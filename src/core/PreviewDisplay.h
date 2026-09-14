@@ -2,6 +2,7 @@
 #define PREVIEWDISPLAYH
 
 #include <memory>
+#include <functional>
 #include <string>
 #include <vector>
 #include "Rcpp.h"
@@ -147,6 +148,12 @@ public:
   bool ToggleCameraMotionBlur();
   void SetCameraMotionBlur(bool enabled);
   bool CameraMotionBlurEnabled() const { return camera_motion_blur_enabled; }
+  void SetAtmosphereControls(bool haze, bool query_altitude,
+                             std::function<void(bool, bool)> update);
+  bool ToggleHaze();
+  bool ToggleQueryAltitude();
+  bool ConsumeAtmosphereChange();
+  std::string AtmosphereStatusText() const;
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
   void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
@@ -249,6 +256,12 @@ public:
   unsigned int snapshot_height;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
+
+private:
+  bool UpdateAtmosphere(bool haze, bool query_altitude);
+  std::function<void(bool, bool)> update_atmosphere;
+  bool atmosphere_haze = false, atmosphere_query_altitude = false;
+  bool atmosphere_changed = false;
 };
 
 #endif

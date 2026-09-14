@@ -21,6 +21,7 @@ public:
                     Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
   InfiniteAreaLight(std::shared_ptr<InfiniteLight> light, Float radius, point3f center,
                     Transform* ObjectToWorld, Transform* WorldToObject);
+  void SetLight(std::shared_ptr<InfiniteLight> source);
   virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;

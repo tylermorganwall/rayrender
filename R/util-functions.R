@@ -680,8 +680,9 @@ tween_camera_orientation = function(
     output_camera_ups[i, ] = camera_basis[, 2]
   }
 
+  # Keep exact lookat targets; the interpolated up basis stays continuous
+  # through keyframes so subsequent motion damping does not introduce roll.
   output_lookats[keyframe_frames, ] = lookats
-  output_camera_ups[keyframe_frames, ] = camera_ups
   list(lookats = output_lookats, camera_ups = output_camera_ups)
 }
 

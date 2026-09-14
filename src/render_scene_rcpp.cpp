@@ -27,6 +27,7 @@
 #include "core/PreviewDisplay.h"
 #include "utils/raylog.h"
 #include <cfenv>
+#include <array>
 
 // #define DEBUG
 
@@ -1102,6 +1103,37 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
+  // Keep complete, immutable light variants for interactive atmosphere changes.
+  // Rebuilding the mixture also updates altitude-dependent sampling weights and
+  // celestial filtering. Coefficients and image textures use their existing caches.
+  if(interactive && has_atmosphere && hasbackground) {
+    auto environment_light = std::static_pointer_cast<InfiniteAreaLight>(background_sphere);
+    Rcpp::List descriptions = Rcpp::as<Rcpp::List>(render_info["infinite_lights"]);
+    for(R_xlen_t i = 0; i < descriptions.size(); ++i) {
+      Rcpp::List description = descriptions[i];
+      if(Rcpp::as<std::string>(description["type"]) != "prague") continue;
+      const bool haze = !description.containsElementNamed("haze") || Rcpp::as<bool>(description["haze"]);
+      const bool query_altitude = !description.containsElementNamed("query_altitude") ||
+                                  Rcpp::as<bool>(description["query_altitude"]);
+      auto variants = std::make_shared<std::array<std::shared_ptr<InfiniteLight>, 4>>();
+      (*variants)[2 * query_altitude + haze] = environment_light->light;
+      auto volume_scene = imp_sample_objects.volume_scene;
+      Display.SetAtmosphereControls(haze, query_altitude,
+        [descriptions, i, variants, environment_light, volume_scene, &texCache](bool haze, bool altitude) {
+          auto &light = (*variants)[2 * altitude + haze];
+          if(!light) {
+            Rcpp::List updated = Rcpp::clone(descriptions);
+            Rcpp::List atmosphere = updated[i];
+            atmosphere["haze"] = haze;
+            atmosphere["query_altitude"] = altitude;
+            light = BuildInfiniteLights(updated, texCache);
+          }
+          environment_light->SetLight(light);
+          volume_scene->atmosphere = light->GetTransportAtmosphere();
+        });
+      break;
+    }
+  }
   Display.SetSnapshotFilename(snapshot_filename);
   Display.SetKeyframeMotionArgs(keyframe_motion_args);
   Display.SetTextOverlays(text_overlays);

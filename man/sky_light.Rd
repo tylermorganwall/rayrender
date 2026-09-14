@@ -222,9 +222,12 @@ curvature, allowing elevated clouds to receive sunlight on their undersides
 after the Sun disappears from the ground. Refraction is not modeled.
 Ground surfaces can still receive diffuse twilight and indirect cloud light.
 
-A scene can contain one atmospheric sky. Solar elevations outside -4.2--90
-degrees are rejected. Queries outside 0--15000 m use the nearest modeled
-altitude; keep scene interactions within that range. Do not add another medium
+A scene can contain one atmospheric sky. When the reference Sun elevation is
+below -4.2 degrees, Prague contributes black sky and no solar in-scattering.
+Enabled Moon, star, and planet lights still contribute, with atmospheric
+transmission and Earth occlusion applied normally. Queries outside 0--15000 m
+use the nearest modeled altitude; keep scene interactions within that range.
+Do not add another medium
 modeling the same clear-air scattering or absorption. Separate clouds can be
 added normally. Clouds default to no interior haze; \code{cloud(haze = TRUE)}
 enables haze below density 0.05, and \code{haze_density_threshold = NULL} removes

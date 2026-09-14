@@ -102,7 +102,10 @@ L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/cl
 < and >: Jump to previous/next keyframe, /: Delete current keyframe,
 M: Preview/cancel keyframe motion,
 F: Toggle Fast Travel Mode,
-B: Toggle Camera Motion Blur
+B: Toggle Camera Motion Blur,
+H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+Haze requires altitude queries: enabling haze also enables altitude queries,
+and disabling altitude queries also disables haze. Each change restarts sampling.
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 

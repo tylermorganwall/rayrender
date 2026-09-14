@@ -22,6 +22,60 @@ static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 24;
 static const Float PREVIEW_SHUTTER_SPEED_MIN = static_cast<Float>(1);
 static const Float PREVIEW_SHUTTER_SPEED_MAX = static_cast<Float>(4096);
 
+void PreviewDisplay::SetAtmosphereControls(bool haze, bool query_altitude,
+                                           std::function<void(bool, bool)> update) {
+  atmosphere_haze = haze;
+  atmosphere_query_altitude = query_altitude;
+  update_atmosphere = std::move(update);
+  atmosphere_changed = false;
+}
+
+bool PreviewDisplay::UpdateAtmosphere(bool haze, bool query_altitude) {
+  if(!interactive || !update_atmosphere) {
+    if(interactive) Rprintf("Atmosphere controls require a Prague sky_light().\n");
+    return false;
+  }
+  // The window processes these keys only after the rendering workers finish.
+  // Build the replacement before publishing settings or invalidating samples.
+  try {
+    update_atmosphere(haze, query_altitude);
+  } catch(const std::exception& error) {
+    Rprintf("Unable to update atmosphere: %s\n", error.what());
+    return false;
+  } catch(...) {
+    // In particular, do not let an R interrupt cross a Windows window callback.
+    terminate = true;
+    return false;
+  }
+  atmosphere_haze = haze;
+  atmosphere_query_altitude = query_altitude;
+  atmosphere_changed = true;
+  Rprintf("%s\n", AtmosphereStatusText().c_str());
+  return true;
+}
+
+bool PreviewDisplay::ToggleHaze() {
+  const bool haze = !atmosphere_haze;
+  return UpdateAtmosphere(haze, haze || atmosphere_query_altitude);
+}
+
+bool PreviewDisplay::ToggleQueryAltitude() {
+  const bool query_altitude = !atmosphere_query_altitude;
+  return UpdateAtmosphere(atmosphere_haze && query_altitude, query_altitude);
+}
+
+bool PreviewDisplay::ConsumeAtmosphereChange() {
+  const bool changed = atmosphere_changed;
+  atmosphere_changed = false;
+  return changed;
+}
+
+std::string PreviewDisplay::AtmosphereStatusText() const {
+  if(!update_atmosphere) return "";
+  return std::string("Haze ") + (atmosphere_haze ? "ON" : "OFF") +
+         " | Altitude " + (atmosphere_query_altitude ? "ON" : "OFF");
+}
+
 static point3f PreviewCameraLookat(RayCamera* cam) {
   point3f origin = cam->get_origin(), pivot = cam->get_lookat();
   vec3f forward = unit_vector(cam->get_w()), to_pivot = pivot - origin;
@@ -817,7 +871,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
                   keyframe_number,
                   Keyframes.size());
   }
-  return std::string(buffer);
+  const std::string atmosphere_status = AtmosphereStatusText();
+  return atmosphere_status.empty() ? std::string(buffer) : atmosphere_status + " | " + buffer;
 }
 
 void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
@@ -1711,6 +1766,8 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     KeyCode DeleteKeyframe_key = XKeysymToKeycode(d, XK_slash);
     KeyCode MotionPreview_key = XKeysymToKeycode(d,XStringToKeysym("m"));
     KeyCode CameraMotionBlur_key = XKeysymToKeycode(d,XStringToKeysym("b"));
+    KeyCode Haze_key = XKeysymToKeycode(d,XStringToKeysym("h"));
+    KeyCode Altitude_key = XKeysymToKeycode(d,XStringToKeysym("y"));
     
     //Fast Movement Key
     KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
@@ -1732,6 +1789,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         if (e.xkey.keycode == CameraMotionBlur_key ) {
           ToggleCameraMotionBlur();
           reset_preview_render();
+          continue;
+        }
+        if(interactive && (e.xkey.keycode == Haze_key || e.xkey.keycode == Altitude_key)) {
+          if(e.xkey.keycode == Haze_key ? ToggleHaze() : ToggleQueryAltitude()) {
+            reset_preview_render();
+          }
           continue;
         }
         if(interactive &&
@@ -1941,6 +2004,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == CameraMotionBlur_key ) {
               ToggleCameraMotionBlur();
               reset_preview_render();
+              continue;
+            }
+            if(interactive && (e.xkey.keycode == Haze_key || e.xkey.keycode == Altitude_key)) {
+              if(e.xkey.keycode == Haze_key ? ToggleHaze() : ToggleQueryAltitude()) {
+                reset_preview_render();
+              }
               continue;
             }
             if(interactive &&
@@ -2763,6 +2832,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         return 0;
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(interactive_w && preview_display_w != nullptr &&
+         (wParam == VK_KEY_H || wParam == VK_KEY_Y)) {
+        if((lParam & (LPARAM(1) << 30)) == 0) {
+          const bool changed = wParam == VK_KEY_H ? preview_display_w->ToggleHaze()
+                                                 : preview_display_w->ToggleQueryAltitude();
+          if(changed) ResetWindowsPreviewRenderState(false);
+          if(preview_display_w->terminate) term = true;
+        }
+        return 0;
+      }
       if(interactive_w &&
          shift_pressed &&
          wParam == VK_RETURN &&
@@ -3135,6 +3214,68 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
     &env_transform, &env_transform, false));
 #endif
 }
+}
+
+context("Preview atmosphere controls") {
+  test_that("replacing an environment updates emission as well as sampling") {
+    Transform identity;
+    auto original = std::make_shared<ImageInfiniteLight>(
+        std::make_shared<constant_texture>(point3f(1, 0, 0)), 4, 2, 0);
+    auto replacement = std::make_shared<ImageInfiniteLight>(
+        std::make_shared<constant_texture>(point3f(0, 2, 0)), 4, 2, 0);
+    InfiniteAreaLight environment(original, 10, point3f(0), &identity, &identity);
+    auto material = environment.mat_ptr;
+    environment.SetLight(replacement);
+    expect_true(environment.light == replacement);
+    expect_true(environment.mat_ptr == material);
+    hit_record rec;
+    bool invisible = true;
+    Ray ray(point3f(0), vec3f(0, 0, 1));
+    point3f emitted = material->emitted(ray, rec, 0, 0, point3f(0), invisible);
+    expect_true((emitted - point3f(0, 2, 0)).length() < 1e-6f);
+    expect_false(invisible);
+  }
+  test_that("haze and altitude toggles preserve supported combinations and request a restart") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    std::vector<std::pair<bool, bool>> applied;
+    display->SetAtmosphereControls(false, false, [&](bool haze, bool altitude) {
+      applied.emplace_back(haze, altitude);
+    });
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->ToggleHaze());
+    expect_true((applied.back() == std::make_pair(true, true)));
+    expect_true(display->ConsumeAtmosphereChange());
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->PreviewStatusText(0).find("Haze ON | Altitude ON") == 0);
+    expect_true(display->ToggleHaze());
+    expect_true((applied.back() == std::make_pair(false, true)));
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, false)));
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, true)));
+    expect_true(display->ToggleHaze());
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, false)));
+    expect_true(display->ConsumeAtmosphereChange());
+  }
+  test_that("unavailable or failed atmosphere changes leave settings and sampling intact") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    expect_false(display->ToggleHaze());
+    expect_false(display->ToggleQueryAltitude());
+    expect_false(display->ConsumeAtmosphereChange());
+    display->SetAtmosphereControls(false, true, [](bool, bool) {
+      throw std::runtime_error("Unable to prepare sky");
+    });
+    expect_false(display->ToggleHaze());
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->AtmosphereStatusText() == "Haze OFF | Altitude ON");
+  }
 }
 
 context("Preview picking and orbit targets") {

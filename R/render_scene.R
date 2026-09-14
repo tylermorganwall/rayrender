@@ -34,7 +34,10 @@
 #' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
 #' M: Preview/cancel keyframe motion,
 #' F: Toggle Fast Travel Mode,
-#' B: Toggle Camera Motion Blur
+#' B: Toggle Camera Motion Blur,
+#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+#' Haze requires altitude queries: enabling haze also enables altitude queries,
+#' and disabling altitude queries also disables haze. Each change restarts sampling.
 #'
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #'
@@ -668,6 +671,7 @@ HAS_OIDN: %s
       "Status:     Wide window shows camera/exposure/env/keyframes/loop",
       "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
       "Blur:       B camera motion blur",
+      "Atmosphere: H haze | Y altitude queries (haze requires altitude queries)",
       "Snapshot:   Shift-Enter save current preview",
       "General:    P print camera | R reset camera | ESC close"
     )

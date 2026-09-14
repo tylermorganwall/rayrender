@@ -1,5 +1,12 @@
 # rayrender 0.41.5.9000
 
+* Keep interpolated camera-up vectors at keyframes to avoid brief roll wobbles
+  when damping camera motion. Keyed positions and lookat targets are retained.
+
+* Allow `sky_light()` below a Sun elevation of -4.2 degrees. Prague contributes
+  black sky and no solar haze, while enabled Moon, stars, and planets retain
+  their light, atmospheric transmission, and Earth occlusion.
+
 * Add continuous local evolution to `cloud()` with `t` and an independent
   `animation_seed`. Broad and fine noise evolve smoothly while position remains
   controlled by x/y/z. Time zero preserves existing clouds exactly.

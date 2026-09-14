@@ -2,6 +2,8 @@
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
 
+#include <stdexcept>
+
 namespace {
 // All infinite sources share one endpoint. Evaluating their sum here makes
 // camera, specular, BSDF/phase, and direct-light paths see identical radiance.
@@ -10,6 +12,7 @@ class InfiniteLightMaterial final : public material {
 public:
   InfiniteLightMaterial(std::shared_ptr<InfiniteLight> light)
       : light(std::move(light)) {}
+  void SetLight(std::shared_ptr<InfiniteLight> source) { light = std::move(source); }
   point3f emitted(const Ray &ray, const hit_record &, Float, Float, const point3f &,
                   bool &invisible) override {
     invisible = false;
@@ -26,6 +29,17 @@ InfiniteAreaLight::InfiniteAreaLight(std::shared_ptr<InfiniteLight> source, Floa
       width(0), height(0), radius(r), center(center), light(std::move(source)) {
   light->SetEnvironmentTransform(to_world, to_light);
 }
+
+void InfiniteAreaLight::SetLight(std::shared_ptr<InfiniteLight> source) {
+  if (!light || !source)
+    throw std::runtime_error("Replacing an environment requires a native infinite light.");
+  // Sampling and emitted radiance must use the same replacement. Keep the
+  // material object stable because scene geometry retains its original pointer.
+  source->SetEnvironmentTransform(ObjectToWorld, WorldToObject);
+  static_cast<InfiniteLightMaterial &>(*mat_ptr).SetLight(source);
+  light = std::move(source);
+}
+
 #include "../math/vectypes.h"
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 

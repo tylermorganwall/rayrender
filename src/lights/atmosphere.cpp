@@ -279,7 +279,7 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   altitude = scalar(description, "altitude", 0, 15000);
   visibility = scalar(description, "visibility", 20, 131.8);
   albedo = scalar(description, "albedo", 0, 1);
-  elevation = scalar(description, "elevation", -4.2, 90) * pi / 180;
+  elevation = scalar(description, "elevation", -90, 90) * pi / 180;
   azimuth = scalar(description, "azimuth", 0, 360) * pi / 180;
   intensity = scalar(description, "intensity", 0, 1e30);
   haze = flag(description, "haze");
@@ -320,7 +320,11 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   std::string mode = Rcpp::as<std::string>(description["render_mode"]);
   if (mode != "all" && mode != "sun" && mode != "atmosphere")
     throw std::runtime_error("Unknown Prague sky render mode.");
-  include_sky = mode != "sun"; include_sun = mode != "atmosphere";
+  // Below the fitted solar range, Prague emits no Sun, sky, or solar haze.
+  // Keep the model for transmission and Earth occlusion of other scene lights.
+  bool solar_supported = elevation >= -4.2 * pi / 180;
+  include_sky = solar_supported && mode != "sun";
+  include_sun = solar_supported && mode != "atmosphere";
   if (description.containsElementNamed("include_sun"))
     include_sun = include_sun && Rcpp::as<bool>(description["include_sun"]);
   sun_fraction = include_sun ? (include_sky ? .5 : 1) : 0;
@@ -521,6 +525,7 @@ bool PragueInfiniteLight::MaySeeDisk(const point3f &p, const vec3f &w, double ra
 PragueInfiniteLight::SpectrumValues PragueInfiniteLight::Spectrum(Vector p, Vector w,
                                                                  bool sun, bool sky, bool smooth) const {
   SpectrumValues result{};
+  if (!sun && !sky) return result;
   auto params = Parameters(p, w);
 
   // Map the requested apparent disk size onto Prague's native solar profile,
@@ -728,6 +733,10 @@ AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const v
   V position = Position(p), direction = Direction(w);
   double d = distance * meters_per_unit;
   if (!std::isfinite(d)) throw std::runtime_error("Finite atmosphere segment length required.");
+  if (!include_sky) {
+    result.transmission = Transmission(p, w, distance);
+    return result;
+  }
   auto params = Parameters(position, direction);
 
 
