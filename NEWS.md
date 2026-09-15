@@ -1,5 +1,7 @@
 # rayrender 0.41.5.9000
 
+* Store BVH4 leaf primitive ranges in compact records, reducing BVH memory use.
+
 * Reduce BVH traversal bookkeeping while preserving intersection order, and
   defer unused medium transforms in surface hit records.
 
