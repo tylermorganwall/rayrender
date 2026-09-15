@@ -538,9 +538,9 @@ context("Participating media geometry and sampling") {
                                                        inverse, &lights, offset));
     }
     branch.Finish(0, 1);
-    Transform far = Translate(vec3f(30, 0, 0)), far_inverse = Inverse(far);
-    auto far_geometry = std::make_shared<sphere>(1, mat, nullptr, nullptr, &far, &far_inverse, false);
-    auto far_boundary = std::make_shared<MediumBoundary>(far_geometry, medium, far, false,
+    Transform far_transform = Translate(vec3f(30, 0, 0)), far_inverse = Inverse(far_transform);
+    auto far_geometry = std::make_shared<sphere>(1, mat, nullptr, nullptr, &far_transform, &far_inverse, false);
+    auto far_boundary = std::make_shared<MediumBoundary>(far_geometry, medium, far_transform, false,
                                                         scene.NextBoundaryId());
     scene.boundaries.add(far_boundary);
     world.add(far_boundary);

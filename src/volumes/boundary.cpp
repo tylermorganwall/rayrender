@@ -43,7 +43,7 @@ double signed_mesh_volume(const TriangleMesh &mesh) {
 struct MediumBoxInterval {
   point3f origin;
   vec3f direction;
-  double near = -INFINITY, far = INFINITY;
+  double t_near = -INFINITY, t_far = INFINITY;
   int near_axis = -1, far_axis = -1;
 };
 // A contact with no resolvable interior interval is not a boundary crossing.
@@ -61,18 +61,18 @@ bool box_interval(const box &geometry, const Ray &ray, MediumBoxInterval &interv
     double b = (double(geometry.pmax[axis]) - interval.origin[axis]) / interval.direction[axis];
     if (a > b)
       std::swap(a, b);
-    if (a > interval.near) {
-      interval.near = a;
+    if (a > interval.t_near) {
+      interval.t_near = a;
       interval.near_axis = axis;
     }
-    if (b < interval.far) {
-      interval.far = b;
+    if (b < interval.t_far) {
+      interval.t_far = b;
       interval.far_axis = axis;
     }
   }
   double tolerance = 8 * std::numeric_limits<Float>::epsilon() *
-                     std::max({1.0, std::abs(interval.near), std::abs(interval.far)});
-  return interval.far - interval.near > tolerance;
+                     std::max({1.0, std::abs(interval.t_near), std::abs(interval.t_far)});
+  return interval.t_far - interval.t_near > tolerance;
 }
 bool has_interior_interval(const hitable *geometry, const Ray &ray) {
   const auto *b = dynamic_cast<const box *>(geometry);
@@ -86,8 +86,8 @@ bool hit_invisible_box(const box &geometry, const Ray &ray, Float lo, Float hi, 
   MediumBoxInterval interval;
   if (!box_interval(geometry, ray, interval))
     return false;
-  bool entering = interval.near >= lo;
-  double t = entering ? interval.near : interval.far;
+  bool entering = interval.t_near >= lo;
+  double t = entering ? interval.t_near : interval.t_far;
   int axis = entering ? interval.near_axis : interval.far_axis;
   if (axis < 0 || t < lo || t > hi)
     return false;

@@ -76,7 +76,9 @@ void MediumHazeIterator::SplitCell(double a, double b) {
   // Split at derivative roots first: each resulting interval is monotone and
   // contains at most one crossing. This also handles three crossings in one
   // voxel and tangent contacts without assuming density is monotone along rays.
-  std::array<double, 4> cuts{0, 1};
+  // Unused slots remain at the upper endpoint, after every interior cut. Sorting
+  // the fixed-size array also lets compilers verify the sort's access bounds.
+  std::array<double, 4> cuts{0, 1, 1, 1};
   size_t count = 2;
   auto add_cut = [&](double u) { if (u > 0 && u < 1) cuts[count++] = u; };
   double qa = 3 * polynomial[3], qb = 2 * polynomial[2], qc = polynomial[1];
@@ -90,7 +92,7 @@ void MediumHazeIterator::SplitCell(double a, double b) {
       else add_cut(-qb / (2 * qa));
     }
   }
-  std::sort(cuts.begin(), cuts.begin() + count);
+  std::sort(cuts.begin(), cuts.end());
   std::array<double, 5> edges{0};
   size_t edge_count = 1;
   auto add_edge = [&](double u) {

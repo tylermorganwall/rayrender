@@ -710,10 +710,10 @@ inline Float Log2(Float x) {
 }
 
 inline point3f RGBtoHSV(point3f& rgb) {
-  Float max_val = ffmax(ffmax(rgb.xyz.x, rgb.xyz.y), rgb.xyz.y);
+  Float max_val = ffmax(ffmax(rgb.xyz.x, rgb.xyz.y), rgb.xyz.z);
   Float min_val = ffmin(ffmin(rgb.xyz.x, rgb.xyz.y), rgb.xyz.z);
   Float delta_val = max_val - min_val;
-  point3f hsv;
+  point3f hsv(0);
   
   if(delta_val > 0) {
     if(max_val == rgb.xyz.x) {

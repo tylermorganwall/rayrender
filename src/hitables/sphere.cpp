@@ -4,10 +4,10 @@
 #include "../volumes/intersections.h"
 
 namespace {
-bool boundary_sphere_roots(const Ray& r, Float radius, EFloat& near, EFloat& far) {
+bool boundary_sphere_roots(const Ray& r, Float radius, EFloat& t_near, EFloat& t_far) {
   Float t0,t1;
   if(!VolumeSphereRoots(r,radius,t0,t1)) return false;
-  near=EFloat(t0); far=EFloat(t1);
+  t_near=EFloat(t0); t_far=EFloat(t1);
   return true;
 }
 }

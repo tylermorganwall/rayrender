@@ -519,17 +519,18 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
       if (before > 0 && world->OpaqueHit(ray, 0, before, rng)) return RGB(0);
       // Resolve the tiny endpoint interval in closest-hit order. This preserves
       // coincident-surface ordering without treating the light itself as a blocker.
-      hit_record near;
-      if (!world->hit(ray, before, endpoint.t + margin, near, rng) ||
-          !emitter_sampler->Matches(selected, near)) return RGB(0);
+      hit_record endpoint_hit;
+      if (!world->hit(ray, before, endpoint.t + margin, endpoint_hit, rng) ||
+          !emitter_sampler->Matches(selected, endpoint_hit)) return RGB(0);
       bool invisible = false;
       Ray emission_ray = ray;
-      if (near.infinite_area_hit) {
+      if (endpoint_hit.infinite_area_hit) {
         emission_ray = Ray(lighting_origin, ray.d, ray.time());
         state.SetRay(emission_ray);
       }
-      point3f emitted = near.mat_ptr
-          ? near.mat_ptr->emitted(emission_ray, near, near.u, near.v, near.p, invisible)
+      point3f emitted = endpoint_hit.mat_ptr
+          ? endpoint_hit.mat_ptr->emitted(emission_ray, endpoint_hit, endpoint_hit.u,
+                                         endpoint_hit.v, endpoint_hit.p, invisible)
           : point3f(0);
       double denominator = (rp * RGB(sample.pdf) + rp * RGB(ps)).Average();
       return denominator > 0 ? beta * f * RGB(emitted) / denominator : RGB(0);

@@ -1,5 +1,11 @@
 # rayrender 0.42.0
 
+* Fix Windows `near`/`far` macro collisions in geometry and volume code. Remove
+  unused preview state and signedness warnings in BVH construction and spline
+  interpolation, and make haze-cut sorting bounds explicit. Correct RGB-to-HSV
+  conversion to include blue when finding the maximum channel and initialize
+  hue on every path.
+
 * Automatically select the NEE integrator for scenes containing native atmospheric
   skies or attached media, including clouds and instanced media, instead of
   requiring an explicit `integrator_type = "nee"` selection. Recognize emitting

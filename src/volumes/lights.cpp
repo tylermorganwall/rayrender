@@ -129,8 +129,8 @@ public:
     // A Float cosine test loses precision at the edge of a distant light's
     // narrow cone. Use the same roots as the actual NEE sphere intersection;
     // otherwise valid light hits can incorrectly receive a zero sampling PDF.
-    Float near, far;
-    if (!VolumeSphereRoots(Ray(p, wi), radius, near, far) || far <= 0)
+    Float t_near, t_far;
+    if (!VolumeSphereRoots(Ray(p, wi), radius, t_near, t_far) || t_far <= 0)
       return 0;
     return Float(1 / (2 * M_PI * one_minus_cos));
   }

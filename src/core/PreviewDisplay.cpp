@@ -271,7 +271,6 @@ static bool term;
 static std::vector<Float> rgb;
 static RayCamera* cam_w;
 static Float speed;
-static bool preview;
 static bool orbit;
 static Float base_step;
 static bool blanked;

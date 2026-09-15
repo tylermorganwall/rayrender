@@ -239,8 +239,8 @@ inline void rayBBoxIntersect4(const RayBBox4& rbox,
     const FVec4 tMin4 = simd_set1(static_cast<float>(tMin));
     const FVec4 tMax4 = simd_set1(static_cast<float>(tMax));
 
-    const FVec4 near = simd_max_num(simd_max_num(txNear, tyNear), tzNear);
-    const FVec4 far = simd_min_num(simd_min_num(txFar, tyFar), tzFar);
+    const FVec4 t_near = simd_max_num(simd_max_num(txNear, tyNear), tzNear);
+    const FVec4 t_far = simd_min_num(simd_min_num(txFar, tyFar), tzFar);
 
     // Multiplying by a positive factor preserves infinities from parallel
     // rays; subtracting an absolute error would turn infinity - infinity into
@@ -248,10 +248,10 @@ inline void rayBBoxIntersect4(const RayBBox4& rbox,
     const FVec4 shrink = simd_set1(1 - bounds_roundoff<float>());
     const FVec4 grow = simd_set1(1 + bounds_roundoff<float>());
     const FVec4 zero = simd_set1(0.f);
-    const FVec4 nearScale = simd_blend(simd_cmpge(near, zero), shrink, grow);
-    const FVec4 farScale = simd_blend(simd_cmpge(far, zero), grow, shrink);
-    tEnters = simd_max_num(simd_mul(near, nearScale), tMin4);
-    const FVec4 tExits = simd_min_num(simd_mul(far, farScale), tMax4);
+    const FVec4 nearScale = simd_blend(simd_cmpge(t_near, zero), shrink, grow);
+    const FVec4 farScale = simd_blend(simd_cmpge(t_far, zero), grow, shrink);
+    tEnters = simd_max_num(simd_mul(t_near, nearScale), tMin4);
+    const FVec4 tExits = simd_min_num(simd_mul(t_far, farScale), tMax4);
 
     hits = simd_cast_to_int(simd_less_equal(tEnters, tExits));
 }

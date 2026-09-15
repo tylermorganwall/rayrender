@@ -34,7 +34,7 @@ bool CatmullRomWeights(std::span<const Float> nodes, Float x, int *offset,
     }
 
     // Compute last node weight $w_3$
-    if (idx + 2 < nodes.size()) {
+    if (static_cast<size_t>(idx) + 2 < nodes.size()) {
         Float w3 = (t3 - t2) * (x1 - x0) / (nodes[idx + 2] - x0);
         weights[1] -= w3;
         weights[3] = w3;
@@ -62,7 +62,7 @@ Float CatmullRom(std::span<const Float> nodes, std::span<const Float> f, Float x
     else
         d0 = f1 - f0;
 
-    if (idx + 2 < nodes.size())
+    if (static_cast<size_t>(idx) + 2 < nodes.size())
         d1 = width * (f[idx + 2] - f0) / (nodes[idx + 2] - x0);
     else
         d1 = f1 - f0;
@@ -90,7 +90,7 @@ Float InvertCatmullRom(std::span<const Float> nodes, std::span<const Float> f,
 
     // Approximate derivatives using finite differences
     Float d0 = (i > 0) ? width * (f1 - f[i - 1]) / (x1 - nodes[i - 1]) : (f1 - f0);
-    Float d1 = (i + 2 < nodes.size()) ? width * (f[i + 2] - f0) / (nodes[i + 2] - x0)
+    Float d1 = (static_cast<size_t>(i) + 2 < nodes.size()) ? width * (f[i + 2] - f0) / (nodes[i + 2] - x0)
                                       : (f1 - f0);
 
     // Invert the spline interpolant using Newton-Bisection
@@ -117,7 +117,7 @@ Float IntegrateCatmullRom(std::span<const Float> nodes, std::span<const Float> f
     // CHECK_EQ(nodes.size(), f.size());
     Float sum = 0;
     cdf[0] = 0;
-    for (int i = 0; i < nodes.size() - 1; ++i) {
+    for (size_t i = 0; i < nodes.size() - 1; ++i) {
         // Look up $x_i$ and function values of spline segment _i_
         Float x0 = nodes[i], x1 = nodes[i + 1];
         Float f0 = f[i], f1 = f[i + 1];

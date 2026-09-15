@@ -329,7 +329,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
         bounds = surrounding_box(bounds, prim.bounds);
     }
 
-    if ((bounds.surface_area() == 0 || bvhPrimitives.size() <= maxPrimsInNode) && !isRoot) {
+    if ((bounds.surface_area() == 0 || bvhPrimitives.size() <= static_cast<size_t>(maxPrimsInNode)) && !isRoot) {
         // Create leaf _BVHBuildNode_
         int firstPrimOffset = orderedPrimsOffset->fetch_add(bvhPrimitives.size());
         for (size_t i = 0; i < bvhPrimitives.size(); ++i) {
@@ -422,7 +422,7 @@ BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives
                 minCost = 1.f / 2.f + minCost / bounds.surface_area();
 
                 // Either create leaf or split primitives at selected SAH bucket
-                if (bvhPrimitives.size() > maxPrimsInNode || minCost < leafCost) {
+                if (bvhPrimitives.size() > static_cast<size_t>(maxPrimsInNode) || minCost < leafCost) {
                     auto midIter = std::partition(
                         bvhPrimitives.begin(), bvhPrimitives.end(),
                         [=](const BVHPrimitive &bp) {
@@ -522,10 +522,10 @@ inline bool rayBoundsHitTEnter(
     const Float tzFar =
         (bounds.bounds[1 - sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
 
-    const Float near = std::fmax(std::fmax(txNear, tyNear), tzNear);
-    const Float far = std::fmin(std::fmin(txFar, tyFar), tzFar);
-    t_min = std::fmax(t_min, bounds_entry_lower(near));
-    t_max = std::fmin(t_max, bounds_exit_upper(far));
+    const Float t_near = std::fmax(std::fmax(txNear, tyNear), tzNear);
+    const Float t_far = std::fmin(std::fmin(txFar, tyFar), tzFar);
+    t_min = std::fmax(t_min, bounds_entry_lower(t_near));
+    t_max = std::fmin(t_max, bounds_exit_upper(t_far));
 
     tEnter = static_cast<float>(t_min);
     return t_min <= t_max;

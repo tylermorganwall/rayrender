@@ -4,7 +4,7 @@
 
 // Zero-width tangencies do not cross a medium boundary. Evaluating the roots
 // in double avoids discarding entries near a spawned Float ray origin.
-inline bool VolumeSphereRoots(const Ray &ray, Float radius, Float &near, Float &far) {
+inline bool VolumeSphereRoots(const Ray &ray, Float radius, Float &t_near, Float &t_far) {
   double a = 0, b = 0, c = -double(radius) * radius;
   for (int i = 0; i < 3; ++i) {
     a += double(ray.d[i]) * ray.d[i];
@@ -18,8 +18,8 @@ inline bool VolumeSphereRoots(const Ray &ray, Float radius, Float &near, Float &
   double t0 = q / a, t1 = c / q;
   if (t0 > t1)
     std::swap(t0, t1);
-  near = Float(t0);
-  far = Float(t1);
+  t_near = Float(t0);
+  t_far = Float(t1);
   return true;
 }
 #endif
