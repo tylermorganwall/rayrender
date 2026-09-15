@@ -49,12 +49,12 @@ struct PreviewLineOverlay {
 
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
+// X11 macros also collide with RcppThread and Catch in builds without OIDN.
 #undef Status
-
+#undef None
 #endif
 
 #ifdef HAS_OIDN
-#undef None
 #include <OpenImageDenoise/oidn.hpp>
 #include "../core/oidn_denoiser.h"
 #endif

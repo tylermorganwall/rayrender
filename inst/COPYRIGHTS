@@ -1,16 +1,12 @@
-Files: src/pcg/*
-Copyright: 2014-2019 Melissa O'Neill and the PCG Project contributors.
-URL: https://github.com/imneme/pcg-cpp
-
-File: src/tinyobj/*
+File: src/ext/tinyobj/tiny_obj_loader.h
 Copyright: 2012-2019 Syoyo Fujita
 URL: https://github.com/syoyo/tinyobjloader/
 
-File: src/miniply.h src/miniply.cpp
+Files: src/ext/miniply/miniply.h src/ext/miniply/miniply.cpp
 Copyright: 2019 Vilya Harvey
 URL: https://github.com/vilya/miniply/
 
-Files: src/ext/nanovdb/NanoVDB.h
+Files: src/ext/nanovdb/nanovdb/*
 Copyright: Contributors to the OpenVDB Project, OpenVDB v12.1.1.
 URL: https://github.com/AcademySoftwareFoundation/openvdb/tree/v12.1.1
 

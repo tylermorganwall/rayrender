@@ -41,7 +41,6 @@ Suggests:
     xml2,
     rgl
 LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.3)
-Remotes: tylermorganwall/skymodelr, tylermorganwall/tree3d
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 SystemRequirements: C++20
 Biarch: true

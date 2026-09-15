@@ -985,8 +985,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
     imp_sample_objects.volume_scene->has_media = true;
-  bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
 #ifdef HAS_OIDN
+  bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
   if(denoise) {
     oidn_denoiser.Setup(rgb_output,
                         oidn_albedo_output,

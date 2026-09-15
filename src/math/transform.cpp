@@ -410,6 +410,16 @@ vec3<T> Transform::operator()(const vec3<T> &v,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
+// These definitions live in this translation unit, but geometry calls them
+// from other files. Emit all Float error-bound overloads explicitly so their
+// availability does not depend on the compiler's inlining decisions.
+template point3<Float> Transform::operator()(const point3<Float> &, vec3<Float> *) const;
+template point3<Float> Transform::operator()(const point3<Float> &, const vec3<Float> &,
+                                             vec3<Float> *) const;
+template vec3<Float> Transform::operator()(const vec3<Float> &, vec3<Float> *) const;
+template vec3<Float> Transform::operator()(const vec3<Float> &, const vec3<Float> &,
+                                           vec3<Float> *) const;
+
 template <typename T>
 inline point3<T> Transform::ApplyInverse(point3<T> p) const {
     T x = p.xyz.x, y = p.xyz.y, z = p.xyz.z;

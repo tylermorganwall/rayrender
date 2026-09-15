@@ -366,7 +366,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
     imp_sample_objects.volume_scene->has_media = true;
+#ifdef HAS_OIDN
   bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
+#endif
   print_time(verbose, "Built Scene BVH" );
   
 

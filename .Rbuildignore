@@ -52,3 +52,5 @@
 ^inst/examples($|/)
 ^air\.toml$
 ^Rplots\.pdf$
+^revdep($|/)
+^tools/benchmarks($|/)

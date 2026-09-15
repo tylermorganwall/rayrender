@@ -141,8 +141,7 @@ bank. The attached \code{\link[=grid_medium]{grid_medium()}} is stored in
 \code{object$shape_info[[1]]$medium} for further density or scattering adjustments.
 }
 \examples{
-\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-if (requireNamespace("ambient", quietly = TRUE)) {
+\dontshow{if (requireNamespace("ambient", quietly = TRUE) && (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true"))) withAutoprint(\{ # examplesIf}
   # The default cloud is centered at the origin. Raise a cloud by its center
   # to put its base above the ground, then rotate the entire density field.
   puff = cloud(y = 20, width = 60, height = 20, depth = 40,
@@ -156,29 +155,40 @@ if (requireNamespace("ambient", quietly = TRUE)) {
                clamp_value = Inf, aperture = 0)
 
   # Reuse the shape at another position, or change the style and its detail.
-  bank = cloud(x = 100, y = 30, z = 20, style = "stratus", seed = 17,
+  bank = cloud(x = 0, y = w0, z = 6, style = "stratus", seed = 17,
                width = 80, height = 10, depth = 50,
                coverage = 0.7, detail = 0.2, optical_depth = 6, g = 0.6)
   scaled = cloud(scale = c(1.5, 1, 0.75), angle = c(10, 30, 0),
                  order_rotation = c(2, 1, 3), resolution = 64)
+generate_ground(material = diffuse("#699447")) |>
+    add_object(bank) |>
+    add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
+                      material = light(intensity = 40))) |>
+ render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),
+               fov = 35, integrator_type = "nee", samples = 64,
+               clamp_value = Inf, aperture = 0)
 
+generate_ground(material = diffuse("#699447")) |>
+    add_object(scaled) |>
+    add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
+                      material = light(intensity = 40))) |>
+ render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),
+               fov = 35, integrator_type = "nee", samples = 64,
+               clamp_value = Inf, aperture = 0)
   # Keep seeds and position fixed to evolve the cloud locally over time.
   # Rebuilding a frame at the same t value always gives the same cloud.
   for (frame in 0:3) {
-    evolving = cloud(y = 20, width = 60, height = 20, depth = 40,
-      seed = 42, t = frame / 3, animation_seed = 17,
-      resolution = 64, optical_depth = 4)
-    scene = generate_ground(material = diffuse("#699447")) |>
-      add_object(evolving) |>
-      add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
-        material = light(intensity = 40)))
     set.seed(2026)
-    render_scene(scene, lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
+    generate_ground(material = diffuse("#699447")) |>
+      add_object(cloud(y = 20, width = 60, height = 20, depth = 40,
+      seed = 42, t = frame / 3, animation_seed = 17,
+      resolution = 64, optical_depth = 4)) |>
+      add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
+        material = light(intensity = 40))) |>
+    render_scene(lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
       width = 256, height = 160, fov = 35, integrator_type = "nee",
-      samples = 64, iso = 100, aperture = 0,
-      filename = file.path(tempdir(), sprintf("cloud-\%02d.png", frame)))
+      samples = 64, iso = 100, aperture = 0)
   }
-}
 \dontshow{\}) # examplesIf}
 }
 \seealso{

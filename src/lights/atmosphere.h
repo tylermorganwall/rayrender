@@ -7,7 +7,7 @@
 // Require the consolidated provider SDK, including in manual source builds.
 // The wrapper validates the loaded provider's ABI and table size at runtime.
 #if !defined(SKYMODELR_PRAGUE_ABI_VERSION) || SKYMODELR_PRAGUE_ABI_VERSION < 3
-#error "rayrender requires the current Prague API: rebuild skymodelr 0.6.2 or later first."
+#error "rayrender requires the current Prague API: rebuild skymodelr 0.6.3 or later first."
 #endif
 
 struct AtmosphereSegment {
@@ -130,7 +130,7 @@ private:
   double Height(Vector) const;
   bool PlanetOccludes(Vector, Vector, double distance) const;
   SpectrumValues Spectrum(Vector, Vector, bool sun, bool sky, bool smooth = true) const;
-  point3f RGB(const SpectrumValues &) const;
+  point3f SpectrumToRGB(const SpectrumValues &) const;
   SpectrumValues FilteredHaze(Vector, Vector, double distance, double uniform) const;
   AtmosphereSegment EvaluateSegment(const point3f &, const vec3f &, double,
                                     AtmosphereSegmentCache &, double) const;

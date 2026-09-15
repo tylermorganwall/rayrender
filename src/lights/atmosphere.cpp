@@ -410,7 +410,7 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
       Rcpp::checkUserInterrupt();
       for (int x = 0; x < width; ++x) {
         vec2f uv((x + .5) / width, (y + .5) / height);
-        auto rgb = RGB(Spectrum(V(0, 0, h), from_uv(uv), false, include_sky));
+        auto rgb = SpectrumToRGB(Spectrum(V(0, 0, h), from_uv(uv), false, include_sky));
         double value = std::max(0.0, .212671 * rgb[0] + .715160 * rgb[1] + .072169 * rgb[2]) *
                        std::sin(pi * uv[1]);
         values[size_t(y) * width + x] = Float(value);
@@ -431,7 +431,7 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   // high-altitude estimate where extinction does not suppress the disk as much.
   V sun(std::cos(azimuth) * std::cos(elevation), std::sin(azimuth) * std::cos(elevation),
         std::sin(elevation));
-  auto rgb = RGB(Spectrum(V(0, 0, query_altitude ? 15000 : altitude), sun, include_sun, false));
+  auto rgb = SpectrumToRGB(Spectrum(V(0, 0, query_altitude ? 15000 : altitude), sun, include_sun, false));
   sampling_weight += std::max(0.0, .212671 * rgb[0] + .715160 * rgb[1] + .072169 * rgb[2]) *
                      sun_solid_angle;
 }
@@ -564,7 +564,7 @@ PragueInfiniteLight::SpectrumValues PragueInfiniteLight::Spectrum(Vector p, Vect
 
 // Use the same spectral-to-RGB conversion for the environment and finite haze.
 // Intensity and channel gains affect emitted radiance, not transmission ratios.
-point3f PragueInfiniteLight::RGB(const SpectrumValues &values) const {
+point3f PragueInfiniteLight::SpectrumToRGB(const SpectrumValues &values) const {
   double rgb[3] = {0, 0, 0};
   for (size_t i = 0; i < wavelengths.size(); ++i)
     for (int c = 0; c < 3; ++c) rgb[c] += values[i] * rgb_weights[i][c];
@@ -579,12 +579,12 @@ point3f PragueInfiniteLight::RGB(const SpectrumValues &values) const {
 // Environment queries can include the built-in Sun. The sky-only entry point
 // also supports retaining atmospheric haze when the background is transparent.
 point3f PragueInfiniteLight::Radiance(const point3f &p, const vec3f &w, Float) const {
-  return RGB(Spectrum(LightingPosition(p), Direction(w), include_sun, include_sky));
+  return SpectrumToRGB(Spectrum(LightingPosition(p), Direction(w), include_sun, include_sky));
 }
 
 
 point3f PragueInfiniteLight::SkyRadiance(const point3f &p, const vec3f &w) const {
-  return RGB(Spectrum(LightingPosition(p), Direction(w), false, include_sky));
+  return SpectrumToRGB(Spectrum(LightingPosition(p), Direction(w), false, include_sky));
 }
 
 
@@ -750,7 +750,7 @@ AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const v
     result.transmission = Transmission(p, w, distance);
     // Every rendering query uses one weighted direction. Only internal
     // reference queries omit the variate to evaluate the complete average.
-    filtered_radiance = RGB(FilteredHaze(position, direction, d, uniform));
+    filtered_radiance = SpectrumToRGB(FilteredHaze(position, direction, d, uniform));
     if (filter_blend == 1) {
       result.radiance = filtered_radiance;
       return result;
@@ -798,10 +798,10 @@ AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const v
 
 
   // Return dimensionless transmission alongside emitted RGB radiance. Only the
-  // latter receives the sky's intensity and color calibration through RGB().
+  // latter receives the sky's intensity and color calibration through SpectrumToRGB().
   result.transmission = point3f(std::clamp(tr[0], 0.0, 1.0), std::clamp(tr[1], 0.0, 1.0),
                                 std::clamp(tr[2], 0.0, 1.0));
-  result.radiance = RGB(source);
+  result.radiance = SpectrumToRGB(source);
   if (filter_blend > 0)
     // Match the component type: mixed double/point3<float> multiplication can
     // select the integer overload and truncate both transition weights to zero.
