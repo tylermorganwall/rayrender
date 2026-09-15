@@ -49,6 +49,7 @@ reference:
   - starts_with("csg_object")
   - starts_with("r_obj")
   - starts_with("raymesh")
+  - cloud
 - title: Constructive Solid Geometry (CSG) Interface
   desc: Functions to model and build objects using CSG
   contents: starts_with("csg")
@@ -64,10 +65,37 @@ reference:
   - starts_with("hair")
   - starts_with("lambertian")
   - starts_with("set_scene_material")
+- title: Participating Media
+  desc: Functions to define and attach scattering, absorbing, and emitting media.
+  contents:
+  - homogeneous_medium
+  - grid_medium
+  - nanovdb_medium
+  - set_medium
+- title: Infinite and Sky Lights
+  desc: Functions to create and manage image, atmospheric, Sun, and Moon lighting.
+  contents:
+  - infinite_light
+  - sky_light
+  - sky_light_image
+  - sun_light
+  - add_infinite_light
+  - list_infinite_lights
+  - remove_infinite_light
+- title: Cameras
+  desc: Functions to create, select, and preview scene cameras.
+  contents:
+  - camera
+  - add_camera
+  - list_cameras
+  - set_active_camera
+  - preview_camera
+  - remove_camera
 - title: Composing Scenes
   desc: Function for adding objects together to form a scene.
   contents:
-  - starts_with("add")
+  - add_object
+  - add_points_polygon
   - starts_with("group")
   - starts_with("create")
 - title: Screen-space Annotations
