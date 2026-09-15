@@ -141,7 +141,9 @@
 #' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 #' With `nee`, surfaces and participating media use RGB null-scattering transport;
-#' new medium attachments require this integrator. See [set_medium()].
+#' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
+#' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
+#' See \code{\link{set_medium}()}.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image

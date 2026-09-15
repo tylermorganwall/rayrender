@@ -71,7 +71,8 @@ A reusable `ray_medium` description.
 }
 \description{
 Describe a medium independently of the surface that contains it. Attach it to
-closed objects with [set_medium()] and render with `integrator_type = "nee"`.
+closed objects with [set_medium()]. Rendering automatically selects
+\code{integrator_type = "nee"} for scenes containing attached media.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

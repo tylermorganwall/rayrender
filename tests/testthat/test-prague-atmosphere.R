@@ -108,10 +108,8 @@ test_that('haze filtering remains enabled with eager or deferred transport', {
   expect_identical(unserialize(serialize(eager, NULL)), eager)
 })
 
-test_that('atmosphere requires nee and is unique in a scene', {
+test_that('atmosphere is unique in a scene', {
   scene = sphere() |> add_infinite_light(prague_test_light())
-  expect_error(prepare_scene_list(scene, integrator_type = 'rtiow'), 'nee')
-  expect_error(prepare_scene_list(scene, integrator_type = 'basic'), 'nee')
   duplicate = scene |> add_infinite_light(prague_test_light(name = 'second'))
   expect_error(
     prepare_scene_list(duplicate, integrator_type = 'nee'),

@@ -38,18 +38,6 @@ test_that("medium metadata survives scene operations and serialization", {
   child = instanced$shape_info[[1]]$shape_properties$original_scene[[1]]
   expect_identical(child$shape_info[[1]]$medium, medium)
   expect_null(set_medium(sphere(), NULL)$shape_info[[1]]$medium)
-  expect_error(
-    render_scene(
-      scene,
-      integrator_type = "basic",
-      width = 4,
-      height = 4,
-      samples = 1,
-      preview = FALSE,
-      plot_scene = FALSE
-    ),
-    'require.*nee'
-  )
 })
 
 test_that("volume foreground converts to straight RGB once", {

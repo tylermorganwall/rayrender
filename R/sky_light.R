@@ -5,7 +5,7 @@
 #' Evaluate the native Prague atmosphere at scene interactions, including
 #' altitude-dependent Sun and sky lighting, finite-distance haze, and
 #' in-scattering. Sun and Moon disk lights are included automatically.
-#' Add the light with [add_infinite_light()] and render with
+#' Add the light with [add_infinite_light()]. Rendering automatically selects
 #' `integrator_type = "nee"`. Use [sky_light_image()] for a cached sky image.
 #'
 #' @param lat Latitude in degrees, between -90 and 90.

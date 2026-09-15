@@ -70,17 +70,17 @@ prepare_scene_list = function(
       call. = FALSE
     )
   }
-  if (any(atmospheric_lights) && tolower(integrator_type) != "nee") {
-    stop(
-      'Atmospheric sky lights require integrator_type = "nee".',
-      call. = FALSE
-    )
-  }
-  if (medium_features$attached && tolower(integrator_type) != "nee") {
-    stop(
-      'Medium attachments require integrator_type = "nee". Use legacy material fog with "rtiow" or "basic".',
-      call. = FALSE
-    )
+  integrator_type = switch(
+    integrator_type,
+    "nee" = 1L,
+    "rtiow" = 2L,
+    "basic" = 3L,
+    stop(integrator_type, " not recognized as valid `integrator_type`")
+  )
+  # Resolve required transport here so stills, animations, and camera previews
+  # all use NEE for atmospheres and attached media, including inside instances.
+  if (any(atmospheric_lights) || medium_features$attached) {
+    integrator_type = 1L
   }
   scene_info = process_scene(scene)
   if (!is.numeric(debug_channel)) {
@@ -118,13 +118,6 @@ prepare_scene_list = function(
     light_direction = debug_channel
     debug_channel = 9
   }
-  integrator_type = switch(
-    integrator_type,
-    "nee" = 1L,
-    "rtiow" = 2L,
-    "basic" = 3L,
-    stop(integrator_type, " not recognized as valid `integrator_type`")
-  )
   if (debug_channel == 4) {
     message(
       "rayrender must be compiled with option DEBUGBVH for this debug option to work"
@@ -161,7 +154,7 @@ prepare_scene_list = function(
 
   if (
     !scene_info$any_light &&
-      !(tolower(integrator_type) == "nee" && medium_features$emissive) &&
+      !(integrator_type == 1L && medium_features$emissive) &&
       is.null(ambient_light) &&
       is.null(environment_light) &&
       !length(infinite_lights)

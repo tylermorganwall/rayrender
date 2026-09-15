@@ -269,7 +269,9 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 With `nee`, surfaces and participating media use RGB null-scattering transport;
-new medium attachments require this integrator. See [set_medium()].}
+\code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
+media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
+See \code{\link{set_medium}()}.}
 
 \item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`,
 or a list of `screen_text()` outputs to draw in order.}

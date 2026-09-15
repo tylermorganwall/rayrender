@@ -1,4 +1,9 @@
-# rayrender 0.41.5
+# rayrender 0.42.0
+
+* Automatically select the NEE integrator for scenes containing native atmospheric
+  skies or attached media, including clouds and instanced media, instead of
+  requiring an explicit `integrator_type = "nee"` selection. Recognize emitting
+  media when deciding whether to add automatic ambient illumination.
 
 * Fix Windows macro collisions in atmospheric lighting and preview test builds
   using X11. Emit the transform error-bound overloads needed by volume boundaries

@@ -106,7 +106,7 @@ cloud density grid.
 }
 \description{
 Create a cloud volume with billowing Perlin-noise density. Add it to a scene
-with \code{\link[=add_object]{add_object()}} and render with \code{integrator_type = "nee"}. Requires the
+with \code{\link[=add_object]{add_object()}}; rendering automatically selects \code{integrator_type = "nee"}. Requires the
 suggested package \code{ambient} to generate the density field.
 }
 \details{

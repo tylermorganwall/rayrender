@@ -3,7 +3,7 @@
 #'
 #' @description
 #' Create a cloud volume with billowing Perlin-noise density. Add it to a scene
-#' with [add_object()] and render with `integrator_type = "nee"`. Requires the
+#' with [add_object()]; rendering automatically selects `integrator_type = "nee"`. Requires the
 #' suggested package `ambient` to generate the density field.
 #'
 #' @param x Default `0`. x-coordinate of the center of the cloud's bounding box.

@@ -199,7 +199,7 @@ A \code{ray_infinite_light} containing a native atmospheric sky description.
 Evaluate the native Prague atmosphere at scene interactions, including
 altitude-dependent Sun and sky lighting, finite-distance haze, and
 in-scattering. Sun and Moon disk lights are included automatically.
-Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}} and render with
+Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}}. Rendering automatically selects
 \code{integrator_type = "nee"}. Use \code{\link[=sky_light_image]{sky_light_image()}} for a cached sky image.
 }
 \details{

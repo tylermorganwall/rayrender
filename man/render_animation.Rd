@@ -197,7 +197,9 @@ those pixels will be partially transparent.}
 
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
-and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+\code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
+media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.}
 
 \item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
 }
