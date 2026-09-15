@@ -20,6 +20,33 @@ test_that("animation frame post-processing matches scene orientation", {
   expect_equal(frame[,, 3], fliplr(flipud(t(rgb_mat$b))))
 })
 
+test_that("render_animation defaults omitted filenames to preview-only output", {
+  expect_false(animation_default_plot_scene(
+    plot_scene = TRUE,
+    plot_scene_supplied = FALSE,
+    filename_supplied = FALSE,
+    preview = TRUE
+  ))
+  expect_true(animation_default_plot_scene(
+    plot_scene = TRUE,
+    plot_scene_supplied = TRUE,
+    filename_supplied = FALSE,
+    preview = TRUE
+  ))
+  expect_true(animation_default_plot_scene(
+    plot_scene = TRUE,
+    plot_scene_supplied = FALSE,
+    filename_supplied = TRUE,
+    preview = TRUE
+  ))
+  expect_true(animation_default_plot_scene(
+    plot_scene = TRUE,
+    plot_scene_supplied = FALSE,
+    filename_supplied = FALSE,
+    preview = FALSE
+  ))
+})
+
 test_that("render_animation respects denoise = FALSE", {
   skip_on_cran()
   skip_if_not(has_denoiser())

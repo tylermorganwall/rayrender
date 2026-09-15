@@ -25,6 +25,9 @@ post_process_scene = function(
   screen_line_overlay = NULL,
   exposure_adjustment = 1
 ) {
+  if (isTRUE(attr(rgb_mat, "render_cancelled"))) {
+    plot_scene = FALSE
+  }
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
       tolower(debug_channel),
@@ -53,6 +56,9 @@ post_process_scene = function(
   } else {
     light_direction = debug_channel
     debug_channel = 9
+  }
+  if (transparent_background && isTRUE(rgb_mat$premultiplied)) {
+    rgb_mat = straight_volume_rgb(rgb_mat)
   }
   if (!transparent_background) {
     full_array = array(0, c(ncol(rgb_mat$r), nrow(rgb_mat$r), 3))
@@ -166,6 +172,10 @@ post_process_scene = function(
     }
     return(invisible(full_array_ret))
   }
+  coverage = if (transparent_background) full_array[,, 4] else NULL
+  if (transparent_background) {
+    full_array = full_array[,, 1:3, drop = FALSE]
+  }
   if (debug_channel == 0) {
     if (!is.matrix(bloom)) {
       if (is.numeric(bloom) && length(bloom) == 1) {
@@ -230,6 +240,9 @@ post_process_scene = function(
     ) |>
     rayimage::render_tonemap(method = tonemap)
 
+  if (transparent_background) {
+    full_array[,, 4] = coverage
+  }
   if (any(is.na(full_array))) {
     full_array[is.na(full_array)] = 0
   }
@@ -278,6 +291,9 @@ post_process_scene = function(
       camera_info,
       screen_text_visible
     )
+  }
+  if (!is.null(attr(rgb_mat, "volume_statistics"))) {
+    attr(full_array, "volume_statistics") = attr(rgb_mat, "volume_statistics")
   }
   if (is.na(filename)) {
     if (plot_scene) {

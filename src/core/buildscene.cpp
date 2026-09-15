@@ -24,6 +24,7 @@
 #include "../materials/texturecache.h"
 #include "../utils/raylog.h"
 #include "../core/bvh.h"
+#include "../volumes/boundary.h"
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
@@ -437,6 +438,9 @@ std::shared_ptr<hitable> build_scene(List& scene,
     /// Load material for shape
     NumericVector tricolorinfo = as<NumericVector>(as<List>(SingleShape["tricolorinfo"])(0));
     bool isvolume = as<bool>(SingleMaterial["fog"]);
+    auto volume_scene = imp_sample_objects.volume_scene;
+    bool has_medium = SingleShape.containsElementNamed("medium") && !Rf_isNull(SingleShape["medium"]);
+    if(has_medium && !volume_scene) Rcpp::stop("Medium descriptions require integrator_type = \"nee\".");
     Float fog_density = as<Float>(SingleMaterial["fogdensity"]);
     Float importance_sample = as<bool>(SingleMaterial["implicit_sample"]);
     
@@ -546,18 +550,65 @@ std::shared_ptr<hitable> build_scene(List& scene,
     
     // New code
     std::shared_ptr<hitable> entry;
+    const size_t lights_before_shape = imp_sample_objects.objects.size();
+    auto finish_entry = [&](std::shared_ptr<hitable> object) {
+      bool register_boundary = false;
+      if(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))
+        imp_sample_objects.objects.resize(lights_before_shape);
+      if(volume_scene) {
+        bool bare_glass = !has_medium && !isvolume && shape_material->is_dielectric();
+        bool supported = (has_medium || isvolume || bare_glass) &&
+          ValidateMediumBoundary(object.get(), has_medium || isvolume);
+        if(supported) {
+          if((has_medium || isvolume) && has_alpha)
+            Rcpp::stop("Medium boundaries cannot have alpha cutouts.");
+          ValidateMediumTransform(*ObjToWorld);
+          if(is_animated) { ValidateMediumTransform(*StartAnim); ValidateMediumTransform(*EndAnim); }
+          std::shared_ptr<const Medium> medium;
+          bool keep_surface = true;
+          if(has_medium) {
+            medium = volume_scene->GetMedium(as<List>(SingleShape["medium"]));
+            keep_surface = as<bool>(SingleShape["medium_keep_surface"]);
+          } else if(isvolume) {
+            NumericMatrix legacy_transform(4,4);
+            const auto& inv = ObjToWorld->GetInverseMatrix();
+            for(int row=0; row<4; ++row) for(int col=0; col<4; ++col) legacy_transform(row,col)=inv.m[row][col];
+            List desc = List::create(_["sigma_a"]=NumericVector::create(0,0,0),
+              _["sigma_s"]=NumericVector::create(fog_density,fog_density,fog_density),
+              _["density_scale"]=1, _["g"]=0, _["emission"]=NumericVector::create(0,0,0),
+              _["temperature"]=R_NilValue, _["emission_scale"]=1,
+              _["temperature_scale"]=1, _["temperature_offset"]=0,
+              _["medium_transform"]=legacy_transform);
+            if(!std::isfinite(fog_density) || fog_density < 0) Rcpp::stop("Fog density must be finite and nonnegative.");
+            auto legacy = std::make_shared<Medium>(desc);
+            if(shape_type == BOX && as<Float>(SingleMaterial["noise"]) != 0)
+              legacy->legacy_albedo = std::make_shared<noise_texture>(as<Float>(SingleMaterial["noise"]),
+                point3f(fog_color[0],fog_color[1],fog_color[2]), point3f(noise_color[0],noise_color[1],noise_color[2]),
+                as<Float>(SingleMaterial["noisephase"]), as<Float>(SingleMaterial["noiseintensity"]));
+            else legacy->legacy_albedo = std::make_shared<constant_texture>(point3f(fog_color[0],fog_color[1],fog_color[2]));
+            medium = legacy; keep_surface = false;
+          }
+          object = std::make_shared<MediumBoundary>(object,medium,*ObjToWorld,keep_surface,
+                                                    volume_scene->NextBoundaryId());
+          volume_scene->has_media |= bool(medium);
+          volume_scene->has_emission |= medium && medium->IsEmissive();
+          register_boundary = true;
+        }
+      }
+      if(is_animated) object = std::make_shared<AnimatedHitable>(object, Animate);
+      if(register_boundary) volume_scene->boundaries.add(object);
+      return object;
+    };
     switch(shape_type) {
       case SPHERE: {
         Float radius = as<Float>(shape_properties["radius"]);
         entry = std::make_shared<sphere>(radius, shape_material, alpha[mat_idx], bump[mat_idx],
                                          ObjToWorld, WorldToObj, is_flipped);
-        if(isvolume) {
+        if(isvolume && !volume_scene) {
           entry = std::make_shared<constant_medium>(entry, fog_density, 
                                                     std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
         }
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -567,9 +618,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           -widths(1)/2, widths(1)/2,
                                           0, shape_material, alpha[mat_idx], bump[mat_idx], 
                                           ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -579,9 +628,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           -widths(1)/2, widths(1)/2,
                                           0, shape_material, alpha[mat_idx], bump[mat_idx], 
                                           ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -591,9 +638,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           -widths(1)/2, widths(1)/2,
                                           0, shape_material, alpha[mat_idx], bump[mat_idx], 
                                           ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -605,7 +650,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                        shape_material, alpha[mat_idx], bump[mat_idx],
                                        ObjToWorld,WorldToObj, is_flipped);
         
-        if(isvolume) {
+        if(isvolume && !volume_scene) {
           Float noise = as<Float>(SingleMaterial["noise"]);
           bool isnoise = noise != 0;
           if(!isnoise) {
@@ -622,9 +667,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                                                                       noisephase, noiseintensity));
           }
         } 
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -662,13 +705,11 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           imp_sample_objects,
                                           shutteropen, shutterclose, bvh_type, rng, verbose,
                                           ObjToWorld,WorldToObj, is_flipped);
-        if(isvolume) {
+        if(isvolume && !volume_scene) {
           entry = std::make_shared<constant_medium>(entry, fog_density, 
                                                     std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
         }
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -678,9 +719,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
         
         entry = std::make_shared<disk>(vec3f(0,0,0), radius, inner_radius, shape_material, alpha[mat_idx], bump[mat_idx],
                                        ObjToWorld, WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -697,9 +736,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                            phi_min, phi_max, has_cap_option,
                                            shape_material, alpha[mat_idx], bump[mat_idx],
                                            ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -711,13 +748,11 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                             vec3f(a,b,c),
                                             shape_material, alpha[mat_idx], bump[mat_idx],
                                             ObjToWorld,WorldToObj, is_flipped);
-        if(isvolume) {
+        if(isvolume && !volume_scene) {
           entry = std::make_shared<constant_medium>(entry, fog_density, 
                                                     std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
         }
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -747,9 +782,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
         std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, n);
         entry = std::make_shared<curve>(u_min, u_max, curve_data, shape_material,
                                         ObjToWorld, WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         
         list.add(entry);
         break;
@@ -759,9 +792,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
         std::shared_ptr<ImplicitShape> shapes = parse_csg(csg_object);
         entry = std::make_shared<csg>(shape_material, shapes,
                                       ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -781,15 +812,13 @@ std::shared_ptr<hitable> build_scene(List& scene,
         if(entry == nullptr) {
           continue;
         }
-        if(isvolume) {
+        if(isvolume && !volume_scene) {
           entry = std::make_shared<constant_medium>(entry, fog_density, 
                                                     std::make_shared<constant_texture>(point3f(fog_color(0),
                                                                                                fog_color(1),
                                                                                                fog_color(2))));
         }
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -808,9 +837,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                          verbose,
                                          shutteropen, shutterclose, bvh_type, rng,
                                          ObjToWorld,WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -844,9 +871,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           verbose, 
                                           shutteropen, shutterclose, bvh_type, rng, 
                                           ObjToWorld, WorldToObj, is_flipped);
-        if(is_animated) {
-          entry = std::make_shared<AnimatedHitable>(entry, Animate);
-        }
+        entry = finish_entry(entry);
         list.add(entry);
         break;
       }
@@ -863,6 +888,11 @@ std::shared_ptr<hitable> build_scene(List& scene,
         NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
         IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
         auto instance_importance_sample_list = std::make_shared<hitable_list>();
+        if(volume_scene) {
+          instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
+          instance_importance_sample_list->volume_scene->medium_cache = volume_scene->medium_cache;
+          volume_scene->children.push_back(instance_importance_sample_list->volume_scene);
+        }
         std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
                                                               shape_vec,
                                                               shutteropen,
@@ -883,6 +913,11 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                                               false,
                                                               rng);
         instanced_objects.push_back(instance_scene);
+        auto child_volumes = instance_importance_sample_list->volume_scene;
+        if(volume_scene && child_volumes) {
+          volume_scene->has_media |= child_volumes->has_media;
+          volume_scene->has_emission |= child_volumes->has_emission;
+        }
         bool any_importance_sampled = instance_importance_sample_list->size() > 0;
         if(any_importance_sampled) {
           instance_importance_sampled.push_back(instance_importance_sample_list);
@@ -898,10 +933,22 @@ std::shared_ptr<hitable> build_scene(List& scene,
             Scale(scale_x(ii), scale_y(ii), scale_z(ii));
           Transform* ObjToWorldInst = transformCache.Lookup(InstanceTransform);
           Transform* WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
-          list.add(std::make_shared<instance>(instance_scene.get(),
-                                              ObjToWorldInst, 
-                                              WorldToObjInst,
-                                              instance_importance_sample_list.get()));
+          const uint64_t boundary_offset = volume_scene
+            ? volume_scene->ReserveBoundaryIds(child_volumes->BoundaryCount()) : 0;
+          auto world_instance=std::make_shared<instance>(instance_scene.get(),ObjToWorldInst,
+              WorldToObjInst,instance_importance_sample_list.get(),boundary_offset);
+          std::shared_ptr<hitable> placed=world_instance;
+          if(is_animated) placed=std::make_shared<AnimatedHitable>(placed,Animate);
+          list.add(placed);
+          if(volume_scene && child_volumes->boundary_bvh) {
+            ValidateMediumTransform(*ObjToWorldInst);
+            if(is_animated) { ValidateMediumTransform(*StartAnim); ValidateMediumTransform(*EndAnim); }
+            auto boundary_instance = std::make_shared<instance>(child_volumes->boundary_bvh.get(),
+              ObjToWorldInst, WorldToObjInst, instance_importance_sample_list.get(), boundary_offset);
+            std::shared_ptr<hitable> boundary_placement=boundary_instance;
+            if(is_animated) boundary_placement=std::make_shared<AnimatedHitable>(boundary_placement,Animate);
+            volume_scene->boundaries.add(boundary_placement);
+          }
           if(any_importance_sampled) {
             imp_sample_objects.add(list.back());
           }
@@ -909,7 +956,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
         break;
       }
     }
-    if(importance_sample && shape_type != INSTANCE) {
+    if(importance_sample && shape_type != INSTANCE && !(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))) {
       imp_sample_objects.add(entry);
     }
   }
@@ -921,6 +968,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
 #endif
   // auto nodeleaf = world_bvh->CountNodeLeaf();
   // Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
+  if(imp_sample_objects.volume_scene) imp_sample_objects.volume_scene->Finish(shutteropen,shutterclose);
   return(world_bvh);
 }
 

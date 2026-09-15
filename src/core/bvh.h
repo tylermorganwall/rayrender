@@ -1,11 +1,12 @@
 #ifndef BVHH
 #define BVHH
+#include "../hitables/hitable.h"
+#include "../math/aabb.h"
+#include "../math/simd.h"
+#include "../utils/assert.h"
+#include <atomic>
 #include <memory>
 #include <span>
-#include "../utils/assert.h"
-#include "../hitables/hitable.h"
-#include "../math/simd.h"
-#include "../math/aabb.h"
 
 struct BVHPrimitive {
     BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};
@@ -99,13 +100,23 @@ struct LinearBVHNode {
     uint8_t axis;          // interior node: xyz
 };
 
-struct alignas(64) LinearBVHNode4 { // 13 bytes to spare if needed using uint8, 4 if using int
-    IVec4 childOffsets;  // For interior nodes
-    BBox4 bbox4;          // Packed bounding boxes of child nodes
-    int nPrimitives;  // 0 for interior nodes
-    int nChildren;    // Number of children (up to 4)
-    int primitivesOffset; // For leaf nodes
+// Only interior nodes carry four child bounds. Nonnegative child references
+// index this array; -1 is unused, and -2 - leafIndex refers to a compact leaf.
+struct alignas(64) LinearBVHNode4 {
+    IVec4 childOffsets;
+    BBox4 bbox4;
+    int nChildren;
 };
+
+// The parent already tested the leaf's bounds, so a leaf needs only its range
+// in the existing ordered primitive array. Keep full counts for coincident
+// primitives, whose leaves can exceed the requested maximum leaf size.
+struct LinearBVHLeaf4 {
+    int primitivesOffset;
+    int nPrimitives;
+};
+
+static_assert(sizeof(LinearBVHLeaf4) == 8, "BVH4 leaves should occupy eight bytes");
 
 class BVHAggregate : public hitable {
 public:
@@ -131,6 +142,11 @@ public:
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+    OpaqueShadowType ShadowType() const { return shadow_type; }
+    bool OpaqueHit(const Ray&, Float, Float, random_gen&) const;
+    // Mesh construction releases its temporary list; light sampling borrows
+    // these same owned primitives instead of retaining a duplicate mesh list.
+    std::span<const std::shared_ptr<hitable>> Primitives() const { return primitives; }
 
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     
@@ -162,11 +178,15 @@ public:
     int n_nodes;
     // std::pair<size_t,size_t> CountNodeLeaf();
 private:
+    void classifyOpaqueShadow();
+    OpaqueShadowType shadow_type = OpaqueShadowType::Opaque;
     BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
                                 std::atomic<int> *totalNodes,
                                 std::atomic<int> *orderedPrimsOffset,
                                 std::vector<std::shared_ptr<hitable> > &orderedPrims);
-    BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4);
+    BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4,
+                                   int* totalLeaves4);
+    void buildBVH4(BVHBuildNode* root);
 //    BVHBuildNode *buildHLBVH(Allocator alloc,
 //                             const std::vector<BVHPrimitive> &primitiveInfo,
 //                             std::atomic<int> *totalNodes,
@@ -180,15 +200,18 @@ private:
 //                                std::vector<BVHBuildNode *> &treeletRoots, int start,
 //                                int end, std::atomic<int> *totalNodes) const;
     int flattenBVH(BVHBuildNode *node, int *offset);
-    int flattenBVH4(BVHBuildNode4* node, int* offset);
+    int flattenBVH4(BVHBuildNode4* node, int* offset, int* leafOffset);
     void validateBVH4() const;
 
     int maxPrimsInNode;
-    int totalNodes4;
+    int totalNodes4 = 0;
+    int totalLeaves4 = 0;
+    int root4 = -1;
     std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
        std::unique_ptr<LinearBVHNode[]> nodes;
        std::unique_ptr<LinearBVHNode4[]> nodes4;
+       std::unique_ptr<LinearBVHLeaf4[]> leaves4;
     //    int totalNodes;
 
 };

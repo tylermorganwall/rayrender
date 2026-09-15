@@ -40,14 +40,10 @@ inline bool hit_aabb_branchless(const aabb &box, const Ray &r, Float tmin,
   const Float tzFar =
       (box.bounds[1 - sz].e[2] - r.o.e[2]) * r.inv_dir_pad.e[2];
 
-  tmin = std::fmax(tmin, txNear);
-  tmax = std::fmin(tmax, txFar);
-
-  tmin = std::fmax(tmin, tyNear);
-  tmax = std::fmin(tmax, tyFar);
-
-  tmin = std::fmax(tmin, tzNear);
-  tmax = std::fmin(tmax, tzFar);
+  const Float near = std::fmax(std::fmax(txNear, tyNear), tzNear);
+  const Float far = std::fmin(std::fmin(txFar, tyFar), tzFar);
+  tmin = std::fmax(tmin, bounds_entry_lower(near));
+  tmax = std::fmin(tmax, bounds_exit_upper(far));
 
   return tmin <= tmax;
 }

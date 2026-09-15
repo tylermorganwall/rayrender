@@ -37,6 +37,13 @@ public:
   Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+
+  OpaqueShadowType ShadowType() const {
+    return tri_mesh_bvh->ShadowType();
+  }
+  bool OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    return tri_mesh_bvh->OpaqueHit(r, t_min, t_max, rng);
+  }
   
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual std::string GetName() const {

@@ -1,3 +1,4 @@
+#include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
 #endif
@@ -16,6 +17,8 @@
 #include "math/sampler.h"
 #include "core/color.h"
 #include "core/integrator.h"
+#include "core/oidn_aux.h"
+#include "core/oidn_denoiser.h"
 #include "utils/debug.h"
 
 #include "materials/texturecache.h"
@@ -24,6 +27,7 @@
 #include "core/PreviewDisplay.h"
 #include "utils/raylog.h"
 #include <cfenv>
+#include <array>
 
 // #define DEBUG
 
@@ -788,9 +792,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool progress_bar = as<bool>(render_info["progress_bar"]);
   int numbercores = as<int>(render_info["numbercores"]);
   bool hasbackground = as<bool>(render_info["hasbackground"]);
-  std::string background = as<std::string>(render_info["background"]);
   Float rotate_env = as<Float>(render_info["rotate_env"]);
-  Float intensity_env = as<Float>(render_info["intensity_env"]);
   bool verbose = as<bool>(render_info["verbose"]);
   int debug_channel = as<int>(render_info["debug_channel"]);
   Float min_variance = as<Float>(render_info["min_variance"]);
@@ -816,6 +818,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   NumericVector camera_up = as<NumericVector>(camera_info["camera_up"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
+  Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
+    as<Float>(camera_info["shutter_speed"]) :
+    static_cast<Float>(2);
   Float focus_distance = as<Float>(camera_info["focal_distance"]);
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
   std::size_t max_depth = as<std::size_t>(camera_info["max_depth"]);
@@ -836,6 +841,23 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   bool interactive = as<bool>(camera_info["interactive"]);
   bool deferred_render = as<bool>(camera_info["deferred_render"]);
   bool auto_exposure = as<bool>(camera_info["auto_exposure"]);
+  bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
+    as<bool>(camera_info["camera_motion_blur"]) :
+    false;
+  List keyframe_motion_args = camera_info.containsElementNamed("keyframe_motion_args") ?
+    as<List>(camera_info["keyframe_motion_args"]) :
+    List::create(_["type"] = "spline",
+                 _["smooth_orientation"] = true,
+                 _["damp_motion"] = true);
+  std::string snapshot_filename;
+  if(camera_info.containsElementNamed("snapshot_filename")) {
+    CharacterVector snapshot_filename_value =
+      as<CharacterVector>(camera_info["snapshot_filename"]);
+    if(snapshot_filename_value.size() > 0 &&
+       !CharacterVector::is_na(snapshot_filename_value[0])) {
+      snapshot_filename = as<std::string>(snapshot_filename_value[0]);
+    }
+  }
   Float iso = as<Float>(camera_info["iso"]);
   int bvh_type = as<int>(camera_info["bvh"]);
 
@@ -855,25 +877,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   RayMatrix albedoOutput(nx,ny, 3);
 
 #ifdef HAS_OIDN
-  // Create an Open Image Denoise device
-  oidn::DeviceRef device = oidn::newDevice(); // CPU or GPU if available
-  // oidn::DeviceRef device = oidn::newDevice(oidn::DeviceType::CPU);
-  device.commit();
-  // Create buffers for input/output images accessible by both host (CPU) and device (CPU/GPU)
-  oidn::BufferRef colorBuf  = device.newBuffer(rgb_output.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef albedoBuf = device.newBuffer(albedoOutput.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef normalBuf = device.newBuffer(normalOutput.begin(), nx * ny * 3 * sizeof(Float));
-  oidn::BufferRef colorBuf2 = device.newBuffer(draw_rgb_output.begin(), nx * ny * 3 * sizeof(Float));
+  RayMatrix oidn_normal_output(nx, ny, 3);
+  RayMatrix oidn_albedo_output(nx, ny, 3);
+  RayOidnDenoiser oidn_denoiser;
 
-  // Create a filter for denoising a beauty (color) image using optional auxiliary images too
-  // This can be an expensive operation, so try no to create a new filter for every image!
-  oidn::FilterRef filter = device.newFilter("RT"); // generic ray tracing filter
-  filter.setImage("color",  colorBuf,  oidn::Format::Float3, nx, ny); // beauty
-  filter.setImage("albedo", albedoBuf, oidn::Format::Float3, nx, ny); // auxiliary
-  filter.setImage("normal", normalBuf, oidn::Format::Float3, nx, ny); // auxiliary
-  filter.setImage("output", colorBuf2,  oidn::Format::Float3, nx, ny); // denoised beauty
-  filter.set("hdr", true); // beauty image is HDR
-  filter.commit();
 #endif
   
   point3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
@@ -928,10 +935,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                      aperture, dist_to_focus,
                                      shutteropen, shutterclose, iso));
   }
+  cam->set_camera_motion_blur(camera_motion_blur);
+  cam->set_shutter_speed(shutter_speed);
   print_time(verbose, "Generated Camera" );
 
 
-  int nx1, ny1, nn1;
 
   std::vector<Float* > textures;
   std::vector<unsigned char * > alpha_textures;
@@ -943,6 +951,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   
   hitable_list imp_sample_objects;
+  if(integrator_type == IntegratorType::ShadowRays) {
+    imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
+  }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
   std::vector<std::shared_ptr<hitable_list> > instance_importance_sampled;
   std::vector<std::shared_ptr<alpha_texture> > alpha;
@@ -952,8 +964,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
-                                                   shutteropen,
-                                                   shutterclose,
+                                                   static_cast<Float>(0),
+                                                   static_cast<Float>(1),
                                                    textures, 
                                                    alpha_textures,
                                                    bump_textures,
@@ -969,9 +981,27 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    texture_idx,
                                                    verbose, 
                                                    rng);
+  bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
+                        Rcpp::as<bool>(render_info["has_atmosphere"]);
+  if (has_atmosphere && imp_sample_objects.volume_scene)
+    imp_sample_objects.volume_scene->has_media = true;
+#ifdef HAS_OIDN
+  bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
+  if(denoise) {
+    oidn_denoiser.Setup(rgb_output,
+                        oidn_albedo_output,
+                        oidn_normal_output,
+                        draw_rgb_output,
+                        nx,
+                        ny,
+                        RayOidnQuality::Balanced,
+                        false,
+                        false, !has_media);
+  }
+#endif
   print_time(verbose, "Built Scene BVH" );
   if(print_debug_info) {
-    worldbvh->hitable_info_bounds(shutteropen,shutterclose);
+    worldbvh->hitable_info_bounds(static_cast<Float>(0), static_cast<Float>(1));
   }
   //Calculate world bounds and ensure camera is inside infinite area light
   aabb bounding_box_world;
@@ -990,7 +1020,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::shared_ptr<texture> background_texture = nullptr;
   std::shared_ptr<material> background_material = nullptr;
   std::shared_ptr<hitable> background_sphere = nullptr;
-  Float *background_texture_data = nullptr;
 
   //Background rotation
   Matrix4x4 Identity;
@@ -1004,52 +1033,13 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   Transform* BackgroundTransform = transformCacheBg.Lookup(BackgroundAngle);
   Transform* BackgroundTransformInv = transformCacheBg.Lookup(BackgroundAngle.GetInverseMatrix());
   if(hasbackground) {
-    background_texture_data = texCache.LookupFloat(background, nx1, ny1, nn1, 3);
-    // nn1 = 3;
-    // texture_bytes += nx1 * ny1 * nn1;
-    
-    if(background_texture_data) {
-      bool has_env_light = false;
-      const std::size_t env_size = static_cast<std::size_t>(nx1) *
-        static_cast<std::size_t>(ny1) *
-        static_cast<std::size_t>(nn1);
-      for(std::size_t i = 0; i < env_size; i++) {
-        if(background_texture_data[i] > 0) {
-          has_env_light = true;
-          break;
-        }
-      }
-      if(has_env_light) {
-        background_texture = std::make_shared<image_texture_float>(background_texture_data, nx1, ny1, nn1,
-                                                                   1, 1, intensity_env);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(nx1, ny1, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,
-                                                                BackgroundTransformInv, false);
-      } else {
-        hasbackground = false;
-        ambient_light = true;
-        backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-        background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-        background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-        background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                                background_texture, background_material,
-                                                                BackgroundTransform,BackgroundTransformInv,false);
-      }
-    } else {
-      Rcpp::Rcout << "Failed to load background image at " << background << "\n";
-      hasbackground = false;
-      ambient_light = true;
-      backgroundhigh = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      backgroundlow = point3f(FLT_MIN,FLT_MIN,FLT_MIN);
-      background_texture = std::make_shared<gradient_texture>(backgroundlow, backgroundhigh, false, false);
-      background_material = std::make_shared<diffuse_light>(background_texture, 1.0, false);
-      background_sphere = std::make_shared<InfiniteAreaLight>(100, 100, world_radius*2, convert_to_point3(world_center),
-                                                              background_texture, background_material,
-                                                              BackgroundTransform,BackgroundTransformInv,false);
-    }
+    auto infinite_lights = BuildInfiniteLights(
+        Rcpp::as<Rcpp::List>(render_info["infinite_lights"]), texCache);
+    if (imp_sample_objects.volume_scene)
+      imp_sample_objects.volume_scene->atmosphere = infinite_lights->GetTransportAtmosphere();
+    background_sphere = std::make_shared<InfiniteAreaLight>(
+        infinite_lights, world_radius * 2, convert_to_point3(world_center),
+        BackgroundTransform, BackgroundTransformInv);
   } else if(ambient_light) {
     //Check if both high and low are black, and set to FLT_MIN
     if(backgroundhigh.length() == 0 && backgroundlow.length() == 0) {
@@ -1077,7 +1067,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   bool impl_only_bg = false;
   world.add(background_sphere);
-  if((imp_sample_objects.size() == 0 || hasbackground || ambient_light || interactive) && debug_channel != 18) {
+  if(((imp_sample_objects.size() == 0 && !(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_emission)) || hasbackground || ambient_light || interactive) && debug_channel != 18) {
     impl_only_bg = true;
   }
   LogicalVector screen_text_visible = compute_screen_text_visibility(
@@ -1102,7 +1092,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
-                         filter, denoise, auto_exposure);
+                         &oidn_denoiser,
+                         &oidn_albedo_output,
+                         &oidn_normal_output,
+                         denoise, auto_exposure);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
@@ -1110,6 +1103,39 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
+  // Keep complete, immutable light variants for interactive atmosphere changes.
+  // Rebuilding the mixture also updates altitude-dependent sampling weights and
+  // celestial filtering. Coefficients and image textures use their existing caches.
+  if(interactive && has_atmosphere && hasbackground) {
+    auto environment_light = std::static_pointer_cast<InfiniteAreaLight>(background_sphere);
+    Rcpp::List descriptions = Rcpp::as<Rcpp::List>(render_info["infinite_lights"]);
+    for(R_xlen_t i = 0; i < descriptions.size(); ++i) {
+      Rcpp::List description = descriptions[i];
+      if(Rcpp::as<std::string>(description["type"]) != "prague") continue;
+      const bool haze = !description.containsElementNamed("haze") || Rcpp::as<bool>(description["haze"]);
+      const bool query_altitude = !description.containsElementNamed("query_altitude") ||
+                                  Rcpp::as<bool>(description["query_altitude"]);
+      auto variants = std::make_shared<std::array<std::shared_ptr<InfiniteLight>, 4>>();
+      (*variants)[2 * query_altitude + haze] = environment_light->light;
+      auto volume_scene = imp_sample_objects.volume_scene;
+      Display.SetAtmosphereControls(haze, query_altitude,
+        [descriptions, i, variants, environment_light, volume_scene, &texCache](bool haze, bool altitude) {
+          auto &light = (*variants)[2 * altitude + haze];
+          if(!light) {
+            Rcpp::List updated = Rcpp::clone(descriptions);
+            Rcpp::List atmosphere = updated[i];
+            atmosphere["haze"] = haze;
+            atmosphere["query_altitude"] = altitude;
+            light = BuildInfiniteLights(updated, texCache);
+          }
+          environment_light->SetLight(light);
+          volume_scene->atmosphere = light->GetTransportAtmosphere();
+        });
+      break;
+    }
+  }
+  Display.SetSnapshotFilename(snapshot_filename);
+  Display.SetKeyframeMotionArgs(keyframe_motion_args);
   Display.SetTextOverlays(text_overlays);
   Display.SetLineOverlays(line_overlays);
   
@@ -1144,12 +1170,39 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
-  if(denoise) {
-    filter.execute();
-    const char* errorMessage;
-    if (device.getError(errorMessage) != oidn::Error::None) {
-      Rcpp::Rcout << "Error: " << errorMessage << std::endl;
-    }
+  Display.PollCloseEvent();
+  bool denoise_output = denoise && !Display.terminate;
+  bool use_cached_denoised_preview = denoise &&
+    Display.terminate &&
+    Display.HasDenoisedPreview();
+  if(denoise_output) {
+    OidnAuxRenderOptions oidn_aux_options;
+    oidn_aux_options.samples = static_cast<std::size_t>(std::max(ns, 1));
+    oidn_aux_options.max_depth = max_depth;
+    oidn_aux_options.max_dielectric_splits = 1;
+    oidn_aux_options.sample_method = sample_method;
+    oidn_aux_options.stratified_x = stratified_x;
+    oidn_aux_options.stratified_y = stratified_y;
+    if(!has_media) render_oidn_aux_features(numbercores,
+                             nx,
+                             ny,
+                             cam.get(),
+                             fov,
+                             &world,
+                             oidn_aux_options,
+                             oidn_normal_output,
+                             oidn_albedo_output);
+    oidn_denoiser.Setup(rgb_output,
+                        oidn_albedo_output,
+                        oidn_normal_output,
+                        draw_rgb_output,
+                        nx,
+                        ny,
+                        RayOidnQuality::High,
+                        true,
+                        true, !has_media);
+    oidn_denoiser.Execute();
+    oidn_denoiser.ReportError();
   }
 #endif
   delete shared_materials;
@@ -1157,7 +1210,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   print_time(verbose, "Finished rendering" );
   RayMatrix final_output = rgb_output;
 #ifdef HAS_OIDN
-  if(denoise) {
+  if(denoise_output || use_cached_denoised_preview) {
     final_output = draw_rgb_output;
   }
 #endif
@@ -1176,7 +1229,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                   _["cy"] = albedoOutput.ConvertRcpp(1), 
                                   _["cz"] = albedoOutput.ConvertRcpp(2),
 
-                                  _["a"] = alpha_output.ConvertRcpp());
+                                  _["a"] = alpha_output.ConvertRcpp(),
+                                  _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
+  if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
+    final_image.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());
     for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {
@@ -1184,6 +1240,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
+  final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
   final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
   if(screen_text_visible.size() > 0) {

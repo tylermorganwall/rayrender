@@ -8,6 +8,7 @@
 #include "../math/onbh.h"
 #include "../math/vec3.h"
 #include "../materials/material.h"
+#include "../lights/infinite.h"
 
 class InfiniteAreaLight: public hitable {
 public:
@@ -18,10 +19,15 @@ public:
   InfiniteAreaLight(int width, int height, Float r, point3f center, 
                     std::shared_ptr<texture> image,  std::shared_ptr<material> mat,
                     Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
+  InfiniteAreaLight(std::shared_ptr<InfiniteLight> light, Float radius, point3f center,
+                    Transform* ObjectToWorld, Transform* WorldToObject);
+  void SetLight(std::shared_ptr<InfiniteLight> source);
   virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
   virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
   virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+
+  OpaqueShadowType ShadowType() const { return OpaqueShadowType::Light; }
 
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
@@ -41,7 +47,8 @@ public:
   int width, height;
   Float radius;
   point3f center;
-  Distribution2D *distribution;
+  Distribution2D *distribution = nullptr;
+  std::shared_ptr<InfiniteLight> light;
 };
 
 

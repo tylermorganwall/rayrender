@@ -155,6 +155,28 @@ inline std::ostream& operator<<(std::ostream &os, const aabb &t) {
   return os;
 }
 
+// The reciprocal cached by Ray is padded away from zero by two ULPs. That
+// helps positive exit distances, but also moves positive entry distances
+// inward. BVH traversal needs a lower bound on entry, including when it uses
+// that distance to decide whether a closer primitive can still be found.
+// Division, subtraction and multiplication cost up to three rounding units;
+// the reciprocal padding adds up to four more. This allowance also covers the
+// final outward multiplication. Apply it before clipping to the ray interval.
+template <typename T> inline constexpr T bounds_roundoff() {
+  constexpr T epsilon = std::numeric_limits<T>::epsilon();
+  return (4 * epsilon) / (1 - 2 * epsilon); // 2 * gamma(4)
+}
+
+inline Float bounds_entry_lower(Float t) {
+  constexpr Float error = bounds_roundoff<Float>();
+  return t * (t >= 0 ? 1 - error : 1 + error);
+}
+
+inline Float bounds_exit_upper(Float t) {
+  constexpr Float error = bounds_roundoff<Float>();
+  return t * (t >= 0 ? 1 + error : 1 - error);
+}
+
 #ifdef RAYSIMD
 struct RayBBox4 {
     FVec4 origin4[3];
@@ -217,15 +239,19 @@ inline void rayBBoxIntersect4(const RayBBox4& rbox,
     const FVec4 tMin4 = simd_set1(static_cast<float>(tMin));
     const FVec4 tMax4 = simd_set1(static_cast<float>(tMax));
 
-    tEnters = simd_max_num(
-        simd_max_num(simd_max_num(txNear, tyNear), tzNear),
-        tMin4
-    );
+    const FVec4 near = simd_max_num(simd_max_num(txNear, tyNear), tzNear);
+    const FVec4 far = simd_min_num(simd_min_num(txFar, tyFar), tzFar);
 
-    const FVec4 tExits = simd_min_num(
-        simd_min_num(simd_min_num(txFar, tyFar), tzFar),
-        tMax4
-    );
+    // Multiplying by a positive factor preserves infinities from parallel
+    // rays; subtracting an absolute error would turn infinity - infinity into
+    // NaN. These bounds must also expand correctly for negative distances.
+    const FVec4 shrink = simd_set1(1 - bounds_roundoff<float>());
+    const FVec4 grow = simd_set1(1 + bounds_roundoff<float>());
+    const FVec4 zero = simd_set1(0.f);
+    const FVec4 nearScale = simd_blend(simd_cmpge(near, zero), shrink, grow);
+    const FVec4 farScale = simd_blend(simd_cmpge(far, zero), grow, shrink);
+    tEnters = simd_max_num(simd_mul(near, nearScale), tMin4);
+    const FVec4 tExits = simd_min_num(simd_mul(far, farScale), tMax4);
 
     hits = simd_cast_to_int(simd_less_equal(tEnters, tExits));
 }

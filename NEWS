@@ -1,5 +1,7 @@
 ## rayrender 0.41.0
 
+- Added `camera(shutter_speed = ...)` and a `render_scene(shutter_speed = ...)` override for frame-relative motion-blur sampling. The default `2` samples half of the normalized frame-to-frame interval, `1` samples the full interval, higher values produce less blur, and `Inf` disables temporal motion blur. This control does not affect exposure or brightness.
+
 - Added screen-space annotations with `screen_text()` and `screen_line()`, usable through new `render_scene(screen_text = ..., screen_line = ...)` arguments. Annotations are anchored to 3D world points, projected through the active camera, and support list/vector inputs, clipping, pixel offsets, text halos/backgrounds, line styles, and optional geometry-aware occlusion.
 
 - Added interactive deferred rendering via `render_scene(deferred_render = TRUE)`. When preview is enabled, the preview can remain interactive until Return starts the final render, and Return can toggle back to deferred preview mode.

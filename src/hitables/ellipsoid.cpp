@@ -1,6 +1,7 @@
 #include "../hitables/ellipsoid.h"
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
+#include "../volumes/intersections.h"
 
 const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
@@ -12,7 +13,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !VolumeSphereRoots(scaled_ray,1,temp1,temp2) : !quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   bool is_hit = true;
@@ -79,6 +80,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -121,6 +123,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -141,7 +144,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !VolumeSphereRoots(scaled_ray,1,temp1,temp2) : !quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   bool is_hit = true;
@@ -210,6 +213,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -252,6 +256,7 @@ const bool ellipsoid::hit(const Ray& r, Float t_min, Float t_max, hit_record& re
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -271,7 +276,7 @@ bool ellipsoid::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) co
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !VolumeSphereRoots(scaled_ray,1,temp1,temp2) : !quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   if(temp1 < t_max && temp1 > t_min) {
@@ -295,7 +300,7 @@ bool ellipsoid::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) c
   Float b = 2 * dot(scaled_ray.origin(), scaled_ray.direction()); 
   Float c = dot(scaled_ray.origin(),scaled_ray.origin()) - 1;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !VolumeSphereRoots(scaled_ray,1,temp1,temp2) : !quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
 

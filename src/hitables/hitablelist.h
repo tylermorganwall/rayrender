@@ -4,6 +4,7 @@
 #include "../hitables/hitable.h"
 #include "../math/sampler.h"
 #include <memory>
+class VolumeScene;
 
 class hitable_list: public hitable {
   public:
@@ -13,6 +14,8 @@ class hitable_list: public hitable {
     const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+    OpaqueShadowType ShadowType() const;
+    bool OpaqueHit(const Ray&, Float, Float, random_gen&) const;
 
     bool bounding_box(Float t0, Float t1, aabb& box) const;
     Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
@@ -35,6 +38,7 @@ class hitable_list: public hitable {
     
     size_t size() {return(objects.size());}
     std::vector<std::shared_ptr<hitable>> objects;
+    std::shared_ptr<VolumeScene> volume_scene;
     std::string GetName() const;
     size_t GetSize();
 };

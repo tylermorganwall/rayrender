@@ -1,6 +1,16 @@
 #include "../hitables/sphere.h"
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
+#include "../volumes/intersections.h"
+
+namespace {
+bool boundary_sphere_roots(const Ray& r, Float radius, EFloat& near, EFloat& far) {
+  Float t0,t1;
+  if(!VolumeSphereRoots(r,radius,t0,t1)) return false;
+  near=EFloat(t0); far=EFloat(t1);
+  return true;
+}
+}
 
 // #include "RcppThread.h"
 
@@ -25,7 +35,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   
   // Solve quadratic equation for _t_ values
   EFloat temp1, temp2;
-  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !boundary_sphere_roots(r2,radius,temp1,temp2) : !Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   bool is_hit = true;
@@ -84,6 +94,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -123,6 +134,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -150,7 +162,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
   
   // Solve quadratic equation for _t_ values
   EFloat temp1, temp2;
-  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !boundary_sphere_roots(r2,radius,temp1,temp2) : !Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   bool is_hit = true;
@@ -209,6 +221,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -248,6 +261,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -278,7 +292,7 @@ bool sphere::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const
   
   // Solve quadratic equation for _t_ values
   EFloat temp1, temp2;
-  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !boundary_sphere_roots(r2,radius,temp1,temp2) : !Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   if(temp1 < t_max && temp1 > t_min) {
@@ -311,7 +325,7 @@ bool sphere::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) cons
   
   // Solve quadratic equation for _t_ values
   EFloat temp1, temp2;
-  if (!Quadratic(a, b, c, &temp1, &temp2)) {
+  if (r.segment_absorption ? !boundary_sphere_roots(r2,radius,temp1,temp2) : !Quadratic(a, b, c, &temp1, &temp2)) {
     return(false);
   }
   if(temp1 < t_max && temp1 > t_min) {

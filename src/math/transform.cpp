@@ -410,6 +410,16 @@ vec3<T> Transform::operator()(const vec3<T> &v,
                  m.m[2][0] * x + m.m[2][1] * y + m.m[2][2] * z);
 }
 
+// These definitions live in this translation unit, but geometry calls them
+// from other files. Emit all Float error-bound overloads explicitly so their
+// availability does not depend on the compiler's inlining decisions.
+template point3<Float> Transform::operator()(const point3<Float> &, vec3<Float> *) const;
+template point3<Float> Transform::operator()(const point3<Float> &, const vec3<Float> &,
+                                             vec3<Float> *) const;
+template vec3<Float> Transform::operator()(const vec3<Float> &, vec3<Float> *) const;
+template vec3<Float> Transform::operator()(const vec3<Float> &, const vec3<Float> &,
+                                           vec3<Float> *) const;
+
 template <typename T>
 inline point3<T> Transform::ApplyInverse(point3<T> p) const {
     T x = p.xyz.x, y = p.xyz.y, z = p.xyz.z;
@@ -626,12 +636,15 @@ Ray Transform::operator()(const Ray &r) const {
   // Offset ray origin to edge of error bounds and compute _tMax_
   Float lengthSquared = d.squared_length();
   Float tMax = r.tMax;
-  if (lengthSquared > 0) {
+  if (lengthSquared > 0 && !r.segment_absorption) {
     Float dt = dot(Abs(d), oError) / lengthSquared;
     o += d * dt;
     tMax -= dt;
   }
-  return Ray(o, d, r.pri_stack, r.time(), tMax);
+  Ray transformed(o, d, r.pri_stack, r.time(), tMax);
+  transformed.segment_absorption = r.segment_absorption;
+  transformed.medium = r.medium;
+  return transformed;
 }
 
 
@@ -641,12 +654,15 @@ Ray Transform::operator()(const Ray &r) const {
   vec3f d = (*this)(r.direction(), dError);
   Float tMax = r.tMax;
   Float lengthSquared = d.squared_length();
-  if (lengthSquared > 0) {
+  if (lengthSquared > 0 && !r.segment_absorption) {
     Float dt = dot(Abs(d), *oError) / lengthSquared;
     o += d * dt;
     //        tMax -= dt;
   }
-  return Ray(o, d, r.pri_stack, r.time(), tMax);
+  Ray transformed(o, d, r.pri_stack, r.time(), tMax);
+  transformed.segment_absorption = r.segment_absorption;
+  transformed.medium = r.medium;
+  return transformed;
 }
 
  Ray Transform::operator()(const Ray &r, const vec3f &oErrorIn,
@@ -656,12 +672,15 @@ Ray Transform::operator()(const Ray &r) const {
   vec3f d = (*this)(r.direction(), dErrorIn, dErrorOut);
   Float tMax = r.tMax;
   Float lengthSquared = d.squared_length();
-  if (lengthSquared > 0) {
+  if (lengthSquared > 0 && !r.segment_absorption) {
     Float dt = dot(Abs(d), *oErrorOut) / lengthSquared;
     o += d * dt;
     //        tMax -= dt;
   }
-  return Ray(o, d, r.pri_stack, r.time(), tMax);
+  Ray transformed(o, d, r.pri_stack, r.time(), tMax);
+  transformed.segment_absorption = r.segment_absorption;
+  transformed.medium = r.medium;
+  return transformed;
 }
 
 
@@ -669,6 +688,11 @@ hit_record Transform::operator()(const hit_record &r) const {
   hit_record hr;
   hr.p = (*this)(r.p, r.pError, &hr.pError);
   hr.normal = (*this)(r.normal);
+  hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
+  hr.medium_boundary = r.medium_boundary;
+  hr.boundary_id = r.boundary_id;
+  if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
+  hr.infinite_area_hit = r.infinite_area_hit;
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
   hr.dpdv = (*this)(r.dpdv);
@@ -681,6 +705,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
   
   
@@ -694,6 +719,11 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.p = (*this)(r.p, r.pError, &hr.pError);
 
   hr.normal = (*this)(r.normal);
+  hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
+  hr.medium_boundary = r.medium_boundary;
+  hr.boundary_id = r.boundary_id;
+  if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
+  hr.infinite_area_hit = r.infinite_area_hit;
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
   hr.dpdv = (*this)(r.dpdv);
@@ -706,6 +736,7 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
   
   

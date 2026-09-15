@@ -2,9 +2,195 @@
 #include "../core/PreviewDisplay.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
+#include "../volumes/picking.h"
+#include "RcppThread.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <sstream>
+#include <stdexcept>
+
+#ifdef NOT_CRAN
+#include "../hitables/infinite_area_light.h"
+#include "../hitables/sphere.h"
+#include "../materials/material.h"
+#include <testthat.h>
+#endif
+
+static const unsigned int PREVIEW_STATUS_MIN_WIDTH = 640;
+static const unsigned int PREVIEW_STATUS_ROW_HEIGHT = 24;
+static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 2 * PREVIEW_STATUS_ROW_HEIGHT;
+static const Float PREVIEW_SHUTTER_SPEED_MIN = static_cast<Float>(1);
+static const Float PREVIEW_SHUTTER_SPEED_MAX = static_cast<Float>(4096);
+
+void PreviewDisplay::SetAtmosphereControls(bool haze, bool query_altitude,
+                                           std::function<void(bool, bool)> update) {
+  atmosphere_haze = haze;
+  atmosphere_query_altitude = query_altitude;
+  update_atmosphere = std::move(update);
+  atmosphere_changed = false;
+}
+
+bool PreviewDisplay::UpdateAtmosphere(bool haze, bool query_altitude) {
+  if(!interactive || !update_atmosphere) {
+    if(interactive) Rprintf("Atmosphere controls require a Prague sky_light().\n");
+    return false;
+  }
+  // The window processes these keys only after the rendering workers finish.
+  // Build the replacement before publishing settings or invalidating samples.
+  try {
+    update_atmosphere(haze, query_altitude);
+  } catch(const std::exception& error) {
+    Rprintf("Unable to update atmosphere: %s\n", error.what());
+    return false;
+  } catch(...) {
+    // In particular, do not let an R interrupt cross a Windows window callback.
+    terminate = true;
+    return false;
+  }
+  atmosphere_haze = haze;
+  atmosphere_query_altitude = query_altitude;
+  atmosphere_changed = true;
+  Rprintf("%s\n", AtmosphereStatusText().c_str());
+  return true;
+}
+
+bool PreviewDisplay::ToggleHaze() {
+  const bool haze = !atmosphere_haze;
+  return UpdateAtmosphere(haze, haze || atmosphere_query_altitude);
+}
+
+bool PreviewDisplay::ToggleQueryAltitude() {
+  const bool query_altitude = !atmosphere_query_altitude;
+  return UpdateAtmosphere(atmosphere_haze && query_altitude, query_altitude);
+}
+
+bool PreviewDisplay::ConsumeAtmosphereChange() {
+  const bool changed = atmosphere_changed;
+  atmosphere_changed = false;
+  return changed;
+}
+
+std::string PreviewDisplay::AtmosphereStatusText() const {
+  if(!update_atmosphere) return "";
+  return std::string("Haze ") + (atmosphere_haze ? "ON" : "OFF") +
+         " | Altitude " + (atmosphere_query_altitude ? "ON" : "OFF");
+}
+
+static point3f PreviewCameraLookat(RayCamera* cam) {
+  point3f origin = cam->get_origin(), pivot = cam->get_lookat();
+  vec3f forward = unit_vector(cam->get_w()), to_pivot = pivot - origin;
+  if(to_pivot.length() > 0 && dot(unit_vector(to_pivot), forward) > .999999f) {
+    return pivot;
+  }
+  // Free-flight translation can leave the stored orbit point off the viewing
+  // axis. Capture that view without replacing an aligned, explicitly picked pivot.
+  return origin + forward * std::max(cam->get_focal_distance(), Float(.001));
+}
+
+struct PreviewCameraState {
+  point3f origin;
+  point3f lookat;
+  vec3f up;
+  Float focal;
+};
+
+static PreviewCameraState CapturePreviewCameraState(RayCamera* cam) {
+  PreviewCameraState state;
+  state.origin = cam->get_origin();
+  state.lookat = PreviewCameraLookat(cam);
+  state.up = cam->get_up();
+  state.focal = cam->get_focal_distance();
+  return state;
+}
+
+static void ApplyPreviewCameraMotionRange(RayCamera* cam,
+                                          const PreviewCameraState& start,
+                                          const PreviewCameraState& end) {
+  cam->set_camera_motion_blur_range(start.origin,
+                                    start.lookat,
+                                    start.up,
+                                    start.focal,
+                                    end.origin,
+                                    end.lookat,
+                                    end.up,
+                                    end.focal);
+}
+
+static void ApplyStaticPreviewCameraMotionRange(RayCamera* cam) {
+  if(cam == nullptr) {
+    return;
+  }
+  PreviewCameraState state = CapturePreviewCameraState(cam);
+  ApplyPreviewCameraMotionRange(cam, state, state);
+}
+
+bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitable* world) {
+  if(!cam || !world || u < 0 || u > 1 || v < 0 || v > 1) {
+    return false;
+  }
+  Ray ray;
+  Float fov = cam->get_fov();
+  if(fov < 0) {
+    // Match GenerateRay's film convention, using the center of the lens and
+    // a fixed shutter sample rather than the current rendering sample.
+    CameraSample sample(point2f(1 - u, 1 - v), point2f(.5f, .5f), .5f);
+    if(!(cam->GenerateRay(sample, &ray) > 0)) {
+      return false;
+    }
+  } else {
+    ray = cam->get_ray(u, v, point3f(0), .5f);
+  }
+  bool cancelled = false;
+  size_t polls = 0;
+  auto cancel = [&] {
+    if(!cancelled && polls++ % 64 == 0) {
+      cancelled = PollCloseEvent() || RcppThread::isInterrupted();
+    }
+    return cancelled;
+  };
+  try {
+    auto target = PickRay(ray, world, volume_scene.get(), .15, cancel);
+    if(!target) {
+      return false;
+    }
+    if(target->background) {
+      // Orthographic rays all look in the same direction. Perspective and
+      // panoramic background clicks turn the camera while preserving focus
+      // and orbit radius, independent of the environment proxy sphere's size.
+      if(fov == 0) return false;
+      Float radius = std::max((PreviewCameraLookat(cam) - cam->get_origin()).length(),
+                              Float(.001));
+      target->p = cam->get_origin() + unit_vector(ray.direction()) * radius;
+    }
+    if((target->p - cam->get_origin()).length() <= 0) {
+      return false;
+    }
+    if(update_focus && !target->background && fov != 0 && fov != 360) {
+      cam->update_focal_distance((target->p - cam->get_origin()).length() -
+                                cam->get_focal_distance());
+    }
+    // This updates both the stored orbit point and the camera frame. Updating
+    // just the direction would snap back to the previous pivot on the next orbit.
+    cam->update_lookat(target->p);
+    ApplyStaticPreviewCameraMotionRange(cam);
+    return true;
+  } catch(const std::exception& error) {
+    Rprintf("Unable to pick preview target: %s\n", error.what());
+    return false;
+  }
+}
+
+static bool IsKeyframeSuppliedMotionArg(const std::string& name) {
+  return name == "positions" ||
+         name == "lookats" ||
+         name == "apertures" ||
+         name == "fovs" ||
+         name == "focal_distances" ||
+         name == "ortho_dims" ||
+         name == "camera_ups";
+}
 
 
 #ifdef RAY_HAS_X11
@@ -41,8 +227,30 @@ static bool IsX11RenderInvalidatingKey(Display* display, KeyCode keycode) {
          keycode == XKeysymToKeycode(display, XStringToKeysym("3")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("4")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("f")) ||
+         keycode == XKeysymToKeycode(display, XStringToKeysym("b")) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("l")) ||
+         keycode == XKeysymToKeycode(display, XK_less) ||
+         keycode == XKeysymToKeycode(display, XK_greater) ||
+         keycode == XKeysymToKeycode(display, XK_slash) ||
          keycode == XKeysymToKeycode(display, XStringToKeysym("r"));
+}
+
+static KeySym X11EventKeysym(XKeyEvent event) {
+  return XLookupKeysym(&event, (event.state & ShiftMask) != 0 ? 1 : 0);
+}
+
+static bool IsX11ShiftedLeftBracket(Display* display, XKeyEvent event) {
+  bool shift_pressed = (event.state & ShiftMask) != 0;
+  KeySym key_symbol = X11EventKeysym(event);
+  return key_symbol == XK_braceleft ||
+         (shift_pressed && event.keycode == XKeysymToKeycode(display, XK_bracketleft));
+}
+
+static bool IsX11ShiftedRightBracket(Display* display, XKeyEvent event) {
+  bool shift_pressed = (event.state & ShiftMask) != 0;
+  KeySym key_symbol = X11EventKeysym(event);
+  return key_symbol == XK_braceright ||
+         (shift_pressed && event.keycode == XKeysymToKeycode(display, XK_bracketright));
 }
 
 #endif
@@ -85,6 +293,7 @@ static bool* write_fast_output_w;
 static bool deferred_render_w;
 static bool* render_requested_w;
 static Float* preview_exposure_adjustment_w;
+static PreviewDisplay* preview_display_w;
 
 
 
@@ -153,6 +362,513 @@ void PreviewDisplay::IncreasePreviewExposure() {
 void PreviewDisplay::DecreasePreviewExposure() {
   preview_exposure_adjustment *= 0.5f;
   Rprintf("Preview Exposure: %.3f\n", preview_exposure_adjustment);
+}
+
+void PreviewDisplay::SetShutterSpeed(Float value) {
+  if(std::isnan(value) ||
+     value < static_cast<Float>(1) ||
+     (std::isinf(value) && value < static_cast<Float>(0))) {
+    throw std::runtime_error("shutter_speed must be greater than or equal to 1, or Inf.");
+  }
+  shutter_speed = value;
+  ApplyShutterSpeedToCameras();
+}
+
+Float PreviewDisplay::GetShutterSpeed() const {
+  return shutter_speed;
+}
+
+void PreviewDisplay::AdjustShutterSpeedStops(Float stops) {
+  Float next = shutter_speed;
+  if(std::isinf(shutter_speed)) {
+    if(stops < static_cast<Float>(0)) {
+      next = PREVIEW_SHUTTER_SPEED_MAX;
+    }
+  } else {
+    next = shutter_speed * std::pow(static_cast<Float>(2), stops);
+    next = clamp(next, PREVIEW_SHUTTER_SPEED_MIN, PREVIEW_SHUTTER_SPEED_MAX);
+  }
+  SetShutterSpeed(next);
+  PrintShutterSpeed();
+}
+
+void PreviewDisplay::ApplyShutterSpeedToCameras() {
+  if(cam != nullptr) {
+    cam->set_shutter_speed(shutter_speed);
+  }
+#ifdef RAY_WINDOWS
+  if(cam_w != nullptr) {
+    cam_w->set_shutter_speed(shutter_speed);
+  }
+#endif
+}
+
+void PreviewDisplay::PrintShutterSpeed() const {
+  if(std::isinf(shutter_speed)) {
+    Rprintf("Shutter speed: Inf; motion blur interval: 0\n");
+    return;
+  }
+  Float interval = static_cast<Float>(1) / shutter_speed;
+  Float angle = static_cast<Float>(360) * interval;
+  Rprintf("Shutter speed: %.3f; interval: %.3f frame; angle: %.0f deg\n",
+          shutter_speed, interval, angle);
+}
+
+void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
+  camera_motion_blur_enabled = enabled;
+  if(cam != nullptr) {
+    cam->set_camera_motion_blur(enabled);
+    if(enabled && interactive && !preview_motion_active) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+    }
+  }
+#ifdef RAY_WINDOWS
+  if(cam_w != nullptr) {
+    cam_w->set_camera_motion_blur(enabled);
+    if(enabled && interactive && !preview_motion_active) {
+      ApplyStaticPreviewCameraMotionRange(cam_w);
+    }
+  }
+#endif
+}
+
+bool PreviewDisplay::ToggleCameraMotionBlur() {
+  SetCameraMotionBlur(!camera_motion_blur_enabled);
+  Rprintf("Camera Motion Blur: %s\n", camera_motion_blur_enabled ? "ON" : "OFF");
+  return camera_motion_blur_enabled;
+}
+
+Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
+  point3f origin = cam->get_origin();
+  Float fov = cam->get_fov();
+  Float cam_aperture = cam->get_aperture();
+  Float fd = cam->get_focal_distance();
+  vec3f cam_up = cam->get_up();
+  point2f ortho = cam->get_ortho();
+  point3f key_lookat = PreviewCameraLookat(cam);
+  Float key_aperture = fov > 0 ? cam_aperture : 0;
+  Float key_fov = fov > 0 ? fov : 0;
+
+  return Rcpp::List::create(Named("x") = origin.xyz.x,
+                            Named("y") = origin.xyz.y,
+                            Named("z") = origin.xyz.z,
+                            Named("dx") = key_lookat.xyz.x,
+                            Named("dy") = key_lookat.xyz.y,
+                            Named("dz") = key_lookat.xyz.z,
+                            Named("aperture") = key_aperture,
+                            Named("fov") = key_fov,
+                            Named("focal") = fd,
+                            Named("exposure") = preview_exposure_adjustment,
+                            Named("env_rotation") = env_rotation,
+                            Named("orthox") = ortho.xy.x,
+                            Named("orthoy") = ortho.xy.y,
+                            Named("upx") = cam_up.xyz.x,
+                            Named("upy") = cam_up.xyz.y,
+                            Named("upz") = cam_up.xyz.z);
+}
+
+void PreviewDisplay::SaveCurrentKeyframe(Float env_rotation) {
+  Keyframes.push_back(CreateCurrentKeyframe(env_rotation));
+  current_keyframe = static_cast<int>(Keyframes.size()) - 1;
+}
+
+bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
+                                      Float* env_rotation) {
+  point3f key_pos = point3f(Rcpp::as<Float>(state["x"]),
+                            Rcpp::as<Float>(state["y"]),
+                            Rcpp::as<Float>(state["z"]));
+  point3f key_lookat = point3f(Rcpp::as<Float>(state["dx"]),
+                               Rcpp::as<Float>(state["dy"]),
+                               Rcpp::as<Float>(state["dz"]));
+  Float key_aperture = Rcpp::as<Float>(state["aperture"]);
+  Float key_fov = Rcpp::as<Float>(state["fov"]);
+  Float key_focal = Rcpp::as<Float>(state["focal"]);
+  vec3f key_up = cam->get_up();
+  if(state.containsElementNamed("upx") &&
+     state.containsElementNamed("upy") &&
+     state.containsElementNamed("upz")) {
+    key_up = vec3f(Rcpp::as<Float>(state["upx"]),
+                   Rcpp::as<Float>(state["upy"]),
+                   Rcpp::as<Float>(state["upz"]));
+  }
+  if(state.containsElementNamed("exposure")) {
+    preview_exposure_adjustment = Rcpp::as<Float>(state["exposure"]);
+  }
+  if(env_rotation != nullptr && state.containsElementNamed("env_rotation")) {
+    *env_rotation = Rcpp::as<Float>(state["env_rotation"]);
+    (*EnvObjectToWorld) = RotateY(-*env_rotation) * Start_EnvObjectToWorld;
+    (*EnvWorldToObject) = RotateY(*env_rotation) * Start_EnvWorldToObject;
+  }
+  vec2f key_ortho = vec2f(Rcpp::as<Float>(state["orthox"]),
+                          Rcpp::as<Float>(state["orthoy"]));
+  cam->update_focal_absolute(key_focal);
+  cam->update_position_absolute(key_pos);
+  cam->update_lookat(key_lookat);
+  cam->update_up(key_up);
+  cam->update_aperture_absolute(key_aperture);
+  cam->update_fov_absolute(key_fov);
+  cam->update_ortho_absolute(key_ortho);
+  return true;
+}
+
+bool PreviewDisplay::ApplyKeyframe(int index, Float* env_rotation) {
+  if(Keyframes.empty()) {
+    current_keyframe = -1;
+    Rprintf("Can't jump to keyframe: No keyframes have been saved. Use K to save a keyframe.\n");
+    return false;
+  }
+  if(index < 0 || index >= static_cast<int>(Keyframes.size())) {
+    return false;
+  }
+
+  Rcpp::List keyframe = Keyframes.at(index);
+  ApplyCameraState(keyframe, env_rotation);
+  current_keyframe = index;
+  return true;
+}
+
+bool PreviewDisplay::JumpKeyframe(int step, Float* env_rotation) {
+  if(Keyframes.empty()) {
+    current_keyframe = -1;
+    Rprintf("Can't jump to keyframe: No keyframes have been saved. Use K to save a keyframe.\n");
+    return false;
+  }
+
+  int keyframe_count = static_cast<int>(Keyframes.size());
+  if(current_keyframe < 0 || current_keyframe >= keyframe_count) {
+    current_keyframe = step >= 0 ? 0 : keyframe_count - 1;
+  } else {
+    current_keyframe = (current_keyframe + step + keyframe_count) % keyframe_count;
+  }
+  return ApplyKeyframe(current_keyframe, env_rotation);
+}
+
+bool PreviewDisplay::DeleteCurrentKeyframe(Float* env_rotation) {
+  if(Keyframes.empty()) {
+    current_keyframe = -1;
+    Rprintf("Can't delete keyframe: No keyframes have been saved. Use K to save a keyframe.\n");
+    return false;
+  }
+
+  int keyframe_count = static_cast<int>(Keyframes.size());
+  if(current_keyframe < 0 || current_keyframe >= keyframe_count) {
+    current_keyframe = keyframe_count - 1;
+  }
+  int deleted_keyframe = current_keyframe;
+  Keyframes.erase(Keyframes.begin() + current_keyframe);
+
+  if(Keyframes.empty()) {
+    current_keyframe = -1;
+    Rprintf("Deleted keyframe %d. 0 keyframes saved.\n", deleted_keyframe + 1);
+    return true;
+  }
+
+  if(current_keyframe >= static_cast<int>(Keyframes.size())) {
+    current_keyframe = static_cast<int>(Keyframes.size()) - 1;
+  }
+  Rprintf("Deleted keyframe %d. %zu keyframes saved.\n",
+          deleted_keyframe + 1,
+          Keyframes.size());
+  return ApplyKeyframe(current_keyframe, env_rotation);
+}
+
+void PreviewDisplay::SetKeyframeMotionArgs(const Rcpp::List& args) {
+  keyframe_motion_args = Rcpp::clone(args);
+  keyframe_motion_closed = args.containsElementNamed("closed") ?
+    Rcpp::as<bool>(args["closed"]) : false;
+}
+
+bool PreviewDisplay::ToggleKeyframeMotionClosed() {
+  keyframe_motion_closed = !keyframe_motion_closed;
+  Rprintf("Keyframe motion loop: %s.\n",
+          keyframe_motion_closed ? "CLOSED" : "OPEN");
+  return keyframe_motion_closed;
+}
+
+Rcpp::DataFrame PreviewDisplay::KeyframesDataFrame() const {
+  size_t keyframe_count = Keyframes.size();
+  Rcpp::NumericVector x(keyframe_count);
+  Rcpp::NumericVector y(keyframe_count);
+  Rcpp::NumericVector z(keyframe_count);
+  Rcpp::NumericVector dx(keyframe_count);
+  Rcpp::NumericVector dy(keyframe_count);
+  Rcpp::NumericVector dz(keyframe_count);
+  Rcpp::NumericVector aperture(keyframe_count);
+  Rcpp::NumericVector fov(keyframe_count);
+  Rcpp::NumericVector focal(keyframe_count);
+  Rcpp::NumericVector exposure(keyframe_count);
+  Rcpp::NumericVector env_rotation(keyframe_count);
+  Rcpp::NumericVector orthox(keyframe_count);
+  Rcpp::NumericVector orthoy(keyframe_count);
+  Rcpp::NumericVector upx(keyframe_count);
+  Rcpp::NumericVector upy(keyframe_count);
+  Rcpp::NumericVector upz(keyframe_count);
+
+  for(size_t i = 0; i < keyframe_count; i++) {
+    Rcpp::List keyframe = Keyframes.at(i);
+    x[i] = Rcpp::as<Float>(keyframe["x"]);
+    y[i] = Rcpp::as<Float>(keyframe["y"]);
+    z[i] = Rcpp::as<Float>(keyframe["z"]);
+    dx[i] = Rcpp::as<Float>(keyframe["dx"]);
+    dy[i] = Rcpp::as<Float>(keyframe["dy"]);
+    dz[i] = Rcpp::as<Float>(keyframe["dz"]);
+    aperture[i] = Rcpp::as<Float>(keyframe["aperture"]);
+    fov[i] = Rcpp::as<Float>(keyframe["fov"]);
+    focal[i] = Rcpp::as<Float>(keyframe["focal"]);
+    exposure[i] = keyframe.containsElementNamed("exposure") ?
+      Rcpp::as<Float>(keyframe["exposure"]) : preview_exposure_adjustment;
+    env_rotation[i] = keyframe.containsElementNamed("env_rotation") ?
+      Rcpp::as<Float>(keyframe["env_rotation"]) : 0;
+    orthox[i] = Rcpp::as<Float>(keyframe["orthox"]);
+    orthoy[i] = Rcpp::as<Float>(keyframe["orthoy"]);
+    upx[i] = Rcpp::as<Float>(keyframe["upx"]);
+    upy[i] = Rcpp::as<Float>(keyframe["upy"]);
+    upz[i] = Rcpp::as<Float>(keyframe["upz"]);
+  }
+
+  return Rcpp::DataFrame::create(Named("x") = x,
+                                 Named("y") = y,
+                                 Named("z") = z,
+                                 Named("dx") = dx,
+                                 Named("dy") = dy,
+                                 Named("dz") = dz,
+                                 Named("aperture") = aperture,
+                                 Named("fov") = fov,
+                                 Named("focal") = focal,
+                                 Named("exposure") = exposure,
+                                 Named("env_rotation") = env_rotation,
+                                 Named("orthox") = orthox,
+                                 Named("orthoy") = orthoy,
+                                 Named("upx") = upx,
+                                 Named("upy") = upy,
+                                 Named("upz") = upz);
+}
+
+bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
+  if(preview_motion_active) {
+    return false;
+  }
+  if(Keyframes.size() < 2) {
+    Rprintf("Can't preview keyframe motion: Save at least two keyframes with K.\n");
+    return false;
+  }
+
+  try {
+    Rcpp::DataFrame keyframes = KeyframesDataFrame();
+    Rcpp::List call_args;
+    call_args.push_back(keyframes, "positions");
+
+    bool frames_supplied = false;
+    Rcpp::CharacterVector arg_names = keyframe_motion_args.names();
+    for(int i = 0; i < keyframe_motion_args.size(); i++) {
+      std::string arg_name = Rcpp::as<std::string>(arg_names[i]);
+      if(arg_name == "frames") {
+        frames_supplied = true;
+      }
+      if(arg_name == "closed") {
+        continue;
+      }
+      if(!IsKeyframeSuppliedMotionArg(arg_name)) {
+        call_args.push_back(keyframe_motion_args[i], arg_name);
+      }
+    }
+    if(!frames_supplied) {
+      call_args.push_back(static_cast<int>(Keyframes.size() * 30), "frames");
+    }
+    call_args.push_back(keyframe_motion_closed, "closed");
+
+    Rcpp::Environment pkg = Rcpp::Environment::namespace_env("rayrender");
+    Rcpp::Function generate_camera_motion = pkg["generate_camera_motion"];
+    Rcpp::Environment base = Rcpp::Environment::base_env();
+    Rcpp::Function do_call = base["do.call"];
+    preview_motion = Rcpp::as<Rcpp::DataFrame>(
+      do_call(generate_camera_motion, call_args)
+    );
+  } catch(std::exception& ex) {
+    Rprintf("Can't preview keyframe motion: %s\n", ex.what());
+    return false;
+  }
+
+  if(preview_motion.nrows() < 1) {
+    Rprintf("Can't preview keyframe motion: generate_camera_motion() returned no frames.\n");
+    return false;
+  }
+
+  preview_motion_restore_state = CreateCurrentKeyframe(env_rotation);
+  preview_motion_restore_keyframe = current_keyframe;
+  preview_motion_frame = 0;
+  current_keyframe = 0;
+  preview_motion_active = true;
+  Rprintf("Previewing keyframe motion (%d frames). Press M to cancel.\n",
+          static_cast<int>(preview_motion.nrows()));
+  return true;
+}
+
+bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
+  if(!preview_motion_active) {
+    return false;
+  }
+  ApplyCameraState(preview_motion_restore_state, env_rotation);
+  current_keyframe = preview_motion_restore_keyframe;
+  preview_motion_active = false;
+  preview_motion_frame = 0;
+  ApplyStaticPreviewCameraMotionRange(cam);
+  Rprintf("Cancelled keyframe motion preview. Restored original camera.\n");
+  return true;
+}
+
+bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
+  if(!preview_motion_active) {
+    return false;
+  }
+
+  if(preview_motion_frame >= preview_motion.nrows()) {
+    ApplyCameraState(preview_motion_restore_state, env_rotation);
+    current_keyframe = preview_motion_restore_keyframe;
+    preview_motion_active = false;
+    preview_motion_frame = 0;
+    ApplyStaticPreviewCameraMotionRange(cam);
+    Rprintf("Finished keyframe motion preview. Restored original camera.\n");
+    return true;
+  }
+
+  PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
+  Rcpp::NumericVector x = preview_motion["x"];
+  Rcpp::NumericVector y = preview_motion["y"];
+  Rcpp::NumericVector z = preview_motion["z"];
+  Rcpp::NumericVector dx = preview_motion["dx"];
+  Rcpp::NumericVector dy = preview_motion["dy"];
+  Rcpp::NumericVector dz = preview_motion["dz"];
+  Rcpp::NumericVector aperture = preview_motion["aperture"];
+  Rcpp::NumericVector fov = preview_motion["fov"];
+  Rcpp::NumericVector focal = preview_motion["focal"];
+  Rcpp::NumericVector orthox = preview_motion["orthox"];
+  Rcpp::NumericVector orthoy = preview_motion["orthoy"];
+  Rcpp::NumericVector upx = preview_motion["upx"];
+  Rcpp::NumericVector upy = preview_motion["upy"];
+  Rcpp::NumericVector upz = preview_motion["upz"];
+  int keyframe_count = static_cast<int>(Keyframes.size());
+  if(keyframe_count > 0) {
+    double frames_per_keyframe =
+      static_cast<double>(preview_motion.nrows()) / static_cast<double>(keyframe_count);
+    int playback_keyframe = frames_per_keyframe > 0 ?
+      static_cast<int>(std::floor(preview_motion_frame / frames_per_keyframe)) : 0;
+    current_keyframe = std::max(0, std::min(playback_keyframe, keyframe_count - 1));
+  }
+
+  Rcpp::List state = Rcpp::List::create(
+    Named("x") = x[preview_motion_frame],
+    Named("y") = y[preview_motion_frame],
+    Named("z") = z[preview_motion_frame],
+    Named("dx") = dx[preview_motion_frame],
+    Named("dy") = dy[preview_motion_frame],
+    Named("dz") = dz[preview_motion_frame],
+    Named("aperture") = aperture[preview_motion_frame],
+    Named("fov") = fov[preview_motion_frame],
+    Named("focal") = focal[preview_motion_frame],
+    Named("orthox") = orthox[preview_motion_frame],
+    Named("orthoy") = orthoy[preview_motion_frame],
+    Named("upx") = upx[preview_motion_frame],
+    Named("upy") = upy[preview_motion_frame],
+    Named("upz") = upz[preview_motion_frame]
+  );
+  ApplyCameraState(state, env_rotation);
+  ApplyPreviewCameraMotionRange(cam,
+                                camera_state_before,
+                                CapturePreviewCameraState(cam));
+  preview_motion_frame++;
+  return true;
+}
+
+void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
+  point3f origin = cam->get_origin();
+  Float fov = cam->get_fov();
+  Float cam_aperture = cam->get_aperture();
+  Float fd = cam->get_focal_distance();
+  point3f key_lookat = PreviewCameraLookat(cam);
+  const char* shutter_label = std::isinf(shutter_speed) ? "Inf" : "";
+
+  if(fov > 0) {
+    if(std::isinf(shutter_speed)) {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %s\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fov,
+              cam_aperture, fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_label);
+    } else {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %.3f\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fov,
+              cam_aperture, fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_speed);
+    }
+  } else {
+    if(std::isinf(shutter_speed)) {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %s\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_label);
+    } else {
+      Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f Camera Motion Blur: %s Shutter Speed: %.3f\n",
+              origin.xyz.x, origin.xyz.y, origin.xyz.z,
+              key_lookat.xyz.x, key_lookat.xyz.y, key_lookat.xyz.z,
+              fd, env_rotation, preview_exposure_adjustment,
+              camera_motion_blur_enabled ? "ON" : "OFF",
+              shutter_speed);
+    }
+  }
+}
+
+std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
+  if(cam == nullptr) {
+    return "";
+  }
+
+  point3f origin = cam->get_origin();
+  point3f key_lookat = PreviewCameraLookat(cam);
+  int keyframe_number = 0;
+  if(current_keyframe >= 0 &&
+     current_keyframe < static_cast<int>(Keyframes.size())) {
+    keyframe_number = current_keyframe + 1;
+  }
+
+  // Keep camera readings together above the rendering and animation flags.
+  char shutter[32];
+  if(std::isinf(shutter_speed)) {
+    std::snprintf(shutter, sizeof(shutter), "Inf");
+  } else {
+    std::snprintf(shutter, sizeof(shutter), "%.3f", shutter_speed);
+  }
+  char camera_text[320];
+  std::snprintf(camera_text,
+                sizeof(camera_text),
+                "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %s",
+                origin.xyz.x,
+                origin.xyz.y,
+                origin.xyz.z,
+                key_lookat.xyz.x,
+                key_lookat.xyz.y,
+                key_lookat.xyz.z,
+                preview_exposure_adjustment,
+                shutter);
+  char flags_text[160];
+  std::snprintf(flags_text,
+                sizeof(flags_text),
+                "Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                keyframe_motion_closed ? "CLOSED" : "OPEN",
+                env_rotation,
+                camera_motion_blur_enabled ? "ON" : "OFF",
+                keyframe_number,
+                Keyframes.size());
+  const std::string atmosphere_status = AtmosphereStatusText();
+  return std::string(camera_text) + "\n" +
+    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text);
 }
 
 void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
@@ -690,12 +1406,43 @@ void PreviewDisplay::CompositeLineOverlaysToX11Buffer(hitable* world, random_gen
     }
   }
 }
+
+void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
+  if(!interactive ||
+     width < PREVIEW_STATUS_MIN_WIDTH ||
+     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+    return;
+  }
+
+  std::string status_text = PreviewStatusText(env_rotation);
+  if(status_text.empty()) {
+    return;
+  }
+
+  GC gc = DefaultGC(d, s);
+  XSetForeground(d, gc, BlackPixel(d, s));
+  XFillRectangle(d,
+                 w,
+                 gc,
+                 0,
+                 height - PREVIEW_STATUS_BAR_HEIGHT,
+                 width,
+                 PREVIEW_STATUS_BAR_HEIGHT);
+  XSetForeground(d, gc, WhitePixel(d, s));
+  std::istringstream rows(status_text);
+  std::string row;
+  int baseline = height - PREVIEW_STATUS_BAR_HEIGHT + PREVIEW_STATUS_ROW_HEIGHT - 7;
+  while(std::getline(rows, row)) {
+    XDrawString(d, w, gc, 8, baseline, row.c_str(), static_cast<int>(row.size()));
+    baseline += PREVIEW_STATUS_ROW_HEIGHT;
+  }
+  XFlush(d);
+}
 #endif
 
-#ifdef RAY_WINDOWS
 void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
-                                                        random_gen& rng) {
+                                                        random_gen& rng, std::vector<Float>* coverage) {
   if(text_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -741,9 +1488,14 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
         Float src_r = overlay.rgba[src_idx] / 255.f;
         Float src_g = overlay.rgba[src_idx + 1] / 255.f;
         Float src_b = overlay.rgba[src_idx + 2] / 255.f;
-        rgb[dst_idx] = clamp(src_r * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 1] = clamp(src_g * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 2] = clamp(src_b * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+        Float dest_alpha=coverage ? (*coverage)[dst_idx/3] : 1;
+        Float out_alpha=alpha+dest_alpha*(1-alpha);
+        Float src_weight=out_alpha>0 ? alpha/out_alpha : 0;
+        Float dst_weight=out_alpha>0 ? dest_alpha*(1-alpha)/out_alpha : 0;
+        if(coverage) (*coverage)[dst_idx/3]=out_alpha;
+        rgb[dst_idx] = clamp(src_r * src_weight + rgb[dst_idx] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(src_g * src_weight + rgb[dst_idx + 1] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(src_b * src_weight + rgb[dst_idx + 2] * dst_weight, 0.f, 1.f);
       }
     }
   }
@@ -751,7 +1503,7 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
 
 void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
-                                                        random_gen& rng) {
+                                                        random_gen& rng, std::vector<Float>* coverage) {
   if(line_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -801,11 +1553,56 @@ void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
           continue;
         }
         size_t dst_idx = 3 * (x + width * y);
-        rgb[dst_idx] = clamp(overlay.red * alpha + rgb[dst_idx] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 1] = clamp(overlay.green * alpha + rgb[dst_idx + 1] * (1.f - alpha), 0.f, 1.f);
-        rgb[dst_idx + 2] = clamp(overlay.blue * alpha + rgb[dst_idx + 2] * (1.f - alpha), 0.f, 1.f);
+        Float dest_alpha=coverage ? (*coverage)[dst_idx/3] : 1;
+        Float out_alpha=alpha+dest_alpha*(1-alpha);
+        Float src_weight=out_alpha>0 ? alpha/out_alpha : 0;
+        Float dst_weight=out_alpha>0 ? dest_alpha*(1-alpha)/out_alpha : 0;
+        if(coverage) (*coverage)[dst_idx/3]=out_alpha;
+        rgb[dst_idx] = clamp(overlay.red * src_weight + rgb[dst_idx] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 1] = clamp(overlay.green * src_weight + rgb[dst_idx + 1] * dst_weight, 0.f, 1.f);
+        rgb[dst_idx + 2] = clamp(overlay.blue * src_weight + rgb[dst_idx + 2] * dst_weight, 0.f, 1.f);
       }
     }
+  }
+}
+
+#ifdef RAY_WINDOWS
+void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
+  if(!interactive ||
+     width < PREVIEW_STATUS_MIN_WIDTH ||
+     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+    return;
+  }
+
+  std::string status_text = PreviewStatusText(env_rotation);
+  if(status_text.empty()) {
+    return;
+  }
+
+  RECT bar_rect = {0,
+                   static_cast<LONG>(height - PREVIEW_STATUS_BAR_HEIGHT),
+                   static_cast<LONG>(width),
+                   static_cast<LONG>(height)};
+  HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+  FillRect(hdc, &bar_rect, brush);
+  DeleteObject(brush);
+
+  RECT text_rect = bar_rect;
+  text_rect.left += 8;
+  text_rect.right -= 8;
+  text_rect.bottom = text_rect.top + PREVIEW_STATUS_ROW_HEIGHT;
+  SetBkMode(hdc, TRANSPARENT);
+  SetTextColor(hdc, RGB(255, 255, 255));
+  std::istringstream rows(status_text);
+  std::string row;
+  while(std::getline(rows, row)) {
+    DrawTextA(hdc,
+              row.c_str(),
+              -1,
+              &text_rect,
+              DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
+    text_rect.top += PREVIEW_STATUS_ROW_HEIGHT;
+    text_rect.bottom += PREVIEW_STATUS_ROW_HEIGHT;
   }
 }
 #endif
@@ -817,16 +1614,37 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
                                hitable *world, random_gen& rng) {
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Draw Image");
+  auto reset_preview_render = [&]() {
+    ns = 0;
+    adaptive_pixel_sampler.reset();
+    adaptive_pixel_sampler_small.reset();
+    ResetPreviewExposure();
+#ifdef HAS_OIDN
+    InvalidateOidnAux();
+#endif
+    if(progress && !interactive) {
+      pb.update(0);
+    }
+  };
+  if(PollCloseEvent()) {
+    return;
+  }
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
-    if(denoise) {
-      filter.execute();
+    bool use_denoised_preview = denoise &&
+      denoiser != nullptr &&
+      denoiser->Ready();
+    if(use_denoised_preview && !write_fast_output) {
+      if(PollCloseEvent()) {
+        return;
+      }
+      denoiser->Execute();
+      if(!denoiser->ReportError()) {
+        MarkDenoisedPreviewReady(ns + 1);
+      }
     }
-    RayMatrix &rgb  = adaptive_pixel_sampler.draw_rgb_output;
-    if(!denoise) {
-      rgb = adaptive_pixel_sampler.rgb;
-    }
+    RayMatrix& rgb = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
@@ -867,6 +1685,24 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
+    CompositeTextOverlaysToX11Buffer(world, rng);
+    CompositeLineOverlaysToX11Buffer(world, rng);
+    snapshot_width = width;
+    snapshot_height = height;
+    snapshot_pixels.resize(static_cast<size_t>(width) *
+                           static_cast<size_t>(height) * 3);
+    for(size_t pixel = 0;
+        pixel < static_cast<size_t>(width) * static_cast<size_t>(height);
+        pixel++) {
+      snapshot_pixels[3 * pixel] =
+        static_cast<unsigned char>(data[4 * pixel + 2]);
+      snapshot_pixels[3 * pixel + 1] =
+        static_cast<unsigned char>(data[4 * pixel + 1]);
+      snapshot_pixels[3 * pixel + 2] =
+        static_cast<unsigned char>(data[4 * pixel]);
+    }
+    CaptureVolumeSnapshot(adaptive_pixel_sampler, rgb, ns+1, world, rng);
+    // Paint display-only UI after populating the snapshot buffer.
     if(progress) {
       for(unsigned int i = 0; i < 4*width*percent_done; i += 4 ) {
         for(unsigned int j = 0; j < 3; j++) {
@@ -876,8 +1712,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
-    CompositeTextOverlaysToX11Buffer(world, rng);
-    CompositeLineOverlaysToX11Buffer(world, rng);
     KeyCode tab = XKeysymToKeycode(d, XK_Tab);
     KeyCode esc = XKeysymToKeycode(d, XK_Escape);
     //Movement
@@ -929,6 +1763,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     
     //Move to Last Keyframe
     KeyCode L_key = XKeysymToKeycode(d,XStringToKeysym("l"));
+
+    //Keyframe navigation
+    KeyCode PreviousKeyframe_key = XKeysymToKeycode(d, XK_less);
+    KeyCode NextKeyframe_key = XKeysymToKeycode(d, XK_greater);
+    KeyCode DeleteKeyframe_key = XKeysymToKeycode(d, XK_slash);
+    KeyCode MotionPreview_key = XKeysymToKeycode(d,XStringToKeysym("m"));
+    KeyCode CameraMotionBlur_key = XKeysymToKeycode(d,XStringToKeysym("b"));
+    KeyCode Haze_key = XKeysymToKeycode(d,XStringToKeysym("h"));
+    KeyCode Altitude_key = XKeysymToKeycode(d,XStringToKeysym("y"));
     
     //Fast Movement Key
     KeyCode F_key = XKeysymToKeycode(d,XStringToKeysym("f"));
@@ -936,6 +1779,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     
     XPutImage(d,w,DefaultGC(d,s),
               img,0,0,0,0,width,height);
+    DrawStatusBarX11(env_y_angle);
     while (XPending(d)) {
       XNextEvent(d, &e);
       if (e.type == KeyPress) {
@@ -946,6 +1790,31 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           terminate = true;
           break;
         }
+        if (e.xkey.keycode == CameraMotionBlur_key ) {
+          ToggleCameraMotionBlur();
+          reset_preview_render();
+          continue;
+        }
+        if(interactive && (e.xkey.keycode == Haze_key || e.xkey.keycode == Altitude_key)) {
+          if(e.xkey.keycode == Haze_key ? ToggleHaze() : ToggleQueryAltitude()) {
+            reset_preview_render();
+          }
+          continue;
+        }
+        if(interactive &&
+           (e.xkey.keycode == Return_key ||
+            e.xkey.keycode == KeypadEnter_key) &&
+           (e.xkey.state & ShiftMask) != 0) {
+          SavePreviewSnapshot();
+          continue;
+        }
+        if(interactive && IsPreviewMotionActive()) {
+          if(e.xkey.keycode == MotionPreview_key) {
+            CancelPreviewMotion(&env_y_angle);
+            reset_preview_render();
+          }
+          continue;
+        }
         if(interactive) {
           vec3f w = cam->get_w();
           vec3f u = cam->get_u();
@@ -954,6 +1823,17 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           bool blanked = false;
           bool one_orbit = false;
           bool one_fast = false;
+          bool shift_pressed = (e.xkey.state & ShiftMask) != 0;
+          if(IsX11ShiftedLeftBracket(d, e.xkey)) {
+            AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+            reset_preview_render();
+            continue;
+          }
+          if(IsX11ShiftedRightBracket(d, e.xkey)) {
+            AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+            reset_preview_render();
+            continue;
+          }
           
           if (e.xkey.keycode == tab ) {
             orbit = !orbit;
@@ -964,24 +1844,40 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             one_fast  = true;
           }
           if (e.xkey.keycode == W_key ) {
-            vec3f step = speed * w * base_step;
-            if(orbit) {
-              Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-              if(dist_to_orbit <= base_step * speed) {
-                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                step = vec3f(0);
+            if(shift_pressed) {
+              cam->rotate_forward(speed * 1.f);
+            } else {
+              vec3f step = speed * w * base_step;
+              if(orbit) {
+                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+                if(dist_to_orbit <= base_step * speed) {
+                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                  step = vec3f(0);
+                }
               }
-            } 
-            cam->update_position(step, orbit, false);
+              cam->update_position(step, orbit, false);
+            }
           }
           if (e.xkey.keycode == A_key ) {
-            cam->update_position(speed * u * base_step, orbit);
+            if(shift_pressed) {
+              cam->rotate_up(speed * -1.f);
+            } else {
+              cam->update_position(speed * u * base_step, orbit);
+            }
           }
           if (e.xkey.keycode == S_key ) {
-            cam->update_position(-speed * w * base_step, orbit, false);
+            if(shift_pressed) {
+              cam->rotate_forward(speed * -1.f);
+            } else {
+              cam->update_position(-speed * w * base_step, orbit, false);
+            }
           }
           if (e.xkey.keycode == D_key ) {
-            cam->update_position(-speed * u * base_step, orbit);
+            if(shift_pressed) {
+              cam->rotate_up(speed * 1.f);
+            } else {
+              cam->update_position(-speed * u * base_step, orbit);
+            }
           }
           if (e.xkey.keycode == Q_key ) {
             cam->update_position(speed * v * base_step, orbit);
@@ -1047,122 +1943,51 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             speed = 1;
             (*EnvWorldToObject) = Start_EnvWorldToObject;
             (*EnvObjectToWorld) = Start_EnvObjectToWorld;
+            env_y_angle = 0;
           }
           if (e.xkey.keycode == L_key) {
-            if(Keyframes.size() > 0) {
-              Rcpp::List LastKeyframe = Keyframes.at(Keyframes.size()-1);
-              point3f last_pos = point3f(Rcpp::as<Float>(LastKeyframe["x"]),
-                                       Rcpp::as<Float>(LastKeyframe["y"]),
-                                       Rcpp::as<Float>(LastKeyframe["z"]));
-              point3f last_lookat = point3f(Rcpp::as<Float>(LastKeyframe["dx"]),
-                                            Rcpp::as<Float>(LastKeyframe["dy"]),
-                                            Rcpp::as<Float>(LastKeyframe["dz"]));
-              Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
-              Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
-              Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
-              if(LastKeyframe.containsElementNamed("exposure")) {
-                preview_exposure_adjustment = Rcpp::as<Float>(LastKeyframe["exposure"]);
-              }
-              vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
-                                       Rcpp::as<Float>(LastKeyframe["orthoy"]));
-              cam->update_focal_absolute(last_focal);
-              cam->update_position_absolute(last_pos);
-              cam->update_lookat(last_lookat);
-              cam->update_aperture_absolute(last_aperture);
-              cam->update_fov_absolute(last_fov);
-              cam->update_ortho_absolute(last_ortho);
+            if(shift_pressed) {
+              ToggleKeyframeMotionClosed();
+              DrawStatusBarX11(env_y_angle);
+              continue;
+            } else if(Keyframes.size() > 0) {
+              ApplyKeyframe(static_cast<int>(Keyframes.size()) - 1, &env_y_angle);
             } else {
               Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
             }
           }
+          if (e.xkey.keycode == PreviousKeyframe_key ) {
+            JumpKeyframe(-1, &env_y_angle);
+          }
+          if (e.xkey.keycode == NextKeyframe_key ) {
+            JumpKeyframe(1, &env_y_angle);
+          }
+          if (e.xkey.keycode == DeleteKeyframe_key ) {
+            DeleteCurrentKeyframe(&env_y_angle);
+          }
+          if (e.xkey.keycode == MotionPreview_key ) {
+            if(StartPreviewMotion(env_y_angle)) {
+              blanked = true;
+              reset_preview_render();
+            }
+          }
           if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
-            point3f origin = cam->get_origin();
-            Float fov =  cam->get_fov();
-            vec3f cam_direction = cam->get_w();
-            Float cam_aperture = cam->get_aperture();
-            Float fd = cam->get_focal_distance();
-            vec3f cam_up = cam->get_up();
-            point2f ortho = cam->get_ortho();
-            point3f cam_lookat = cam->get_lookat();
-            
             if(e.xkey.keycode == K_key) {
-              if(fov > 0) {
-                Keyframes.push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                       Named("y")  = origin.xyz.y,
-                                                       Named("z")  = origin.xyz.z,
-                                                       Named("dx") = origin.xyz.x+cam_direction.xyz.x*fd,
-                                                       Named("dy") = origin.xyz.y+cam_direction.xyz.y*fd,
-                                                       Named("dz") = origin.xyz.z+cam_direction.xyz.z*fd,
-                                                       Named("aperture") = cam_aperture,
-                                                       Named("fov") = fov,
-                                                       Named("focal") = fd,
-                                                       Named("exposure") = preview_exposure_adjustment,
-                                                       Named("orthox") = ortho.xy.x,
-                                                       Named("orthoy") = ortho.xy.y,
-                                                       Named("upx")  = cam_up.xyz.x,
-                                                       Named("upy")  = cam_up.xyz.y,
-                                                       Named("upz")  = cam_up.xyz.z));
-              } else if (fov < 0) {
-                Keyframes.push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                       Named("y")  = origin.xyz.y,
-                                                       Named("z")  = origin.xyz.z,
-                                                       Named("dx") = origin.xyz.x+cam_direction.xyz.x*fd,
-                                                       Named("dy") = origin.xyz.y+cam_direction.xyz.y*fd,
-                                                       Named("dz") = origin.xyz.z+cam_direction.xyz.z*fd,
-                                                       Named("aperture") = 0,
-                                                       Named("fov") = 0,
-                                                       Named("focal") = fd,
-                                                       Named("exposure") = preview_exposure_adjustment,
-                                                       Named("orthox") = ortho.xy.x,
-                                                       Named("orthoy") = ortho.xy.y,
-                                                       Named("upx")  = cam_up.xyz.x,
-                                                       Named("upy")  = cam_up.xyz.y,
-                                                       Named("upz")  = cam_up.xyz.z));
-              } else {
-                Keyframes.push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                       Named("y")  = origin.xyz.y,
-                                                       Named("z")  = origin.xyz.z,
-                                                       Named("dx") = cam_lookat.xyz.x,
-                                                       Named("dy") = cam_lookat.xyz.y,
-                                                       Named("dz") = cam_lookat.xyz.z,
-                                                       Named("aperture") = 0,
-                                                       Named("fov") = 0,
-                                                       Named("focal") = fd,
-                                                       Named("exposure") = preview_exposure_adjustment,
-                                                       Named("orthox") = ortho.xy.x,
-                                                       Named("orthoy") = ortho.xy.y,
-                                                       Named("upx")  = cam_up.xyz.x,
-                                                       Named("upy")  = cam_up.xyz.y,
-                                                       Named("upz")  = cam_up.xyz.z));
-              }
+              SaveCurrentKeyframe(env_y_angle);
             }
-            if(fov > 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      origin.xyz.x + cam_direction.xyz.x*fd, 
-                      origin.xyz.y + cam_direction.xyz.y*fd, 
-                      origin.xyz.z + cam_direction.xyz.z*fd, 
-                      fov, 
-                      cam_aperture, fd, env_y_angle, preview_exposure_adjustment);
-            } else if (fov < 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                      fd, env_y_angle, preview_exposure_adjustment);
-            } else {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                      fd, env_y_angle, preview_exposure_adjustment);
-            }
+            PrintCameraInfo(env_y_angle);
             
           } else {
             if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
+              ApplyStaticPreviewCameraMotionRange(cam);
               blanked = true;
               ns = 0;
               adaptive_pixel_sampler.reset();
               adaptive_pixel_sampler_small.reset();
               ResetPreviewExposure();
+#ifdef HAS_OIDN
+              InvalidateOidnAux();
+#endif
               if(progress && !interactive) {
                 pb.update(0);
               }
@@ -1180,6 +2005,31 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if (e.xkey.keycode == esc ) {
               terminate = true;
             }
+            if (e.xkey.keycode == CameraMotionBlur_key ) {
+              ToggleCameraMotionBlur();
+              reset_preview_render();
+              continue;
+            }
+            if(interactive && (e.xkey.keycode == Haze_key || e.xkey.keycode == Altitude_key)) {
+              if(e.xkey.keycode == Haze_key ? ToggleHaze() : ToggleQueryAltitude()) {
+                reset_preview_render();
+              }
+              continue;
+            }
+            if(interactive &&
+               (e.xkey.keycode == Return_key ||
+                e.xkey.keycode == KeypadEnter_key) &&
+               (e.xkey.state & ShiftMask) != 0) {
+              SavePreviewSnapshot();
+              continue;
+            }
+            if(interactive && IsPreviewMotionActive()) {
+              if(e.xkey.keycode == MotionPreview_key) {
+                CancelPreviewMotion(&env_y_angle);
+                reset_preview_render();
+              }
+              continue;
+            }
             if (e.xkey.keycode == tab && !one_orbit) {
               orbit = !orbit;
               one_orbit = true;
@@ -1193,26 +2043,53 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             w = cam->get_w();
             u = cam->get_u();
             v = cam->get_v();
+            shift_pressed = (e.xkey.state & ShiftMask) != 0;
+            if(IsX11ShiftedLeftBracket(d, e.xkey)) {
+              AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+              reset_preview_render();
+              continue;
+            }
+            if(IsX11ShiftedRightBracket(d, e.xkey)) {
+              AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+              reset_preview_render();
+              continue;
+            }
             
             if (e.xkey.keycode == W_key ) {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
+              if(shift_pressed) {
+                cam->rotate_forward(speed * 1.f);
+              } else {
+                vec3f step = speed * w * base_step;
+                if(orbit) {
+                  Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
+                  if(dist_to_orbit <= base_step * speed) {
+                    Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                    step = vec3f(0);
+                  }
                 }
-              } 
-              cam->update_position(step, orbit, false);
+                cam->update_position(step, orbit, false);
+              }
             }
             if (e.xkey.keycode == A_key ) {
-              cam->update_position(speed * u * base_step, orbit);
+              if(shift_pressed) {
+                cam->rotate_up(speed * -1.f);
+              } else {
+                cam->update_position(speed * u * base_step, orbit);
+              }
             }
             if (e.xkey.keycode == S_key ) {
-              cam->update_position(-speed * w * base_step, orbit, false);
+              if(shift_pressed) {
+                cam->rotate_forward(speed * -1.f);
+              } else {
+                cam->update_position(-speed * w * base_step, orbit, false);
+              }
             }
             if (e.xkey.keycode == D_key ) {
-              cam->update_position(-speed * u * base_step, orbit);
+              if(shift_pressed) {
+                cam->rotate_up(speed * 1.f);
+              } else {
+                cam->update_position(-speed * u * base_step, orbit);
+              }
             }
             if (e.xkey.keycode == Q_key ) {
               cam->update_position(speed * v * base_step, orbit);
@@ -1283,38 +2160,50 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               speed = 1;
               (*EnvWorldToObject) = Start_EnvWorldToObject;
               (*EnvObjectToWorld) = Start_EnvObjectToWorld;
+              env_y_angle = 0;
             }
-            if (e.xkey.keycode == P_key ) {
-              point3f origin = cam->get_origin();
-              Float fov =  cam->get_fov();
-              vec3f cam_direction = cam->get_w();
-              Float fd = cam->get_focal_distance();
-              point3f cam_lookat = cam->get_lookat();
-              Float cam_aperture = cam->get_aperture();
-              if(fov > 0) {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                        origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                        origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                        fov, 
-                        cam_aperture, fd, env_y_angle, preview_exposure_adjustment);
-              } else if (fov < 0) {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                        origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                        origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                        fd, env_y_angle, preview_exposure_adjustment);
+            if (e.xkey.keycode == L_key) {
+              if(shift_pressed) {
+                ToggleKeyframeMotionClosed();
+                DrawStatusBarX11(env_y_angle);
+                continue;
+              } else if(Keyframes.size() > 0) {
+                ApplyKeyframe(static_cast<int>(Keyframes.size()) - 1, &env_y_angle);
               } else {
-                Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                        origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                        cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                        fd, env_y_angle, preview_exposure_adjustment);
+                Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
               }
+            }
+            if (e.xkey.keycode == PreviousKeyframe_key ) {
+              JumpKeyframe(-1, &env_y_angle);
+            }
+            if (e.xkey.keycode == NextKeyframe_key ) {
+              JumpKeyframe(1, &env_y_angle);
+            }
+            if (e.xkey.keycode == DeleteKeyframe_key ) {
+              DeleteCurrentKeyframe(&env_y_angle);
+            }
+            if (e.xkey.keycode == MotionPreview_key ) {
+              if(StartPreviewMotion(env_y_angle)) {
+                blanked = true;
+                reset_preview_render();
+              }
+            }
+            if (e.xkey.keycode == P_key || e.xkey.keycode == K_key ) {
+              if(e.xkey.keycode == K_key) {
+                SaveCurrentKeyframe(env_y_angle);
+              }
+              PrintCameraInfo(env_y_angle);
             } else {
               if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
+                ApplyStaticPreviewCameraMotionRange(cam);
                 blanked = true;
                 ns = 0;
                 adaptive_pixel_sampler.reset();
                 adaptive_pixel_sampler_small.reset();
                 ResetPreviewExposure();
+#ifdef HAS_OIDN
+                InvalidateOidnAux();
+#endif
                 if(progress && !interactive) {
                   pb.update(0);
                 }
@@ -1323,6 +2212,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
+        if(interactive && IsPreviewMotionActive()) {
+          continue;
+        }
         if(interactive) {
           bool left = e.xbutton.button == Button1;
           bool right = e.xbutton.button == Button3;
@@ -1331,60 +2223,18 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
           Float x = e.xbutton.x;
           Float y = e.xbutton.y;
-          Float fov = cam->get_fov();
-          Float u = (Float(width) - 1 - (Float(x))) / Float(width);
-          Float v = (Float(height) - 1 - (Float(y))) / Float(height);
-          vec3f dir;
-          hit_record hrec;
-          if(fov < 0) {
-            CameraSample samp({u,v},point2f(0.5,0.5), 0.5);
-            Ray r2;
-            cam->GenerateRay(samp,&r2);
-            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-              if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = point3f(0) - hrec.p;
-              }  else {
-                left = false;
-                right = true;
-                dir = point3f(0) - hrec.p;
-              }
-            }
-          } else if (fov > 0) {
-            Ray r2 = cam->get_ray(u,v, point3f(0),0.5f);
-            if (left) {
-                world->hit(r2, 0.001, FLT_MAX, hrec, rng);
-                if (hrec.shape->GetName() == "EnvironmentLight") {
-                  right = true;
-                }
-            }
-            dir = r2.direction();
-          } else {
-            Ray r2 = cam->get_ray(u,v, point3f(0.5),
-                                 0.5f);
-            if(world->hit(r2, 0.001, FLT_MAX, hrec, rng)) {
-              if( hrec.shape->GetName() != "EnvironmentLight") {
-                dir = -(cam->get_origin()-hrec.p);
-              } else {
-                Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
-                dir = -cam->get_w();
-              }
-            } else {
-              dir = -cam->get_w();
-            }
+          Float u = 1 - (x + .5f) / Float(width);
+          Float v = 1 - (y + .5f) / Float(height);
+          if(!PickCameraTarget(u, v, left, world)) {
+            continue;
           }
-          if(left && !right) {
-            if(fov != 0 && fov != 360) {
-              Float current_fd = cam->get_focal_distance();
-              Float new_fd = (hrec.p-cam->get_origin()).length();
-              cam->update_focal_distance(new_fd - current_fd);
-            }
-            cam->update_lookat(hrec.p);
-          }
-          cam->update_look_direction(dir);
           ns = 0;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
           ResetPreviewExposure();
+#ifdef HAS_OIDN
+          InvalidateOidnAux();
+#endif
           
           if(progress && !interactive) {
             pb.update(0);
@@ -1392,12 +2242,17 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       } else if (e.type == ClientMessage) {
         terminate = true;
+        break;
       } 
+    }
+    if(AdvancePreviewMotion(&env_y_angle)) {
+      reset_preview_render();
     }
   }
 #endif
 #ifdef RAY_WINDOWS
   if(hwnd) {
+    preview_display_w = this;
     aps = &adaptive_pixel_sampler;
     aps_small = &adaptive_pixel_sampler_small;
     ns_w = &ns;
@@ -1405,8 +2260,19 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     progress_w = progress;
     interactive_w = interactive;
 #ifdef HAS_OIDN
-    filter.execute();
-    RayMatrix &rgb_s  = adaptive_pixel_sampler.draw_rgb_output;
+    bool use_denoised_preview = denoise &&
+      denoiser != nullptr &&
+      denoiser->Ready();
+    if(use_denoised_preview && !write_fast_output) {
+      if(PollCloseEvent()) {
+        return;
+      }
+      denoiser->Execute();
+      if(!denoiser->ReportError()) {
+        MarkDenoisedPreviewReady(ns + 1);
+      }
+    }
+    RayMatrix& rgb_s = use_denoised_preview ? adaptive_pixel_sampler.draw_rgb_output : adaptive_pixel_sampler.rgb;
 #else
     RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
 #endif
@@ -1458,6 +2324,24 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     }
     blanked = false;
     
+    CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
+    CompositeLineOverlaysToFloatBuffer(rgb, world, rng);
+    snapshot_width = width;
+    snapshot_height = height;
+    snapshot_pixels.resize(static_cast<size_t>(width) *
+                           static_cast<size_t>(height) * 3);
+    for(size_t pixel = 0;
+        pixel < static_cast<size_t>(width) * static_cast<size_t>(height);
+        pixel++) {
+      snapshot_pixels[3 * pixel] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel], 0.f, 1.f));
+      snapshot_pixels[3 * pixel + 1] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel + 1], 0.f, 1.f));
+      snapshot_pixels[3 * pixel + 2] = static_cast<unsigned char>(
+        255.f * clamp(rgb[3 * pixel + 2], 0.f, 1.f));
+    }
+    CaptureVolumeSnapshot(adaptive_pixel_sampler, rgb_s, ns+1, world, rng);
+    // Paint display-only UI after populating the snapshot buffer.
     if(progress) {
       for(unsigned int i = 0; i < 3*width*percent_done; i += 3 ) {
         for(unsigned int j = 0; j < 3; j++) {
@@ -1467,13 +2351,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         }
       }
     }
-    CompositeTextOverlaysToFloatBuffer(rgb, world, rng);
-    CompositeLineOverlaysToFloatBuffer(rgb, world, rng);
     
     InvalidateRect(hwnd, NULL, 0);
     while (PeekMessage (&msg, NULL, 0, 0, PM_REMOVE) > 0) {
       TranslateMessage(&msg);
       DispatchMessage(&msg); 
+    }
+    if(AdvancePreviewMotion(&env_y_angle)) {
+      blanked = true;
+      reset_preview_render();
     }
     terminate = term;
   }
@@ -1484,13 +2370,21 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                                bool preview, bool _interactive,
                                bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
-                               oidn::FilterRef& _filter,
+                               RayOidnDenoiser* _denoiser,
+                               RayMatrix* _oidn_albedo_output,
+                               RayMatrix* _oidn_normal_output,
                                bool denoise, bool _auto_exposure) :
   preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
   preview_exposure_scale(1.f), preview_exposure_adjustment(1.f),
   EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
-  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject), filter(_filter),
-  denoise(denoise) {
+  Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject),
+  denoiser(_denoiser), oidn_albedo_output(_oidn_albedo_output),
+  oidn_normal_output(_oidn_normal_output),
+  denoise(denoise && _denoiser != nullptr &&
+          _oidn_albedo_output != nullptr &&
+          _oidn_normal_output != nullptr),
+  oidn_aux_dirty(true), oidn_fast_aux_dirty(true),
+  has_denoised_preview(false), denoised_preview_sample_count(0) {
 #else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
@@ -1502,11 +2396,30 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   EnvObjectToWorld(_EnvObjectToWorld), EnvWorldToObject(_EnvWorldToObject),
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
 #endif
+  width = _width; height = _height;
   Keyframes.clear();
+  current_keyframe = -1;
+  keyframe_motion_args = Rcpp::List::create(
+    Named("type") = "spline",
+    Named("smooth_orientation") = true,
+    Named("damp_motion") = true
+  );
+  keyframe_motion_closed = false;
+  preview_motion = Rcpp::DataFrame::create();
+  preview_motion_restore_state = Rcpp::List::create();
+  preview_motion_frame = 0;
+  preview_motion_restore_keyframe = -1;
+  preview_motion_active = false;
+  snapshot_width = 0;
+  snapshot_height = 0;
   write_fast_output = false;
   terminate = false;
   deferred_render = _deferred_render && preview && _interactive;
   render_requested = !deferred_render;
+  cam = _cam;
+  camera_motion_blur_enabled = cam != nullptr && cam->get_camera_motion_blur();
+  shutter_speed = cam != nullptr ? cam->get_shutter_speed() : static_cast<Float>(2);
+  ApplyShutterSpeedToCameras();
 #ifdef RAY_HAS_X11
   speed = 1.f;
   interactive = _interactive;
@@ -1561,12 +2474,14 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   term = false;
   env_y_angle = 0;
   Keyframes_w = &Keyframes;
+  preview_display_w = this;
   if(preview) {
     width = _width;
     height = _height;
     base_step = initial_lookat_distance/20;
     rgb.resize(width*height*3);
     cam_w = _cam;
+    ApplyShutterSpeedToCameras();
     hInstance = (HINSTANCE)GetModuleHandle(NULL);
     // Register the window class.
     const wchar_t CLASS_NAME[]  = L"Rayrender";
@@ -1611,6 +2526,187 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #endif
 }
 
+void PreviewDisplay::SetCamera(RayCamera* _cam) {
+  cam = _cam;
+  if(cam != nullptr) {
+    cam->set_camera_motion_blur(camera_motion_blur_enabled);
+    cam->set_shutter_speed(shutter_speed);
+  }
+#ifdef RAY_WINDOWS
+  if(hwnd != NULL) {
+    cam_w = _cam;
+    if(cam_w != nullptr) {
+      cam_w->set_camera_motion_blur(camera_motion_blur_enabled);
+      cam_w->set_shutter_speed(shutter_speed);
+    }
+  }
+#endif
+}
+
+void PreviewDisplay::SetSnapshotFilename(const std::string& filename) {
+  snapshot_filename = filename;
+}
+
+void PreviewDisplay::CaptureVolumeSnapshot(adaptive_sampler& sampler, RayMatrix& color,
+                                           size_t samples, hitable* world, random_gen& rng) {
+  snapshot_alpha.clear();
+  if(!transparent_volume_background) return;
+  snapshot_width=width; snapshot_height=height;
+  snapshot_alpha.resize(size_t(width)*height);
+  std::vector<Float> rgb(size_t(width)*height*3);
+  for(size_t y=0;y<height;++y) for(size_t x=0;x<width;++x) {
+    size_t sx=width-1-x, sy=height-1-y, pixel=x+width*y;
+    bool final=sampler.finalized[sx+width*sy];
+    Float count=final ? 1 : std::max(size_t(1),samples);
+    Float alpha=clamp(final ? sampler.a(sx,sy,0) : 1-sampler.a(sx,sy,0)/count,0.f,1.f);
+    snapshot_alpha[pixel]=alpha;
+    for(int channel=0;channel<3;++channel)
+      rgb[3*pixel+channel]=alpha>0 ? ApplyPreviewExposure(color(sx,sy,channel)/alpha,count) : 0;
+  }
+  CompositeTextOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
+  CompositeLineOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
+  snapshot_pixels.resize(rgb.size());
+  for(size_t i=0;i<rgb.size();++i) snapshot_pixels[i]=static_cast<unsigned char>(255*clamp(rgb[i],0.f,1.f));
+}
+
+void PreviewDisplay::SavePreviewSnapshot() const {
+  if(snapshot_width == 0 || snapshot_height == 0 || snapshot_pixels.empty()) {
+    Rprintf("Unable to save preview snapshot: no preview image is available.\n");
+    return;
+  }
+
+  try {
+    size_t channels=snapshot_alpha.empty() ? 3 : 4;
+    Rcpp::NumericVector image(
+      static_cast<R_xlen_t>(snapshot_width) *
+      static_cast<R_xlen_t>(snapshot_height) * channels
+    );
+    size_t channel_size = static_cast<size_t>(snapshot_width) *
+      static_cast<size_t>(snapshot_height);
+    for(unsigned int y = 0; y < snapshot_height; y++) {
+      for(unsigned int x = 0; x < snapshot_width; x++) {
+        size_t source_pixel = static_cast<size_t>(x) +
+          static_cast<size_t>(snapshot_width) * y;
+        size_t target_pixel = static_cast<size_t>(y) +
+          static_cast<size_t>(snapshot_height) * x;
+        if(channels==4) image[target_pixel + 3*channel_size]=snapshot_alpha[source_pixel];
+        for(size_t channel = 0; channel < 3; channel++) {
+          image[target_pixel + channel_size * channel] =
+            static_cast<Float>(snapshot_pixels[3 * source_pixel + channel]) /
+            255.f;
+        }
+      }
+    }
+    image.attr("dim") = Rcpp::IntegerVector::create(
+      snapshot_height,
+      snapshot_width,
+      channels
+    );
+
+    Rcpp::CharacterVector source_filename(1);
+    if(snapshot_filename.empty()) {
+      source_filename[0] = NA_STRING;
+    } else {
+      source_filename[0] = snapshot_filename;
+    }
+    Rcpp::Environment pkg = Rcpp::Environment::namespace_env("rayrender");
+    Rcpp::Function save_snapshot = pkg["save_preview_snapshot"];
+    save_snapshot(image, source_filename);
+  } catch(const std::exception& error) {
+    Rprintf("Unable to save preview snapshot: %s\n", error.what());
+  } catch(...) {
+    Rprintf("Unable to save preview snapshot.\n");
+  }
+}
+
+bool PreviewDisplay::PollCloseEvent() {
+#ifdef RAY_HAS_X11
+  if(d != nullptr && !terminate) {
+    std::vector<XEvent> deferred_events;
+    KeyCode esc = XKeysymToKeycode(d, XK_Escape);
+    while(XPending(d)) {
+      XEvent poll_event;
+      XNextEvent(d, &poll_event);
+      if(poll_event.type == ClientMessage) {
+        terminate = true;
+      } else if(poll_event.type == KeyPress &&
+                poll_event.xkey.keycode == esc &&
+                PreviewDisplayHasKeyboardFocus(d, this->w)) {
+        terminate = true;
+      } else {
+        deferred_events.push_back(poll_event);
+      }
+    }
+    if(!terminate) {
+      for(auto event_iter = deferred_events.rbegin();
+          event_iter != deferred_events.rend();
+          ++event_iter) {
+        XPutBackEvent(d, &(*event_iter));
+      }
+    }
+  }
+#endif
+#ifdef RAY_WINDOWS
+  if(hwnd != NULL && !terminate) {
+    if(GetForegroundWindow() == hwnd && (GetAsyncKeyState(VK_ESCAPE) & 0x8000)) {
+      term = true;
+      terminate = true;
+      PostMessage(hwnd, WM_CLOSE, 0, 0);
+    }
+    MSG close_msg;
+    while(PeekMessage(&close_msg, hwnd, WM_SYSCOMMAND, WM_SYSCOMMAND, PM_REMOVE) > 0) {
+      TranslateMessage(&close_msg);
+      DispatchMessage(&close_msg);
+    }
+    while(PeekMessage(&close_msg, hwnd, WM_CLOSE, WM_CLOSE, PM_REMOVE) > 0) {
+      TranslateMessage(&close_msg);
+      DispatchMessage(&close_msg);
+    }
+    while(PeekMessage(&close_msg, NULL, WM_QUIT, WM_QUIT, PM_REMOVE) > 0) {
+      term = true;
+    }
+    terminate = term;
+  }
+#endif
+  return terminate;
+}
+
+#ifdef HAS_OIDN
+void PreviewDisplay::SetDenoiser(RayOidnDenoiser* _denoiser,
+                                 RayMatrix* _oidn_albedo_output,
+                                 RayMatrix* _oidn_normal_output,
+                                 bool _denoise) {
+  denoiser = _denoiser;
+  oidn_albedo_output = _oidn_albedo_output;
+  oidn_normal_output = _oidn_normal_output;
+  denoise = _denoise &&
+    denoiser != nullptr &&
+    oidn_albedo_output != nullptr &&
+    oidn_normal_output != nullptr;
+  InvalidateOidnAux();
+}
+
+void PreviewDisplay::InvalidateOidnAux() {
+  oidn_aux_dirty = true;
+  oidn_fast_aux_dirty = true;
+  has_denoised_preview = false;
+  denoised_preview_sample_count = 0;
+}
+
+void PreviewDisplay::MarkOidnAuxClean(bool fast_preview) {
+  if(fast_preview) {
+    oidn_fast_aux_dirty = false;
+  } else {
+    oidn_aux_dirty = false;
+  }
+}
+
+void PreviewDisplay::MarkDenoisedPreviewReady(size_t sample_count) {
+  has_denoised_preview = true;
+  denoised_preview_sample_count = std::max<size_t>(sample_count, 1);
+}
+#endif
+
 PreviewDisplay::~PreviewDisplay() {
 #ifdef RAY_HAS_X11
   if (d) {
@@ -1621,6 +2717,9 @@ PreviewDisplay::~PreviewDisplay() {
 #ifdef RAY_WINDOWS
   if (hwnd != NULL) {
     DestroyWindow(hwnd);
+  }
+  if (preview_display_w == this) {
+    preview_display_w = nullptr;
   }
   rgb.resize(0);
 #endif
@@ -1636,6 +2735,9 @@ PreviewDisplay::~PreviewDisplay() {
 #define VK_KEY_6 54
 #define VK_KEY_7 55
 #define VK_KEY_8 56
+#define VK_KEY_COMMA 188
+#define VK_KEY_PERIOD 190
+#define VK_KEY_SLASH 191
 #define VK_KEY_LEFT_BRACKET 219
 #define VK_KEY_RIGHT_BRACKET 221
 //These are lower case
@@ -1686,8 +2788,40 @@ static bool IsWindowsRenderInvalidatingKey(WPARAM key) {
          key == VK_KEY_3 ||
          key == VK_KEY_4 ||
          key == VK_KEY_F ||
+         key == VK_KEY_B ||
          key == VK_KEY_L ||
+         key == VK_KEY_M ||
+         key == VK_KEY_COMMA ||
+         key == VK_KEY_PERIOD ||
+         key == VK_KEY_SLASH ||
          key == VK_KEY_R;
+}
+
+static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = true) {
+  if(!blanked && !term) {
+    if(update_camera_motion_range) {
+      ApplyStaticPreviewCameraMotionRange(cam_w);
+    }
+    blanked = true;
+    if(ns_w != nullptr) {
+      *ns_w = 0;
+    }
+    if(aps != nullptr) {
+      aps->reset();
+    }
+    if(aps_small != nullptr) {
+      aps_small->reset();
+    }
+    if(preview_display_w != nullptr) {
+      preview_display_w->ResetPreviewExposure();
+#ifdef HAS_OIDN
+      preview_display_w->InvalidateOidnAux();
+#endif
+    }
+    if(progress_w && !interactive_w && pb_w != nullptr) {
+      pb_w->update(0);
+    }
+  }
 }
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -1701,6 +2835,39 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
       if(!PreviewWindowHasKeyboardFocus(hwnd)) {
         return 0;
       }
+      bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(interactive_w && preview_display_w != nullptr &&
+         (wParam == VK_KEY_H || wParam == VK_KEY_Y)) {
+        if((lParam & (LPARAM(1) << 30)) == 0) {
+          const bool changed = wParam == VK_KEY_H ? preview_display_w->ToggleHaze()
+                                                 : preview_display_w->ToggleQueryAltitude();
+          if(changed) ResetWindowsPreviewRenderState(false);
+          if(preview_display_w->terminate) term = true;
+        }
+        return 0;
+      }
+      if(interactive_w &&
+         shift_pressed &&
+         wParam == VK_RETURN &&
+         preview_display_w != nullptr) {
+        preview_display_w->SavePreviewSnapshot();
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         preview_display_w->IsPreviewMotionActive() &&
+         wParam != VK_ESCAPE &&
+         wParam != VK_KEY_M) {
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_L) {
+        preview_display_w->ToggleKeyframeMotionClosed();
+        InvalidateRect(hwnd, nullptr, FALSE);
+        return 0;
+      }
       vec3f w(1,0,0);
       vec3f u(0,1,0);
       vec3f v(0,0,1);
@@ -1709,6 +2876,22 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         w = cam_w->get_w();
         u = cam_w->get_u();
         v = cam_w->get_v();
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_LEFT_BRACKET) {
+        preview_display_w->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+        ResetWindowsPreviewRenderState(false);
+        return 0;
+      }
+      if(interactive_w &&
+         preview_display_w != nullptr &&
+         shift_pressed &&
+         wParam == VK_KEY_RIGHT_BRACKET) {
+        preview_display_w->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+        ResetWindowsPreviewRenderState(false);
+        return 0;
       }
 
       switch (wParam) {
@@ -1728,37 +2911,59 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
           break;
         }
+        case VK_KEY_B: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->ToggleCameraMotionBlur();
+          }
+          break;
+        }
         case VK_KEY_W: {
           if(interactive_w) {
-            vec3f step = speed * w * base_step;
-            if(orbit) {
-              Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
-              if(dist_to_orbit <= base_step * speed) {
-                Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                step = vec3f(0);
+            if(shift_pressed) {
+              cam_w->rotate_forward(speed * 1.f);
+            } else {
+              vec3f step = speed * w * base_step;
+              if(orbit) {
+                Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
+                if(dist_to_orbit <= base_step * speed) {
+                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
+                  step = vec3f(0);
+                }
               }
-            } 
-            cam_w->update_position(step, orbit, false);
+              cam_w->update_position(step, orbit, false);
+            }
           }
           break;
         }
 
         case VK_KEY_A: {
           if(interactive_w) {
-          cam_w->update_position(-speed * u * base_step, orbit);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_up(speed * -1.f);
+            } else {
+              cam_w->update_position(-speed * u * base_step, orbit);
+            }
+          }
           break;
         }
         case VK_KEY_S: {
           if(interactive_w) {
-          cam_w->update_position(-speed * w * base_step, orbit, false);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_forward(speed * -1.f);
+            } else {
+              cam_w->update_position(-speed * w * base_step, orbit, false);
+            }
+          }
           break;
         }
         case VK_KEY_D: {
           if(interactive_w) {
-          cam_w->update_position(speed * u * base_step, orbit);
-        }
+            if(shift_pressed) {
+              cam_w->rotate_up(speed * 1.f);
+            } else {
+              cam_w->update_position(speed * u * base_step, orbit);
+            }
+          }
           break;
         }
         case VK_KEY_Q: { 
@@ -1828,6 +3033,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           if(interactive_w) {
             (*EnvObjectToWorld_w) =  RotateY(speed*8) * (*EnvObjectToWorld_w);
             (*EnvWorldToObject_w) =  RotateY(-speed*8) * (*EnvWorldToObject_w);
+            env_y_angle -= speed*8;
           }
           break;
         }
@@ -1835,6 +3041,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           if(interactive_w) {
           (*EnvObjectToWorld_w) =  RotateY(-speed*8) * (*EnvObjectToWorld_w);
           (*EnvWorldToObject_w) =  RotateY(speed*8) * (*EnvWorldToObject_w);
+          env_y_angle += speed*8;
           }
           break;
         }
@@ -1871,262 +3078,83 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             speed = 1;
             (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
             (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
+            env_y_angle = 0;
           }
           break;
         }
         case VK_KEY_P: {
-          point3f origin = cam_w->get_origin();
-          Float fov =  cam_w->get_fov();
-          vec3f cam_direction = -cam_w->get_w();
-          Float cam_aperture = cam_w->get_aperture();
-          Float fd = cam_w->get_focal_distance();
-          point2f ortho = cam_w->get_ortho();
-          point3f cam_lookat = cam_w->get_lookat();
-          if(fov > 0) {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                    origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                    origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                    fov, 
-                    cam_aperture, fd, env_y_angle, *preview_exposure_adjustment_w);
-          } else if (fov < 0) {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                    origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                    origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                    fd, env_y_angle, *preview_exposure_adjustment_w);
-          } else {
-            Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                    origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                    cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                    fd, env_y_angle, *preview_exposure_adjustment_w);
+          if(preview_display_w != nullptr) {
+            preview_display_w->PrintCameraInfo(env_y_angle);
           }
-            break;
-          } 
-          case VK_KEY_L: {
-            if(Keyframes_w->size() > 0) {
-              Rcpp::List LastKeyframe = Keyframes_w->at(Keyframes_w->size()-1);
-              point3f last_pos = point3f(Rcpp::as<Float>(LastKeyframe["x"]),
-                                         Rcpp::as<Float>(LastKeyframe["y"]),
-                                         Rcpp::as<Float>(LastKeyframe["z"]));
-              point3f last_lookat = point3f(Rcpp::as<Float>(LastKeyframe["dx"]),
-                                            Rcpp::as<Float>(LastKeyframe["dy"]),
-                                            Rcpp::as<Float>(LastKeyframe["dz"]));
-              Float last_aperture = Rcpp::as<Float>(LastKeyframe["aperture"]);
-              Float last_fov = Rcpp::as<Float>(LastKeyframe["fov"]);
-              Float last_focal = Rcpp::as<Float>(LastKeyframe["focal"]);
-              if(LastKeyframe.containsElementNamed("exposure")) {
-                (*preview_exposure_adjustment_w) = Rcpp::as<Float>(LastKeyframe["exposure"]);
-              }
-              vec2f last_ortho = vec2f(Rcpp::as<Float>(LastKeyframe["orthox"]),
-                                       Rcpp::as<Float>(LastKeyframe["orthoy"]));
-              cam_w->update_focal_absolute(last_focal);
-              cam_w->update_position_absolute(last_pos);
-              cam_w->update_lookat(last_lookat);
-              cam_w->update_aperture_absolute(last_aperture);
-              cam_w->update_fov_absolute(last_fov);
-              cam_w->update_ortho_absolute(last_ortho);
+          break;
+        }
+        case VK_KEY_L: {
+          if(preview_display_w != nullptr) {
+            if(preview_display_w->Keyframes.size() > 0) {
+              preview_display_w->ApplyKeyframe(
+                static_cast<int>(preview_display_w->Keyframes.size()) - 1,
+                &env_y_angle
+              );
             } else {
               Rprintf("Can't reset to last keyframe: No keyframes have been saved. Use the R key to reset camera.");
             }
-            break;
           }
-          case VK_KEY_K: {
-            point3f origin = cam_w->get_origin();
-            Float fov =  cam_w->get_fov();
-            vec3f cam_direction = -cam_w->get_w();
-            Float cam_aperture = cam_w->get_aperture();
-            Float fd = cam_w->get_focal_distance();
-            vec3f cam_up = cam_w->get_up();
-            point2f ortho = cam_w->get_ortho();
-            point3f cam_lookat = cam_w->get_lookat();
-            
-            if(fov > 0) {
-              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                     Named("y")  = origin.xyz.y,
-                                                     Named("z")  = origin.xyz.z,
-                                                     Named("dx") = origin.xyz.x+cam_direction.xyz.x*fd,
-                                                     Named("dy") = origin.xyz.y+cam_direction.xyz.y*fd,
-                                                     Named("dz") = origin.xyz.z+cam_direction.xyz.z*fd,
-                                                     Named("aperture") = cam_aperture,
-                                                     Named("fov") = fov,
-                                                     Named("focal") = fd,
-                                                     Named("exposure") = *preview_exposure_adjustment_w,
-                                                     Named("orthox") = ortho.xy.x,
-                                                     Named("orthoy") = ortho.xy.y,
-                                                     Named("upx")  = cam_up.xyz.x,
-                                                     Named("upy")  = cam_up.xyz.y,
-                                                     Named("upz")  = cam_up.xyz.z));
-            } else if (fov < 0) {
-              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                     Named("y")  = origin.xyz.y,
-                                                     Named("z")  = origin.xyz.z,
-                                                     Named("dx") = origin.xyz.x+cam_direction.xyz.x*fd,
-                                                     Named("dy") = origin.xyz.y+cam_direction.xyz.y*fd,
-                                                     Named("dz") = origin.xyz.z+cam_direction.xyz.z*fd,
-                                                     Named("aperture") = 0,
-                                                     Named("fov") = 0,
-                                                     Named("focal") = fd,
-                                                     Named("exposure") = *preview_exposure_adjustment_w,
-                                                     Named("orthox") = ortho.xy.x,
-                                                     Named("orthoy") = ortho.xy.y,
-                                                     Named("upx")  = cam_up.xyz.x,
-                                                     Named("upy")  = cam_up.xyz.y,
-                                                     Named("upz")  = cam_up.xyz.z));
+          break;
+        }
+        case VK_KEY_M: {
+          if(preview_display_w != nullptr) {
+            if(preview_display_w->IsPreviewMotionActive()) {
+              preview_display_w->CancelPreviewMotion(&env_y_angle);
             } else {
-              Keyframes_w->push_back(Rcpp::List::create(Named("x")  = origin.xyz.x,
-                                                     Named("y")  = origin.xyz.y,
-                                                     Named("z")  = origin.xyz.z,
-                                                     Named("dx") = cam_lookat.xyz.x,
-                                                     Named("dy") = cam_lookat.xyz.y,
-                                                     Named("dz") = cam_lookat.xyz.z,
-                                                     Named("aperture") = 0,
-                                                     Named("fov") = 0,
-                                                     Named("focal") = fd,
-                                                     Named("exposure") = *preview_exposure_adjustment_w,
-                                                     Named("orthox") = ortho.xy.x,
-                                                     Named("orthoy") = ortho.xy.y,
-                                                     Named("upx")  = cam_up.xyz.x,
-                                                     Named("upy")  = cam_up.xyz.y,
-                                                     Named("upz")  = cam_up.xyz.z));
+              preview_display_w->StartPreviewMotion(env_y_angle);
             }
-            if(fov > 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) FOV: %.1f Aperture: %0.3f Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                      fov, 
-                      cam_aperture, fd, env_y_angle, *preview_exposure_adjustment_w);
-            } else if (fov < 0) {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      origin.xyz.x+cam_direction.xyz.x*fd, origin.xyz.y+cam_direction.xyz.y*fd, origin.xyz.z+cam_direction.xyz.z*fd, 
-                      fd, env_y_angle, *preview_exposure_adjustment_w);
-            } else {
-              Rprintf("Lookfrom: c(%.2f, %.2f, %.2f) LookAt: c(%.2f, %.2f, %.2f) Focal Dist: %0.3f Env Rotation: %.2f Exposure: %.3f\n",
-                      origin.xyz.x, origin.xyz.y, origin.xyz.z, 
-                      cam_lookat.xyz.x, cam_lookat.xyz.y, cam_lookat.xyz.z, 
-                      fd, env_y_angle, *preview_exposure_adjustment_w);
-            }
-            break;
-          } 
+          }
+          break;
+        }
+        case VK_KEY_COMMA: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->JumpKeyframe(-1, &env_y_angle);
+          }
+          break;
+        }
+        case VK_KEY_PERIOD: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->JumpKeyframe(1, &env_y_angle);
+          }
+          break;
+        }
+        case VK_KEY_SLASH: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->DeleteCurrentKeyframe(&env_y_angle);
+          }
+          break;
+        }
+        case VK_KEY_K: {
+          if(preview_display_w != nullptr) {
+            preview_display_w->SaveCurrentKeyframe(env_y_angle);
+            preview_display_w->PrintCameraInfo(env_y_angle);
+          }
+          break;
+        }
           
           default: 
             break;
       }
       if(interactive_w) {
         if(IsWindowsRenderInvalidatingKey(wParam)) {
-          if(!blanked && !term) {
-            blanked = true;
-            *ns_w = 0;
-            aps->reset();
-            aps_small->reset();
-            if(progress_w && !interactive_w) {
-              pb_w->update(0);
-            }
-          }
+          ResetWindowsPreviewRenderState();
         }
       }
       break;
     }
-  case WM_LBUTTONDOWN: {
-    if(interactive_w) {
-        Float x = GET_X_LPARAM(lParam);
-        Float y = GET_Y_LPARAM(lParam);
-        Float fov = cam_w->get_fov();
-        Float u = (Float(x)) / Float(width);
-        Float v = (Float(y)) / Float(height);
-        vec3f dir;
-        bool just_direction = false;
-        hit_record hrec;
-        if(fov < 0) {
-          CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-          Ray r2;
-          cam_w->GenerateRay(samp,&r2);
-          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            dir = convert_to_vec3(-hrec.p);
-            if( hrec.shape->GetName() == "EnvironmentLight") {
-              just_direction = true;
-            }
-          }
-        } else if (fov > 0) {
-          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-          world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w);
-          dir = r2.direction();
-          if( hrec.shape->GetName() == "EnvironmentLight") {
-            just_direction = true;
-          } 
-        } else {
-          Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-          if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-            if( hrec.shape->GetName() != "EnvironmentLight") {
-              dir = -(cam_w->get_origin()-hrec.p);
-            } else {
-              dir = -cam_w->get_w();
-              just_direction = true;
-            }
-          } else {
-            dir = -cam_w->get_w();
-          }
-        }
-        if(!just_direction) {
-          if(fov != 0 && fov != 360) {
-            Float current_fd = cam_w->get_focal_distance();
-            Float new_fd = (hrec.p-cam_w->get_origin()).length();
-            cam_w->update_focal_distance(new_fd- current_fd);
-          }
-          cam_w->update_lookat(hrec.p);
-        } else {
-          cam_w->update_look_direction(-dir);
-        }
-        *ns_w = 0;
-        aps->reset();
-        aps_small->reset();
-        if(progress_w && !interactive_w) {
-          pb_w->update(0);
-        }
-      }
-    break;
-  }
+  case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN: {
-    if(interactive_w) {
-      Float x = GET_X_LPARAM(lParam);
-      Float y = GET_Y_LPARAM(lParam);
-      Float fov = cam_w->get_fov();
-      Float u = (Float(x)) / Float(width);
-      Float v = (Float(y)) / Float(height);
-      vec3f dir;
-      hit_record hrec;
-      if(fov < 0) {
-        CameraSample samp({1-u,v},point2f(0.5,0.5), 0.5);
-        Ray r2;
-        cam_w->GenerateRay(samp,&r2);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          dir = convert_to_vec3(-hrec.p);
-        }
-      } else if (fov > 0) {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                                0.5f);
-        dir = r2.direction();
-      } else {
-        Ray r2 = cam_w->get_ray(u,1-v, point3f(0),
-                              0.5f);
-        if(world_w->hit(r2, 0.001, FLT_MAX, hrec, *rng_w)) {
-          if( hrec.shape->GetName() != "EnvironmentLight") {
-            dir = -(cam_w->get_origin()-hrec.p);
-          } else {
-            Rprintf("Clicking on the environment light while using a orthographic camera does not change the view.\n");
-            dir = -cam_w->get_w();
-          }
-        } else {
-          dir = -cam_w->get_w();
-        }
-      }
-      cam_w->update_look_direction(dir);
-      *ns_w = 0;
-      aps->reset();
-      aps_small->reset();
-      if(progress_w && !interactive_w) {
-        pb_w->update(0);
+    if(interactive_w && preview_display_w != nullptr &&
+       !preview_display_w->IsPreviewMotionActive()) {
+      Float u = 1 - (Float(GET_X_LPARAM(lParam)) + .5f) / Float(width);
+      Float v = 1 - (Float(GET_Y_LPARAM(lParam)) + .5f) / Float(height);
+      if(preview_display_w->PickCameraTarget(u, v, uMsg == WM_LBUTTONDOWN, world_w)) {
+        ResetWindowsPreviewRenderState();
       }
     }
     break;
@@ -2160,6 +3188,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
              0,
              0,
              SRCCOPY); // Defined DWORD to just copy pixels.
+      if(preview_display_w != nullptr) {
+        preview_display_w->DrawStatusBarWindows(hdc, env_y_angle);
+      }
       DeleteDC(src);
       DeleteObject(map);
       free(arr);
@@ -2169,5 +3200,259 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
   return 0;
   }
   return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+#endif
+
+#ifdef NOT_CRAN
+namespace {
+std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
+                                                       Transform& env_transform) {
+#ifdef HAS_OIDN
+  return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+    4, 4, false, true, false, 10.f, &cam,
+    &env_transform, &env_transform,
+    nullptr, nullptr, nullptr, false, false));
+#else
+  return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
+    4, 4, false, true, false, 10.f, &cam,
+    &env_transform, &env_transform, false));
+#endif
+}
+}
+
+context("Preview atmosphere controls") {
+  test_that("replacing an environment updates emission as well as sampling") {
+    Transform identity;
+    auto original = std::make_shared<ImageInfiniteLight>(
+        std::make_shared<constant_texture>(point3f(1, 0, 0)), 4, 2, 0);
+    auto replacement = std::make_shared<ImageInfiniteLight>(
+        std::make_shared<constant_texture>(point3f(0, 2, 0)), 4, 2, 0);
+    InfiniteAreaLight environment(original, 10, point3f(0), &identity, &identity);
+    auto material = environment.mat_ptr;
+    environment.SetLight(replacement);
+    expect_true(environment.light == replacement);
+    expect_true(environment.mat_ptr == material);
+    hit_record rec;
+    bool invisible = true;
+    Ray ray(point3f(0), vec3f(0, 0, 1));
+    point3f emitted = material->emitted(ray, rec, 0, 0, point3f(0), invisible);
+    expect_true((emitted - point3f(0, 2, 0)).length() < 1e-6f);
+    expect_false(invisible);
+  }
+  test_that("haze and altitude toggles preserve supported combinations and request a restart") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    std::vector<std::pair<bool, bool>> applied;
+    display->SetAtmosphereControls(false, false, [&](bool haze, bool altitude) {
+      applied.emplace_back(haze, altitude);
+    });
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->ToggleHaze());
+    expect_true((applied.back() == std::make_pair(true, true)));
+    expect_true(display->ConsumeAtmosphereChange());
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->PreviewStatusText(0).find("\nHaze ON | Altitude ON") !=
+                std::string::npos);
+    expect_true(display->ToggleHaze());
+    expect_true((applied.back() == std::make_pair(false, true)));
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, false)));
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, true)));
+    expect_true(display->ToggleHaze());
+    expect_true(display->ToggleQueryAltitude());
+    expect_true((applied.back() == std::make_pair(false, false)));
+    expect_true(display->ConsumeAtmosphereChange());
+  }
+  test_that("unavailable or failed atmosphere changes leave settings and sampling intact") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    expect_false(display->ToggleHaze());
+    expect_false(display->ToggleQueryAltitude());
+    expect_false(display->ConsumeAtmosphereChange());
+    display->SetAtmosphereControls(false, true, [](bool, bool) {
+      throw std::runtime_error("Unable to prepare sky");
+    });
+    expect_false(display->ToggleHaze());
+    expect_false(display->ConsumeAtmosphereChange());
+    expect_true(display->AtmosphereStatusText() == "Haze OFF | Altitude ON");
+  }
+}
+
+context("Preview picking and orbit targets") {
+  test_that("background clicks turn the camera and retain focus and orbit radius") {
+    Transform identity;
+    auto texture = std::make_shared<constant_texture>(point3f(1));
+    auto light = std::make_shared<ImageInfiniteLight>(texture, 16, 8, 30);
+    for(bool update_focus : {false, true}) {
+      for(Float radius : {Float(100), Float(10000)}) {
+        hitable_list world;
+        world.add(std::make_shared<InfiniteAreaLight>(light, radius, point3f(0),
+                                                      &identity, &identity));
+        camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                   60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+        auto display = MakeTestPreviewDisplay(cam, identity);
+        point3f origin = cam.get_origin();
+        vec3f expected = unit_vector(cam.get_ray(.7, .65, point3f(0), .5).direction());
+        expect_true(display->PickCameraTarget(.7, .65, update_focus, &world));
+        expect_true((cam.get_origin() - origin).length() == 0);
+        expect_true((cam.get_w() - expected).length() < 1e-5);
+        expect_true(cam.get_focal_distance() == 5);
+        point3f pivot = cam.get_lookat();
+        expect_true((pivot - origin).length() == Approx(10));
+        cam.update_position(cam.get_u(), true);
+        expect_true((cam.get_lookat() - pivot).length() == 0);
+        expect_true((cam.get_origin() - pivot).length() == Approx(10));
+        expect_true(dot(unit_vector(pivot - cam.get_origin()), cam.get_w()) > .99999);
+        Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+        expect_true(Rcpp::as<Float>(keyframe["dx"]) == pivot[0]);
+        expect_true(Rcpp::as<Float>(keyframe["focal"]) == 5);
+      }
+    }
+  }
+  test_that("volume clicks update the pivot and sparse misses leave the camera untouched") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 1.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    auto scene = std::make_shared<VolumeScene>();
+    Rcpp::Function describe = Rcpp::Environment::namespace_env("rayrender")["homogeneous_medium"];
+    auto medium = LoadMedium(describe());
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto sphere_geometry = std::make_shared<sphere>(2, mat, nullptr, nullptr,
+                                                  &identity, &identity, false);
+    auto boundary = std::make_shared<MediumBoundary>(sphere_geometry, medium, identity, false,
+                                                    scene->NextBoundaryId());
+    scene->boundaries.add(boundary);
+    scene->Finish(0, 1);
+    display->volume_scene = scene;
+    hitable_list world;
+    world.add(boundary);
+    expect_true(display->PickCameraTarget(.5, .5, true, &world));
+    point3f pivot = cam.get_lookat();
+    expect_true(std::abs(pivot[2] - (-2 - std::log(.85))) < 1e-5);
+    expect_true(std::abs(cam.get_focal_distance() - (pivot - cam.get_origin()).length()) < 1e-5);
+    cam.update_position(cam.get_u(), true);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true(dot(unit_vector(pivot - cam.get_origin()), cam.get_w()) > .99999);
+    point3f origin = cam.get_origin();
+    vec3f direction = cam.get_w();
+    Float focal = cam.get_focal_distance();
+    expect_false(display->PickCameraTarget(0, 0, true, &world));
+    expect_true((cam.get_origin() - origin).length() == 0);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true((cam.get_w() - direction).length() == 0);
+    expect_true(cam.get_focal_distance() == focal);
+  }
+  test_that("right clicks preserve focus while orbiting about the selected surface") {
+    Transform identity;
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    hitable_list world;
+    world.add(std::make_shared<sphere>(2, mat, nullptr, nullptr, &identity, &identity, false));
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    expect_true(display->PickCameraTarget(.5, .5, false, &world));
+    point3f pivot = cam.get_lookat();
+    Float distance = (pivot - cam.get_origin()).length();
+    expect_true(pivot[2] == Approx(-2));
+    expect_true(cam.get_focal_distance() == 10);
+    cam.update_position(cam.get_u(), true);
+    expect_true((cam.get_lookat() - pivot).length() == 0);
+    expect_true((cam.get_origin() - pivot).length() == Approx(distance));
+    expect_true(cam.get_focal_distance() == 10);
+    Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+    expect_true(Rcpp::as<Float>(keyframe["dz"]) == pivot[2]);
+    expect_true(Rcpp::as<Float>(keyframe["focal"]) == 10);
+  }
+  test_that("free-flight keyframes still capture the current viewing direction") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    cam.update_position(vec3f(2, 0, 0), false);
+    Rcpp::List keyframe = display->CreateCurrentKeyframe(0);
+    point3f target(Rcpp::as<Float>(keyframe["dx"]), Rcpp::as<Float>(keyframe["dy"]),
+                    Rcpp::as<Float>(keyframe["dz"]));
+    expect_true(dot(unit_vector(target - cam.get_origin()), cam.get_w()) > .999999);
+  }
+}
+
+context("Preview keyframe loop controls") {
+  test_that("preview keyframe loop state toggles and appears in status text") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    expect_false(display->KeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop OPEN") !=
+                std::string::npos);
+
+    display->SetKeyframeMotionArgs(
+      Rcpp::List::create(Rcpp::Named("closed") = true)
+    );
+    expect_true(display->KeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop CLOSED") !=
+                std::string::npos);
+
+    expect_false(display->ToggleKeyframeMotionClosed());
+    expect_true(display->PreviewStatusText(0.f).find("Loop OPEN") !=
+                std::string::npos);
+  }
+}
+
+context("Preview shutter speed controls") {
+  test_that("preview shutter speed adjustments use one-third stop increments") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(2.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(2.f * std::pow(2.f, 1.f / 3.f)));
+    expect_true(cam.get_shutter_speed() == Approx(display->GetShutterSpeed()));
+
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(2.f));
+  }
+
+  test_that("preview shutter speed clamps finite keyboard adjustments") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(1.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(1.f));
+
+    display->SetShutterSpeed(4096.f);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(4096.f));
+  }
+
+  test_that("preview shutter speed exits Inf through slower-shutter adjustment") {
+    Matrix4x4 identity_matrix;
+    Transform env_transform(identity_matrix);
+    camera cam(point3f(0, 0, -10), point3f(0, 0, 0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 10.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, env_transform);
+
+    display->SetShutterSpeed(Infinity);
+    display->AdjustShutterSpeedStops(static_cast<Float>(1) / static_cast<Float>(3));
+    expect_true(std::isinf(display->GetShutterSpeed()));
+
+    display->AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
+    expect_true(display->GetShutterSpeed() == Approx(4096.f));
+  }
 }
 #endif

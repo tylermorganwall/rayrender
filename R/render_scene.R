@@ -18,23 +18,39 @@
 #' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 #' lookat point (unless the mode is switched to free flying), with the following control mapping:
 #' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
 #' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 #' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 #' 3/4 = Rotate Environment Light,
-#' Right bracket/left bracket = Increase/Decrease Preview Exposure,
-#' R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-#' Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
+#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+#' Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
+#' If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
+#' and keyframe state.
 #' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 #' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-#' L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
+#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+#' M: Preview/cancel keyframe motion,
+#' F: Toggle Fast Travel Mode,
+#' B: Toggle Camera Motion Blur,
+#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+#' Haze requires altitude queries: enabling haze also enables altitude queries,
+#' and disabling altitude queries also disables haze. Each change restarts sampling.
 #'
 #' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 #'
-#' Note: Clicking on the environment image will only redirect the view direction, not change the orbit point.
-#' Some options aren't available all cameras. When using a realistic camera,
-#' the aperture and field of view cannot be changed from their initial settings. Additionally,
-#' clicking to direct the camera at the background environment image while using a realistic camera will
-#' not always point to the exact position selected.
+#' With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
+#' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
+#' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
+#' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
+#' background without reaching this opacity turns perspective and panoramic cameras toward that
+#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
+#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
+#' Right clicking preserves the focal distance.
+#' Some options aren't available for all cameras. When using a realistic camera,
+#' the aperture and field of view cannot be changed from their initial settings.
 #' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 #' updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
 #' same window; pressing Return again returns to deferred mode.
@@ -79,13 +95,23 @@
 #' there will be bright spots that will not go away even with a large number of samples. These
 #' can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.
 #' @param filename Default `NULL`. If present, the renderer will write to the filename instead
-#' of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images.
+#' of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images. In the
+#' interactive preview, press Shift+Enter to save the current preview. A source filename with an
+#' extension produces numbered snapshots with the number inserted before the extension; otherwise
+#' snapshots are saved as `rayrender_snapshot1.png`, `rayrender_snapshot2.png`, and so on in the
+#' current directory.
 #' @param backgroundhigh Default `#80b4ff`. The "high" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
+#' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
+#' @param shutter_speed Default `NULL`. Optional render-time override for the
+#' selected camera's frame-relative shutter speed. A value of `1` samples the
+#' full frame-to-frame motion interval, `2` samples one-half, and `4` samples
+#' one-quarter. Higher values produce less motion blur. `Inf` disables temporal
+#' motion blur. This does not affect exposure or brightness.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
 #' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
@@ -100,25 +126,22 @@
 #' tonemapping the image. Pass in a matrix to specify the convolution kernel manually, or a positive number
 #' to control the intensity of the bloom (higher number = more bloom).
 #' @param environment_light Default `NULL`. An image to be used for the background for rays that escape
-#' the scene. Supports EXR (`.exr`), HDR (`.hdr`), and low-dynamic range
-#' (`.png`, `.jpg`) images.
-#' @param environment_light_bake_white Default `FALSE`. If `TRUE`, and `environment_light`
-#' is an EXR with a `white_current` value read by `rayimage::ray_read_image()`,
-#' bake a temporary copy of the environment map from that white point to
-#' `environment_light_bake_white_target` before rendering. The source file is
-#' not modified.
-#' @param environment_light_bake_white_target Default `"D65"`. Target white point
-#' for `environment_light_bake_white`. Use a named white point (`"D65"`, `"D60"`,
-#' `"D55"`, `"D50"`, `"D75"`, or `"E"`) or an XYZ vector with Y = 1.
-#' @param rotate_env Default `0`. The number of degrees to rotate the environment map around the scene.
+#' the scene. Supports EXR, HDR, PNG, and JPEG images. For reusable scene lights and
+#' multiple environments, use \code{\link{infinite_light}()} and \code{\link{add_infinite_light}()}. This
+#' argument adds a light to any infinite lights already attached to the scene.
+#' @param rotate_env Default `0`. The number of degrees to rotate all infinite lights around the scene,
+#' in addition to their individual rotations.
 #' @param intensity_env Default `1`. The amount to increase the intensity of the environment lighting. Useful
-#' if using a LDR (JPEG or PNG) image as an environment map.
+#' if using a LDR (JPEG or PNG) image as an environment map. Applies only to the
+#' `environment_light` argument; scene lights have their own intensity.
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
 #' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 #' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' With `nee`, surfaces and participating media use RGB null-scattering transport;
+#' new medium attachments require this integrator. See [set_medium()].
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image
@@ -144,6 +167,10 @@
 #' or a list of `screen_line()` outputs to draw in order.
 #' Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 #' rendering so text size and justification are independent of scene scale and view distance.
+#' @param camera Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.
+#' @param start_frame Default `1`. First camera frame to render when using an animated camera.
+#' @param end_frame Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.
+#' @param mode Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
@@ -252,6 +279,8 @@ render_scene = function(
   backgroundlow = "#ffffff",
   shutteropen = 0.0,
   shutterclose = 1.0,
+  camera_motion_blur = FALSE,
+  shutter_speed = NULL,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -272,8 +301,330 @@ render_scene = function(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  camera = NULL,
+  start_frame = 1,
+  end_frame = NA,
+  mode = c("auto", "image", "animation", "preview")
 ) {
+  mode = match.arg(mode)
+  if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
+    stop("camera_motion_blur must be a single TRUE/FALSE value.")
+  }
+  shutter_speed_supplied = !is.null(shutter_speed)
+  if (shutter_speed_supplied) {
+    validate_shutter_speed(shutter_speed)
+  }
+  camera_shutter_speed = if (shutter_speed_supplied) shutter_speed else 2
+  camera_arg = if (missing(camera)) NULL else camera
+  filename_supplied = !missing(filename)
+  legacy_camera_supplied = c(
+    lookfrom = !missing(lookfrom),
+    lookat = !missing(lookat),
+    camera_up = !missing(camera_up),
+    fov = !missing(fov),
+    aperture = !missing(aperture),
+    focal_distance = !missing(focal_distance),
+    ortho_dimensions = !missing(ortho_dimensions),
+    camera_description_file = !missing(camera_description_file),
+    camera_scale = !missing(camera_scale),
+    iso = !missing(iso),
+    film_size = !missing(film_size),
+    shutteropen = !missing(shutteropen),
+    shutterclose = !missing(shutterclose),
+    camera_motion_blur = !missing(camera_motion_blur),
+    filename = filename_supplied
+  )
+  legacy_camera_geometry_supplied = any(legacy_camera_supplied[c(
+    "lookfrom",
+    "lookat",
+    "camera_up",
+    "fov",
+    "aperture",
+    "focal_distance",
+    "ortho_dimensions"
+  )])
+  metadata_supplied = legacy_camera_supplied[c(
+    "camera_description_file",
+    "camera_scale",
+    "iso",
+    "film_size",
+    "shutteropen",
+    "shutterclose",
+    "camera_motion_blur",
+    "shutter_speed",
+    "filename"
+  )]
+  metadata_overrides = list(
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
+    shutter_speed = camera_shutter_speed,
+    filename = filename
+  )
+  metadata_supplied[["shutter_speed"]] = shutter_speed_supplied
+  scene_camera_available = length(ray_scene_cameras(scene)) > 0 ||
+    !is.null(camera_arg)
+  legacy_filename = if (
+    !legacy_camera_geometry_supplied &&
+      scene_camera_available
+  ) {
+    NA_character_
+  } else {
+    filename
+  }
+  legacy_camera = render_scene_legacy_camera(
+    scene = scene,
+    supplied = legacy_camera_supplied,
+    lookfrom = lookfrom,
+    lookat = lookat,
+    camera_up = camera_up,
+    fov = fov,
+    aperture = aperture,
+    focal_distance = focal_distance,
+    ortho_dimensions = ortho_dimensions,
+    filename = legacy_filename,
+    camera_description_file = camera_description_file,
+    camera_scale = camera_scale,
+    iso = iso,
+    film_size = film_size,
+    shutteropen = shutteropen,
+    shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
+    shutter_speed = camera_shutter_speed,
+    message_cornell = is.null(camera_arg) &&
+      length(ray_scene_cameras(scene)) == 0
+  )
+  cameras = resolve_scene_camera(
+    scene = scene,
+    camera = camera_arg,
+    legacy_camera = legacy_camera,
+    legacy_camera_supplied = legacy_camera_geometry_supplied,
+    allow_all = TRUE,
+    default_camera = legacy_camera
+  )
+  if (!legacy_camera_geometry_supplied) {
+    cameras = lapply(
+      cameras,
+      apply_camera_overrides,
+      overrides = metadata_overrides,
+      supplied = metadata_supplied
+    )
+  }
+
+  if (length(cameras) > 1) {
+    validate_camera_output_filenames(
+      cameras,
+      mode = mode,
+      start_frame = start_frame,
+      end_frame = end_frame
+    )
+    batch_blockers = character()
+    if (!camera_batch_metadata_compatible(cameras)) {
+      batch_blockers = c(batch_blockers, "camera metadata differs")
+    }
+    if (!is.null(screen_text) || !is.null(screen_line)) {
+      batch_blockers = c(batch_blockers, "screen overlays are enabled")
+    }
+    if (isTRUE(auto_exposure)) {
+      batch_blockers = c(batch_blockers, "auto_exposure is enabled")
+    }
+    if (isTRUE(deferred_render)) {
+      batch_blockers = c(batch_blockers, "deferred_render is enabled")
+    }
+    if (isTRUE(print_debug_info)) {
+      batch_blockers = c(batch_blockers, "print_debug_info is enabled")
+    }
+    if (
+      isTRUE(preview) &&
+        isTRUE(interactive) &&
+        !identical(mode, "preview")
+    ) {
+      batch_blockers = c(batch_blockers, "interactive preview is enabled")
+    }
+    if (length(batch_blockers) == 0) {
+      return(render_camera_batch(
+        scene = scene,
+        cameras = cameras,
+        mode = mode,
+        start_frame = start_frame,
+        end_frame = end_frame,
+        width = width,
+        height = height,
+        preview = if (identical(mode, "preview")) TRUE else preview,
+        denoise = denoise,
+        samples = samples,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        keep_colors = FALSE,
+        sample_dist = Inf,
+        max_depth = if (is.na(max_depth)) 50 else max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        focal_distance = focal_distance,
+        ortho_dimensions = ortho_dimensions,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = rotate_env,
+        intensity_env = intensity_env,
+        debug_channel = debug_channel,
+        plot_scene = if (identical(mode, "preview")) FALSE else plot_scene,
+        progress = progress,
+        verbose = verbose,
+        transparent_background = transparent_background,
+        integrator_type = integrator_type,
+        force_no_write = identical(mode, "preview")
+      ))
+    }
+    warning(
+      "Rendering cameras one at a time because ",
+      paste(batch_blockers, collapse = ", "),
+      "."
+    )
+    output = lapply(cameras, function(cam) {
+      render_scene(
+        scene = scene,
+        width = width,
+        height = height,
+        samples = samples,
+        preview = preview,
+        interactive = interactive,
+        deferred_render = deferred_render,
+        denoise = denoise,
+        auto_exposure = auto_exposure,
+        min_variance = min_variance,
+        min_adaptive_size = min_adaptive_size,
+        sample_method = sample_method,
+        max_depth = max_depth,
+        roulette_active_depth = roulette_active_depth,
+        ambient_light = ambient_light,
+        clamp_value = clamp_value,
+        backgroundhigh = backgroundhigh,
+        backgroundlow = backgroundlow,
+        tonemap = tonemap,
+        bloom = bloom,
+        parallel = parallel,
+        bvh_type = bvh_type,
+        environment_light = environment_light,
+        rotate_env = rotate_env,
+        intensity_env = intensity_env,
+        transparent_background = transparent_background,
+        debug_channel = debug_channel,
+        plot_scene = plot_scene,
+        progress = progress,
+        verbose = verbose,
+        print_debug_info = print_debug_info,
+        new_page = new_page,
+        integrator_type = integrator_type,
+        screen_text = screen_text,
+        screen_line = screen_line,
+        camera = cam,
+        start_frame = start_frame,
+        end_frame = end_frame,
+        mode = mode
+      )
+    })
+    names(output) = vapply(cameras, function(cam) cam$name, character(1))
+    return(invisible(output))
+  }
+
+  selected_camera = cameras[[1]]
+  render_mode = camera_render_mode(selected_camera, mode)
+  if (
+    render_mode == "animation" ||
+      (render_mode == "preview" && nrow(selected_camera$motion) > 1)
+  ) {
+    return(render_animation_camera(
+      scene = scene,
+      camera = selected_camera,
+      start_frame = start_frame,
+      end_frame = end_frame,
+      width = width,
+      height = height,
+      preview = if (render_mode == "preview") TRUE else preview,
+      denoise = denoise,
+      samples = samples,
+      min_variance = min_variance,
+      min_adaptive_size = min_adaptive_size,
+      sample_method = sample_method,
+      keep_colors = FALSE,
+      sample_dist = Inf,
+      max_depth = if (is.na(max_depth)) 50 else max_depth,
+      roulette_active_depth = roulette_active_depth,
+      ambient_light = ambient_light,
+      clamp_value = clamp_value,
+      backgroundhigh = backgroundhigh,
+      backgroundlow = backgroundlow,
+      focal_distance = focal_distance,
+      ortho_dimensions = ortho_dimensions,
+      tonemap = tonemap,
+      bloom = bloom,
+      parallel = parallel,
+      bvh_type = bvh_type,
+      environment_light = environment_light,
+      rotate_env = rotate_env,
+      intensity_env = intensity_env,
+      debug_channel = debug_channel,
+      plot_scene = if (render_mode == "preview") FALSE else plot_scene,
+      progress = progress,
+      verbose = verbose,
+      transparent_background = transparent_background,
+      integrator_type = integrator_type,
+      force_no_write = render_mode == "preview"
+    ))
+  }
+
+  snapshot_filename = if (
+    length(selected_camera$filename) == 1 &&
+      !is.na(selected_camera$filename) &&
+      nzchar(tools::file_ext(selected_camera$filename))
+  ) {
+    selected_camera$filename
+  } else {
+    NA_character_
+  }
+
+  frame = if (render_mode %in% c("image", "preview")) {
+    camera_frame_range(nrow(selected_camera$motion), start_frame, start_frame)[
+      1
+    ]
+  } else {
+    1
+  }
+  camera_args = camera_frame_args(selected_camera, frame)
+  lookfrom = camera_args$lookfrom
+  lookat = camera_args$lookat
+  camera_up = camera_args$camera_up
+  fov = camera_args$fov
+  aperture = camera_args$aperture
+  focal_distance = camera_args$focal_distance
+  ortho_dimensions = camera_args$ortho_dimensions
+  camera_description_file = camera_args$camera_description_file
+  camera_scale = camera_args$camera_scale
+  iso = camera_args$iso
+  film_size = camera_args$film_size
+  shutteropen = camera_args$shutteropen
+  shutterclose = camera_args$shutterclose
+  camera_motion_blur = camera_args$camera_motion_blur
+  shutter_speed = camera_args$shutter_speed
+  filename = camera_image_filename(selected_camera, frame)
+  if (render_mode == "preview") {
+    filename = NA
+    preview = TRUE
+    plot_scene = FALSE
+  }
+
   init_time()
   if (print_debug_info) {
     message(sprintf(
@@ -302,37 +653,6 @@ HAS_OIDN: %s
     sample_method = "sobol"
   }
 
-  #Check if Cornell Box scene and set camera if user did not:
-  if (!is.null(attr(scene, "cornell"))) {
-    corn_message = "Setting default values for Cornell box: "
-    missing_corn = FALSE
-    if (missing(lookfrom)) {
-      lookfrom = c(278, 278, -800)
-      corn_message = paste0(corn_message, "lookfrom `c(278,278,-800)` ")
-      missing_corn = TRUE
-    }
-    if (missing(lookat)) {
-      lookat = c(278, 278, 555 / 2)
-      corn_message = paste0(corn_message, "lookat `c(278,278,555/2)` ")
-      missing_corn = TRUE
-    }
-    if (missing(fov) && is.na(camera_description_file)) {
-      fov = 40
-      corn_message = paste0(corn_message, "fov `40` ")
-      missing_corn = TRUE
-    }
-    if (
-      fov == 0 && missing(ortho_dimensions) && is.na(camera_description_file)
-    ) {
-      ortho_dimensions = c(580, 580)
-      corn_message = paste0(corn_message, "ortho_dimensions `c(580, 580)` ")
-      missing_corn = TRUE
-    }
-    corn_message = paste0(corn_message, ".")
-    if (missing_corn) {
-      message(corn_message)
-    }
-  }
   if (width < 3 || height < 3) {
     stop("Must specify a minimum width/height of 3 or more pixels")
   }
@@ -343,23 +663,27 @@ HAS_OIDN: %s
       !is.numeric(debug_channel) &&
       debug_channel == "none"
   ) {
-    controls_message = if (deferred_render) {
-      "--------------------------Interactive Mode Controls---------------------------
-W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
-Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light
-P: Print Camera Info | R: Reset Camera |  E/C: Adjust Step Size |  TAB: Toggle Orbit Mode
-K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
-Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
-]/[: Adjust Preview Exposure | Return: Start Final Render"
-    } else {
-      "--------------------------Interactive Mode Controls---------------------------
-W/A/S/D: Horizontal Movement: | Q/Z: Vertical Movement | Up/Down: Adjust FOV | ESC: Close
-Left/Right: Adjust Aperture  | 1/2: Adjust Focal Distance | 3/4: Rotate Environment Light 
-P: Print Camera Info | R: Reset Camera |  TAB: Toggle Orbit Mode |  E/C: Adjust Step Size
-K: Save Keyframe | L: Reset Camera to Last Keyframe (if set) | F: Toggle Fast Travel Mode
-Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Change Look At
-]/[: Adjust Preview Exposure"
+    controls_lines = c(
+      "------------------------ Interactive Mode Controls ------------------------",
+      "Move:       W/A/S/D horizontal | Q/Z vertical | E/C step size | F fast travel",
+      "Look:       Shift-W/S pitch | Shift-A/D roll | Tab toggle orbit",
+      "Lens/Env:   Up/Down FOV | Left/Right aperture | 1/2 focal | 3/4 env rotate",
+      "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel",
+      "Mouse:      Left click lookat + focal distance | Right click lookat",
+      "Status:     Wide window shows camera/exposure/env/keyframes/loop",
+      "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
+      "Blur:       B camera motion blur",
+      "Atmosphere: H haze | Y altitude queries (haze requires altitude queries)",
+      "Snapshot:   Shift-Enter save current preview",
+      "General:    P print camera | R reset camera | ESC close"
+    )
+    if (deferred_render) {
+      controls_lines = c(
+        controls_lines,
+        "Render:     Return start final render"
+      )
     }
+    controls_message = paste(controls_lines, collapse = "\n")
     message(controls_message)
   }
   print_time(verbose, "Pre-processing scene")
@@ -399,6 +723,8 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
     backgroundlow = backgroundlow,
     shutteropen = shutteropen,
     shutterclose = shutterclose,
+    camera_motion_blur = camera_motion_blur,
+    shutter_speed = shutter_speed,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -423,6 +749,7 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   screen_text_native_overlay = screen_text_needs_native_overlay(screen_text)
   screen_line_native_overlay = screen_line_needs_native_overlay(screen_line)
@@ -448,6 +775,12 @@ Left Mouse Click: Change Look At (new focal distance) | Right Mouse Click: Chang
   camera_info$preview = preview
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
+  camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
+  camera_info$shutter_speed = shutter_speed
+  camera_info$snapshot_filename = snapshot_filename
+  camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
+    selected_camera$keyframe_motion_args
+  )
   debug_channel = scene_info$debug_channel # converted to numeric
 
   #Pathtrace Scene

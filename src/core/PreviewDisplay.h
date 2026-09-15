@@ -2,12 +2,16 @@
 #define PREVIEWDISPLAYH
 
 #include <memory>
+#include <functional>
+#include <string>
 #include <vector>
 #include "Rcpp.h"
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "../core/camera.h"
 #include "../hitables/hitable.h"
+
+class VolumeScene;
 
 struct PreviewTextOverlay {
   point3f anchor;
@@ -45,13 +49,14 @@ struct PreviewLineOverlay {
 
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
+// X11 macros also collide with RcppThread and Catch in builds without OIDN.
 #undef Status
-
+#undef None
 #endif
 
 #ifdef HAS_OIDN
-#undef None
 #include <OpenImageDenoise/oidn.hpp>
+#include "../core/oidn_denoiser.h"
 #endif
 
 #ifdef RAY_WINDOWS
@@ -72,7 +77,10 @@ public:
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
                  bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
-                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, oidn::FilterRef& _filter,
+                 Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
+                 RayOidnDenoiser* _denoiser,
+                 RayMatrix* _oidn_albedo_output,
+                 RayMatrix* _oidn_normal_output,
                  bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
@@ -81,6 +89,27 @@ public:
                  bool _auto_exposure);
 #endif
   ~PreviewDisplay();
+  void SetCamera(RayCamera* _cam);
+  // Coordinates match the renderer's film samples, independent of window API.
+  bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
+  std::shared_ptr<VolumeScene> volume_scene;
+  void SetSnapshotFilename(const std::string& filename);
+  void SavePreviewSnapshot() const;
+  void CaptureVolumeSnapshot(adaptive_sampler&, RayMatrix&, size_t samples, hitable*, random_gen&);
+  bool transparent_volume_background = false;
+  std::vector<Float> snapshot_alpha;
+  bool PollCloseEvent();
+#ifdef HAS_OIDN
+  void SetDenoiser(RayOidnDenoiser* _denoiser,
+                   RayMatrix* _oidn_albedo_output,
+                   RayMatrix* _oidn_normal_output,
+                   bool _denoise);
+  void InvalidateOidnAux();
+  void MarkOidnAuxClean(bool fast_preview);
+  void MarkDenoisedPreviewReady(size_t sample_count);
+  bool HasDenoisedPreview() const { return has_denoised_preview; }
+  size_t DenoisedPreviewSampleCount() const { return denoised_preview_sample_count; }
+#endif
   void DrawImage(adaptive_sampler& adaptive_pixel_sampler, 
                  adaptive_sampler& adaptive_pixel_sampler_small,
                  size_t &ns,
@@ -95,6 +124,36 @@ public:
   Float ApplyPreviewExposure(Float value, Float sample_count) const;
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
+  void SetShutterSpeed(Float value);
+  Float GetShutterSpeed() const;
+  void AdjustShutterSpeedStops(Float stops);
+  void ApplyShutterSpeedToCameras();
+  void PrintShutterSpeed() const;
+  Rcpp::List CreateCurrentKeyframe(Float env_rotation) const;
+  void SaveCurrentKeyframe(Float env_rotation);
+  bool ApplyCameraState(const Rcpp::List& state, Float* env_rotation);
+  bool ApplyKeyframe(int index, Float* env_rotation);
+  bool JumpKeyframe(int step, Float* env_rotation);
+  bool DeleteCurrentKeyframe(Float* env_rotation);
+  void PrintCameraInfo(Float env_rotation) const;
+  std::string PreviewStatusText(Float env_rotation) const;
+  void SetKeyframeMotionArgs(const Rcpp::List& args);
+  bool ToggleKeyframeMotionClosed();
+  bool KeyframeMotionClosed() const { return keyframe_motion_closed; }
+  Rcpp::DataFrame KeyframesDataFrame() const;
+  bool StartPreviewMotion(Float env_rotation);
+  bool CancelPreviewMotion(Float* env_rotation);
+  bool AdvancePreviewMotion(Float* env_rotation);
+  bool IsPreviewMotionActive() const { return preview_motion_active; }
+  bool ToggleCameraMotionBlur();
+  void SetCameraMotionBlur(bool enabled);
+  bool CameraMotionBlurEnabled() const { return camera_motion_blur_enabled; }
+  void SetAtmosphereControls(bool haze, bool query_altitude,
+                             std::function<void(bool, bool)> update);
+  bool ToggleHaze();
+  bool ToggleQueryAltitude();
+  bool ConsumeAtmosphereChange();
+  std::string AtmosphereStatusText() const;
   void SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays);
   void SetLineOverlays(const std::vector<PreviewLineOverlay>& overlays);
   bool ProjectTextAnchor(const PreviewTextOverlay& overlay,
@@ -123,17 +182,19 @@ public:
                            hitable* world,
                            random_gen& rng) const;
 #ifdef RAY_HAS_X11
+  void DrawStatusBarX11(Float env_rotation);
   void CompositeTextOverlaysToX11Buffer(hitable* world, random_gen& rng);
   void CompositeLineOverlaysToX11Buffer(hitable* world, random_gen& rng);
 #endif
 #ifdef RAY_WINDOWS
+  void DrawStatusBarWindows(HDC hdc, Float env_rotation) const;
+#endif
   void CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
-                                          random_gen& rng);
+                                          random_gen& rng, std::vector<Float>* coverage = nullptr);
   void CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                           hitable* world,
-                                          random_gen& rng);
-#endif
+                                          random_gen& rng, std::vector<Float>* coverage = nullptr);
 #ifdef RAY_HAS_X11
   Display *d;
   XImage *img;
@@ -169,12 +230,38 @@ public:
   Transform Start_EnvObjectToWorld;
   Transform Start_EnvWorldToObject;
   #ifdef HAS_OIDN
-  oidn::FilterRef& filter;
+  RayOidnDenoiser* denoiser;
+  RayMatrix* oidn_albedo_output;
+  RayMatrix* oidn_normal_output;
   bool denoise;
+  bool oidn_aux_dirty;
+  bool oidn_fast_aux_dirty;
+  bool has_denoised_preview;
+  size_t denoised_preview_sample_count;
   #endif
   std::vector<Rcpp::List> Keyframes;
+  int current_keyframe;
+  Rcpp::List keyframe_motion_args;
+  bool keyframe_motion_closed;
+  Rcpp::DataFrame preview_motion;
+  Rcpp::List preview_motion_restore_state;
+  int preview_motion_frame;
+  int preview_motion_restore_keyframe;
+  bool preview_motion_active;
+  bool camera_motion_blur_enabled;
+  Float shutter_speed;
+  std::string snapshot_filename;
+  std::vector<unsigned char> snapshot_pixels;
+  unsigned int snapshot_width;
+  unsigned int snapshot_height;
   std::vector<PreviewTextOverlay> text_overlays;
   std::vector<PreviewLineOverlay> line_overlays;
+
+private:
+  bool UpdateAtmosphere(bool haze, bool query_altitude);
+  std::function<void(bool, bool)> update_atmosphere;
+  bool atmosphere_haze = false, atmosphere_query_altitude = false;
+  bool atmosphere_changed = false;
 };
 
 #endif

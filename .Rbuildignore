@@ -40,3 +40,17 @@
 ^AGENT\.md$
 ^\.codex:
 ^tools/benchmarks/results/\.gitkeep$
+^mmp/*$
+^\.r-lib/*$
+^inst/extdata/spectral/*$
+^\.codex($|/)
+^\.codex-sccache($|/)
+^\.sccache-.*($|/)
+^tools/codex($|/)
+^inst/licenses?($|/)
+^inst/doc($|/)
+^inst/examples($|/)
+^air\.toml$
+^Rplots\.pdf$
+^revdep($|/)
+^tools/benchmarks($|/)

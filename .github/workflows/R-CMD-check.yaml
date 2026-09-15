@@ -28,6 +28,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       NOT_CRAN: true
+      RAYRENDER_CPP_TESTS: "false"
       IS_GHA: true
 
     steps:
@@ -94,3 +95,14 @@ jobs:
         with:
           upload-snapshots: true
           build_args: c("--no-manual","--compact-vignettes=gs+qpdf")
+
+      - name: Volume, C++, and legacy integrator regressions
+        env:
+          RAYRENDER_CPP_TESTS: "true"
+        shell: Rscript {0}
+        run: |
+          install.packages(".", repos = NULL, type = "source", INSTALL_opts = "--preclean")
+          library(rayrender)
+          testthat::test_local(".", load_package = "installed",
+            filter = "media|cpp|integrator|render-animation|render-cancellation|preview-snapshot",
+            stop_on_failure = TRUE)

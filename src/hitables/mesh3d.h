@@ -22,6 +22,13 @@ class mesh3d : public hitable {
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
+  OpaqueShadowType ShadowType() const {
+    return mesh_bvh->ShadowType();
+  }
+  bool OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    return mesh_bvh->OpaqueHit(r, t_min, t_max, rng);
+  }
+
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual std::string GetName() const {
       return(std::string("Mesh3d"));

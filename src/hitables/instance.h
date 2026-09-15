@@ -12,7 +12,7 @@ public:
   instance(hitable* scene, 
            Transform* ObjectToWorld, 
            Transform* WorldToObject,
-           hitable_list* imp_list);
+           hitable_list* imp_list, uint64_t boundary_id_offset = 0);
   
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
@@ -23,6 +23,12 @@ public:
 
   vec3f random(const point3f& o, random_gen& rng, Float time = 0);
   vec3f random(const point3f& o, Sampler* sampler, Float time = 0);
+  OpaqueShadowType ShadowType() const {
+    return original_scene->ShadowType();
+  }
+  bool OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    return original_scene->OpaqueHit((*WorldToObject)(r), t_min, t_max, rng);
+  }
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   
   virtual std::string GetName() const {
@@ -38,7 +44,12 @@ public:
   //Embedded scene
   hitable* original_scene;
   hitable_list* importance_sampled_objects;
+  LightPlacementMap light_placements;
+
+private:
+  // Remap child boundary IDs into this placement's reserved range in its
+  // parent scene. Zero means the first range, or an instance without boundaries.
+  const uint64_t boundary_id_offset = 0;
 };
 
 #endif
-

@@ -26,6 +26,8 @@ public:
   virtual bool SetSampleNumber(size_t sampleNum);
   
   const size_t samplesPerPixel;
+  // NEE shares one coordinate stream across 1D/2D requests. Legacy sampling is unchanged.
+  bool independent_dimensions = false;
   
 protected:
   //Add int vec2f class

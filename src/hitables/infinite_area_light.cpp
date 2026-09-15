@@ -1,6 +1,45 @@
 #include "../hitables/infinite_area_light.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
+
+#include <stdexcept>
+
+namespace {
+// All infinite sources share one endpoint. Evaluating their sum here makes
+// camera, specular, BSDF/phase, and direct-light paths see identical radiance.
+class InfiniteLightMaterial final : public material {
+  std::shared_ptr<InfiniteLight> light;
+public:
+  InfiniteLightMaterial(std::shared_ptr<InfiniteLight> light)
+      : light(std::move(light)) {}
+  void SetLight(std::shared_ptr<InfiniteLight> source) { light = std::move(source); }
+  point3f emitted(const Ray &ray, const hit_record &, Float, Float, const point3f &,
+                  bool &invisible) override {
+    invisible = false;
+    return light->Radiance(ray.origin(), ray.direction(), ray.time());
+  }
+  size_t GetSize() override { return sizeof(*this); }
+  const std::string GetName() override { return "infinite_light"; }
+};
+}
+
+InfiniteAreaLight::InfiniteAreaLight(std::shared_ptr<InfiniteLight> source, Float r,
+                                   point3f center, Transform *to_world, Transform *to_light)
+    : hitable(to_world, to_light, std::make_shared<InfiniteLightMaterial>(source), false),
+      width(0), height(0), radius(r), center(center), light(std::move(source)) {
+  light->SetEnvironmentTransform(to_world, to_light);
+}
+
+void InfiniteAreaLight::SetLight(std::shared_ptr<InfiniteLight> source) {
+  if (!light || !source)
+    throw std::runtime_error("Replacing an environment requires a native infinite light.");
+  // Sampling and emitted radiance must use the same replacement. Keep the
+  // material object stable because scene geometry retains its original pointer.
+  source->SetEnvironmentTransform(ObjectToWorld, WorldToObject);
+  static_cast<InfiniteLightMaterial &>(*mat_ptr).SetLight(source);
+  light = std::move(source);
+}
+
 #include "../math/vectypes.h"
 
 InfiniteAreaLight::InfiniteAreaLight(int width, int height, Float r, point3f center, 
@@ -223,6 +262,7 @@ bool InfiniteAreaLight::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sa
 }
 
 Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
+  if (light) return light->Pdf(o, v, time);
   hit_record rec;
   // if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, rng)) {
     vec3f d = (*WorldToObject)(v);
@@ -243,6 +283,7 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, random_gen&
 
 
 Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
+  if (light) return light->Pdf(o, v, time);
   hit_record rec;
 
   // if(this->hit(ray(o,v), 0.001, FLT_MAX, rec, sampler)) {
@@ -264,6 +305,7 @@ Float InfiniteAreaLight::pdf_value(const point3f& o, const vec3f& v, Sampler* sa
 
 vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
   vec2f u(rng.unif_rand(), rng.unif_rand());
+  if (light) return light->Sample(o, u, time);
   Float mapPdf;
   vec2f uv = distribution->SampleContinuous(u, &mapPdf);
   if (mapPdf == 0) {
@@ -280,6 +322,7 @@ vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
 
 vec3f InfiniteAreaLight::random(const point3f& o, Sampler* sampler, Float time) {
   vec2f u = sampler->Get2D();
+  if (light) return light->Sample(o, u, time);
   Float mapPdf;
   vec2f uv = distribution->SampleContinuous(u, &mapPdf);
   if (mapPdf == 0) {
@@ -300,6 +343,7 @@ bool InfiniteAreaLight::bounding_box(Float t0, Float t1, aabb& box) const {
 }
 
 size_t InfiniteAreaLight::GetSize()  {
+  if (light) return sizeof(*this) + light->GetSize();
   return(mat_ptr ? 
            sizeof(*this) + distribution->GetSize() + sizeof(Float) * width * height + mat_ptr->GetSize() :
            sizeof(*this) + distribution->GetSize() + sizeof(Float) * width * height);

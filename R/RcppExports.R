@@ -5,6 +5,10 @@ PrintClassSizes <- function() {
     invisible(.Call(`_rayrender_PrintClassSizes`))
 }
 
+query_prague_atmosphere <- function(description, positions, directions, distances, sample = FALSE, build_sampler = FALSE) {
+    .Call(`_rayrender_query_prague_atmosphere`, description, positions, directions, distances, sample, build_sampler)
+}
+
 has_gui_capability <- function() {
     .Call(`_rayrender_has_gui_capability`)
 }
@@ -34,7 +38,7 @@ cppdef_HAS_SSE41 <- function() {
 }
 
 render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background) {
-    invisible(.Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background))
+    .Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background)
 }
 
 render_scene_rcpp <- function(scene, camera_info, scene_info, render_info) {

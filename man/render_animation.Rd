@@ -6,7 +6,7 @@
 \usage{
 render_animation(
   scene,
-  camera_motion,
+  camera_motion = NULL,
   start_frame = 1,
   end_frame = NA,
   width = 400,
@@ -33,6 +33,7 @@ render_animation(
   backgroundlow = "#ffffff",
   shutteropen = 0,
   shutterclose = 1,
+  camera_motion_blur = FALSE,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -51,13 +52,14 @@ render_animation(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow"
+  integrator_type = "rtiow",
+  camera = NULL
 )
 }
 \arguments{
 \item{scene}{Tibble of object locations and properties.}
 
-\item{camera_motion}{Data frame of camera motion vectors, calculated with `generate_camera_motion()`.}
+\item{camera_motion}{Default `NULL`. Data frame of camera motion vectors, calculated with `generate_camera_motion()`. If `NULL`, the camera is resolved from the scene.}
 
 \item{start_frame}{Default `1`. Frame to start the animation.}
 
@@ -135,6 +137,8 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
 
+\item{camera_motion_blur}{Default `FALSE`. Whether to blur camera movement over the shutter interval.}
+
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
 
@@ -157,20 +161,11 @@ hierarchy structure used when rendering. Other option is "equal", which splits t
 of equal size.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
-the scene. Supports EXR (`.exr`), HDR (`.hdr`), and low-dynamic range
-(`.png`, `.jpg`) images.}
+the scene. Supports EXR, HDR, PNG, and JPEG images. Scene lights added with
+\code{\link{add_infinite_light}()} are included in every frame, together with this image.}
 
-\item{environment_light_bake_white}{Default `FALSE`. If `TRUE`, and `environment_light`
-is an EXR with a `white_current` value read by `rayimage::ray_read_image()`,
-bake a temporary copy of the environment map from that white point to
-`environment_light_bake_white_target` before rendering. The source file is
-not modified.}
-
-\item{environment_light_bake_white_target}{Default `"D65"`. Target white point
-for `environment_light_bake_white`. Use a named white point (`"D65"`, `"D60"`,
-`"D55"`, `"D50"`, `"D75"`, or `"E"`) or an XYZ vector with Y = 1.}
-
-\item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
+\item{rotate_env}{Default `0`. The number of degrees to rotate all infinite lights around the scene,
+in addition to their individual rotations.}
 
 \item{intensity_env}{Default `1`. The amount to increase the intensity of the environment lighting. Useful
 if using a LDR (JPEG or PNG) image as an environment map.}
@@ -183,7 +178,9 @@ an image showing the differential `u` and `u` coordinates. If `color`, function 
 values (with white for `metal` and `dielectric` materials). If `preview`, an image rendered with `render_preview()`
 will be returned. Can set to `ao` to render an animation with the ambient occlusion renderer.}
 
-\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene.}
+\item{plot_scene}{Default `TRUE`. Whether to plot the rendered scene. If
+`preview = TRUE` and `filename` is omitted, this defaults to `FALSE` so the
+animation runs through the preview window.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 
@@ -201,6 +198,8 @@ those pixels will be partially transparent.}
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+
+\item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.
@@ -266,7 +265,7 @@ generate_ground(material=diffuse(checkercolor="grey20"),depth=-10) |>
   add_object(pig(x=0,y=-0.25,z=-15,scale=1,angle=c(0,225,-22), order_rotation = c(3,2,1),
                  emotion="angry", spider=TRUE)) |>
   add_object(path(camera_pos, y=-0.2,material=diffuse(color="red"))) |>
-  render_animation(filename = NA, camera_motion = camera_motion, samples=16,
+  render_animation(camera_motion = camera_motion, samples=16,
                    sample_method="sobol_blue",
                    clamp_value=10, width=400, height=400)
 \dontshow{\}) # examplesIf}

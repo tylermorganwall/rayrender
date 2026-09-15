@@ -6,6 +6,10 @@
 #include "../math/onbh.h"
 #include "../math/animatedtransform.h"
 #include "../math/bounds.h"
+#include "../math/mathinline.h"
+
+#include <cmath>
+#include <stdexcept>
 
 
 struct CameraSample {
@@ -31,11 +35,33 @@ class RayCamera {
     virtual void update_focal_distance(Float delta_focus)  = 0;
     virtual void update_look_direction(vec3f dir) = 0;
     virtual void update_lookat(point3f point) = 0;
+    virtual void update_up(vec3f up) = 0;
+    virtual void rotate_up(Float angle_degrees) = 0;
+    virtual void rotate_forward(Float angle_degrees) = 0;
     virtual void update_position_absolute(point3f point) = 0;
     virtual void update_ortho_absolute(vec2f o_size) = 0;
     virtual void update_aperture_absolute(Float aperture) = 0;
     virtual void update_focal_absolute(Float focal_length) = 0;
     virtual void update_fov_absolute(Float fov) = 0;
+    virtual void set_camera_motion_blur(bool enabled) = 0;
+    virtual bool get_camera_motion_blur() const = 0;
+    virtual void set_camera_motion_blur_range(point3f start_origin,
+                                              point3f start_lookat,
+                                              vec3f start_up,
+                                              Float start_focal,
+                                              point3f end_origin,
+                                              point3f end_lookat,
+                                              vec3f end_up,
+                                              Float end_focal) = 0;
+    void set_shutter_speed(Float value) {
+      if(std::isnan(value) ||
+         value < static_cast<Float>(1) ||
+         (std::isinf(value) && value < static_cast<Float>(0))) {
+        throw std::runtime_error("shutter_speed must be greater than or equal to 1, or Inf.");
+      }
+      shutter_speed = value;
+    }
+    Float get_shutter_speed() const {return(shutter_speed);}
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
@@ -53,6 +79,15 @@ class RayCamera {
     virtual point3f get_lookat() {return(point3f(0,0,0));}
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
+  protected:
+    Float sample_motion_time(Float unit_time) const {
+      Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
+      if(std::isinf(shutter_speed)) {
+        return static_cast<Float>(0);
+      }
+      return u / shutter_speed;
+    }
+    Float shutter_speed = static_cast<Float>(2);
     
 };
 
@@ -68,11 +103,24 @@ class camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_up(vec3f up);
+    void rotate_up(Float angle_degrees);
+    void rotate_forward(Float angle_degrees);
     void update_position_absolute(point3f point);
     void update_ortho_absolute(vec2f o_size);
     void update_aperture_absolute(Float aperture);
     void update_focal_absolute(Float focal_length);
     void update_fov_absolute(Float fov_new);
+    void set_camera_motion_blur(bool enabled);
+    bool get_camera_motion_blur() const {return(camera_motion_blur);}
+    void set_camera_motion_blur_range(point3f start_origin,
+                                      point3f start_lookat,
+                                      vec3f start_up,
+                                      Float start_focal,
+                                      point3f end_origin,
+                                      point3f end_lookat,
+                                      vec3f end_up,
+                                      Float end_focal);
     
     void reset();
     vec3f get_w() {return(w);}
@@ -107,6 +155,17 @@ class camera : public RayCamera {
     Float fov;
     Float start_fov;
     point3f start_lookat;
+    vec3f start_vup;
+    bool camera_motion_blur;
+    bool camera_motion_blur_has_range;
+    point3f camera_motion_start_origin;
+    point3f camera_motion_start_lookat;
+    vec3f camera_motion_start_up;
+    Float camera_motion_start_focal;
+    point3f camera_motion_end_origin;
+    point3f camera_motion_end_lookat;
+    vec3f camera_motion_end_up;
+    Float camera_motion_end_focal;
 	Float iso;
     
 };
@@ -123,11 +182,24 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_up(vec3f up);
+  void rotate_up(Float angle_degrees);
+  void rotate_forward(Float angle_degrees);
   void update_position_absolute(point3f point);
   void update_ortho_absolute(vec2f o_size);
   void update_aperture_absolute(Float aperture);
   void update_focal_absolute(Float focal_length);
   void update_fov_absolute(Float fov_new);
+  void set_camera_motion_blur(bool enabled);
+  bool get_camera_motion_blur() const {return(camera_motion_blur);}
+  void set_camera_motion_blur_range(point3f start_origin,
+                                    point3f start_lookat,
+                                    vec3f start_up,
+                                    Float start_focal,
+                                    point3f end_origin,
+                                    point3f end_lookat,
+                                    vec3f end_up,
+                                    Float end_focal);
   
   void reset();
   vec3f get_w() {return(w);}
@@ -147,6 +219,7 @@ public:
   point3f start_origin;
   point3f lookat;
   vec3f vup;
+  vec3f start_vup;
   vec3f horizontal;
   vec3f vertical;
   vec3f u, v, w;
@@ -156,6 +229,16 @@ public:
   point3f start_lookat;
   Float focus_dist;
   Float initial_ratio;
+  bool camera_motion_blur;
+  bool camera_motion_blur_has_range;
+  point3f camera_motion_start_origin;
+  point3f camera_motion_start_lookat;
+  vec3f camera_motion_start_up;
+  Float camera_motion_start_focal;
+  point3f camera_motion_end_origin;
+  point3f camera_motion_end_lookat;
+  vec3f camera_motion_end_up;
+  Float camera_motion_end_focal;
 	Float iso;
 };
 
@@ -171,11 +254,24 @@ class environment_camera : public RayCamera {
     void update_focal_distance(Float delta_focus);
     void update_look_direction(vec3f dir);
     void update_lookat(point3f point);
+    void update_up(vec3f up);
+    void rotate_up(Float angle_degrees);
+    void rotate_forward(Float angle_degrees);
     void update_position_absolute(point3f point);
     void update_ortho_absolute(vec2f o_size);
     void update_aperture_absolute(Float aperture);
     void update_focal_absolute(Float focal_length);
     void update_fov_absolute(Float fov_new);
+    void set_camera_motion_blur(bool enabled);
+    bool get_camera_motion_blur() const {return(camera_motion_blur);}
+    void set_camera_motion_blur_range(point3f start_origin,
+                                      point3f start_lookat,
+                                      vec3f start_up,
+                                      Float start_focal,
+                                      point3f end_origin,
+                                      point3f end_lookat,
+                                      vec3f end_up,
+                                      Float end_focal);
     
     void reset();
     vec3f get_w();
@@ -197,8 +293,19 @@ class environment_camera : public RayCamera {
     Float time0, time1;
     onb uvw;
     vec3f vup;
+    vec3f start_vup;
     point3f lookat;
     point3f start_lookat;
+    bool camera_motion_blur;
+    bool camera_motion_blur_has_range;
+    point3f camera_motion_start_origin;
+    point3f camera_motion_start_lookat;
+    vec3f camera_motion_start_up;
+    Float camera_motion_start_focal;
+    point3f camera_motion_end_origin;
+    point3f camera_motion_end_lookat;
+    vec3f camera_motion_end_up;
+    Float camera_motion_end_focal;
 	Float iso;
     
 };
@@ -220,11 +327,24 @@ public:
   void update_focal_distance(Float delta_focus);
   void update_look_direction(vec3f dir);
   void update_lookat(point3f point);
+  void update_up(vec3f up);
+  void rotate_up(Float angle_degrees);
+  void rotate_forward(Float angle_degrees);
   void update_position_absolute(point3f point);
   void update_ortho_absolute(vec2f o_size);
   void update_aperture_absolute(Float aperture);
   void update_focal_absolute(Float focal_length);
   void update_fov_absolute(Float fov_new);
+  void set_camera_motion_blur(bool enabled);
+  bool get_camera_motion_blur() const {return(camera_motion_blur);}
+  void set_camera_motion_blur_range(point3f start_origin,
+                                    point3f start_lookat,
+                                    vec3f start_up,
+                                    Float start_focal,
+                                    point3f end_origin,
+                                    point3f end_lookat,
+                                    vec3f end_up,
+                                    Float end_focal);
   
   void reset();
   vec3f get_w();
@@ -295,12 +415,23 @@ private:
   bool init;
   Float iso;
   vec3f camera_up;
+  vec3f start_camera_up;
   Transform CamTransform;
   point3f origin;
   Float focusDistance;
   Float start_focusDistance;
   point3f start_lookat;
   point3f lookat;
+  bool camera_motion_blur;
+  bool camera_motion_blur_has_range;
+  point3f camera_motion_start_origin;
+  point3f camera_motion_start_lookat;
+  vec3f camera_motion_start_up;
+  Float camera_motion_start_focal;
+  point3f camera_motion_end_origin;
+  point3f camera_motion_end_lookat;
+  vec3f camera_motion_end_up;
+  Float camera_motion_end_focal;
 };
 
 

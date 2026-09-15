@@ -197,6 +197,9 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
     srec.attenuation = point3f(std::exp(-distance * prev_atten.xyz.x),
                                std::exp(-distance * prev_atten.xyz.y),
                                std::exp(-distance * prev_atten.xyz.z));
+    if(r_in.segment_absorption) srec.attenuation = point3f(1);
+    srec.is_passthrough = true;
+    srec.is_transmission = true;
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
     }
@@ -222,6 +225,7 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
       srec.attenuation = albedo;
     }
   }
+  if(r_in.segment_absorption) srec.attenuation = entering ? albedo : point3f(1);
   if(rng.unif_rand() < reflect_prob) {
     if(entering) {
       r_in.pri_stack->pop_back();
@@ -233,7 +237,10 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted(0,0,0);
-    Refract(wi, outward_normal, ni_over_nt, &refracted);
+    bool valid_refraction = Refract(wi, outward_normal, ni_over_nt, &refracted);
+    if(!valid_refraction && r_in.segment_absorption) return false;
+    srec.is_transmission = true;
+    srec.eta = 1/ni_over_nt;
     srec.specular_ray = Ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);
@@ -295,6 +302,9 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
     srec.attenuation = point3f(std::exp(-distance * prev_atten.xyz.x),
                                std::exp(-distance * prev_atten.xyz.y),
                                std::exp(-distance * prev_atten.xyz.z));
+    if(r_in.segment_absorption) srec.attenuation = point3f(1);
+    srec.is_passthrough = true;
+    srec.is_transmission = true;
     if(!entering && current_layer != -1) {
       r_in.pri_stack->erase(r_in.pri_stack->begin() + static_cast<size_t>(current_layer));
     }
@@ -326,6 +336,7 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
       srec.attenuation = albedo;
     }
   }
+  if(r_in.segment_absorption) srec.attenuation = entering ? albedo : point3f(1);
   if(sampler->Get1D() < reflect_prob) {
     if(entering) {
       r_in.pri_stack->pop_back();
@@ -337,7 +348,10 @@ bool dielectric::scatter(const Ray& r_in, const hit_record& hrec, scatter_record
       r_in.pri_stack->erase(r_in.pri_stack->begin() + current_layer);
     }
     vec3f refracted(-wi);    
-    Refract(wi, outward_normal, ni_over_nt, &refracted);
+    bool valid_refraction = Refract(wi, outward_normal, ni_over_nt, &refracted);
+    if(!valid_refraction && r_in.segment_absorption) return false;
+    srec.is_transmission = true;
+    srec.eta = 1/ni_over_nt;
     srec.specular_ray = Ray(offset_p, refracted, r_in.pri_stack, r_in.time());
   }
   return(true);

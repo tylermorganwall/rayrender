@@ -52,6 +52,9 @@ inline Float schlick_reflection(Float cosine, Float r0) {
 struct scatter_record {
   Ray specular_ray;
   bool is_specular;
+  bool is_passthrough = false;
+  bool is_transmission = false;
+  Float eta = 1; // transmitted IOR / incident IOR; NEE uses radiance transport
   point3f attenuation;
   pdf *pdf_ptr = nullptr;
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
@@ -84,6 +87,12 @@ class material {
     virtual point3f get_albedo(const hit_record& rec) const {
       return(point3f(0,0,0));
     }
+    virtual bool is_delta_specular() const {
+      return(false);
+    }
+    virtual bool is_dielectric() const {
+      return(false);
+    }
     virtual ~material() {};
     virtual const std::string GetName() = 0;
     virtual size_t GetSize() = 0;
@@ -112,6 +121,9 @@ class metal : public material {
     virtual bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     virtual bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
     point3f get_albedo(const hit_record& rec) const;
+    bool is_delta_specular() const {
+      return(fuzz == 0);
+    }
     size_t GetSize();
     const std::string GetName() {
       return(std::string("metal"));
@@ -131,6 +143,12 @@ class dielectric : public material {
     
     point3f get_albedo(const hit_record& rec) const {
       return(point3f(1,1,1));
+    }
+    bool is_delta_specular() const {
+      return(true);
+    }
+    bool is_dielectric() const {
+      return(true);
     }
     size_t GetSize();
     const std::string GetName() {
@@ -348,5 +366,20 @@ class hair : public material {
     Float s;
     Float sin2kAlpha[3], cos2kAlpha[3];
 };
+
+// A conservative whitelist for direct-light visibility. Unknown materials and
+// transmissive surfaces retain the full connection walk.
+inline OpaqueShadowType opaque_shadow_material(const material* m) {
+  if (!m) return OpaqueShadowType::Unsupported;
+  const auto& type = typeid(*m);
+  if (type == typeid(lambertian) || type == typeid(orennayar) ||
+      type == typeid(metal) || type == typeid(MicrofacetReflection) ||
+      type == typeid(glossy)) return OpaqueShadowType::Opaque;
+  if (type == typeid(diffuse_light) && !static_cast<const diffuse_light*>(m)->invisible)
+    return OpaqueShadowType::Light;
+  if (type == typeid(spot_light) && !static_cast<const spot_light*>(m)->invisible)
+    return OpaqueShadowType::Light;
+  return OpaqueShadowType::Unsupported;
+}
 
 #endif

@@ -1,3 +1,4 @@
+#include <Rcpp.h>
 #include "../math/matrix.h"
 #include "../math/simd.h"
 
@@ -176,7 +177,6 @@ Matrix4x4 Transpose(const Matrix4x4 &m) {
 
 #ifdef NOT_CRAN
 #include <testthat.h>
-#include <Rcpp.h>
 
 context("Inverse computes matrix inverse correctly") {
     test_that("[Inverse of identity matrix]") {

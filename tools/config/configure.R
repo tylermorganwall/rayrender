@@ -143,7 +143,7 @@ build_command = function(base_tokens, extra_tokens = character()) {
   paste(quoted[nzchar(quoted)], collapse = " ")
 }
 
-PKG_CPPFLAGS = character()
+PKG_CPPFLAGS = "-Iext/nanovdb"
 PKG_CXXFLAGS = append_unique_flags(
   character(),
   "-ffp-contract=off",
@@ -255,8 +255,32 @@ if (!is_windows) {
   x11_cppflags = character()
   x11_ldflags = character()
   x11_found = FALSE
+  x11_test_code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n"
 
-  if (nzchar(pkgconfig)) {
+  if (is_macos) {
+    x11_cppflags = append_flags(
+      x11_cppflags,
+      flag_with_path("-I", "/opt/X11/include")
+    )
+    x11_ldflags = append_flags(
+      x11_ldflags,
+      flag_with_path("-L", "/opt/X11/lib"),
+      "-lX11"
+    )
+    x11_found = compile_test(
+      code = x11_test_code,
+      extra_cppflags = x11_cppflags,
+      extra_ldflags = x11_ldflags,
+      link = TRUE,
+      quiet = TRUE
+    )
+    if (!x11_found) {
+      x11_cppflags = character()
+      x11_ldflags = character()
+    }
+  }
+
+  if (!x11_found && nzchar(pkgconfig)) {
     status = tryCatch(
       system2(
         pkgconfig,
@@ -277,30 +301,25 @@ if (!is_windows) {
         collapse = " "
       ))
       x11_found = compile_test(
-        code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
+        code = x11_test_code,
         extra_cppflags = x11_cppflags,
         extra_ldflags = x11_ldflags,
-        link = TRUE
+        link = TRUE,
+        quiet = is_macos
       )
+      if (!x11_found) {
+        x11_cppflags = character()
+        x11_ldflags = character()
+      }
     }
   }
 
-  if (!x11_found) {
+  if (!x11_found && !is_macos) {
     fallback_cpp = character()
     fallback_ld = character()
-    if (is_macos) {
-      fallback_cpp = append_flags(
-        fallback_cpp,
-        flag_with_path("-I", "/opt/X11/include")
-      )
-      fallback_ld = append_flags(
-        fallback_ld,
-        flag_with_path("-L", "/opt/X11/lib")
-      )
-    }
     fallback_ld = append_flags(fallback_ld, "-lX11")
     x11_found = compile_test(
-      code = "#include <X11/Xlib.h>\nint main() { XOpenDisplay(NULL); return 0; }\n",
+      code = x11_test_code,
       extra_cppflags = fallback_cpp,
       extra_ldflags = fallback_ld,
       link = TRUE
@@ -831,7 +850,7 @@ collect_sources = function(subdir, pattern) {
 
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
 SUBDIR_SOURCES = sort(unlist(lapply(
-  c("core", "hitables", "materials", "math", "utils"),
+  c("core", "hitables", "lights", "materials", "math", "utils", "volumes"),
   collect_sources,
   pattern = "\\.cpp$"
 )))
@@ -846,6 +865,10 @@ EXT_C_SOURCES = sort(list.files(
   recursive = TRUE,
   full.names = FALSE
 ))
+
+if (identical(tolower(Sys.getenv("RAYRENDER_CPP_TESTS", "false")), "true")) {
+  PKG_CPPFLAGS = append_flags(PKG_CPPFLAGS, "-DNOT_CRAN")
+}
 
 PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
 PKG_LIBS_STR = collapse_flags(append_flags(

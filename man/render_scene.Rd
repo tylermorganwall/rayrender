@@ -35,6 +35,8 @@ render_scene(
   backgroundlow = "#ffffff",
   shutteropen = 0,
   shutterclose = 1,
+  camera_motion_blur = FALSE,
+  shutter_speed = NULL,
   focal_distance = NULL,
   ortho_dimensions = c(1, 1),
   tonemap = "raw",
@@ -55,7 +57,11 @@ render_scene(
   new_page = TRUE,
   integrator_type = "rtiow",
   screen_text = NULL,
-  screen_line = NULL
+  screen_line = NULL,
+  camera = NULL,
+  start_frame = 1,
+  end_frame = NA,
+  mode = c("auto", "image", "animation", "preview")
 )
 }
 \arguments{
@@ -82,23 +88,39 @@ If `deferred_render = TRUE`, the preview stays interactive until the final rende
 \item{interactive}{Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
 lookat point (unless the mode is switched to free flying), with the following control mapping:
 W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
 E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,
-Right bracket/left bracket = Increase/Decrease Preview Exposure,
-R = Reset Camera, Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-Left Mouse Click: Change Look Direction, Right Mouse Click: Change Look At
+Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
+Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
+If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
+and keyframe state.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-L: Reset Camera to Last Keyframe (if set) F: Toggle Fast Travel Mode
+L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+< and >: Jump to previous/next keyframe, /: Delete current keyframe,
+M: Preview/cancel keyframe motion,
+F: Toggle Fast Travel Mode,
+B: Toggle Camera Motion Blur,
+H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+Haze requires altitude queries: enabling haze also enables altitude queries,
+and disabling altitude queries also disables haze. Each change restarts sampling.
 
 Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
 
-Note: Clicking on the environment image will only redirect the view direction, not change the orbit point.
-Some options aren't available all cameras. When using a realistic camera,
-the aperture and field of view cannot be changed from their initial settings. Additionally,
-clicking to direct the camera at the background environment image while using a realistic camera will
-not always point to the exact position selected.}
+With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
+reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
+deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
+allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
+background without reaching this opacity turns perspective and panoramic cameras toward that
+direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
+view unchanged. Selected surface and volume points remain the orbit center when rotating.
+Right clicking preserves the focal distance.
+Some options aren't available for all cameras. When using a realistic camera,
+the aperture and field of view cannot be changed from their initial settings.}
 
 \item{deferred_render}{Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
@@ -159,7 +181,11 @@ there will be bright spots that will not go away even with a large number of sam
 can be removed (at the cost of slightly darkening the image) by setting this to a small number greater than 1.}
 
 \item{filename}{Default `NULL`. If present, the renderer will write to the filename instead
-of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images.}
+of the current device. Can write to JPEG/JPG, PNG, and high dynamic range EXR images. In the
+interactive preview, press Shift+Enter to save the current preview. A source filename with an
+extension produces numbered snapshots with the number inserted before the extension; otherwise
+snapshots are saved as `rayrender_snapshot1.png`, `rayrender_snapshot2.png`, and so on in the
+current directory.}
 
 \item{backgroundhigh}{Default `#80b4ff`. The "high" color in the background gradient. Can be either
 a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
@@ -170,6 +196,14 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 \item{shutteropen}{Default `0`. Time at which the shutter is open. Only affects moving objects.}
 
 \item{shutterclose}{Default `1`. Time at which the shutter is open. Only affects moving objects.}
+
+\item{camera_motion_blur}{Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.}
+
+\item{shutter_speed}{Default `NULL`. Optional render-time override for the
+selected camera's frame-relative shutter speed. A value of `1` samples the
+full frame-to-frame motion interval, `2` samples one-half, and `4` samples
+one-quarter. Higher values produce less motion blur. `Inf` disables temporal
+motion blur. This does not affect exposure or brightness.}
 
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
@@ -196,23 +230,16 @@ hierarchy structure used when rendering. Other option is "equal", which splits t
 of equal size.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
-the scene. Supports EXR (`.exr`), HDR (`.hdr`), and low-dynamic range
-(`.png`, `.jpg`) images.}
+the scene. Supports EXR, HDR, PNG, and JPEG images. For reusable scene lights and
+multiple environments, use \code{\link{infinite_light}()} and \code{\link{add_infinite_light}()}. This
+argument adds a light to any infinite lights already attached to the scene.}
 
-\item{environment_light_bake_white}{Default `FALSE`. If `TRUE`, and `environment_light`
-is an EXR with a `white_current` value read by `rayimage::ray_read_image()`,
-bake a temporary copy of the environment map from that white point to
-`environment_light_bake_white_target` before rendering. The source file is
-not modified.}
-
-\item{environment_light_bake_white_target}{Default `"D65"`. Target white point
-for `environment_light_bake_white`. Use a named white point (`"D65"`, `"D60"`,
-`"D55"`, `"D50"`, `"D75"`, or `"E"`) or an XYZ vector with Y = 1.}
-
-\item{rotate_env}{Default `0`. The number of degrees to rotate the environment map around the scene.}
+\item{rotate_env}{Default `0`. The number of degrees to rotate all infinite lights around the scene,
+in addition to their individual rotations.}
 
 \item{intensity_env}{Default `1`. The amount to increase the intensity of the environment lighting. Useful
-if using a LDR (JPEG or PNG) image as an environment map.}
+if using a LDR (JPEG or PNG) image as an environment map. Applies only to the
+`environment_light` argument; scene lights have their own intensity.}
 
 \item{transparent_background}{Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
@@ -240,7 +267,9 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 
 \item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
-and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).}
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+With `nee`, surfaces and participating media use RGB null-scattering transport;
+new medium attachments require this integrator. See [set_medium()].}
 
 \item{screen_text}{Default `NULL`. Optional screen-space text overlay created with `screen_text()`,
 or a list of `screen_text()` outputs to draw in order.}
@@ -249,6 +278,14 @@ or a list of `screen_text()` outputs to draw in order.}
 or a list of `screen_line()` outputs to draw in order.
 Labels are anchored to 3D world-space points, projected through the current camera, and drawn after
 rendering so text size and justification are independent of scene scale and view distance.}
+
+\item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
+
+\item{start_frame}{Default `1`. First camera frame to render when using an animated camera.}
+
+\item{end_frame}{Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.}
+
+\item{mode}{Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

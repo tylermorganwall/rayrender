@@ -95,6 +95,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec = (*ObjectToWorld)(rec);
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
       
@@ -145,6 +146,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     return(true);
   }
@@ -188,6 +190,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
 
     return(true);
@@ -227,6 +230,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -321,6 +325,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -368,6 +373,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     
     return(true);
@@ -411,6 +417,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
@@ -448,6 +455,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec = (*ObjectToWorld)(rec);
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.geometric_normal = rec.normal;
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
