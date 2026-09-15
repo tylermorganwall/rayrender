@@ -1,5 +1,8 @@
 # rayrender 0.41.5.9000
 
+* Split the interactive preview status bar into camera information and rendering
+  flags on separate rows.
+
 * Reuse rendering workers across samples and wake on task completion, removing
   fixed polling delays from beauty and denoising feature passes while retaining
   preview cancellation and R interrupt handling.

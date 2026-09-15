@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 #include <stdexcept>
 
 #ifdef NOT_CRAN
@@ -18,7 +19,8 @@
 #endif
 
 static const unsigned int PREVIEW_STATUS_MIN_WIDTH = 640;
-static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 24;
+static const unsigned int PREVIEW_STATUS_ROW_HEIGHT = 24;
+static const unsigned int PREVIEW_STATUS_BAR_HEIGHT = 2 * PREVIEW_STATUS_ROW_HEIGHT;
 static const Float PREVIEW_SHUTTER_SPEED_MIN = static_cast<Float>(1);
 static const Float PREVIEW_SHUTTER_SPEED_MAX = static_cast<Float>(4096);
 
@@ -836,43 +838,37 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
     keyframe_number = current_keyframe + 1;
   }
 
-  char buffer[320];
+  // Keep camera readings together above the rendering and animation flags.
+  char shutter[32];
   if(std::isinf(shutter_speed)) {
-    std::snprintf(buffer,
-                  sizeof(buffer),
-                  "Loop %s | Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter Inf | Env %.1f | Blur %s | Key %d/%zu",
-                  keyframe_motion_closed ? "CLOSED" : "OPEN",
-                  origin.xyz.x,
-                  origin.xyz.y,
-                  origin.xyz.z,
-                  key_lookat.xyz.x,
-                  key_lookat.xyz.y,
-                  key_lookat.xyz.z,
-                  preview_exposure_adjustment,
-                  env_rotation,
-                  camera_motion_blur_enabled ? "ON" : "OFF",
-                  keyframe_number,
-                  Keyframes.size());
+    std::snprintf(shutter, sizeof(shutter), "Inf");
   } else {
-    std::snprintf(buffer,
-                  sizeof(buffer),
-                  "Loop %s | Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %.3f | Env %.1f | Blur %s | Key %d/%zu",
-                  keyframe_motion_closed ? "CLOSED" : "OPEN",
-                  origin.xyz.x,
-                  origin.xyz.y,
-                  origin.xyz.z,
-                  key_lookat.xyz.x,
-                  key_lookat.xyz.y,
-                  key_lookat.xyz.z,
-                  preview_exposure_adjustment,
-                  shutter_speed,
-                  env_rotation,
-                  camera_motion_blur_enabled ? "ON" : "OFF",
-                  keyframe_number,
-                  Keyframes.size());
+    std::snprintf(shutter, sizeof(shutter), "%.3f", shutter_speed);
   }
+  char camera_text[320];
+  std::snprintf(camera_text,
+                sizeof(camera_text),
+                "Cam x/y/z %.2f %.2f %.2f | Look %.2f %.2f %.2f | Exp %.3f | Shutter %s",
+                origin.xyz.x,
+                origin.xyz.y,
+                origin.xyz.z,
+                key_lookat.xyz.x,
+                key_lookat.xyz.y,
+                key_lookat.xyz.z,
+                preview_exposure_adjustment,
+                shutter);
+  char flags_text[160];
+  std::snprintf(flags_text,
+                sizeof(flags_text),
+                "Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                keyframe_motion_closed ? "CLOSED" : "OPEN",
+                env_rotation,
+                camera_motion_blur_enabled ? "ON" : "OFF",
+                keyframe_number,
+                Keyframes.size());
   const std::string atmosphere_status = AtmosphereStatusText();
-  return atmosphere_status.empty() ? std::string(buffer) : atmosphere_status + " | " + buffer;
+  return std::string(camera_text) + "\n" +
+    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text);
 }
 
 void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
@@ -1433,13 +1429,13 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
                  width,
                  PREVIEW_STATUS_BAR_HEIGHT);
   XSetForeground(d, gc, WhitePixel(d, s));
-  XDrawString(d,
-              w,
-              gc,
-              8,
-              height - 7,
-              status_text.c_str(),
-              static_cast<int>(status_text.size()));
+  std::istringstream rows(status_text);
+  std::string row;
+  int baseline = height - PREVIEW_STATUS_BAR_HEIGHT + PREVIEW_STATUS_ROW_HEIGHT - 7;
+  while(std::getline(rows, row)) {
+    XDrawString(d, w, gc, 8, baseline, row.c_str(), static_cast<int>(row.size()));
+    baseline += PREVIEW_STATUS_ROW_HEIGHT;
+  }
   XFlush(d);
 }
 #endif
@@ -1593,13 +1589,21 @@ void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
 
   RECT text_rect = bar_rect;
   text_rect.left += 8;
+  text_rect.right -= 8;
+  text_rect.bottom = text_rect.top + PREVIEW_STATUS_ROW_HEIGHT;
   SetBkMode(hdc, TRANSPARENT);
   SetTextColor(hdc, RGB(255, 255, 255));
-  DrawTextA(hdc,
-            status_text.c_str(),
-            -1,
-            &text_rect,
-            DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
+  std::istringstream rows(status_text);
+  std::string row;
+  while(std::getline(rows, row)) {
+    DrawTextA(hdc,
+              row.c_str(),
+              -1,
+              &text_rect,
+              DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
+    text_rect.top += PREVIEW_STATUS_ROW_HEIGHT;
+    text_rect.bottom += PREVIEW_STATUS_ROW_HEIGHT;
+  }
 }
 #endif
 
@@ -3249,7 +3253,8 @@ context("Preview atmosphere controls") {
     expect_true((applied.back() == std::make_pair(true, true)));
     expect_true(display->ConsumeAtmosphereChange());
     expect_false(display->ConsumeAtmosphereChange());
-    expect_true(display->PreviewStatusText(0).find("Haze ON | Altitude ON") == 0);
+    expect_true(display->PreviewStatusText(0).find("\nHaze ON | Altitude ON") !=
+                std::string::npos);
     expect_true(display->ToggleHaze());
     expect_true((applied.back() == std::make_pair(false, true)));
     expect_true(display->ToggleQueryAltitude());
