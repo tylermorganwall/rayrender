@@ -35,6 +35,8 @@ sky_light_image(
   number_cores = 1,
   verbose = FALSE,
   sun = TRUE,
+  environment_light_bake_white = FALSE,
+  environment_light_bake_white_target = "D65",
   ...
 )
 }
@@ -116,6 +118,16 @@ Set \code{FALSE} to use Prague.}
 \item{sun}{Default \code{TRUE}. Include the solar disk when selected by \code{render_mode}.
 Set \code{FALSE} to omit it from the image.}
 
+\item{environment_light_bake_white}{Default \code{FALSE}. Bake chromatic adaptation
+from the generated EXR's \code{white_current} metadata into its RGB pixels before
+using it for lighting. Requires \code{exr_metadata = TRUE}. The adapted image is
+cached and reused for still images and animations.}
+
+\item{environment_light_bake_white_target}{Default \code{"D65"}. Target white point
+when baking: \code{"D50"}, \code{"D55"}, \code{"D60"}, \code{"D65"}, \code{"D75"}, \code{"E"}, or a finite
+numeric XYZ vector with positive Y (normalized to Y = 1). Unlike
+\code{exr_adopted_white}, this changes the image pixels when baking is enabled.}
+
 \item{...}{Additional named arguments forwarded by
 \code{skymodelr::generate_sky_latlong()} to its star, planet, and Moon generators.
 Pass settings directly; location, datetime, and the cached filename are
@@ -135,6 +147,10 @@ Both constructors include Sun and Moon by default, controlled with \code{sun} an
 \details{
 Image generation happens before rendering and is cached for the R
 session. Changing only \code{intensity}, \code{rotation}, or \code{name} reuses the image.
+Changing the baked target white point reuses the generated sky and caches a
+separate adapted image. White-balance controls belong to this light; pass the
+light to \code{\link[=add_infinite_light]{add_infinite_light()}} before calling \code{\link[=render_scene]{render_scene()}} or
+\code{\link[=render_animation]{render_animation()}}.
 Install any required Prague data with \code{skymodelr::download_sky_data()} first;
 rendering does not download datasets.
 

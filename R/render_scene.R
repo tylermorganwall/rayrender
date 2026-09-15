@@ -290,8 +290,6 @@ render_scene = function(
   parallel = TRUE,
   bvh_type = "sah",
   environment_light = NULL,
-  environment_light_bake_white = FALSE,
-  environment_light_bake_white_target = "D65",
   rotate_env = 0,
   intensity_env = 1,
   transparent_background = FALSE,
@@ -690,15 +688,6 @@ HAS_OIDN: %s
   }
   print_time(verbose, "Pre-processing scene")
   debug_string = debug_channel
-  environment_light_info = prepare_environment_light_white_balance(
-    environment_light = environment_light,
-    environment_light_bake_white = environment_light_bake_white,
-    environment_light_bake_white_target = environment_light_bake_white_target
-  )
-  environment_light = environment_light_info$environment_light
-  if (length(environment_light_info$cleanup) > 0L) {
-    on.exit(unlink(environment_light_info$cleanup), add = TRUE)
-  }
   scene_list = prepare_scene_list(
     scene = scene,
     width = width,

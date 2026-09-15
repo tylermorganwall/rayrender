@@ -44,8 +44,6 @@ render_scene(
   parallel = TRUE,
   bvh_type = "sah",
   environment_light = NULL,
-  environment_light_bake_white = FALSE,
-  environment_light_bake_white_target = "D65",
   rotate_env = 0,
   intensity_env = 1,
   transparent_background = FALSE,

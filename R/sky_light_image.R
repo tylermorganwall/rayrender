@@ -33,6 +33,14 @@
 #' @param exr_adopted_white Default `"D60"`. Adopted white for EXR metadata:
 #'   `"D60"`, `"D65"`, or numeric XYZ with Y = 1. Does not change image pixels.
 #' @param exr_metadata Default `TRUE`. Attach skymodelr color metadata to the EXR.
+#' @param environment_light_bake_white Default `FALSE`. Bake chromatic adaptation
+#'   from the generated EXR's `white_current` metadata into its RGB pixels before
+#'   using it for lighting. Requires `exr_metadata = TRUE`. The adapted image is
+#'   cached and reused for still images and animations.
+#' @param environment_light_bake_white_target Default `"D65"`. Target white point
+#'   when baking: `"D50"`, `"D55"`, `"D60"`, `"D65"`, `"D75"`, `"E"`, or a finite
+#'   numeric XYZ vector with positive Y (normalized to Y = 1). Unlike
+#'   `exr_adopted_white`, this changes the image pixels when baking is enabled.
 #' @param number_cores Default `1`. CPU threads used to generate the cached image.
 #' @param verbose Default `FALSE`. Print sky-generation progress information.
 #' @param ... Additional named arguments forwarded by
@@ -42,6 +50,10 @@
 #'
 #' @details Image generation happens before rendering and is cached for the R
 #' session. Changing only `intensity`, `rotation`, or `name` reuses the image.
+#' Changing the baked target white point reuses the generated sky and caches a
+#' separate adapted image. White-balance controls belong to this light; pass the
+#' light to [add_infinite_light()] before calling [render_scene()] or
+#' [render_animation()].
 #' Install any required Prague data with `skymodelr::download_sky_data()` first;
 #' rendering does not download datasets.
 #'
@@ -132,13 +144,24 @@ sky_light_image = function(
   number_cores = 1,
   verbose = FALSE,
   sun = TRUE,
+  environment_light_bake_white = FALSE,
+  environment_light_bake_white_target = "D65",
   ...
 ) {
-  for (field in c("sun", "moon")) {
+  for (field in c("sun", "moon", "environment_light_bake_white")) {
     value = get(field)
     if (!is.logical(value) || length(value) != 1L || is.na(value)) {
       stop(field, " must be TRUE or FALSE.", call. = FALSE)
     }
+  }
+  if (environment_light_bake_white) {
+    if (!isTRUE(exr_metadata)) {
+      stop(
+        "environment_light_bake_white requires exr_metadata = TRUE.",
+        call. = FALSE
+      )
+    }
+    environment_light_white_xyz(environment_light_bake_white_target)
   }
   if (!sun && identical(render_mode, "sun")) {
     stop('render_mode = "sun" requires sun = TRUE.', call. = FALSE)
@@ -213,6 +236,8 @@ sky_light_image = function(
     name
   )
   result["sun"] = list(sun)
+  result$environment_light_bake_white = environment_light_bake_white
+  result$environment_light_bake_white_target = environment_light_bake_white_target
   validate_infinite_light(result)
   result
 }
@@ -264,6 +289,40 @@ prepare_sky_light_image = function(light) {
     args$filename = filename
     do.call(skymodelr::generate_sky_latlong, args)
     success = TRUE
+  }
+
+  # Preserve the generated sky so each white point can reuse it. Adapted pixels
+  # have their own session cache and stay available across frames and renders.
+  if (isTRUE(light$environment_light_bake_white)) {
+    target_white = environment_light_white_xyz(
+      light$environment_light_bake_white_target
+    )
+    saveRDS(
+      list(
+        image = basename(filename),
+        target_white = target_white,
+        rayimage_version = as.character(utils::packageVersion("rayimage"))
+      ),
+      key_file,
+      version = 2
+    )
+    baked_filename = file.path(
+      cache,
+      paste0(unname(tools::md5sum(key_file)), "-white.exr")
+    )
+    if (!file.exists(baked_filename)) {
+      white_balance = prepare_environment_light_white_balance(
+        filename,
+        environment_light_bake_white = TRUE,
+        environment_light_bake_white_target = target_white
+      )
+      on.exit(unlink(white_balance$cleanup), add = TRUE)
+      if (!file.copy(white_balance$environment_light, baked_filename)) {
+        unlink(baked_filename)
+        stop("Could not cache the white-balanced sky image.", call. = FALSE)
+      }
+    }
+    filename = baked_filename
   }
   infinite_light(
     filename,

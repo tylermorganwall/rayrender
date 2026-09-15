@@ -1,5 +1,9 @@
 # rayrender 0.42.0
 
+* Move EXR white-balance baking controls from the render functions to
+  `sky_light_image()`. Cache each adapted sky for use in stills and animations,
+  reusing the generated sky when only the target white point changes.
+
 * Fix Windows `near`/`far` macro collisions in geometry and volume code. Remove
   unused preview state and signedness warnings in BVH construction and spline
   interpolation, and make haze-cut sorting bounds explicit. Correct RGB-to-HSV
