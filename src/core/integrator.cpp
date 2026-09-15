@@ -18,6 +18,7 @@
 #include "../utils/raylog.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <future>
 #include <limits>
 
@@ -53,7 +54,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   display.volume_scene = hlist.volume_scene;
   display.transparent_volume_background = hlist.volume_scene && hlist.volume_scene->transparent_background;
   if(hlist.volume_scene) {
-    hlist.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(hlist);
+    // Read once before workers start. The fixed distribution is retained as a
+    // reproducible reference for light-tree timing and variance comparisons.
+    const char *light_method = std::getenv("RAYRENDER_LIGHT_SAMPLER");
+    auto method = integrator_type != IntegratorType::ShadowRays ||
+        (light_method && std::string(light_method) == "fixed")
+        ? VolumeLightSampler::SelectionMethod::Fixed : VolumeLightSampler::SelectionMethod::BVH;
+    hlist.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(hlist, method);
     hlist.volume_scene->statistics.Reset();
   }
   adaptive_sampler adaptive_pixel_sampler(numbercores, nx, ny, ns, debug_channel,

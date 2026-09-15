@@ -454,7 +454,9 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   VolumeLightSampler::Selection selected;
   LightSample sample;
   if (emitter_sampler) {
-    selected = emitter_sampler->SampleEmitter(p, sampler, rng, parent.time());
+    VolumeLightSampler::Context context{p, surface ?
+        (surface->has_bump ? surface->bump_normal : surface->normal) : normal3f(0), parent.time()};
+    selected = emitter_sampler->SampleEmitter(context, sampler, rng);
     sample.wi = selected.wi;
     sample.pdf = selected.pdf;
   } else {
@@ -735,7 +737,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   state.SetRay(ray);
   RGB L(0), beta(1), ru(1), rl(1);
   double eta_scale = 1;
-  point3f previous_point(0);
+  VolumeLightSampler::Context previous_light_context;
   // Native lighting without finite haze still belongs to the last real vertex.
   // Crossing an invisible cloud boundary must not move its altitude query.
   point3f lighting_origin = ray.o;
@@ -778,7 +780,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     HazeIntervalWalk haze_walk(haze_intervals(atmosphere, state, ray, distance, cancel));
     select_haze(haze_walk.Initial(), ray.o);
     Float atmosphere_light_pdf = integrate_haze && !specular && use_light_sampling()
-                                     ? light_pdf(lights, previous_point, ray.d, rng, ray.time()) : 0;
+                                     ? light_pdf(lights, previous_light_context.p, ray.d, rng, ray.time()) : 0;
 
 
     // Between candidates, add clear-air source radiance with the current MIS
@@ -890,7 +892,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
               auto sample = mp.phase.Sample(-ray.d, u.xy.x, u.xy.y);
               beta *= RGB(sample.p / sample.pdf);
               rl = ru / sample.pdf;
-              previous_point = p;
+              previous_light_context = {p, normal3f(0), ray.time()};
               ray = Ray(p, unit_vector(sample.wi), ray.time());
               lighting_origin = p;
               state.SetRay(ray);
@@ -1008,8 +1010,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       double denom = ru.Average();
       if (!specular && use_light_sampling()) {
         Float competing_pdf = scene && scene->light_sampler && !atmosphere
-            ? scene->light_sampler->EmitterPdf(previous_point, ray.d, h, rng, ray.time())
-            : light_pdf(lights, previous_point, ray.d, rng, ray.time());
+            ? scene->light_sampler->EmitterPdf(previous_light_context, ray.d, h, rng)
+            : light_pdf(lights, previous_light_context.p, ray.d, rng, ray.time());
         denom = (ru + rl * RGB(competing_pdf)).Average();
       }
       if (denom > 0)
@@ -1069,7 +1071,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         break;
       beta *= RGB(h.mat_ptr->f(ray, h, wi)) / p;
       rl = ru / p;
-      previous_point = h.p;
+      previous_light_context = {h.p, h.has_bump ? h.bump_normal : h.normal, ray.time()};
       specular = false;
       any_diffuse = true;
       cross_if_transmitted(state, h, ray.d, wi);

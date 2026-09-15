@@ -1035,6 +1035,124 @@ context("Restricted opaque shadow connections") {
 }
 
 context("Explicit emitter sampling") {
+  test_that("light-tree probabilities normalize and match sampling at different vertices") {
+    Transform identity;
+    std::vector<Transform> transforms, inverses;
+    transforms.reserve(8); inverses.reserve(8);
+    hitable_list lights;
+    for (int i = 0; i < 8; ++i) {
+      transforms.push_back(Translate(vec3f((i - 3.5f) * 3, i % 2 ? 5 : 1, 0)));
+      inverses.push_back(Inverse(transforms.back()));
+      auto emission = std::make_shared<diffuse_light>(
+          std::make_shared<constant_texture>(point3f(1)), i == 3 ? 20 : 1, false);
+      lights.add(std::make_shared<sphere>(.25, emission, nullptr, nullptr,
+                                         &transforms.back(), &inverses.back(), false));
+    }
+    VolumeLightSampler sampler(lights), fixed(lights, VolumeLightSampler::SelectionMethod::Fixed);
+    using Context = VolumeLightSampler::Context;
+    Context left{point3f(-10, 0, -2), normal3f(0), 0};
+    Context right{point3f(10, 0, -2), normal3f(0), 0};
+    expect_true(sampler.SelectionPmf(left, 0) > sampler.SelectionPmf(right, 0) * 5);
+    expect_true(sampler.SelectionPmf(right, 7) > sampler.SelectionPmf(left, 7) * 5);
+    bool correct = true;
+    for (const Context &ctx : {left, right, Context{point3f(0), normal3f(0, 1, 0), .5f},
+                              Context{point3f(0), normal3f(0, -1, 0), .5f}}) {
+      double total = 0;
+      std::vector<int> counts(8);
+      random_gen rng(845); RandomSampler random(rng);
+      const int count = 32768;
+      for (int i = 0; i < count; ++i) {
+        auto sample = sampler.SampleEmitter(ctx, &random, rng);
+        correct &= sample.index < 8;
+        if (sample.index < 8) ++counts[sample.index];
+        hit_record hit;
+        hit.shape = lights.objects[sample.index].get();
+        correct &= sample.pdf == sampler.EmitterPdf(ctx, sample.wi, hit, rng);
+      }
+      for (size_t i = 0; i < 8; ++i) {
+        double p = sampler.SelectionPmf(ctx, i);
+        total += p;
+        correct &= p >= .05 / 8 && p <= 1;
+        correct &= std::abs(double(counts[i]) / count - p) < 6 * std::sqrt(p * (1 - p) / count) + 5.0 / count;
+        correct &= fixed.SelectionPmf(ctx, i) == 1.0 / 8;
+      }
+      correct &= std::abs(total - 1) < 1e-12;
+      correct &= sampler.SelectionPmf(ctx, 8) == 0;
+    }
+    expect_true(correct);
+  }
+
+  test_that("power, facing and receiver estimates retain support for missed texture features") {
+    Transform identity;
+    class SmallBrightPatch final : public texture {
+    public:
+      point3f value(Float u, Float v, const point3f &) const override {
+        return point3f(u < .01f && v < .01f ? 10000 : 0);
+      }
+    };
+    auto unit = std::make_shared<constant_texture>(point3f(1));
+    auto dim = std::make_shared<diffuse_light>(unit, 1, false);
+    auto bright = std::make_shared<diffuse_light>(unit, 10, false);
+    auto patch = std::make_shared<diffuse_light>(std::make_shared<SmallBrightPatch>(), 1, false);
+    hitable_list lights;
+    for (auto mat : {dim, bright, patch})
+      lights.add(std::make_shared<xz_rect>(-1, 1, -1, 1, 3, mat, nullptr, nullptr,
+                                          &identity, &identity, true));
+    lights.add(std::make_shared<xz_rect>(-1, 1, -1, 1, 3, bright, nullptr, nullptr,
+                                        &identity, &identity, false));
+    VolumeLightSampler sampler(lights);
+    VolumeLightSampler::Context ctx{point3f(0), normal3f(0, 1, 0), 0};
+    expect_true(sampler.SelectionPmf(ctx, 1) > sampler.SelectionPmf(ctx, 0) * 5);
+    expect_true(sampler.SelectionPmf(ctx, 2) >= .05 / 4);
+    expect_true(sampler.SelectionPmf(ctx, 3) >= .05 / 4);
+    hitable_list facing;
+    facing.add(lights.objects[1]); facing.add(lights.objects[3]);
+    VolumeLightSampler facing_sampler(facing);
+    expect_true(facing_sampler.SelectionPmf(ctx, 0) > facing_sampler.SelectionPmf(ctx, 1) * 5);
+    auto opposite = ctx; opposite.n = -ctx.n;
+    for (size_t i = 0; i < 4; ++i)
+      expect_true(sampler.SelectionPmf(ctx, i) == sampler.SelectionPmf(opposite, i));
+
+    unsigned char pixel[4] = {255, 255, 255, 255};
+    auto alpha = std::make_shared<alpha_texture>(pixel, 1, 1, 4);
+    hitable_list masked;
+    for (bool flipped : {false, true})
+      masked.add(std::make_shared<xz_rect>(-1, 1, -1, 1, 3, bright, alpha, nullptr,
+                                          &identity, &identity, flipped));
+    VolumeLightSampler masked_sampler(masked);
+    expect_true(masked_sampler.SelectionPmf(ctx, 0) == .5);
+    ctx.p = point3f(0, 6, 0);
+    expect_true(masked_sampler.SelectionPmf(ctx, 0) == .5);
+  }
+
+  test_that("distant lights and empty groups retain their original probability mass") {
+    Transform identity;
+    auto texture = std::make_shared<constant_texture>(point3f(1));
+    auto material = std::make_shared<diffuse_light>(texture, 1, false);
+    hitable_list lights, empty;
+    lights.add(std::make_shared<sphere>(1, material, nullptr, nullptr, &identity, &identity, false));
+    lights.add(std::make_shared<sphere>(2, material, nullptr, nullptr, &identity, &identity, false));
+    lights.add(std::make_shared<InfiniteAreaLight>(4, 2, 100, point3f(0), texture,
+                                                  material, &identity, &identity, false));
+    lights.add(std::make_shared<instance>(&empty, &identity, &identity, &empty));
+    VolumeLightSampler sampler(lights);
+    VolumeLightSampler::Context ctx{point3f(0), normal3f(0), 0};
+    double sum = 0;
+    for (size_t i = 0; i < 3; ++i) sum += sampler.SelectionPmf(ctx, i);
+    expect_true(std::abs(sum - .75) < 1e-12);
+    expect_true(sampler.SelectionPmf(ctx, 2) == .25);
+    random_gen rng(423); RandomSampler random(rng);
+    int distant = 0, null = 0;
+    const int count = 16384;
+    for (int i = 0; i < count; ++i) {
+      auto sample = sampler.SampleEmitter(ctx, &random, rng);
+      distant += sample.index == 2;
+      null += sample.index == 3 && sample.pdf == 0;
+    }
+    expect_true(std::abs(double(distant) / count - .25) < .02);
+    expect_true(std::abs(double(null) / count - .25) < .02);
+  }
+
   test_that("shared emitters retain distinct nested, mirrored and animated placement IDs") {
     Transform identity, left = Translate(vec3f(-2, 0, 0)), right = Translate(vec3f(2, 0, 0));
     Transform left_inv = Inverse(left), right_inv = Inverse(right);
@@ -1062,7 +1180,7 @@ context("Explicit emitter sampling") {
     point3f p(0, 0, -15);
     for (int i = 0; i < 2048; ++i) {
       Float time = Float(i % 17) / 16;
-      auto selected = sampler.SampleEmitter(p, &random, rng, time);
+      auto selected = sampler.SampleEmitter({p, normal3f(0), time}, &random, rng);
       if (!(selected.pdf > 0)) continue;
       Ray ray(p, selected.wi, time); ray.segment_absorption = true;
       hit_record endpoint, reached;
@@ -1074,11 +1192,11 @@ context("Explicit emitter sampling") {
       ids.insert(reached.light_placement);
       correct &= reached.shape == lamp.get() && sampler.Matches(selected, reached);
       correct &= endpoint.light_placement == reached.light_placement;
-      Float pdf = sampler.EmitterPdf(p, selected.wi, reached, rng, time);
+      Float pdf = sampler.EmitterPdf({p, normal3f(0), time}, selected.wi, reached, rng);
       correct &= pdf == selected.pdf;
       reached.light_placement = 0;
       correct &= !sampler.Matches(selected, reached);
-      correct &= sampler.EmitterPdf(p, selected.wi, reached, rng, time) == 0;
+      correct &= sampler.EmitterPdf({p, normal3f(0), time}, selected.wi, reached, rng) == 0;
     }
     expect_true(correct);
     expect_true(hits > 2000);
@@ -1106,13 +1224,13 @@ context("Explicit emitter sampling") {
     RandomSampler random(rng);
     bool correct = true;
     for (int i = 0; i < 1024; ++i) {
-      auto sample = sampler.SampleEmitter(point3f(0), &random, rng, 0);
+      auto sample = sampler.SampleEmitter({point3f(0), normal3f(0), 0}, &random, rng);
       Ray ray(point3f(0), sample.wi); ray.segment_absorption = true;
       hit_record hit;
       correct &= sample.pdf > 0 && sampler.Pdf(ray.o, ray.d, rng, 0) > 0;
       if (!lights.hit(ray, 0, MaxT, hit, rng)) { correct = false; continue; }
       correct &= sampler.Matches(sample, hit);
-      correct &= sampler.EmitterPdf(ray.o, ray.d, hit, rng, 0) == sample.pdf;
+      correct &= sampler.EmitterPdf({ray.o, normal3f(0), 0}, ray.d, hit, rng) == sample.pdf;
     }
     expect_true(correct);
   }

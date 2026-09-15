@@ -1,5 +1,10 @@
 # rayrender 0.41.5.9000
 
+* Select finite lights with a spatial light BVH in the NEE integrator, using
+  distance, estimated power and emission direction. Retain the previous
+  scattering context for matching MIS probabilities and mix in the original
+  distribution to preserve support for textured and animated emitters.
+
 * Accelerate eligible opaque NEE shadow connections with early-exit BVH traversal
   and reduced triangle intersection work. Select explicit emitters with matching
   MIS weights, avoiding full light-mixture PDF scans and supporting multiple and
