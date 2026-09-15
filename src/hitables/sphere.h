@@ -23,6 +23,13 @@ class sphere: public hitable {
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
+  OpaqueShadowType ShadowType() const {
+    return alpha_mask ? OpaqueShadowType::Unsupported : opaque_shadow_material(mat_ptr.get());
+  }
+  bool OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    return ShadowType() != OpaqueShadowType::Unsupported && HitP(r, t_min, t_max, rng);
+  }
+
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     virtual Float pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time = 0);
     virtual Float pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time = 0);

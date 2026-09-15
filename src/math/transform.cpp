@@ -695,6 +695,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
   
   
@@ -725,6 +726,7 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.v = r.v;
   hr.t = r.t;
   hr.shape = r.shape;
+  hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
   
   

@@ -367,4 +367,19 @@ class hair : public material {
     Float sin2kAlpha[3], cos2kAlpha[3];
 };
 
+// A conservative whitelist for direct-light visibility. Unknown materials and
+// transmissive surfaces retain the full connection walk.
+inline OpaqueShadowType opaque_shadow_material(const material* m) {
+  if (!m) return OpaqueShadowType::Unsupported;
+  const auto& type = typeid(*m);
+  if (type == typeid(lambertian) || type == typeid(orennayar) ||
+      type == typeid(metal) || type == typeid(MicrofacetReflection) ||
+      type == typeid(glossy)) return OpaqueShadowType::Opaque;
+  if (type == typeid(diffuse_light) && !static_cast<const diffuse_light*>(m)->invisible)
+    return OpaqueShadowType::Light;
+  if (type == typeid(spot_light) && !static_cast<const spot_light*>(m)->invisible)
+    return OpaqueShadowType::Light;
+  return OpaqueShadowType::Unsupported;
+}
+
 #endif

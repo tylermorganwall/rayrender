@@ -31,6 +31,40 @@ bool volume_triangle_intersection(const Ray& r, const point3f& a, const point3f&
 }
 }
 
+OpaqueShadowType triangle::ShadowType() const {
+  const int id = mesh->face_material_id[face_number];
+  // Alpha masks require the ordered stochastic walk; opaque lamps block light too.
+  return mesh->alpha_textures[id] ? OpaqueShadowType::Unsupported
+      : opaque_shadow_material(mesh->mesh_materials[id].get());
+}
+
+bool triangle::OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  if (!r.segment_absorption) {
+    hit_record rec;
+    return hit(r, t_min, t_max, rec, rng);
+  }
+  const point3f &p0 = mesh->p[v[0]], &p1 = mesh->p[v[1]], &p2 = mesh->p[v[2]];
+  Float distance, b0, b1, b2;
+  if (!volume_triangle_intersection(r, p0, p1, p2, t_min, t_max, distance, b0, b1, b2))
+    return false;
+
+  // Match hit()'s degenerate-geometry rejection before omitting the shading
+  // record: no interpolated normals, textures, bump map, or position error.
+  point2f uv[3];
+  GetUVs(uv);
+  vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
+  vec3f dp02 = p0 - p2, dp12 = p1 - p2;
+  Float determinant = DifferenceOfProducts(duv02[0], duv12[1], duv02[1], duv12[0]);
+  bool degenerate = ffabs(determinant) < 1e-8;
+  if (!degenerate) {
+    Float inv = 1 / determinant;
+    vec3f dpdu = (duv12[1] * dp02 - duv02[1] * dp12) * inv;
+    vec3f dpdv = (-duv12[0] * dp02 + duv02[0] * dp12) * inv;
+    degenerate = parallelVectors(dpdu, dpdv);
+  }
+  return !degenerate || cross(p2 - p0, p1 - p0).squared_length() != 0;
+}
+
 const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Triangle");

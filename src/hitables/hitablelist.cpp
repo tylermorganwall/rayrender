@@ -1,6 +1,19 @@
 #include "../hitables/hitablelist.h"
 #include "../utils/raylog.h"
 
+OpaqueShadowType hitable_list::ShadowType() const {
+  for (const auto& object : objects)
+    if (object->ShadowType() == OpaqueShadowType::Unsupported)
+      return OpaqueShadowType::Unsupported;
+  return OpaqueShadowType::Mixed;
+}
+
+bool hitable_list::OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+  for (const auto& object : objects)
+    if (object->OpaqueHit(r, t_min, t_max, rng)) return true;
+  return false;
+}
+
 const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Hitable List");
@@ -13,6 +26,7 @@ const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record&
   for (const auto& object : objects) {
     temp_rec.medium_boundary = nullptr; temp_rec.boundary_id = 0;
     temp_rec.medium_to_world.reset();
+    temp_rec.light_placement = 0;
     temp_rec.geometric_normal = normal3f(0); temp_rec.infinite_area_hit = false;
     if (object->hit(r, t_min, closest_so_far, temp_rec, rng)) {
       hit_anything = true;
@@ -35,6 +49,7 @@ const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record&
   for (const auto& object : objects) {
     temp_rec.medium_boundary = nullptr; temp_rec.boundary_id = 0;
     temp_rec.medium_to_world.reset();
+    temp_rec.light_placement = 0;
     temp_rec.geometric_normal = normal3f(0); temp_rec.infinite_area_hit = false;
     if (object->hit(r, t_min, closest_so_far, temp_rec, sampler)) {
       hit_anything = true;

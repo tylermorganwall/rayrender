@@ -142,6 +142,11 @@ public:
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
+    OpaqueShadowType ShadowType() const { return shadow_type; }
+    bool OpaqueHit(const Ray&, Float, Float, random_gen&) const;
+    // Mesh construction releases its temporary list; light sampling borrows
+    // these same owned primitives instead of retaining a duplicate mesh list.
+    std::span<const std::shared_ptr<hitable>> Primitives() const { return primitives; }
 
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     
@@ -173,6 +178,8 @@ public:
     int n_nodes;
     // std::pair<size_t,size_t> CountNodeLeaf();
 private:
+    void classifyOpaqueShadow();
+    OpaqueShadowType shadow_type = OpaqueShadowType::Opaque;
     BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
                                 std::atomic<int> *totalNodes,
                                 std::atomic<int> *orderedPrimsOffset,

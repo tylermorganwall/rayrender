@@ -83,6 +83,7 @@ const bool AnimatedHitable::hit(const Ray& r, Float t_min, Float t_max, hit_reco
     return false;
   }
   r.tMax = ray_interp.tMax;
+  rec.light_placement = light_placements.Resolve(rec.light_placement);
   if (!InterpolatedPrimToWorld.IsIdentity()) {
     rec = InterpolatedPrimToWorld(rec);
   }
@@ -101,6 +102,7 @@ const bool AnimatedHitable::hit(const Ray& r, Float t_min, Float t_max, hit_reco
     return false;
   }
   r.tMax = ray_interp.tMax;
+  rec.light_placement = light_placements.Resolve(rec.light_placement);
   if (!InterpolatedPrimToWorld.IsIdentity()) {
     rec = InterpolatedPrimToWorld(rec);
   }

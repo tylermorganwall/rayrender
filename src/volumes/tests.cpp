@@ -2,9 +2,11 @@
 #include "../core/bvh.h"
 #include "../hitables/box.h"
 #include "../hitables/instance.h"
+#include "../hitables/mesh3d.h"
 #include "../hitables/infinite_area_light.h"
 #include "../hitables/rectangle.h"
 #include "../hitables/sphere.h"
+#include "../hitables/triangle.h"
 #include "../materials/material.h"
 #include "../materials/texture.h"
 #include "boundary.h"
@@ -921,6 +923,270 @@ context("Conservative bounds around medium boundaries") {
       expect_true(actual.medium_boundary == boundary.get());
       expect_true(world.HitP(ray, 0, expected.t, rng));
       expect_true(world.HitP(ray, 0, expected.t, &sampler));
+    }
+  }
+}
+
+
+namespace {
+class OrderedShadowWorld : public hitable_list {
+public:
+  OpaqueShadowType ShadowType() const { return OpaqueShadowType::Unsupported; }
+};
+}
+
+context("Restricted opaque shadow connections") {
+  test_that("visibility preserves radiance and both random streams, including near-light ties") {
+    Transform identity;
+    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.6)));
+    auto emission = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1, .8, .4)), 3, false);
+    auto ground = std::make_shared<xz_rect>(-20, 20, -20, 20, 0, matte, nullptr, nullptr,
+                                          &identity, &identity, false);
+    auto light = std::make_shared<xz_rect>(-3, 3, -3, 3, 5, emission, nullptr, nullptr,
+                                         &identity, &identity, true);
+    for (Float height : {Float(2), Float(5), std::nextafter(Float(5), Float(0)),
+                         std::nextafter(Float(5), Float(10))}) {
+      auto blocker = std::make_shared<xz_rect>(-.7, .7, -.7, .7, height, matte, nullptr,
+                                              nullptr, &identity, &identity, false);
+      std::vector<std::shared_ptr<hitable>> objects{ground, blocker, light};
+      auto bvh = std::make_shared<BVHAggregate>(objects, 0, 1, 1, true);
+      hitable_list fast, lights;
+      OrderedShadowWorld ordered;
+      fast.add(bvh); ordered.add(bvh); lights.add(light);
+      lights.volume_scene = std::make_shared<VolumeScene>();
+      lights.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(lights);
+      expect_true(fast.ShadowType() == OpaqueShadowType::Mixed);
+      bool same = true;
+      for (int seed = 0; seed < 512; ++seed) {
+        random_gen a(seed), b(seed);
+        RandomSampler sa(a), sb(b);
+        sa.independent_dimensions = sb.independent_dimensions = true;
+        Ray ray(point3f(8, 3, -8), unit_vector(vec3f(-8 + (seed % 17) * .15,
+                                                     -3, 8 + (seed % 13) * .2)));
+        Float ta, tb;
+        point3f ra, rb, aa, ab;
+        normal3f na, nb;
+        color_volume(ray, &fast, &lights, 8, 5, a, &sa, ta, ra, na, aa, nullptr);
+        color_volume(ray, &ordered, &lights, 8, 5, b, &sb, tb, rb, nb, ab, nullptr);
+        same &= ta == tb && a.unif_rand() == b.unif_rand() && sa.Get1D() == sb.Get1D();
+        for (int c = 0; c < 3; ++c) same &= ra[c] == rb[c] && aa[c] == ab[c] && na[c] == nb[c];
+      }
+      expect_true(same);
+    }
+  }
+
+  test_that("unsupported materials, masks, and boundaries opt out") {
+    Transform identity;
+    auto texture = std::make_shared<constant_texture>(point3f(.5));
+    auto matte = std::make_shared<lambertian>(texture);
+    auto glass = std::make_shared<dielectric>(point3f(1), 1.5, point3f(0), 0);
+    auto emitter = std::make_shared<diffuse_light>(texture, 1, false);
+    auto invisible = std::make_shared<diffuse_light>(texture, 1, true);
+    unsigned char pixels[4] = {255, 255, 255, 128};
+    auto alpha = std::make_shared<alpha_texture>(pixels, 1, 1, 4);
+    auto shape = [&](std::shared_ptr<material> m, std::shared_ptr<alpha_texture> a = nullptr) {
+      return std::make_shared<sphere>(1, m, a, nullptr, &identity, &identity, false);
+    };
+    expect_true(shape(matte)->ShadowType() == OpaqueShadowType::Opaque);
+    expect_true(shape(glass)->ShadowType() == OpaqueShadowType::Unsupported);
+    expect_true(shape(matte, alpha)->ShadowType() == OpaqueShadowType::Unsupported);
+    expect_true(shape(invisible)->ShadowType() == OpaqueShadowType::Unsupported);
+    auto boundary = std::make_shared<MediumBoundary>(shape(matte), nullptr, identity, false, 1);
+    expect_true(boundary->ShadowType() == OpaqueShadowType::Unsupported);
+    BVHAggregate many({shape(emitter), shape(emitter)}, 0, 1, 1, true);
+    expect_true(many.ShadowType() == OpaqueShadowType::Mixed);
+    BVHAggregate mixed({shape(matte), shape(matte, alpha)}, 0, 1, 1, true);
+    expect_true(mixed.ShadowType() == OpaqueShadowType::Unsupported);
+  }
+
+  test_that("triangle predicates match NEE hit distances at edges and tiny offsets") {
+    Transform identity;
+    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    float vertices[9] = {-1, -1, 0, 1, -1, 0, 0, 1, 0};
+    int indices[3] = {0, 1, 2};
+    TriangleMesh mesh(vertices, indices, nullptr, nullptr, 3, 3, nullptr, nullptr,
+                      matte, &identity, &identity, false);
+    triangle tri(&mesh, mesh.vertexIndices.data(), mesh.normalIndices.data(),
+                 mesh.texIndices.data(), 0, &identity, &identity, false);
+    expect_true(tri.ShadowType() == OpaqueShadowType::Opaque);
+    bool same = true;
+    for (Float z : {Float(1), Float(1e-9), Float(1e-20)}) {
+      for (int i = -15; i <= 15; ++i) {
+        for (int j = -15; j <= 15; ++j) {
+          Ray ray(point3f(i / 10.f, j / 10.f, -z), vec3f(0, 0, 1));
+          ray.segment_absorption = true;
+          for (Float end : {std::nextafter(z, Float(0)), z, std::nextafter(z, Float(2))}) {
+            random_gen a(4), b(4);
+            hit_record rec;
+            same &= tri.hit(ray, 0, end, rec, a) == tri.OpaqueHit(ray, 0, end, b);
+            same &= a.unif_rand() == b.unif_rand();
+          }
+        }
+      }
+    }
+    expect_true(same);
+    // A collapsed triangle must not become a blocker in the reduced predicate.
+    mesh.p[2] = mesh.p[1];
+    Ray ray(point3f(0, -1, -1), vec3f(0, 0, 1)); ray.segment_absorption = true;
+    random_gen rng(1);
+    expect_false(tri.OpaqueHit(ray, 0, MaxT, rng));
+  }
+}
+
+context("Explicit emitter sampling") {
+  test_that("shared emitters retain distinct nested, mirrored and animated placement IDs") {
+    Transform identity, left = Translate(vec3f(-2, 0, 0)), right = Translate(vec3f(2, 0, 0));
+    Transform left_inv = Inverse(left), right_inv = Inverse(right);
+    auto emission = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1)), 2, false);
+    auto lamp = std::make_shared<sphere>(.25, emission, nullptr, nullptr, &identity, &identity, false);
+    hitable_list leaf(lamp), inner;
+    inner.add(std::make_shared<instance>(&leaf, &left, &left_inv, &leaf));
+    inner.add(std::make_shared<instance>(&leaf, &right, &right_inv, &leaf));
+    Transform upper = Translate(vec3f(0, 3, 0)) * Scale(-1, 1.4, 1);
+    Transform lower = Translate(vec3f(0, -3, 0)), upper_inv = Inverse(upper), lower_inv = Inverse(lower);
+    hitable_list lights;
+    lights.add(std::make_shared<instance>(&inner, &upper, &upper_inv, &inner));
+    std::shared_ptr<hitable> moving = std::make_shared<instance>(&inner, &lower, &lower_inv, &inner);
+    Transform end = Translate(vec3f(.4, 0, 0));
+    lights.add(std::make_shared<AnimatedHitable>(moving, AnimatedTransform(&identity, 0, &end, 1)));
+    // Rebuilding the sampler must rebuild the intern table consistently as well.
+    VolumeLightSampler first(lights);
+    VolumeLightSampler sampler(lights);
+    random_gen rng(2026);
+    RandomSampler random(rng);
+    std::set<uint64_t> ids;
+    bool correct = true;
+    int hits = 0;
+    point3f p(0, 0, -15);
+    for (int i = 0; i < 2048; ++i) {
+      Float time = Float(i % 17) / 16;
+      auto selected = sampler.SampleEmitter(p, &random, rng, time);
+      if (!(selected.pdf > 0)) continue;
+      Ray ray(p, selected.wi, time); ray.segment_absorption = true;
+      hit_record endpoint, reached;
+      if (!sampler.Endpoint(selected, ray, endpoint, rng) || !lights.hit(ray, 0, MaxT, reached, rng)) {
+        correct = false;
+        continue;
+      }
+      ++hits;
+      ids.insert(reached.light_placement);
+      correct &= reached.shape == lamp.get() && sampler.Matches(selected, reached);
+      correct &= endpoint.light_placement == reached.light_placement;
+      Float pdf = sampler.EmitterPdf(p, selected.wi, reached, rng, time);
+      correct &= pdf == selected.pdf;
+      reached.light_placement = 0;
+      correct &= !sampler.Matches(selected, reached);
+      correct &= sampler.EmitterPdf(p, selected.wi, reached, rng, time) == 0;
+    }
+    expect_true(correct);
+    expect_true(hits > 2000);
+    expect_true(ids.size() == 4);
+  }
+
+  test_that("mesh lights sample the BVH-owned triangles after releasing the build list") {
+    Transform identity;
+    auto material = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1)), 3, false);
+    float vertices[12] = {-1, 3, -1, 1, 3, -1, 1, 3, 1, -1, 3, 1};
+    int indices[6] = {0, 1, 2, 0, 2, 3};
+    auto mesh = std::make_shared<mesh3d>();
+    mesh->mesh = std::make_unique<TriangleMesh>(vertices, indices, nullptr, nullptr, 4, 6,
+                                              nullptr, nullptr, material, &identity, &identity, false);
+    for (int i = 0; i < 6; i += 3)
+      mesh->triangles.add(std::make_shared<triangle>(mesh->mesh.get(),
+          &mesh->mesh->vertexIndices[i], &mesh->mesh->normalIndices[i],
+          &mesh->mesh->texIndices[i], i / 3, &identity, &identity, false));
+    mesh->mesh_bvh = std::make_shared<BVHAggregate>(mesh->triangles.objects, 0, 1, 1, true);
+    mesh->triangles.objects.clear();
+    hitable_list lights(mesh);
+    VolumeLightSampler sampler(lights);
+    random_gen rng(42);
+    RandomSampler random(rng);
+    bool correct = true;
+    for (int i = 0; i < 1024; ++i) {
+      auto sample = sampler.SampleEmitter(point3f(0), &random, rng, 0);
+      Ray ray(point3f(0), sample.wi); ray.segment_absorption = true;
+      hit_record hit;
+      correct &= sample.pdf > 0 && sampler.Pdf(ray.o, ray.d, rng, 0) > 0;
+      if (!lights.hit(ray, 0, MaxT, hit, rng)) { correct = false; continue; }
+      correct &= sampler.Matches(sample, hit);
+      correct &= sampler.EmitterPdf(ray.o, ray.d, hit, rng, 0) == sample.pdf;
+    }
+    expect_true(correct);
+  }
+
+  test_that("overlapping emitter proposals preserve mean radiance with matching MIS") {
+    Transform identity;
+    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.6)));
+    auto warm = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1, .4, .2)), 3, false);
+    auto cool = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(.2, .4, 1)), 5, false);
+    auto floor = std::make_shared<xz_rect>(-20, 20, -20, 20, 0, matte, nullptr, nullptr,
+                                         &identity, &identity, false);
+    auto a = std::make_shared<xz_rect>(-1, 1, -1, 1, 3, warm, nullptr, nullptr,
+                                     &identity, &identity, true);
+    auto b = std::make_shared<xz_rect>(-3, 3, -3, 3, 5, cool, nullptr, nullptr,
+                                     &identity, &identity, true);
+    // The second configuration adds real scattering, null candidates and
+    // boundary crossings to the same overlapping-emitter comparison.
+    class TestMedium final : public Medium {
+    public:
+      TestMedium() : Medium(medium_description(.4)) {}
+      bool IsHomogeneous() const override { return false; }
+      MediumProperties SamplePoint(const point3f &p) const override {
+        auto properties = Medium::SamplePoint(p);
+        properties.sigma_s *= Float(.4 + .2 * std::sin(p[0]));
+        return properties;
+      }
+    };
+    for (bool fog : {false, true}) {
+      hitable_list objects, selected, mixture;
+      objects.add(floor); objects.add(a); objects.add(b);
+      selected.add(a); selected.add(b); mixture.add(a); mixture.add(b);
+      selected.volume_scene = std::make_shared<VolumeScene>();
+      selected.volume_scene->light_sampler = std::make_shared<VolumeLightSampler>(selected);
+      if (fog) {
+        auto container = std::make_shared<sphere>(10, matte, nullptr, nullptr,
+                                                 &identity, &identity, false);
+        auto boundary = std::make_shared<MediumBoundary>(container, std::make_shared<TestMedium>(),
+                                                         identity, false, 1);
+        objects.add(boundary);
+        mixture.volume_scene = std::make_shared<VolumeScene>();
+        for (auto scene : {selected.volume_scene, mixture.volume_scene}) {
+          scene->boundaries.add(boundary);
+          scene->has_media = true;
+          scene->Finish(0, 1);
+        }
+      }
+      BVHAggregate world(objects.objects, 0, 1, 1, true);
+      double sum[3] = {}, squares[3] = {}, reference[3] = {};
+      const int count = 40000;
+      for (int i = 0; i < count; ++i) {
+        random_gen ra(i), rb(i);
+        RandomSampler sa(ra), sb(rb);
+        sa.independent_dimensions = sb.independent_dimensions = true;
+        Ray ray(point3f(0, 1, -2), unit_vector(vec3f(0, -1, 2)));
+        Float ta, tb;
+        point3f ca, cb, albedo;
+        normal3f normal;
+        color_volume(ray, &world, &selected, 1, 5, ra, &sa, ta, ca, normal, albedo, nullptr);
+        color_volume(ray, &world, &mixture, 1, 5, rb, &sb, tb, cb, normal, albedo, nullptr);
+        for (int c = 0; c < 3; ++c) {
+          double difference = double(ca[c]) - cb[c];
+          sum[c] += difference;
+          squares[c] += difference * difference;
+          reference[c] += cb[c];
+        }
+      }
+      for (int c = 0; c < 3; ++c) {
+        double mean = sum[c] / count;
+        double se = std::sqrt((squares[c] / count - mean * mean) / count);
+        expect_true(std::abs(mean) < 6 * se + 1e-6);
+        expect_true(std::abs(sum[c] / reference[c]) < .02);
+      }
     }
   }
 }

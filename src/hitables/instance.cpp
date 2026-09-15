@@ -17,6 +17,7 @@ const bool instance::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Ray r2 = (*WorldToObject)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, rng)) {
     rec = (*ObjectToWorld)(rec);
+    rec.light_placement = light_placements.Resolve(rec.light_placement);
     if(rec.boundary_id != 0) rec.boundary_id += boundary_id_offset;
     if(rec.alpha_miss) {
       return(false);
@@ -33,6 +34,7 @@ const bool instance::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Ray r2 = (*WorldToObject)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, sampler)) {
     rec = (*ObjectToWorld)(rec);
+    rec.light_placement = light_placements.Resolve(rec.light_placement);
     if(rec.boundary_id != 0) rec.boundary_id += boundary_id_offset;
     return(true);
   }

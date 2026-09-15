@@ -14,10 +14,34 @@
 #include <optional>
 #include <cfloat>
 #include <tuple>
+#include <unordered_map>
 
 class material;
 class hitable;
 class MediumBoundary;
+
+// Opt-in only: these intersections must be deterministic and have no alpha or
+// medium boundaries. Emissive surfaces also block connections to other lights.
+enum class OpaqueShadowType { Unsupported, Opaque, Light, Mixed };
+
+// Intern complete instance paths without hashing their geometry or allocating
+// during intersection. Only placements containing sampled lights need a table.
+class LightPlacementMap {
+  std::unique_ptr<std::unordered_map<uint64_t, uint64_t>> ids;
+public:
+  void Reset() { ids.reset(); }
+  uint64_t Register(uint64_t child, uint64_t &next) {
+    if (!ids) ids = std::make_unique<std::unordered_map<uint64_t, uint64_t>>();
+    auto inserted = ids->emplace(child, next);
+    if (inserted.second) ++next;
+    return inserted.first->second;
+  }
+  uint64_t Resolve(uint64_t child) const {
+    if (!ids) return 0;
+    auto found = ids->find(child);
+    return found == ids->end() ? 0 : found->second;
+  }
+};
 
 void get_sphere_uv(const vec3f& p, Float& u, Float& v);
 void get_sphere_uv(const normal3f& p, Float& u, Float& v);
@@ -50,6 +74,7 @@ struct alignas(16) hit_record {
 
   // vec3f wo; //PBRT: In Interaction, negative ray direction
   const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
+  uint64_t light_placement = 0; // Distinguishes shared emitters in nested instances.
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
 
   const Transform& MediumToWorld() const {
@@ -88,6 +113,9 @@ class hitable {
       hit_record tmp;
       return hit(r, t_min, t_max, tmp, sampler);
     }
+
+    virtual OpaqueShadowType ShadowType() const { return OpaqueShadowType::Unsupported; }
+    virtual bool OpaqueHit(const Ray&, Float, Float, random_gen&) const { return false; }
 
 
     // virtual const bool hit(const CompactRay& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const = 0;
@@ -157,6 +185,7 @@ public:
   bool bounding_box(Float t0, Float t1, aabb& box) const;
   std::shared_ptr<hitable> primitive;
   const AnimatedTransform PrimitiveToWorld;
+  LightPlacementMap light_placements;
 };
 
 

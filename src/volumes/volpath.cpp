@@ -410,8 +410,8 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
 }
 
 
-// Both direct-light connections and emitter hits must query the same directional
-// light distribution. Prefer the volume scene's sampler, with the legacy fallback.
+// Atmospheric source terms use the marginal directional light distribution.
+// Ordinary emitter hits instead use the selected-emitter density below.
 Float light_pdf(hitable_list *lights, const point3f &p, const vec3f &wi, random_gen &rng,
                 Float time) {
   if (lights->volume_scene && lights->volume_scene->light_sampler)
@@ -420,8 +420,7 @@ Float light_pdf(hitable_list *lights, const point3f &p, const vec3f &wi, random_
 }
 
 
-// A connection first chooses a direction and PDF, then records the emitter
-// actually reached by the shadow walk along that direction.
+// Transport data shared by the atmospheric and selected-emitter strategies.
 struct LightSample {
   vec3f wi;
   hit_record endpoint;
@@ -446,18 +445,27 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
                                 : nullptr;
 
 
-  // Select a light direction, then evaluate the full light-mixture PDF there.
-  // Invalid or zero-density proposals cannot form a contribution.
+  // With atmospheric transport, the marginal direction distribution also
+  // samples haze before a blocker. Otherwise select an explicit emitter and
+  // use its joint selection/direction density on both sides of MIS.
+  const auto *scene = lights->volume_scene.get();
+  const VolumeLightSampler *emitter_sampler = scene && !scene->atmosphere
+      ? scene->light_sampler.get() : nullptr;
+  VolumeLightSampler::Selection selected;
   LightSample sample;
-  sample.wi = lights->volume_scene && lights->volume_scene->light_sampler
-                  ? lights->volume_scene->light_sampler->Sample(p, sampler, parent.time())
-                  : lights->random(p, sampler, parent.time());
-  if (!(sample.wi.squared_length() > 0))
-    return RGB(0);
-  sample.wi = unit_vector(sample.wi);
-  sample.pdf = light_pdf(lights, p, sample.wi, rng, parent.time());
-  if (!(sample.pdf > 0) || !std::isfinite(sample.pdf))
-    return RGB(0);
+  if (emitter_sampler) {
+    selected = emitter_sampler->SampleEmitter(p, sampler, rng, parent.time());
+    sample.wi = selected.wi;
+    sample.pdf = selected.pdf;
+  } else {
+    sample.wi = scene && scene->light_sampler
+        ? scene->light_sampler->Sample(p, sampler, parent.time())
+        : lights->random(p, sampler, parent.time());
+    if (!(sample.wi.squared_length() > 0)) return RGB(0);
+    sample.wi = unit_vector(sample.wi);
+    sample.pdf = light_pdf(lights, p, sample.wi, rng, parent.time());
+  }
+  if (!(sample.pdf > 0) || !std::isfinite(sample.pdf)) return RGB(0);
 
 
   // Evaluate scattering and the competing directional PDF at this same direction.
@@ -494,6 +502,37 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   const point3f lighting_origin = ray.o;
   const Atmosphere *atmosphere = lights->volume_scene ? lights->volume_scene->atmosphere : nullptr;
   random_gen tracker = tracking_rng(sampler);
+
+  // Resolve only the selected emitter, then ask whether anything blocks the
+  // finite connection. Other lamps are blockers too. Keep the existing ordered
+  // walk for media, alpha masks and materials with stochastic intersections.
+  if (emitter_sampler && state.media.empty() && state.glass.empty() &&
+      world->ShadowType() != OpaqueShadowType::Unsupported) {
+    hit_record endpoint;
+    if (!emitter_sampler->Endpoint(selected, ray, endpoint, rng)) return RGB(0);
+    if (std::isfinite(endpoint.t) && endpoint.t > 0) {
+      const Float margin = 64 * std::numeric_limits<Float>::epsilon() *
+                           std::max(Float(1), std::abs(endpoint.t));
+      const Float before = std::max(Float(0), endpoint.t - margin);
+      if (before > 0 && world->OpaqueHit(ray, 0, before, rng)) return RGB(0);
+      // Resolve the tiny endpoint interval in closest-hit order. This preserves
+      // coincident-surface ordering without treating the light itself as a blocker.
+      hit_record near;
+      if (!world->hit(ray, before, endpoint.t + margin, near, rng) ||
+          !emitter_sampler->Matches(selected, near)) return RGB(0);
+      bool invisible = false;
+      Ray emission_ray = ray;
+      if (near.infinite_area_hit) {
+        emission_ray = Ray(lighting_origin, ray.d, ray.time());
+        state.SetRay(emission_ray);
+      }
+      point3f emitted = near.mat_ptr
+          ? near.mat_ptr->emitted(emission_ray, near, near.u, near.v, near.p, invisible)
+          : point3f(0);
+      double denominator = (rp * RGB(sample.pdf) + rp * RGB(ps)).Average();
+      return denominator > 0 ? beta * f * RGB(emitted) / denominator : RGB(0);
+    }
+  }
   AtmosphereRay atmosphere_ray(atmosphere);
   bool air_active = false;
   const bool deferred_haze = atmosphere && atmosphere->DeferredHaze();
@@ -637,6 +676,7 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
       emission_ray = Ray(atmosphere ? atmosphere_ray.Origin(ray.o) : lighting_origin, ray.d, ray.time());
       state.SetRay(emission_ray);
     }
+    if (emitter_sampler && !emitter_sampler->Matches(selected, h)) return RGB(0);
     sample.radiance = h.mat_ptr ? h.mat_ptr->emitted(emission_ray, h, h.u, h.v, h.p, invisible) : point3f(0);
     if (atmosphere && h.infinite_area_hit)
       sample.radiance = atmosphere_ray.Remaining(sample.radiance);
@@ -966,9 +1006,12 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       le = atmosphere_ray.Remaining(le);
     if (!hide_background || atmosphere) {
       double denom = ru.Average();
-      if (!specular && use_light_sampling())
-        denom =
-            (ru + rl * RGB(light_pdf(lights, previous_point, ray.d, rng, ray.time()))).Average();
+      if (!specular && use_light_sampling()) {
+        Float competing_pdf = scene && scene->light_sampler && !atmosphere
+            ? scene->light_sampler->EmitterPdf(previous_point, ray.d, h, rng, ray.time())
+            : light_pdf(lights, previous_point, ray.d, rng, ray.time());
+        denom = (ru + rl * RGB(competing_pdf)).Average();
+      }
       if (denom > 0)
         L += beta * RGB(le) / denom;
     }

@@ -1,5 +1,11 @@
 # rayrender 0.41.5.9000
 
+* Accelerate eligible opaque NEE shadow connections with early-exit BVH traversal
+  and reduced triangle intersection work. Select explicit emitters with matching
+  MIS weights, avoiding full light-mixture PDF scans and supporting multiple and
+  instanced lights. Preserve ordered visibility for media and alpha masks, and
+  retain the directional-mixture estimator for atmospheric transport.
+
 * Store BVH4 leaf primitive ranges in compact records, reducing BVH memory use.
 
 * Reduce BVH traversal bookkeeping while preserving intersection order, and

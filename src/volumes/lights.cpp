@@ -13,6 +13,7 @@
 #include "boundary.h"
 #include "intersections.h"
 #include <algorithm>
+#include <unordered_set>
 
 namespace {
 using Adapter = std::unique_ptr<VolumeLightAdapter>;
@@ -21,8 +22,9 @@ class Group final : public VolumeLightAdapter {
   std::vector<Adapter> children;
 
 public:
-  explicit Group(const hitable_list &list) {
-    for (const auto &object : list.objects)
+  explicit Group(const hitable_list &list) : Group(list.objects) {}
+  explicit Group(std::span<const std::shared_ptr<hitable>> objects) {
+    for (const auto &object : objects)
       children.push_back(make_adapter(object));
   }
   vec3f Sample(const point3f &p, Sampler *s, Float t) const override {
@@ -174,13 +176,13 @@ Adapter make_adapter(std::shared_ptr<hitable> shape) {
   if (auto *b = dynamic_cast<box *>(shape.get()))
     return std::make_unique<Group>(b->list);
   if (auto *m = dynamic_cast<trimesh *>(shape.get()))
-    return std::make_unique<Group>(m->triangles);
+    return std::make_unique<Group>(m->tri_mesh_bvh->Primitives());
   if (auto *m = dynamic_cast<mesh3d *>(shape.get()))
-    return std::make_unique<Group>(m->triangles);
+    return std::make_unique<Group>(m->mesh_bvh->Primitives());
   if (auto *m = dynamic_cast<plymesh *>(shape.get()))
-    return std::make_unique<Group>(m->triangles);
+    return std::make_unique<Group>(m->ply_mesh_bvh->Primitives());
   if (auto *m = dynamic_cast<raymesh *>(shape.get()))
-    return std::make_unique<Group>(m->triangles);
+    return std::make_unique<Group>(m->tri_mesh_bvh->Primitives());
   if (auto *t = dynamic_cast<triangle *>(shape.get())) {
     const point3f &a = t->mesh->p[t->v[0]], &b = t->mesh->p[t->v[1]], &c = t->mesh->p[t->v[2]];
     return std::make_unique<PlanarLight>(a, b - a, c - a, true);
@@ -226,8 +228,148 @@ Adapter make_adapter(std::shared_ptr<hitable> shape) {
   return std::make_unique<ExistingLight>(std::move(shape));
 }
 } // namespace
+// The directional mixture above remains available for atmospheric source terms.
+// Finite emission instead lives on (emitter, direction): a selected lamp cannot
+// collect another lamp's emission when that lamp blocks the connection.
+struct VolumeLightSampler::Emitters {
+  struct Key {
+    const hitable *shape;
+    uint64_t placement;
+    bool operator==(const Key &other) const {
+      return shape == other.shape && placement == other.placement;
+    }
+  };
+  struct Hash {
+    size_t operator()(const Key &key) const {
+      return std::hash<const hitable *>{}(key.shape) ^
+             (std::hash<uint64_t>{}(key.placement) + 0x9e3779b9);
+    }
+  };
+  struct Placement {
+    std::shared_ptr<hitable> owner;
+    LightPlacementMap *ids;
+    Transform At(Float time) const {
+      if (auto *a = dynamic_cast<AnimatedHitable *>(owner.get())) {
+        Transform result;
+        a->PrimitiveToWorld.Interpolate(time, &result);
+        return result;
+      }
+      return *owner->ObjectToWorld;
+    }
+  };
+  struct Emitter {
+    std::shared_ptr<hitable> shape;
+    Adapter proposal;
+    std::vector<Placement> placements;
+    Key key;
+    double pmf;
+  };
+  std::vector<Emitter> entries;
+  std::vector<double> cdf;
+  std::unordered_map<Key, size_t, Hash> lookup;
+  std::unordered_set<LightPlacementMap *> initialized;
+  uint64_t next_placement = 1;
+
+  void AddGroup(const hitable_list &group, double pmf, std::vector<Placement> &path) {
+    AddGroup(group.objects, pmf, path);
+  }
+  void AddGroup(std::span<const std::shared_ptr<hitable>> objects, double pmf,
+                std::vector<Placement> &path) {
+    if (objects.empty()) return;
+    for (const auto &shape : objects) Add(shape, pmf / objects.size(), path);
+  }
+  void Add(std::shared_ptr<hitable> shape, double pmf, std::vector<Placement> &path) {
+    if (auto b = std::dynamic_pointer_cast<MediumBoundary>(shape)) {
+      Add(b->geometry, pmf, path);
+      return;
+    }
+    auto *animated = dynamic_cast<AnimatedHitable *>(shape.get());
+    auto *placed = dynamic_cast<instance *>(shape.get());
+    if (animated || placed) {
+      auto *ids = animated ? &animated->light_placements : &placed->light_placements;
+      if (initialized.insert(ids).second) ids->Reset();
+      path.push_back({shape, ids});
+      if (animated) Add(animated->primitive, pmf, path);
+      else if (placed->importance_sampled_objects)
+        AddGroup(*placed->importance_sampled_objects, pmf, path);
+      path.pop_back();
+      return;
+    }
+    if (auto *b = dynamic_cast<box *>(shape.get())) { AddGroup(b->list, pmf, path); return; }
+    if (auto *m = dynamic_cast<trimesh *>(shape.get())) { AddGroup(m->tri_mesh_bvh->Primitives(), pmf, path); return; }
+    if (auto *m = dynamic_cast<mesh3d *>(shape.get())) { AddGroup(m->mesh_bvh->Primitives(), pmf, path); return; }
+    if (auto *m = dynamic_cast<plymesh *>(shape.get())) { AddGroup(m->ply_mesh_bvh->Primitives(), pmf, path); return; }
+    if (auto *m = dynamic_cast<raymesh *>(shape.get())) { AddGroup(m->tri_mesh_bvh->Primitives(), pmf, path); return; }
+
+    uint64_t placement = 0;
+    Adapter proposal = make_adapter(shape);
+    for (auto i = path.rbegin(); i != path.rend(); ++i) {
+      placement = i->ids->Register(placement, next_placement);
+      if (auto a = std::dynamic_pointer_cast<AnimatedHitable>(i->owner))
+        proposal = std::make_unique<TransformedLight>(std::move(proposal), a);
+      else proposal = std::make_unique<TransformedLight>(std::move(proposal), i->At(0));
+    }
+    Key key{shape.get(), placement};
+    auto found = lookup.find(key);
+    if (found != lookup.end()) {
+      // Repeated references to the same physical emitter are one MIS outcome.
+      entries[found->second].pmf += pmf;
+      return;
+    }
+    lookup.emplace(key, entries.size());
+    entries.push_back({std::move(shape), std::move(proposal), path, key, pmf});
+  }
+  explicit Emitters(const hitable_list &list) {
+    std::vector<Placement> path;
+    AddGroup(list, 1, path);
+    double sum = 0;
+    for (const auto &entry : entries) cdf.push_back(sum += entry.pmf);
+  }
+};
+
+VolumeLightSampler::Selection VolumeLightSampler::SampleEmitter(
+    const point3f &p, Sampler *sampler, random_gen &rng, Float time) const {
+  Selection sample;
+  double u = sampler->Get1D();
+  auto selected = std::upper_bound(emitters->cdf.begin(), emitters->cdf.end(), u);
+  if (selected == emitters->cdf.end()) return sample;
+  sample.index = selected - emitters->cdf.begin();
+  const auto &entry = emitters->entries[sample.index];
+  sample.wi = entry.proposal->Sample(p, sampler, time);
+  if (!(sample.wi.squared_length() > 0)) return sample;
+  sample.wi = unit_vector(sample.wi);
+  sample.pdf = Float(entry.pmf * entry.proposal->Pdf(p, sample.wi, rng, time));
+  return sample;
+}
+
+bool VolumeLightSampler::Endpoint(const Selection &sample, const Ray &ray,
+                                  hit_record &endpoint, random_gen &rng) const {
+  const auto &entry = emitters->entries[sample.index];
+  Ray local = ray;
+  for (const auto &placement : entry.placements) local = Inverse(placement.At(ray.time()))(local);
+  if (!entry.shape->hit(local, 0, MaxT, endpoint, rng)) return false;
+  for (auto p = entry.placements.rbegin(); p != entry.placements.rend(); ++p)
+    endpoint = p->At(ray.time())(endpoint);
+  endpoint.light_placement = entry.key.placement;
+  return true;
+}
+
+bool VolumeLightSampler::Matches(const Selection &sample, const hit_record &hit) const {
+  const auto &key = emitters->entries[sample.index].key;
+  return key.shape == hit.shape && key.placement == hit.light_placement;
+}
+
+Float VolumeLightSampler::EmitterPdf(const point3f &p, const vec3f &wi,
+                                     const hit_record &hit, random_gen &rng, Float time) const {
+  auto found = emitters->lookup.find({hit.shape, hit.light_placement});
+  if (found == emitters->lookup.end()) return 0;
+  const auto &entry = emitters->entries[found->second];
+  return Float(entry.pmf * entry.proposal->Pdf(p, wi, rng, time));
+}
+
 VolumeLightSampler::VolumeLightSampler(const hitable_list &list)
-    : lights(std::make_unique<Group>(list)) {}
+    : emitters(std::make_unique<Emitters>(list)), lights(std::make_unique<Group>(list)) {}
+VolumeLightSampler::~VolumeLightSampler() = default;
 vec3f VolumeLightSampler::Sample(const point3f &p, Sampler *sampler, Float t) const {
   return lights->Sample(p, sampler, t);
 }

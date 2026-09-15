@@ -155,6 +155,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
+    classifyOpaqueShadow();
 
 #ifndef RAYSIMD
     nodes.reset(new LinearBVHNode[totalNodes]);
@@ -202,6 +203,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
+    classifyOpaqueShadow();
 #ifndef RAYSIMD
     nodes.reset(new LinearBVHNode[totalNodes]);
     n_nodes = totalNodes;
@@ -219,6 +221,93 @@ bool BVHAggregate::bounding_box(Float t0, Float t1, aabb& box) const {
 	}
 	box = scene_bounds;
 	return(true);
+}
+
+void BVHAggregate::classifyOpaqueShadow() {
+    shadow_type = OpaqueShadowType::Opaque;
+    for (const auto& primitive : primitives) {
+        const auto type = primitive->ShadowType();
+        if (type == OpaqueShadowType::Unsupported) {
+            shadow_type = type;
+            return;
+        }
+        if (type != OpaqueShadowType::Opaque) shadow_type = OpaqueShadowType::Mixed;
+    }
+}
+
+// Opaque visibility needs any blocker, so order only the current node's children
+// and keep pending work on a small LIFO stack. Spill safely for unusually deep
+// trees; ordinary closest-hit and stochastic HitP traversal remain unchanged.
+bool BVHAggregate::OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
+    int pending[64];
+    size_t count = 0;
+    std::vector<int> overflow;
+    auto push = [&](int index) {
+        if (count < 64 && overflow.empty()) pending[count++] = index;
+        else overflow.push_back(index);
+    };
+    auto pop = [&]() {
+        if (overflow.empty()) return pending[--count];
+        int index = overflow.back();
+        overflow.pop_back();
+        return index;
+    };
+#ifdef RAYSIMD
+    if (root4 == kBVH4Empty) return false;
+    const RayBBox4 rbox(r);
+    push(root4);
+    while (count || !overflow.empty()) {
+        const int index = pop();
+        if (isBVH4Leaf(index)) {
+            const auto& leaf = leaves4[bvh4LeafIndex(index)];
+            for (int i = 0; i < leaf.nPrimitives; ++i)
+                if (primitives[leaf.primitivesOffset + i]->OpaqueHit(r, t_min, t_max, rng))
+                    return true;
+        } else {
+            const auto& node = nodes4[index];
+            IVec4 hits;
+            FVec4 enters;
+            rayBBoxIntersect4(rbox, node.bbox4, t_min, t_max, hits, enters);
+            int mask = simd_extract_hitmask(simd_and(hits, simd_not_equals_minus_one(node.childOffsets)));
+            if (!mask) continue;
+            float distances[4];
+            simd_extract_fvec4(enters, distances);
+            BVHNodeEntry children[4];
+            int n = 0;
+            for (int lane = 0; lane < 4; ++lane) {
+                if (!(mask & (1 << lane))) continue;
+                BVHNodeEntry child{node.childOffsets[lane], distances[lane]};
+                int j = n++;
+                while (j && children[j - 1].tEnter < child.tEnter) {
+                    children[j] = children[j - 1];
+                    --j;
+                }
+                children[j] = child;
+            }
+            for (int i = 0; i < n; ++i) push(children[i].nodeIndex);
+        }
+    }
+#else
+    if (!nodes) return false;
+    push(0);
+    while (count || !overflow.empty()) {
+        const int index = pop();
+        const auto& node = nodes[index];
+        if (!node.bounds.hit(r, t_min, t_max, rng)) continue;
+        if (node.nPrimitives) {
+            for (int i = 0; i < node.nPrimitives; ++i)
+                if (primitives[node.primitivesOffset + i]->OpaqueHit(r, t_min, t_max, rng))
+                    return true;
+        } else if (r.d[node.axis] < 0) {
+            push(index + 1);
+            push(node.secondChildOffset);
+        } else {
+            push(node.secondChildOffset);
+            push(index + 1);
+        }
+    }
+#endif
+    return false;
 }
 
 BVHBuildNode *BVHAggregate::buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
