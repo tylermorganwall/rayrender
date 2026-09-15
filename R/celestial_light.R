@@ -20,7 +20,7 @@
 #' describes one observer for the whole light. With [sky_light()], a missing
 #' altitude uses that sky's reference altitude
 #' for ephemeris placement; atmospheric filtering uses each interaction's position.
-#' @param resolution Default `256` for the Sun and `1024` for the Moon. Target
+#' @param resolution Default `256`. Target
 #' disk image width and height in pixels, at least 16. The Moon's padded image is
 #' cropped without downsampling; edge coverage can add a few pixels. Texture
 #' detail is evaluated directly at this resolution, independently of the sky map.
@@ -117,7 +117,7 @@ moon_light = function(
   datetime,
   sky_args = list(),
   moon_args = list(),
-  resolution = 1024,
+  resolution = 256,
   intensity = 1,
   rotation = 0,
   name = "moon"

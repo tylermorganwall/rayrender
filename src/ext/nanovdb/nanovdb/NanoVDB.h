@@ -5448,7 +5448,8 @@ class GridMetaData
     GridData  mGridData; // 672B
     TreeData  mTreeData; // 64B
     CoordBBox mIndexBBox; // 24B. AABB of active values in index space.
-    uint32_t  mRootTableSize, mPadding{0}; // 8B
+    uint32_t  mRootTableSize; // 4B
+    [[maybe_unused]] uint32_t mPadding{0}; // 4B
 
 public:
     template<typename T>

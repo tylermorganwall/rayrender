@@ -320,6 +320,11 @@ std::array<double, 8> GridMedium::DensityCorners(const std::array<double, 3> &ce
   return result;
 }
 point3f GridMedium::Emission(const point3f &p) const {
+  // Ordinary clouds have no emission. The constructor already checks the
+  // entire RGB field, so this also skips explicitly supplied all-zero grids.
+  // Temperature emission remains active even when the RGB field is zero.
+  if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
+    return point3f(0);
   point3f uvw = Normalize(p);
   if (has_temperature)
     return emission_scale *
@@ -328,6 +333,10 @@ point3f GridMedium::Emission(const point3f &p) const {
          point3f(emissions.Lookup(uvw, 0), emissions.Lookup(uvw, 1), emissions.Lookup(uvw, 2));
 }
 MediumProperties GridMedium::SamplePoint(const point3f &p) const {
+  // Avoid even entering the emission lookup in the common non-emissive case.
+  // Do not use IsEmissive(): zero absorption does not make the stored Le zero.
+  if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
+    return Properties(Density(p), point3f(0), p);
   return Properties(Density(p), Emission(p), p);
 }
 RayMajorantIterator GridMedium::SampleRay(const Ray &r, double t_max) const {

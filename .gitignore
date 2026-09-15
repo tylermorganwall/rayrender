@@ -34,3 +34,8 @@ src/Makevars
 *.exr
 *.pdf
 *.txt
+tools/codex/
+inst/examples/
+inst/doc/
+tools/build-pig-assets.R
+revdep/

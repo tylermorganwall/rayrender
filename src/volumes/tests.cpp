@@ -62,6 +62,58 @@ Rcpp::List grid_description(const Rcpp::NumericVector &values, int nx, int ny, i
   return description;
 }
 } // namespace
+context("Grid medium emission") {
+  test_that("zero RGB fields preserve density and return zero emission") {
+    for (bool array_field : {false, true}) {
+      auto description = grid_description(Rcpp::NumericVector(8, .35), 2, 2, 2);
+      if (array_field) {
+        Rcpp::NumericVector emission(24, 0.0);
+        emission.attr("dim") = Rcpp::IntegerVector::create(2, 2, 2, 3);
+        description["emission"] = emission;
+      }
+      GridMedium medium(description);
+      for (point3f p : {point3f(0), point3f(.75), point3f(2)}) {
+        auto properties = medium.SamplePoint(p);
+        for (int c = 0; c < 3; ++c) {
+          expect_true(properties.Le[c] == 0);
+          expect_true(medium.Emission(p)[c] == 0);
+          expect_true(properties.sigma_s[c] == medium.Density(p));
+        }
+      }
+    }
+  }
+  test_that("a zero first voxel and zero absorption do not disable nonzero RGB emission") {
+    auto description = grid_description(Rcpp::NumericVector(8, 1.0), 2, 2, 2);
+    Rcpp::NumericVector emission = Rcpp::NumericVector::create(0, 2, 0, 4, 0, 6);
+    emission.attr("dim") = Rcpp::IntegerVector::create(2, 1, 1, 3);
+    description["emission"] = emission;
+    description["emission_scale"] = 2;
+    GridMedium medium(description);
+    expect_false(medium.IsEmissive()); // sigma_a is zero; Le itself is still nonzero.
+    for (int c = 0; c < 3; ++c) {
+      expect_true(medium.SamplePoint(point3f(0)).Le[c] == 2 * (c + 1));
+      expect_true(medium.Emission(point3f(-.5, 0, 0))[c] == 0);
+      expect_true(medium.Emission(point3f(.5, 0, 0))[c] == 4 * (c + 1));
+    }
+  }
+  test_that("temperature emission survives zero RGB and an emission scale of zero disables it") {
+    auto description = grid_description(Rcpp::NumericVector(8, 1.0), 2, 2, 2);
+    Rcpp::NumericVector temperature = Rcpp::NumericVector::create(3000, 6000);
+    temperature.attr("dim") = Rcpp::IntegerVector::create(2, 1, 1);
+    description["temperature"] = temperature;
+    description["temperature_offset"] = 500;
+    description["temperature_scale"] = 2;
+    for (double scale : {1.5, 0.}) {
+      description["emission_scale"] = scale;
+      GridMedium medium(description);
+      point3f expected = Float(scale) * BlackbodyRGB(8000);
+      for (int c = 0; c < 3; ++c) {
+        expect_true(medium.Emission(point3f(0))[c] == expected[c]);
+        expect_true(medium.SamplePoint(point3f(0)).Le[c] == expected[c]);
+      }
+    }
+  }
+}
 context("Density-selected atmospheric haze") {
   test_that("density metadata preserves fractional RGB tracking bounds") {
     auto description = grid_description(Rcpp::NumericVector(8, .35), 2, 2, 2);

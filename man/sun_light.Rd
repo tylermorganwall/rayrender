@@ -22,7 +22,7 @@ moon_light(
   datetime,
   sky_args = list(),
   moon_args = list(),
-  resolution = 1024,
+  resolution = 256,
   intensity = 1,
   rotation = 0,
   name = "moon"
@@ -45,7 +45,7 @@ describes one observer for the whole light. With \code{\link[=sky_light]{sky_lig
 altitude uses that sky's reference altitude
 for ephemeris placement; atmospheric filtering uses each interaction's position.}
 
-\item{resolution}{Default \code{256} for the Sun and \code{1024} for the Moon. Target
+\item{resolution}{Default \code{256}. Target
 disk image width and height in pixels, at least 16. The Moon's padded image is
 cropped without downsampling; edge coverage can add a few pixels. Texture
 detail is evaluated directly at this resolution, independently of the sky map.}

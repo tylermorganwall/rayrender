@@ -180,7 +180,7 @@ test_that("native star and planet maps are unfiltered and cached independently o
   sky$name = "renamed"
   sky$sky_args$altitude = NULL
   sky$sky_args$visibility = 120
-  sky$attenuation = FALSE
+  sky$haze = FALSE
   cached = prepare_sky_celestial_background(sky)
   expect_length(seen, 0)
   expect_identical(result$filename, cached$filename)

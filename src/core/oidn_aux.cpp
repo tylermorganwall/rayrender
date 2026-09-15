@@ -1,13 +1,11 @@
 #include "../core/oidn_aux.h"
+#include "../core/render_jobs.h"
 
 #include <atomic>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
-#include <exception>
 #include <future>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include "RcppThread.h"
@@ -363,48 +361,12 @@ void render_oidn_aux_features(std::size_t numbercores,
   std::size_t completed_samples = 0;
   std::atomic<bool> render_cancelled(false);
 
-  auto wait_for_aux_jobs = [&render_cancelled, &poll_cancel](
-      std::vector<std::future<void> >& futures) -> bool {
-    std::exception_ptr interrupt_exception = nullptr;
-    bool done = false;
-    while(!done) {
-      done = true;
-      for(auto& future : futures) {
-        if(future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-          done = false;
-          break;
-        }
-      }
-      if(done) {
-        break;
-      }
-      if(poll_cancel && poll_cancel()) {
-        render_cancelled.store(true, std::memory_order_relaxed);
-      }
-      try {
-        RcppThread::checkUserInterrupt();
-      } catch(...) {
-        render_cancelled.store(true, std::memory_order_relaxed);
-        interrupt_exception = std::current_exception();
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    for(auto& future : futures) {
-      future.wait();
-    }
-    for(auto& future : futures) {
-      future.get();
-    }
-    if(interrupt_exception != nullptr) {
-      std::rethrow_exception(interrupt_exception);
-    }
-    return !render_cancelled.load(std::memory_order_relaxed);
-  };
+  // Guide images use the same completion-driven scheduling as the beauty
+  // render, with one worker pool for all feature samples.
+  RcppThread::ThreadPool pool(numbercores);
 
   for(std::size_t s = 0; s < render_options.samples; s++) {
     render_cancelled.store(false, std::memory_order_relaxed);
-    RcppThread::ThreadPool pool(numbercores);
     auto worker = [&](int k) {
       std::size_t chunk_x = static_cast<std::size_t>(k) / numbercores;
       std::size_t chunk_y = static_cast<std::size_t>(k) % numbercores;
@@ -469,7 +431,8 @@ void render_oidn_aux_features(std::size_t numbercores,
     for(std::size_t k = 0; k < chunk_count; k++) {
       futures.push_back(pool.pushReturn(worker, static_cast<int>(k)));
     }
-    if(!wait_for_aux_jobs(futures)) {
+    if(!wait_for_render_jobs(futures, render_cancelled,
+                             [&poll_cancel] { return poll_cancel && poll_cancel(); })) {
       return;
     }
     completed_samples++;

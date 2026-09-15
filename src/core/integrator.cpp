@@ -12,16 +12,14 @@
 #include "../math/sampler.h"
 #include "../core/PreviewDisplay.h"
 #include "../core/oidn_aux.h"
+#include "../core/render_jobs.h"
 #include "../volumes/boundary.h"
 #include "../core/oidn_denoiser.h"
 #include "../utils/raylog.h"
 
 #include <atomic>
-#include <chrono>
-#include <exception>
 #include <future>
 #include <limits>
-#include <thread>
 
 static const size_t FAST_INTERACTIVE_PREVIEW_SAMPLES = 4;
 
@@ -276,44 +274,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   std::atomic<bool> render_cancelled(false);
-  auto wait_for_render_jobs = [&display, &render_cancelled](
-      std::vector<std::future<void> >& futures) -> bool {
-    std::exception_ptr interrupt_exception = nullptr;
-    bool done = false;
-    while(!done) {
-      done = true;
-      for(auto& future : futures) {
-        if(future.wait_for(std::chrono::milliseconds(0)) != std::future_status::ready) {
-          done = false;
-          break;
-        }
-      }
-      if(done) {
-        break;
-      }
-      if(display.PollCloseEvent()) {
-        render_cancelled.store(true, std::memory_order_relaxed);
-      }
-      try {
-        RcppThread::checkUserInterrupt();
-      } catch(...) {
-        render_cancelled.store(true, std::memory_order_relaxed);
-        interrupt_exception = std::current_exception();
-        break;
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    }
-    for(auto& future : futures) {
-      future.wait();
-    }
-    for(auto& future : futures) {
-      future.get();
-    }
-    if(interrupt_exception != nullptr) {
-      std::rethrow_exception(interrupt_exception);
-    }
-    return !render_cancelled.load(std::memory_order_relaxed);
-  };
+  // Retain worker threads across full-resolution and interactive preview
+  // samples. Pixel-owned RNGs and samplers keep results independent of which
+  // worker executes a tile. The pool is destroyed before captured render state.
+  RcppThread::ThreadPool render_pool(numbercores);
 
   // Sampled haze corrections may be signed. Clamping them before accumulation
   // would bias their expectation; ordinary rendering keeps its existing floor.
@@ -322,13 +286,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         hlist.volume_scene->atmosphere->DeferredHaze() ? -std::numeric_limits<Float>::infinity() : 0;
   };
 
-  auto render_full_sample = [&adaptive_pixel_sampler, numbercores, nx, ny, sample_method,
+  auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                             &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
+                             &render_cancelled, &render_pool, &display] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
-    RcppThread::ThreadPool pool(numbercores);
     auto worker = [&adaptive_pixel_sampler,
                    nx, ny, s, sample_method,
                    &rngs, fov, &samplers,
@@ -340,7 +303,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                      int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
                      int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
 
-                     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+                     std::vector<dielectric*> mat_stack;
                      for(int i = nx_begin; i < nx_end; i++) {
                        if(render_cancelled.load(std::memory_order_relaxed)) {
                          break;
@@ -363,7 +326,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
                            weight = cam->GenerateRay(samp, &r);
                          }
-                         r.pri_stack = mat_stack;
+                         r.pri_stack = &mat_stack;
                          Float alpha = 0;
                          point3f color_sample;
                          normal3f normal_sample;
@@ -375,7 +338,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          point3f col = weight != 0 ? clamp_point(de_nan(color_sample),
                                                                  sample_minimum, clampval) * weight * cam->get_iso() : 0;
                          adaptive_pixel_sampler.add_alpha_count(i,j, alpha);
-                         mat_stack->clear();
+                         mat_stack.clear();
                          adaptive_pixel_sampler.add_color_main(i, j, col);
                          if(s % 2 == 0) {
                            adaptive_pixel_sampler.add_color_sec(i, j, col);
@@ -392,14 +355,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                         adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
                       }
                      }
-                     delete mat_stack;
                    };
     std::vector<std::future<void> > futures;
     futures.reserve(adaptive_pixel_sampler.size());
     for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
-      futures.push_back(pool.pushReturn(worker, static_cast<int>(j)));
+      futures.push_back(render_pool.pushReturn(worker, static_cast<int>(j)));
     }
-    bool completed_sample = wait_for_render_jobs(futures);
+    bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
+                                                 [&display] { return display.PollCloseEvent(); });
     if (adaptive_pixel_sampler.adaptive_on) {
       if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler.split_remove_chunks(s);
@@ -411,13 +374,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     return completed_sample;
   };
 
-  auto render_small_sample = [&adaptive_pixel_sampler_small, numbercores, nx_small, ny_small, sample_method,
+  auto render_small_sample = [&adaptive_pixel_sampler_small, nx_small, ny_small, sample_method,
                               &rngs_small, fov, &samplers_small, cam, &world, &hlist,
                               clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                              &render_cancelled, &wait_for_render_jobs] (size_t s) -> bool {
+                              &render_cancelled, &render_pool, &display] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
-    RcppThread::ThreadPool pool(numbercores);
     auto worker = [&adaptive_pixel_sampler_small,
                    nx_small, ny_small, s, sample_method,
                    &rngs_small, fov, &samplers_small,
@@ -429,7 +391,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                      int nx_end = adaptive_pixel_sampler_small.pixel_chunks[k].endx;
                      int ny_end = adaptive_pixel_sampler_small.pixel_chunks[k].endy;
 
-                     std::vector<dielectric*> *mat_stack = new std::vector<dielectric*>;
+                     std::vector<dielectric*> mat_stack;
                      for(int i = nx_begin; i < nx_end; i++) {
                        if(render_cancelled.load(std::memory_order_relaxed)) {
                          break;
@@ -452,7 +414,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                            CameraSample samp({1-u,1-v},samplers_small[index]->Get2D(), samplers_small[index]->Get1D());
                            weight = cam->GenerateRay(samp, &r);
                          }
-                         r.pri_stack = mat_stack;
+                         r.pri_stack = &mat_stack;
                          Float alpha = 0;
                          point3f color_sample;
                          normal3f normal_sample;
@@ -468,7 +430,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          adaptive_pixel_sampler_small.add_alpha_count(i,j, alpha);
                          adaptive_pixel_sampler_small.add_albedo(i, j, albedo_sample);
                          adaptive_pixel_sampler_small.add_normal(i, j, normal_sample);
-                         mat_stack->clear();
+                         mat_stack.clear();
                          adaptive_pixel_sampler_small.add_color_main(i, j, col);
                          if(s % 2 == 0) {
                            adaptive_pixel_sampler_small.add_color_sec(i, j, col);
@@ -483,14 +445,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                           adaptive_pixel_sampler_small.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
                         }
                      }
-                     delete mat_stack;
                    };
     std::vector<std::future<void> > futures;
     futures.reserve(adaptive_pixel_sampler_small.size());
     for(size_t j = 0; j < adaptive_pixel_sampler_small.size(); j++) {
-      futures.push_back(pool.pushReturn(worker, static_cast<int>(j)));
+      futures.push_back(render_pool.pushReturn(worker, static_cast<int>(j)));
     }
-    bool completed_sample = wait_for_render_jobs(futures);
+    bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
+                                                 [&display] { return display.PollCloseEvent(); });
     if (adaptive_pixel_sampler_small.adaptive_on) {
       if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler_small.split_remove_chunks(s);

@@ -31,7 +31,7 @@ sky_light(
   sun = TRUE,
   moon = TRUE,
   sun_resolution = 256,
-  moon_resolution = 1024,
+  moon_resolution = 256,
   earthshine = TRUE,
   earthshine_albedo = 0.19,
   solar_irradiance_w_m2 = 1300,
@@ -152,7 +152,7 @@ overrides the automatic Moon. Set \code{FALSE} to omit the automatic disk.}
 \item{sun_resolution}{Default \code{256}. Sun disk texture width and height in
 pixels, at least 16; independent of the atmospheric \code{sampling_resolution}.}
 
-\item{moon_resolution}{Default \code{1024}. Moon disk texture width and height in
+\item{moon_resolution}{Default \code{256}. Moon disk texture width and height in
 pixels, at least 16. Cropping and edge coverage can change the final dimensions.}
 
 \item{earthshine}{Default \code{TRUE}. Illuminate the Moon's dark side with earthshine.}
@@ -512,7 +512,6 @@ if (
           -74,
           day,
           meters_per_unit = 1000,
-          visibility = 120,
           haze = FALSE
         ),
         caption = "No finite haze"

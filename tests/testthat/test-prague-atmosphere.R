@@ -26,7 +26,6 @@ test_that('atmospheric descriptions validate physical units and supported model 
     list(visibility = 10),
     list(altitude = 20000),
     list(albedo = 2),
-    list(resolution = 16.5),
     list(unknown = 1),
     list(turbidity = 3),
     list(moon_atmosphere = TRUE),
@@ -37,15 +36,22 @@ test_that('atmospheric descriptions validate physical units and supported model 
       names(x)
     )
   }
+  expect_error(
+    prague_test_light(sampling_resolution = 16.5),
+    'Invalid atmospheric resolution'
+  )
   time = light$datetime
-  expect_error(sky_light(0, 0, time, atmosphere = NA), 'atmosphere')
-  expect_error(sky_light(0, 0, time, atmosphere = NULL), 'atmosphere')
+  for (value in list(NA, NULL)) {
+    invalid = light
+    invalid['atmosphere'] = list(value)
+    expect_error(validate_infinite_light(invalid), 'atmosphere must be')
+  }
   expect_true(sky_light(0, 0, time)$atmosphere)
 })
 
 test_that('native lighting switches validate and retain serialized defaults', {
   for (field in c(
-    'attenuation',
+    'haze',
     'query_altitude',
     'haze_in_volumes',
     'deferred_haze',
@@ -64,11 +70,11 @@ test_that('native lighting switches validate and retain serialized defaults', {
     prague_test_light(query_altitude = FALSE),
     'requires query_altitude'
   )
-  light = prague_test_light(attenuation = FALSE, query_altitude = FALSE)
-  expect_false(light$attenuation)
+  light = prague_test_light(haze = FALSE, query_altitude = FALSE)
+  expect_false(light$haze)
   expect_false(light$query_altitude)
   old = prague_test_light()
-  old$attenuation = old$query_altitude = NULL
+  old$haze = old$query_altitude = NULL
   old$haze_in_volumes = NULL
   old$deferred_haze = NULL
   old$haze_filter = NULL
@@ -137,11 +143,13 @@ test_that('native preparation uses public metadata without generating an image',
     moon = FALSE,
     altitude = 250,
     visibility = 40,
+    sampling_resolution = 16,
     meters_per_unit = 5,
     atmosphere_origin = c(0, -50, 0)
   )
   result = prepare_infinite_light(light)
   expect_equal(result$type, 'prague')
+  expect_equal(result$resolution, 16L)
   expect_equal(result$altitude, 250)
   expect_equal(result$meters_per_unit, 5)
   expect_equal(result$origin, c(0, -50, 0))
@@ -158,14 +166,14 @@ test_that('native preparation uses public metadata without generating an image',
   info = prepare_scene_list(scene, integrator_type = 'nee')$render_info
   expect_true(info$has_atmosphere)
   expect_true(info$hasbackground)
-  light$attenuation = light$query_altitude = FALSE
+  light$haze = light$query_altitude = FALSE
   light$haze_in_volumes = FALSE
   light$deferred_haze = TRUE
   light$haze_filter = FALSE
   light$cache_spectra = light$transmission_table = FALSE
   light$transmission_table_max_mb = Inf
   result = prepare_infinite_light(light)
-  expect_false(result$attenuation)
+  expect_false(result$haze)
   expect_false(result$query_altitude)
   expect_false(result$haze_in_volumes)
   expect_true(result$deferred_haze)
@@ -173,14 +181,14 @@ test_that('native preparation uses public metadata without generating an image',
   expect_false(result$cache_spectra)
   expect_false(result$transmission_table)
   expect_equal(result$transmission_table_max_mb, Inf)
-  light$attenuation = light$query_altitude = NULL
+  light$haze = light$query_altitude = NULL
   light$haze_in_volumes = NULL
   light$deferred_haze = NULL
   light$haze_filter = NULL
   light$cache_spectra = light$transmission_table = NULL
   light$transmission_table_max_mb = NULL
   result = prepare_infinite_light(light)
-  expect_true(result$attenuation)
+  expect_true(result$haze)
   expect_true(result$query_altitude)
   expect_true(result$haze_in_volumes)
   expect_false(result$deferred_haze)
@@ -198,7 +206,7 @@ prague_test_description = function() {
   skip_if_not(identical(Sys.getenv('RAYRENDER_PRAGUE_TESTS'), 'true'))
   skip_if_not_installed('skymodelr')
   skip_if_not('get_prague_sky_metadata' %in% getNamespaceExports('skymodelr'))
-  prepare_infinite_light(prague_test_light(resolution = 16))
+  prepare_infinite_light(prague_test_light(sampling_resolution = 16))
 }
 
 test_that('native exact cache controls preserve spectra when switched between queries', {
@@ -308,7 +316,7 @@ test_that('lighting without finite haze retains altitude-dependent sunset', {
   p = rbind(c(0, 0, 0), c(0, 5000, 0))
   directions = rbind(w, w)
   reference = query_prague_atmosphere(d, p, directions, c(1000, 1000))
-  d$attenuation = FALSE
+  d$haze = FALSE
   q = query_prague_atmosphere(d, p, directions, c(1000, 1000))
   expect_equal(q$radiance, reference$radiance)
   expect_equal(q$radiance[1, ], rep(0, 3))
@@ -324,7 +332,7 @@ test_that('lighting without finite haze retains altitude-dependent sunset', {
   high = query_prague_atmosphere(d, p, directions, c(1000, 1000))
   expect_equal(high$radiance[1, ], q$radiance[2, ])
   expect_equal(high$radiance[2, ], q$radiance[2, ])
-  d$attenuation = TRUE
+  d$haze = TRUE
   expect_error(
     query_prague_atmosphere(d, p, directions, c(0, 0)),
     'requires query_altitude'
@@ -333,7 +341,7 @@ test_that('lighting without finite haze retains altitude-dependent sunset', {
 
 test_that('fixed-altitude native sampling uses one consistent proposal', {
   d = prague_test_description()
-  d$attenuation = d$query_altitude = FALSE
+  d$haze = d$query_altitude = FALSE
   d$altitude = 700
   d$render_mode = 'atmosphere'
   u = as.matrix(expand.grid(
@@ -426,8 +434,8 @@ test_that('atmospheric preparation requests unattenuated disks and replaces the 
 test_that('lighting-only queries retain their altitude through empty cloud boundaries', {
   prague_test_description()
   light = prague_test_light(
-    attenuation = FALSE,
-    resolution = 16
+    haze = FALSE,
+    sampling_resolution = 16
   )
   empty = sphere(x = 50000, radius = 1) |> add_infinite_light(light)
   boundary = cube(y = 3000, xwidth = 10000, ywidth = 6000, zwidth = 6000) |>
@@ -505,7 +513,7 @@ test_that('outside-only haze composes air intervals around nested empty volumes'
   sky = prague_test_light(
     haze_in_volumes = FALSE,
     deferred_haze = FALSE,
-    resolution = 16
+    sampling_resolution = 16
   )
   panel = xy_rect(
     y = 200,
@@ -572,7 +580,7 @@ test_that('outside-only background opacity excludes exactly the volume interval'
   prague_test_description()
   sky = prague_test_light(
     haze_in_volumes = FALSE,
-    resolution = 16
+    sampling_resolution = 16
   )
   empty = sphere(x = 50000, radius = 1)
   volume = cube(

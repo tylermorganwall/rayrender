@@ -1,5 +1,15 @@
 # rayrender 0.41.5.9000
 
+* Reuse rendering workers across samples and wake on task completion, removing
+  fixed polling delays from beauty and denoising feature passes while retaining
+  preview cancellation and R interrupt handling.
+
+* Reduce the default Moon disk resolution to 256 pixels in `moon_light()` and
+  automatic sky lights, retaining the Moon renderer's 2x antialiasing.
+
+* Skip grid emission lookups for media with zero RGB emission and no temperature
+  field, or with emission disabled by a zero scale.
+
 * Keep interpolated camera-up vectors at keyframes to avoid brief roll wobbles
   when damping camera motion. Keyed positions and lookat targets are retained.
 

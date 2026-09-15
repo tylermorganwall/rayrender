@@ -191,6 +191,82 @@ test_that("orientation spline preserves keyed states and smooths angular velocit
   )
 })
 
+test_that("pitched keyframes retain exact targets and continuous up vectors through damping", {
+  positions = rbind(c(0, 0, 0), c(1, 2, 3), c(4, 1, 5))
+  directions = rbind(c(0, -1, 1), c(1, -2, 1), c(2, -1, 0))
+  lookats = positions + directions
+  forward = directions / sqrt(rowSums(directions^2))
+  camera_ups = matrix(c(0, 1, 0), 3, 3, byrow = TRUE)
+  # These up hints describe the same keyed orientations as world-up.
+  perpendicular_ups = camera_ups - forward[, 2] * forward
+  perpendicular_ups = perpendicular_ups / sqrt(rowSums(perpendicular_ups^2))
+  position_columns = c("x", "y", "z")
+  lookat_columns = c("dx", "dy", "dz")
+  up_columns = c("upx", "upy", "upz")
+
+  for (closed in c(FALSE, TRUE)) {
+    expected_positions = if (closed) {
+      rbind(positions, positions[1, ])
+    } else {
+      positions
+    }
+    expected_lookats = if (closed) rbind(lookats, lookats[1, ]) else lookats
+    keyframe_rows = 1 + 40 * (seq_len(nrow(expected_positions)) - 1)
+    for (type in c("linear", "spline")) {
+      motion = generate_camera_motion(
+        positions,
+        lookats = lookats,
+        camera_ups = camera_ups,
+        type = type,
+        frames = max(keyframe_rows),
+        closed = closed,
+        damp_motion = FALSE,
+        progress = FALSE
+      )
+      expect_equal(
+        unname(as.matrix(motion[keyframe_rows, position_columns])),
+        expected_positions,
+        tolerance = 1e-12
+      )
+      expect_equal(
+        unname(as.matrix(motion[keyframe_rows, lookat_columns])),
+        expected_lookats,
+        tolerance = 1e-12
+      )
+      up = as.matrix(motion[, up_columns])
+      view = as.matrix(motion[, lookat_columns]) -
+        as.matrix(motion[, position_columns])
+      view = view / sqrt(rowSums(view^2))
+      expect_equal(rowSums(up^2), rep(1, nrow(motion)), tolerance = 1e-12)
+      expect_equal(rowSums(up * view), rep(0, nrow(motion)), tolerance = 1e-12)
+
+      # Damping must not depend on an up hint's component along the view axis.
+      # A raw world-up reset at the knots breaks this equivalence and adds roll.
+      damped = generate_camera_motion(
+        positions,
+        lookats = lookats,
+        camera_ups = camera_ups,
+        type = type,
+        frames = max(keyframe_rows),
+        closed = closed,
+        damp_motion = TRUE,
+        progress = FALSE
+      )
+      equivalent = generate_camera_motion(
+        positions,
+        lookats = lookats,
+        camera_ups = perpendicular_ups,
+        type = type,
+        frames = max(keyframe_rows),
+        closed = closed,
+        damp_motion = TRUE,
+        progress = FALSE
+      )
+      expect_equal(damped, equivalent, tolerance = 1e-12)
+    }
+  }
+})
+
 test_that("closed orientation spline has periodic angular velocity", {
   positions = matrix(0, nrow = 4, ncol = 3)
   rotate_x = function(angle) {

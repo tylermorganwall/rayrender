@@ -46,7 +46,7 @@ test_that("per-medium haze controls compose camera radiance, alpha, and nested i
     # These exact interval comparisons need no angular sampling noise.
     # Native filter tests separately check sampled means and subdivisions.
     haze_filter = FALSE,
-    resolution = 16
+    sampling_resolution = 16
   )
   description = tryCatch(prepare_infinite_light(sky), error = function(e) {
     if (

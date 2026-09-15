@@ -32,7 +32,7 @@
 #' overrides the automatic Moon. Set `FALSE` to omit the automatic disk.
 #' @param sun_resolution Default `256`. Sun disk texture width and height in
 #' pixels, at least 16; independent of the atmospheric `sampling_resolution`.
-#' @param moon_resolution Default `1024`. Moon disk texture width and height in
+#' @param moon_resolution Default `256`. Moon disk texture width and height in
 #' pixels, at least 16. Cropping and edge coverage can change the final dimensions.
 #' @param earthshine Default `TRUE`. Illuminate the Moon's dark side with earthshine.
 #' @param earthshine_albedo Default `0.19`. Effective Earth reflectance used to
@@ -517,7 +517,7 @@ sky_light = function(
   sun = TRUE,
   moon = TRUE,
   sun_resolution = 256,
-  moon_resolution = 1024,
+  moon_resolution = 256,
   earthshine = TRUE,
   earthshine_albedo = 0.19,
   solar_irradiance_w_m2 = 1300,
