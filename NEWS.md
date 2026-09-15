@@ -1,5 +1,8 @@
 # rayrender 0.41.5.9000
 
+* Reduce BVH traversal bookkeeping while preserving intersection order, and
+  defer unused medium transforms in surface hit records.
+
 * Split the interactive preview status bar into camera information and rendering
   flags on separate rows.
 

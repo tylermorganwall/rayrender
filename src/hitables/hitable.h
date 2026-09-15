@@ -11,6 +11,7 @@
 #include "../math/transform.h"
 #include "../math/animatedtransform.h"
 #include <memory>
+#include <optional>
 #include <cfloat>
 #include <tuple>
 
@@ -31,9 +32,10 @@ struct alignas(16) hit_record {
   normal3f normal; //PBRT: In interaction
   normal3f geometric_normal{0};
   const MediumBoundary* medium_boundary = nullptr;
-  Transform medium_to_world;
   uint64_t boundary_id = 0; // Scene-assigned placement ID; zero for ordinary surfaces.
-
+  // Ordinary candidate intersections need no medium placement. Keep its two
+  // matrices unconstructed until a boundary supplies them, without allocating.
+  std::optional<Transform> medium_to_world;
 #ifdef DEBUGBVH
   Float bvh_nodes;
 #endif
@@ -49,6 +51,12 @@ struct alignas(16) hit_record {
   // vec3f wo; //PBRT: In Interaction, negative ray direction
   const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape
   material* mat_ptr; //PBRT: In SurfaceInteraction as bsdf or bssrdf
+
+  const Transform& MediumToWorld() const {
+    if (medium_to_world) return *medium_to_world;
+    static const Transform identity;
+    return identity;
+  }
 
   // mutable vec3f dpdx, dpdy;
   // mutable normal3f dndu, dndv;

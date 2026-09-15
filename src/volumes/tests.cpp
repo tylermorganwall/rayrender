@@ -62,6 +62,33 @@ Rcpp::List grid_description(const Rcpp::NumericVector &values, int nx, int ny, i
   return description;
 }
 } // namespace
+context("Hit record medium placement") {
+  test_that("ordinary records defer matrices and transformed boundaries retain their placement") {
+    hit_record ordinary;
+    expect_false(ordinary.medium_to_world.has_value());
+    expect_true(ordinary.MediumToWorld().IsIdentity());
+    expect_false(ordinary.medium_to_world.has_value());
+
+    PickingScene scene;
+    scene.Add(std::make_shared<Medium>(medium_description()), 1);
+    Ray ray(point3f(-3, 0, 0), vec3f(1, 0, 0));
+    ray.segment_absorption = true;
+    random_gen rng(19);
+    hit_record boundary;
+    expect_true(scene.world.hit(ray, 0, 10, boundary, rng));
+    expect_true(boundary.medium_to_world.has_value());
+    Transform placement = Translate(vec3f(2, 3, 4)) * Scale(2, 3, 4);
+    const hit_record transformed = placement(boundary);
+    expect_true(transformed.MediumToWorld() == placement);
+    hit_record copied = transformed;
+    expect_true(copied.MediumToWorld() == placement);
+    VolumePathState state;
+    state.Cross(copied, vec3f(1, 0, 0));
+    expect_true((state.Active() && state.Active()->medium_to_world == placement));
+    copied.medium_to_world.reset();
+    expect_true(copied.MediumToWorld().IsIdentity());
+  }
+}
 context("Grid medium emission") {
   test_that("zero RGB fields preserve density and return zero emission") {
     for (bool array_field : {false, true}) {

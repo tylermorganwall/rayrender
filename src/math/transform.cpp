@@ -681,7 +681,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
   hr.medium_boundary = r.medium_boundary;
   hr.boundary_id = r.boundary_id;
-  if(r.medium_boundary) hr.medium_to_world = (*this) * r.medium_to_world;
+  if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
   hr.infinite_area_hit = r.infinite_area_hit;
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);
@@ -711,7 +711,7 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
   hr.medium_boundary = r.medium_boundary;
   hr.boundary_id = r.boundary_id;
-  if(r.medium_boundary) hr.medium_to_world = (*this) * r.medium_to_world;
+  if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
   hr.infinite_area_hit = r.infinite_area_hit;
   hr.bump_normal = (*this)(r.bump_normal);
   hr.dpdu = (*this)(r.dpdu);

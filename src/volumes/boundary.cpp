@@ -122,7 +122,7 @@ point3f OffsetMediumOrigin(const hit_record &h, const vec3f &direction) {
   // selected rectangle leaves a second face at t=0, causing a duplicate crossing.
   if (h.medium_boundary)
     if (auto *box_geometry = dynamic_cast<const box *>(h.medium_boundary->geometry.get())) {
-      Transform object_to_world = h.medium_to_world;
+      Transform object_to_world = h.MediumToWorld();
       if (h.medium_boundary->medium)
         object_to_world = object_to_world * Inverse(h.medium_boundary->medium->medium_to_object);
       Transform inverse = Inverse(object_to_world);
@@ -217,7 +217,7 @@ void VolumePathState::Cross(const hit_record &h, const vec3f &direction) {
                 << ". Check mesh orientation, self intersections, and nesting.";
         throw std::runtime_error(message.str());
       }
-    media.push_back({h.medium_boundary, h.boundary_id, h.medium_to_world});
+    media.push_back({h.medium_boundary, h.boundary_id, h.MediumToWorld()});
   } else {
     if (media.empty() || media.back().boundary != h.medium_boundary ||
         media.back().boundary_id != h.boundary_id) {

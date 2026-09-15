@@ -17,6 +17,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef NOT_CRAN
+#include <testthat.h>
+#endif
+
 namespace {
 
 struct BVHNodeEntry {
@@ -49,6 +53,33 @@ public:
 
     data_[i + 1] = entry;
     ++size_;
+    return true;
+  }
+
+  // Merge up to four children in one pass instead of shifting the same pending
+  // nodes once per child. Equal-distance children retain insertion order here,
+  // so popping still visits the newest equal-distance entry first.
+  bool try_push_batch(BVHNodeEntry* entries, size_t count) {
+    if (count > MaxSize - size_) return false;
+    if (count == 1) return try_push(entries[0]);
+    for (size_t i = 1; i < count; ++i) {
+      BVHNodeEntry entry = entries[i];
+      size_t j = i;
+      while (j > 0 && entries[j - 1].tEnter < entry.tEnter) {
+        entries[j] = entries[j - 1];
+        --j;
+      }
+      entries[j] = entry;
+    }
+    size_t old = size_, added = count, dest = size_ + count;
+    while (added > 0) {
+      if (old > 0 && data_[old - 1].tEnter < entries[added - 1].tEnter) {
+        data_[--dest] = data_[--old];
+      } else {
+        data_[--dest] = entries[--added];
+      }
+    }
+    size_ += count;
     return true;
   }
 
@@ -685,6 +716,29 @@ public:
     return using_heap_;
   }
 
+  BVHNodeEntry next_child(const IVec4& offsets, const float* distances, int hitmask) {
+    BVHNodeEntry children[4];
+    size_t count = 0;
+    for (int i = 0; i < 4; ++i) {
+      if ((hitmask >> i) & 1) children[count++] = {offsets[i], distances[i]};
+    }
+    ASSERT(count > 0);
+
+    // Follow an already-nearest single child without pushing and immediately
+    // popping it. At capacity, retain the original spill and heap tie behavior.
+    if (count == 1 && !using_heap_ && static_.size() < StaticCapacity &&
+        (static_.empty() || children[0].tEnter <= static_.top().tEnter)) {
+      return children[0];
+    }
+    if (!using_heap_ && static_.try_push_batch(children, count)) {
+      return static_.pop();
+    }
+    // A batch that would overflow must spill at exactly the same insertion as
+    // before. try_push_batch leaves the children untouched when it cannot fit.
+    for (size_t i = 0; i < count; ++i) push(children[i]);
+    return pop();
+  }
+
 private:
   void spill_to_heap() {
     ASSERT(!using_heap_);
@@ -716,13 +770,11 @@ bool traverseClosestBVH4(
 
   const RayBBox4 rbox(r);
   BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
-  frontier.push({0, -std::numeric_limits<float>::infinity()});
+  BVHNodeEntry entry{0, -std::numeric_limits<float>::infinity()};
 
   bool any_hit = false;
 
-  while (!frontier.empty()) {
-    BVHNodeEntry entry = frontier.pop();
-
+  while (true) {
     const int currentNodeIndex = entry.nodeIndex;
     const LinearBVHNode4* node = &nodes4[currentNodeIndex];
 
@@ -744,30 +796,22 @@ bool traverseClosestBVH4(
         }
       }
 
-      continue;
-    }
-
-    IVec4 hits;
-    FVec4 tEnters;
-
-    rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
-
-    const IVec4 valid_hit =
-        simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-
-    const int hitmask = simd_extract_hitmask(valid_hit);
-    if (hitmask == 0) {
-      continue;
-    }
-
-    float tEntersArray[4];
-    simd_extract_fvec4(tEnters, tEntersArray);
-
-    for (int i = 0; i < 4; ++i) {
-      if ((hitmask >> i) & 1) {
-        frontier.push({node->childOffsets[i], tEntersArray[i]});
+    } else {
+      IVec4 hits;
+      FVec4 tEnters;
+      rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
+      const IVec4 valid_hit =
+          simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+      const int hitmask = simd_extract_hitmask(valid_hit);
+      if (hitmask != 0) {
+        float tEntersArray[4];
+        simd_extract_fvec4(tEnters, tEntersArray);
+        entry = frontier.next_child(node->childOffsets, tEntersArray, hitmask);
+        continue;
       }
     }
+    if (frontier.empty()) break;
+    entry = frontier.pop();
   }
 
   return any_hit;
@@ -790,10 +834,9 @@ bool traverseAnyPriorityBVH4(
 
   const RayBBox4 rbox(r);
   BVH4PriorityFrontier<kBVH4PriorityStaticCapacity> frontier;
-  frontier.push({0, -std::numeric_limits<float>::infinity()});
+  BVHNodeEntry entry{0, -std::numeric_limits<float>::infinity()};
 
-  while (!frontier.empty()) {
-    BVHNodeEntry entry = frontier.pop();
+  while (true) {
     const LinearBVHNode4* node = &nodes4[entry.nodeIndex];
 
     if (node->nPrimitives > 0) {
@@ -805,30 +848,22 @@ bool traverseAnyPriorityBVH4(
         }
       }
 
-      continue;
-    }
-
-    IVec4 hits;
-    FVec4 tEnters;
-
-    rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
-
-    const IVec4 valid_hit =
-        simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-
-    const int hitmask = simd_extract_hitmask(valid_hit);
-    if (hitmask == 0) {
-      continue;
-    }
-
-    float tEntersArray[4];
-    simd_extract_fvec4(tEnters, tEntersArray);
-
-    for (int i = 0; i < 4; ++i) {
-      if ((hitmask >> i) & 1) {
-        frontier.push({node->childOffsets[i], tEntersArray[i]});
+    } else {
+      IVec4 hits;
+      FVec4 tEnters;
+      rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
+      const IVec4 valid_hit =
+          simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
+      const int hitmask = simd_extract_hitmask(valid_hit);
+      if (hitmask != 0) {
+        float tEntersArray[4];
+        simd_extract_fvec4(tEnters, tEntersArray);
+        entry = frontier.next_child(node->childOffsets, tEntersArray, hitmask);
+        continue;
       }
     }
+    if (frontier.empty()) break;
+    entry = frontier.pop();
   }
 
   return false;
@@ -917,6 +952,50 @@ bool BVHAggregate::HitP(
       }
   );
 }
+
+#ifdef NOT_CRAN
+context("BVH frontier batching") {
+  test_that("child fast paths preserve sequential insertion order and heap spills") {
+    bool same_order = true, saw_heap = false;
+    int serial = 0;
+    // Exercise every child mask, ties, infinities, and batches crossing capacity.
+    for (int pending = 0; pending <= 18; ++pending) {
+      for (int mask = 1; mask < 16; ++mask) {
+        for (int pattern = 0; pattern < 5; ++pattern) {
+          BVH4PriorityFrontier<16> reference, optimized;
+          for (int i = 0; i < pending; ++i) {
+            BVHNodeEntry entry{serial++, float(i % 3)};
+            reference.push(entry);
+            optimized.push(entry);
+          }
+          IVec4 offsets;
+          float distances[4];
+          for (int i = 0; i < 4; ++i) {
+            offsets[i] = serial++;
+            distances[i] = pattern == 0 ? 1.f : pattern == 1 ? float(i - 2) :
+              pattern == 2 ? float(3 - i) : pattern == 3 ?
+              -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+            if ((mask >> i) & 1) reference.push({offsets[i], distances[i]});
+          }
+          BVHNodeEntry actual = optimized.next_child(offsets, distances, mask);
+          BVHNodeEntry expected = reference.pop();
+          same_order &= actual.nodeIndex == expected.nodeIndex && actual.tEnter == expected.tEnter;
+          same_order &= optimized.using_heap() == reference.using_heap();
+          saw_heap |= optimized.using_heap();
+          while (!reference.empty() && !optimized.empty()) {
+            actual = optimized.pop();
+            expected = reference.pop();
+            same_order &= actual.nodeIndex == expected.nodeIndex && actual.tEnter == expected.tEnter;
+          }
+          same_order &= reference.empty() && optimized.empty();
+        }
+      }
+    }
+    expect_true(same_order);
+    expect_true(saw_heap);
+  }
+}
+#endif
 #endif
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
