@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.0</span>
       </span>
     </div>
 
@@ -98,7 +98,7 @@
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">render_animation</span><span class="op">(</span></span>
 <span>  <span class="va">scene</span>,</span>
-<span>  <span class="va">camera_motion</span>,</span>
+<span>  camera_motion <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  start_frame <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  end_frame <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  width <span class="op">=</span> <span class="fl">400</span>,</span>
@@ -125,6 +125,7 @@
 <span>  backgroundlow <span class="op">=</span> <span class="st">"#ffffff"</span>,</span>
 <span>  shutteropen <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  shutterclose <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  camera_motion_blur <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  focal_distance <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ortho_dimensions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>,</span>
 <span>  tonemap <span class="op">=</span> <span class="st">"raw"</span>,</span>
@@ -141,7 +142,8 @@
 <span>  transparent_background <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  preview_light_direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">-</span><span class="fl">1</span>, <span class="fl">0</span><span class="op">)</span>,</span>
 <span>  preview_exponent <span class="op">=</span> <span class="fl">6</span>,</span>
-<span>  integrator_type <span class="op">=</span> <span class="st">"rtiow"</span></span>
+<span>  integrator_type <span class="op">=</span> <span class="st">"rtiow"</span>,</span>
+<span>  camera <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -154,7 +156,7 @@
 
 
 <dt id="arg-camera-motion">camera_motion<a class="anchor" aria-label="anchor" href="#arg-camera-motion"></a></dt>
-<dd><p>Data frame of camera motion vectors, calculated with `generate_camera_motion()`.</p></dd>
+<dd><p>Default `NULL`. Data frame of camera motion vectors, calculated with `generate_camera_motion()`. If `NULL`, the camera is resolved from the scene.</p></dd>
 
 
 <dt id="arg-start-frame">start_frame<a class="anchor" aria-label="anchor" href="#arg-start-frame"></a></dt>
@@ -285,6 +287,10 @@ a hexadecimal code, or a numeric rgb vector listing three intensities between `0
 <dd><p>Default `1`. Time at which the shutter is open. Only affects moving objects.</p></dd>
 
 
+<dt id="arg-camera-motion-blur">camera_motion_blur<a class="anchor" aria-label="anchor" href="#arg-camera-motion-blur"></a></dt>
+<dd><p>Default `FALSE`. Whether to blur camera movement over the shutter interval.</p></dd>
+
+
 <dt id="arg-focal-distance">focal_distance<a class="anchor" aria-label="anchor" href="#arg-focal-distance"></a></dt>
 <dd><p>Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.</p></dd>
@@ -320,11 +326,13 @@ of equal size.</p></dd>
 
 <dt id="arg-environment-light">environment_light<a class="anchor" aria-label="anchor" href="#arg-environment-light"></a></dt>
 <dd><p>Default `NULL`. An image to be used for the background for rays that escape
-the scene. Supports both HDR (`.hdr`) and low-dynamic range (`.png`, `.jpg`) images.</p></dd>
+the scene. Supports EXR, HDR, PNG, and JPEG images. Scene lights added with
+<code><a href="add_infinite_light.html">add_infinite_light()</a></code> are included in every frame, together with this image.</p></dd>
 
 
 <dt id="arg-rotate-env">rotate_env<a class="anchor" aria-label="anchor" href="#arg-rotate-env"></a></dt>
-<dd><p>Default `0`. The number of degrees to rotate the environment map around the scene.</p></dd>
+<dd><p>Default `0`. The number of degrees to rotate all infinite lights around the scene,
+in addition to their individual rotations.</p></dd>
 
 
 <dt id="arg-intensity-env">intensity_env<a class="anchor" aria-label="anchor" href="#arg-intensity-env"></a></dt>
@@ -343,7 +351,9 @@ will be returned. Can set to `ao` to render an animation with the ambient occlus
 
 
 <dt id="arg-plot-scene">plot_scene<a class="anchor" aria-label="anchor" href="#arg-plot-scene"></a></dt>
-<dd><p>Default `TRUE`. Whether to plot the rendered scene.</p></dd>
+<dd><p>Default `TRUE`. Whether to plot the rendered scene. If
+`preview = TRUE` and `filename` is omitted, this defaults to `FALSE` so the
+animation runs through the preview window.</p></dd>
 
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
@@ -372,7 +382,13 @@ those pixels will be partially transparent.</p></dd>
 <dt id="arg-integrator-type">integrator_type<a class="anchor" aria-label="anchor" href="#arg-integrator-type"></a></dt>
 <dd><p>Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
 form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
-and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).</p></dd>
+and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+<code>nee</code> is selected automatically for scenes containing <code><a href="sky_light.html">sky_light()</a></code> or attached
+media (including clouds and media inside instances), overriding <code>rtiow</code> or <code>basic</code>.</p></dd>
+
+
+<dt id="arg-camera">camera<a class="anchor" aria-label="anchor" href="#arg-camera"></a></dt>
+<dd><p>Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.</p></dd>
 
 </dl></div>
     <div id="value">
@@ -430,31 +446,31 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 <span class="r-in"><span><span class="co">#This returns a data frame of individual camera positions, interpolated by cubic bezier curves.</span></span></span>
 <span class="r-in"><span><span class="va">camera_motion</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             x          y           z         dx         dy          dz aperture</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540206  0.3794243  14.4450707        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0421331 -1.2908549  12.9120442  2.5791576 -1.8963457  12.3247276        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9654705 -3.4751361  10.6119146  4.4299947 -4.0144092   9.9098152        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3615877 -5.1631490   7.6612776  5.4392102 -5.3222392   6.6817420        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5714282 -4.6109635   4.2896263  4.0392944 -4.1112247   3.6069762        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4541781 -2.5794074   2.0305817  1.8469965 -1.9833422   1.5052406        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1812879 -0.3311138   0.1450768 -0.4338097  0.2845805  -0.3474421        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0843327  1.9518901  -1.7077138 -2.6797046  2.5596598  -2.2331603        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2092803  4.1463921  -3.8100811 -4.7079362  4.6791210  -4.4930514        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4419342  5.5744636  -6.8775846 -5.3179592  5.5344257  -7.8648105        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2533438  4.6984218 -10.1901472 -3.7360012  4.2605701 -10.9251121        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2085804  2.9388650 -12.7328477 -1.6206386  2.4243743 -13.3570159        0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    fov     focal orthox orthoy upx upy upz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 1.0000000      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 1.0000157      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9999735      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9970717      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9996751      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999997      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 1.0000001      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 1.0000637      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 1.0001658      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9981058      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9998484      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999911      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 0.9999998      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 0.9999776      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9997709      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9954019      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9994580      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999732      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 0.9999998      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 0.9999729      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 0.9994529      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9957850      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9997654      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999811      1      1   0   1   0</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see</span></span></span>
 <span class="r-in"><span><span class="co">#where we're going. This results in a "roller coaster" effect.</span></span></span>
@@ -467,7 +483,7 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="pig.html">pig</a></span><span class="op">(</span>x<span class="op">=</span><span class="fl">0</span>,y<span class="op">=</span><span class="op">-</span><span class="fl">0.25</span>,z<span class="op">=</span><span class="op">-</span><span class="fl">15</span>,scale<span class="op">=</span><span class="fl">1</span>,angle<span class="op">=</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">225</span>,<span class="op">-</span><span class="fl">22</span><span class="op">)</span>, order_rotation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>,<span class="fl">2</span>,<span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                 emotion<span class="op">=</span><span class="st">"angry"</span>, spider<span class="op">=</span><span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="path.html">path</a></span><span class="op">(</span><span class="va">camera_pos</span>, y<span class="op">=</span><span class="op">-</span><span class="fl">0.2</span>,material<span class="op">=</span><span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color<span class="op">=</span><span class="st">"red"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
-<span class="r-in"><span>  <span class="fu">render_animation</span><span class="op">(</span>filename <span class="op">=</span> <span class="cn">NA</span>, camera_motion <span class="op">=</span> <span class="va">camera_motion</span>, samples<span class="op">=</span><span class="fl">16</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">render_animation</span><span class="op">(</span>camera_motion <span class="op">=</span> <span class="va">camera_motion</span>, samples<span class="op">=</span><span class="fl">16</span>,</span></span>
 <span class="r-in"><span>                   sample_method<span class="op">=</span><span class="st">"sobol_blue"</span>,</span></span>
 <span class="r-in"><span>                   clamp_value<span class="op">=</span><span class="fl">10</span>, width<span class="op">=</span><span class="fl">400</span>, height<span class="op">=</span><span class="fl">400</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="render_animation-4.png" alt="" width="768" height="768"></span>
@@ -496,7 +512,7 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>

@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.0</span>
       </span>
     </div>
 
@@ -201,6 +201,10 @@
           <p><code><a href="raymesh_model.html">raymesh_model()</a></code> </p>
         </td>
         <td><p>`raymesh` model</p></td>
+      </tr><tr><td>
+          <p><code><a href="cloud.html">cloud()</a></code> </p>
+        </td>
+        <td><p>Procedural Cloud Object</p></td>
       </tr></tbody><tbody><tr><th colspan="2">
           <h2 id="constructive-solid-geometry-csg-interface">Constructive Solid Geometry (CSG) Interface <a href="#constructive-solid-geometry-csg-interface" class="anchor" aria-hidden="true"></a></h2>
           <p class="section-desc"></p><p>Functions to model and build objects using CSG</p>
@@ -326,6 +330,86 @@
         </td>
         <td><p>Set Material for All Objects</p></td>
       </tr></tbody><tbody><tr><th colspan="2">
+          <h2 id="participating-media">Participating Media <a href="#participating-media" class="anchor" aria-hidden="true"></a></h2>
+          <p class="section-desc"></p><p>Functions to define and attach scattering, absorbing, and emitting media.</p>
+        </th>
+      </tr></tbody><tbody><tr><td>
+          <p><code><a href="homogeneous_medium.html">homogeneous_medium()</a></code> </p>
+        </td>
+        <td><p>Homogeneous Participating Medium</p></td>
+      </tr><tr><td>
+          <p><code><a href="grid_medium.html">grid_medium()</a></code> </p>
+        </td>
+        <td><p>Dense Grid Participating Medium</p></td>
+      </tr><tr><td>
+          <p><code><a href="nanovdb_medium.html">nanovdb_medium()</a></code> </p>
+        </td>
+        <td><p>NanoVDB Participating Medium</p></td>
+      </tr><tr><td>
+          <p><code><a href="set_medium.html">set_medium()</a></code> </p>
+        </td>
+        <td><p>Attach a Medium to Closed Objects</p></td>
+      </tr></tbody><tbody><tr><th colspan="2">
+          <h2 id="infinite-and-sky-lights">Infinite and Sky Lights <a href="#infinite-and-sky-lights" class="anchor" aria-hidden="true"></a></h2>
+          <p class="section-desc"></p><p>Functions to create and manage image, atmospheric, Sun, and Moon lighting.</p>
+        </th>
+      </tr></tbody><tbody><tr><td>
+          <p><code><a href="infinite_light.html">infinite_light()</a></code> </p>
+        </td>
+        <td><p>Image-Based Infinite Light</p></td>
+      </tr><tr><td>
+          <p><code><a href="sky_light.html">sky_light()</a></code> </p>
+        </td>
+        <td><p>Atmospheric Location and Time Sky Light</p></td>
+      </tr><tr><td>
+          <p><code><a href="sky_light_image.html">sky_light_image()</a></code> </p>
+        </td>
+        <td><p>Image-Based Location and Time Sky Light</p></td>
+      </tr><tr><td>
+          <p><code><a href="sun_light.html">sun_light()</a></code> <code><a href="sun_light.html">moon_light()</a></code> </p>
+        </td>
+        <td><p>Sun and Moon Infinite Lights</p></td>
+      </tr><tr><td>
+          <p><code><a href="add_infinite_light.html">add_infinite_light()</a></code> </p>
+        </td>
+        <td><p>Add an Infinite Light</p></td>
+      </tr><tr><td>
+          <p><code><a href="list_infinite_lights.html">list_infinite_lights()</a></code> </p>
+        </td>
+        <td><p>List Infinite Lights</p></td>
+      </tr><tr><td>
+          <p><code><a href="remove_infinite_light.html">remove_infinite_light()</a></code> </p>
+        </td>
+        <td><p>Remove an Infinite Light</p></td>
+      </tr></tbody><tbody><tr><th colspan="2">
+          <h2 id="cameras">Cameras <a href="#cameras" class="anchor" aria-hidden="true"></a></h2>
+          <p class="section-desc"></p><p>Functions to create, select, and preview scene cameras.</p>
+        </th>
+      </tr></tbody><tbody><tr><td>
+          <p><code><a href="camera.html">camera()</a></code> </p>
+        </td>
+        <td><p>Camera</p></td>
+      </tr><tr><td>
+          <p><code><a href="add_camera.html">add_camera()</a></code> </p>
+        </td>
+        <td><p>Add Camera</p></td>
+      </tr><tr><td>
+          <p><code><a href="list_cameras.html">list_cameras()</a></code> </p>
+        </td>
+        <td><p>List Cameras</p></td>
+      </tr><tr><td>
+          <p><code><a href="set_active_camera.html">set_active_camera()</a></code> </p>
+        </td>
+        <td><p>Set Active Camera</p></td>
+      </tr><tr><td>
+          <p><code><a href="preview_camera.html">preview_camera()</a></code> </p>
+        </td>
+        <td><p>Preview Camera</p></td>
+      </tr><tr><td>
+          <p><code><a href="remove_camera.html">remove_camera()</a></code> </p>
+        </td>
+        <td><p>Remove Camera</p></td>
+      </tr></tbody><tbody><tr><th colspan="2">
           <h2 id="composing-scenes">Composing Scenes <a href="#composing-scenes" class="anchor" aria-hidden="true"></a></h2>
           <p class="section-desc"></p><p>Function for adding objects together to form a scene.</p>
         </th>
@@ -333,6 +417,10 @@
           <p><code><a href="add_object.html">add_object()</a></code> </p>
         </td>
         <td><p>Add Object</p></td>
+      </tr><tr><td>
+          <p><code><a href="add_points_polygon.html">add_points_polygon()</a></code> </p>
+        </td>
+        <td><p>Add Points to Polygon</p></td>
       </tr><tr><td>
           <p><code><a href="group_objects.html">group_objects()</a></code> </p>
         </td>
@@ -358,6 +446,14 @@
           <p class="section-desc"></p><p>Function for animating objects or the camera through a scene.</p>
         </th>
       </tr></tbody><tbody><tr><td>
+          <p><code><a href="get_camera.html">get_camera()</a></code> </p>
+        </td>
+        <td><p>Get Camera</p></td>
+      </tr><tr><td>
+          <p><code><a href="get_infinite_light.html">get_infinite_light()</a></code> </p>
+        </td>
+        <td><p>Get an Infinite Light</p></td>
+      </tr><tr><td>
           <p><code><a href="get_saved_keyframes.html">get_saved_keyframes()</a></code> </p>
         </td>
         <td><p>Get Saved Keyframes</p></td>
@@ -410,7 +506,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>

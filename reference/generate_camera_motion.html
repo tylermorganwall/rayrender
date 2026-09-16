@@ -18,7 +18,7 @@ a data.frame that can be passed to `render_animation()`."><meta property="og:ima
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.0</span>
       </span>
     </div>
 
@@ -106,7 +106,7 @@ a data.frame that can be passed to `render_animation()`.</p>
 <span>  focal_distances <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  ortho_dims <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  camera_ups <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  type <span class="op">=</span> <span class="st">"cubic"</span>,</span>
+<span>  type <span class="op">=</span> <span class="st">"spline"</span>,</span>
 <span>  frames <span class="op">=</span> <span class="fl">30</span>,</span>
 <span>  closed <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  aperture_linear <span class="op">=</span> <span class="cn">TRUE</span>,</span>
@@ -119,7 +119,8 @@ a data.frame that can be passed to `render_animation()`.</p>
 <span>  offset_lookat <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  damp_motion <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  damp_magnitude <span class="op">=</span> <span class="fl">0.1</span>,</span>
-<span>  progress <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  progress <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  smooth_orientation <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -162,9 +163,12 @@ of orthographic dimensions.</p></dd>
 
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
-<dd><p>Default `cubic`. Type of transition between keyframes.
-Other options are `linear`, `quad`, `bezier`, `exp`, and `manual`. `manual` just returns the values
-passed in, properly formatted to be passed to `render_animation()`.</p></dd>
+<dd><p>Default `spline`. Type of transition between keyframes.
+Other options are `linear`, `quad`, `cubic`, `bezier`, `exp`, and `manual`. `spline` keeps the
+path linear between keyframes while using a shape-preserving cubic Hermite spline to smoothly
+vary speed. Closed paths use matching boundary speeds. Direction can still change abruptly at
+a corner because the keyed path is preserved. `manual` just returns the values passed in,
+properly formatted to be passed to `render_animation()`.</p></dd>
 
 
 <dt id="arg-frames">frames<a class="anchor" aria-label="anchor" href="#arg-frames"></a></dt>
@@ -192,7 +196,8 @@ passed in, properly formatted to be passed to `render_animation()`.</p></dd>
 
 
 <dt id="arg-constant-step">constant_step<a class="anchor" aria-label="anchor" href="#arg-constant-step"></a></dt>
-<dd><p>Default `TRUE`. This will make the camera travel at a constant speed.</p></dd>
+<dd><p>Default `TRUE`. Whether to make the camera travel at a constant speed
+when `type = "bezier"`.</p></dd>
 
 
 <dt id="arg-curvature-adjust">curvature_adjust<a class="anchor" aria-label="anchor" href="#arg-curvature-adjust"></a></dt>
@@ -228,6 +233,14 @@ less than `1`.</p></dd>
 
 <dt id="arg-progress">progress<a class="anchor" aria-label="anchor" href="#arg-progress"></a></dt>
 <dd><p>Default `TRUE`. Whether to display a progress bar.</p></dd>
+
+
+<dt id="arg-smooth-orientation">smooth_orientation<a class="anchor" aria-label="anchor" href="#arg-smooth-orientation"></a></dt>
+<dd><p>Default `TRUE`. Whether to use a quaternion orientation spline for
+`spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
+and orientations while making angular velocity continuous through orientation keyframes. Closed
+paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
+directly with the selected `type`.</p></dd>
 
 </dl></div>
     <div id="value">
@@ -285,31 +298,31 @@ less than `1`.</p></dd>
 <span class="r-in"><span><span class="co">#This returns a data frame of individual camera positions, interpolated by cubic bezier curves.</span></span></span>
 <span class="r-in"><span><span class="va">camera_motion</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             x          y           z         dx         dy          dz aperture</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540753  0.3793760  14.4451790        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0426788 -1.2913413  12.9130580  2.5799782 -1.8970825  12.3261865        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9656263 -3.4752799  10.6121427  4.4319830 -4.0162782   9.9123005        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3641317 -5.1657043   7.6624089  5.4433167 -5.3265227   6.6815832        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5735555 -4.6134636   4.2864210  4.0394085 -4.1113644   3.6067639        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4543547 -2.5796685   2.0300934  1.8473580 -1.9839746   1.5040677        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1811561 -0.3313301   0.1449713 -0.4339193  0.2845633  -0.3473272        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0849691  1.9522779  -1.7065252 -2.6813261  2.5607910  -2.2301639        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2136709  4.1500150  -3.8037431 -4.7114121  4.6821070  -4.4889171        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4478102  5.5801044  -6.8775827 -5.3230057  5.5394471  -7.8670199        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2534993  4.6985864 -10.1903391 -3.7368466  4.2614804 -10.9263454        0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2089084  2.9392277 -12.7334457 -1.6207842  2.4245362 -13.3572923        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   0.0000000  1.0000000  15.0000000  0.5540206  0.3794243  14.4450707        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   2.0421331 -1.2908549  12.9120442  2.5791576 -1.8963457  12.3247276        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   3.9654705 -3.4751361  10.6119146  4.4299947 -4.0144092   9.9098152        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   5.3615877 -5.1631490   7.6612776  5.4392102 -5.3222392   6.6817420        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   4.5714282 -4.6109635   4.2896263  4.0392944 -4.1112247   3.6069762        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   2.4541781 -2.5794074   2.0305817  1.8469965 -1.9833422   1.5052406        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   0.1812879 -0.3311138   0.1450768 -0.4338097  0.2845805  -0.3474421        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8  -2.0843327  1.9518901  -1.7077138 -2.6797046  2.5596598  -2.2331603        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9  -4.2092803  4.1463921  -3.8100811 -4.7079362  4.6791210  -4.4930514        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10 -5.4419342  5.5744636  -6.8775846 -5.3179592  5.5344257  -7.8648105        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11 -4.2533438  4.6984218 -10.1901472 -3.7360012  4.2605701 -10.9251121        0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12 -2.2085804  2.9388650 -12.7328477 -1.6206386  2.4243743 -13.3570159        0</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    fov     focal orthox orthoy upx upy upz</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 1.0000000      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 1.0000157      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9999735      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9970717      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9996751      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999997      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 1.0000001      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 1.0000637      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 1.0001658      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9981058      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9998484      1      1   0   1   0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999911      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1   80 0.9999998      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2   80 0.9999776      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3   80 0.9997709      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4   80 0.9954019      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5   80 0.9994580      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6   80 0.9999732      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7   80 0.9999998      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8   80 0.9999729      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9   80 0.9994529      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10  80 0.9957850      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11  80 0.9997654      1      1   0   1   0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12  80 0.9999811      1      1   0   1   0</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">#Pass NA filename to plot to the device. We'll keep the path and offset it slightly to see</span></span></span>
 <span class="r-in"><span><span class="co">#where we're going. This results in a "roller coaster" effect.</span></span></span>
@@ -351,7 +364,7 @@ less than `1`.</p></dd>
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>

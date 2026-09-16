@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.41.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.0</span>
       </span>
     </div>
 
@@ -96,7 +96,7 @@
     </div>
 
     <div id="ref-usage">
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tween</span><span class="op">(</span><span class="va">vals</span>, <span class="va">n</span>, ease <span class="op">=</span> <span class="st">"cubic"</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tween</span><span class="op">(</span><span class="va">vals</span>, <span class="va">n</span>, ease <span class="op">=</span> <span class="st">"cubic"</span>, closed <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -104,15 +104,20 @@
 
 
 <dl><dt id="arg-vals">vals<a class="anchor" aria-label="anchor" href="#arg-vals"></a></dt>
-<dd><p>Numeric values</p></dd>
+<dd><p>Numeric values.</p></dd>
 
 
 <dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
-<dd><p>Frames</p></dd>
+<dd><p>Number of frames.</p></dd>
 
 
 <dt id="arg-ease">ease<a class="anchor" aria-label="anchor" href="#arg-ease"></a></dt>
-<dd><p>type</p></dd>
+<dd><p>Default `"cubic"`. Interpolation type.</p></dd>
+
+
+<dt id="arg-closed">closed<a class="anchor" aria-label="anchor" href="#arg-closed"></a></dt>
+<dd><p>Default `FALSE`. Whether spline interpolation should match speed
+at the path boundaries.</p></dd>
 
 </dl></div>
     <div id="value">
@@ -132,7 +137,7 @@
 </div>
 
 <div class="pkgdown">
-  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p></p><p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
       </footer></div>
