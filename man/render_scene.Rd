@@ -59,7 +59,8 @@ render_scene(
   camera = NULL,
   start_frame = 1,
   end_frame = NA,
-  mode = c("auto", "image", "animation", "preview")
+  mode = c("auto", "image", "animation", "preview"),
+  gui = c("auto", "imgui", "legacy", "none")
 )
 }
 \arguments{
@@ -79,6 +80,8 @@ The total number of samples in this case will be the product of the two numbers.
 
 \item{camera_description_file}{Default `NA`. Filename of a camera description file for rendering with
 a realistic camera. Several camera files are built-in: `"50mm"`,`"wide"`,`"fisheye"`, and `"telephoto"`.}
+
+\item{gui}{Default `c("auto", "imgui", "legacy", "none")`. Preview provider. Auto tries the optional native provider for still renders and falls back on classified availability failures. Imgui requires it; legacy uses the existing preview; none opens no window. Animation retains the legacy path in this version.}
 
 \item{preview}{Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.}

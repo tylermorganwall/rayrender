@@ -244,6 +244,7 @@ public:
 };
 
 class MicrofacetReflection : public material {
+  friend struct PreviewMaterialAccess;
 public:
   MicrofacetReflection(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                        point3f eta, point3f k)
@@ -268,6 +269,7 @@ private:
 };
 
 class MicrofacetTransmission : public material {
+  friend struct PreviewMaterialAccess;
 public:
   MicrofacetTransmission(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                          point3f eta2, point3f k) : 
@@ -294,6 +296,7 @@ private:
 };
 
 class glossy : public material {
+  friend struct PreviewMaterialAccess;
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          point3f Rs, point3f Rd2)

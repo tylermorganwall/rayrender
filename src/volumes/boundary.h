@@ -100,6 +100,13 @@ public:
                             std::string(std::getenv("RAYRENDER_VOLUME_STATS")) == "true";
   mutable VolumeStatistics statistics;
   Rcpp::List Statistics() const;
+  void ReplacePreparedScene(VolumeScene& next) noexcept {
+    boundaries.objects.swap(next.boundaries.objects);
+    boundary_bvh.swap(next.boundary_bvh);children.swap(next.children);
+    medium_cache.swap(next.medium_cache);light_sampler.swap(next.light_sampler);
+    boundary_count=next.boundary_count;has_media=next.has_media;has_emission=next.has_emission;
+    statistics.Reset();
+  }
   void Finish(Float t0, Float t1);
   VolumePathState InitialState(const Ray &, const std::atomic<bool> *cancel,
                               const std::function<bool()> &poll = {}) const;

@@ -1,4 +1,5 @@
 #include "../core/buildscene.h"
+#include "preview_scene.h"
 #include "../hitables/hitable.h"
 #include "../hitables/sphere.h"
 #include "../hitables/hitablelist.h"
@@ -405,12 +406,11 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
                                      std::vector<int>& texture_idx,
                                      bool verbose, 
-                                     random_gen& rng) {
+                                     random_gen& rng, PreviewScene* preview_scene) {
   auto nvec  = std::make_unique<int[]>(3);
   auto nveca = std::make_unique<int[]>(3);
   auto nvecb = std::make_unique<int[]>(3);
   auto nvecr = std::make_unique<int[]>(3);
-  int init_texture_size = texture_idx.size();
   
   hitable_list list;
   NumericMatrix IdentityMat(4,4);
@@ -472,7 +472,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                           has_bump,
                                           has_roughness,
                                           tricolorinfo);
-      texture_idx.push_back(init_texture_size + i);
+      // Recursive instance builds append their own textures between parent rows.
+      texture_idx.push_back(static_cast<int>(textures.size())-1);
     }
     if(is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
       shared_materials->push_back(shape_material);
@@ -527,7 +528,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
     ShapeEnum shape_type = static_cast<ShapeEnum>(shape(i));
     vec3f center = vec3f(x(i), y(i), z(i));
     
-    Transform GroupTransform(GroupTransformMat);
+    const Transform editor_delta=preview_scene && shape_type!=INSTANCE ? preview_scene->ObjectTransform(i,0) : Transform();
+    Transform GroupTransform=editor_delta*Transform(GroupTransformMat);
     Transform TempM = GroupTransform * Translate(center) *
       rotation_order_matrix(angle, order_rotation) * 
       Scale(scales[0], scales[1], scales[2]);
@@ -535,8 +537,8 @@ std::shared_ptr<hitable> build_scene(List& scene,
     Transform* WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
     
     
-    Transform AnimationStartTransform(StartTransformAnimationMat);
-    Transform AnimationEndTransform(EndTransformAnimationMat);
+    Transform AnimationStartTransform=editor_delta*Transform(StartTransformAnimationMat)*Inverse(editor_delta);
+    Transform AnimationEndTransform=editor_delta*Transform(EndTransformAnimationMat)*Inverse(editor_delta);
     Transform* StartAnim = transformCache.Lookup(AnimationStartTransform);
     Transform* EndAnim = transformCache.Lookup(AnimationEndTransform);
     
@@ -887,47 +889,42 @@ std::shared_ptr<hitable> build_scene(List& scene,
         NumericVector scale_y = as<NumericVector>(shape_properties["scale_y"]);
         NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
         IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
-        auto instance_importance_sample_list = std::make_shared<hitable_list>();
-        if(volume_scene) {
-          instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
-          instance_importance_sample_list->volume_scene->medium_cache = volume_scene->medium_cache;
-          volume_scene->children.push_back(instance_importance_sample_list->volume_scene);
-        }
-        std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
-                                                              shape_vec,
-                                                              shutteropen,
-                                                              shutterclose,
-                                                              textures, 
-                                                              alpha_textures, 
-                                                              bump_textures, 
-                                                              roughness_textures,  
-                                                              shared_materials,
-                                                              alpha, bump, roughness,
-                                                              bvh_type,
-                                                              transformCache,
-                                                              texCache,
-                                                              (*instance_importance_sample_list),
-                                                              instanced_objects,
-                                                              instance_importance_sampled,
-                                                              texture_idx,
-                                                              false,
-                                                              rng);
-        instanced_objects.push_back(instance_scene);
-        auto child_volumes = instance_importance_sample_list->volume_scene;
-        if(volume_scene && child_volumes) {
-          volume_scene->has_media |= child_volumes->has_media;
-          volume_scene->has_emission |= child_volumes->has_emission;
-        }
-        bool any_importance_sampled = instance_importance_sample_list->size() > 0;
-        if(any_importance_sampled) {
-          instance_importance_sampled.push_back(instance_importance_sample_list);
-        }
-        
+        auto build_child = [&]() {
+          auto lights=std::make_shared<hitable_list>();
+          if(volume_scene) {
+            lights->volume_scene=std::make_shared<VolumeScene>();
+            lights->volume_scene->medium_cache=volume_scene->medium_cache;
+          }
+          auto child=build_scene(original_scene,shape_vec,shutteropen,shutterclose,
+            textures,alpha_textures,bump_textures,roughness_textures,shared_materials,
+            alpha,bump,roughness,bvh_type,transformCache,texCache,*lights,
+            instanced_objects,instance_importance_sampled,texture_idx,false,rng);
+          instanced_objects.push_back(child);
+          instance_importance_sampled.push_back(lights);
+          if(volume_scene) {
+            volume_scene->children.push_back(lights->volume_scene);
+            volume_scene->has_media |= lights->volume_scene->has_media;
+            volume_scene->has_emission |= lights->volume_scene->has_emission;
+          }
+          return std::make_pair(child,lights);
+        };
+        auto shared_child=build_child();
         for(size_t ii = 0; ii < (size_t)x_values.size(); ii++) {
+          // Rebuild only edited placements independently; all untouched instances
+          // retain their shared geometry and material storage.
+          auto child=preview_scene && preview_scene->UniqueInstance(i,ii) ? build_child() : shared_child;
+          auto instance_scene=child.first;
+          auto instance_importance_sample_list=child.second;
+          auto child_volumes=instance_importance_sample_list->volume_scene;
+          bool any_importance_sampled=instance_importance_sample_list->size()>0;
+          const Transform instance_delta=preview_scene?preview_scene->ObjectTransform(i,ii):Transform();
+          Transform* instance_start=transformCache.Lookup(instance_delta*AnimationStartTransform*Inverse(instance_delta));
+          Transform* instance_end=transformCache.Lookup(instance_delta*AnimationEndTransform*Inverse(instance_delta));
+          AnimatedTransform instance_animation(instance_start,start_time,instance_end,end_time);
           vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
           NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
 
-          Transform InstanceTransform = GroupTransform * 
+          Transform InstanceTransform = instance_delta * GroupTransform *
             Translate(center_instance) * 
             rotation_order_matrix(angle_instance, order_rotation) * 
             Scale(scale_x(ii), scale_y(ii), scale_z(ii));
@@ -938,15 +935,19 @@ std::shared_ptr<hitable> build_scene(List& scene,
           auto world_instance=std::make_shared<instance>(instance_scene.get(),ObjToWorldInst,
               WorldToObjInst,instance_importance_sample_list.get(),boundary_offset);
           std::shared_ptr<hitable> placed=world_instance;
-          if(is_animated) placed=std::make_shared<AnimatedHitable>(placed,Animate);
+          if(is_animated) placed=std::make_shared<AnimatedHitable>(placed,instance_animation);
+          if(preview_scene) {
+            Transform animation;instance_animation.Interpolate(.5f,&animation);
+            preview_scene->Record(i,ii,placed,animation*InstanceTransform);
+          }
           list.add(placed);
           if(volume_scene && child_volumes->boundary_bvh) {
             ValidateMediumTransform(*ObjToWorldInst);
-            if(is_animated) { ValidateMediumTransform(*StartAnim); ValidateMediumTransform(*EndAnim); }
+            if(is_animated) { ValidateMediumTransform(*instance_start); ValidateMediumTransform(*instance_end); }
             auto boundary_instance = std::make_shared<instance>(child_volumes->boundary_bvh.get(),
               ObjToWorldInst, WorldToObjInst, instance_importance_sample_list.get(), boundary_offset);
             std::shared_ptr<hitable> boundary_placement=boundary_instance;
-            if(is_animated) boundary_placement=std::make_shared<AnimatedHitable>(boundary_placement,Animate);
+            if(is_animated) boundary_placement=std::make_shared<AnimatedHitable>(boundary_placement,instance_animation);
             volume_scene->boundaries.add(boundary_placement);
           }
           if(any_importance_sampled) {
@@ -955,6 +956,10 @@ std::shared_ptr<hitable> build_scene(List& scene,
         }
         break;
       }
+    }
+    if(preview_scene && shape_type!=INSTANCE && entry) {
+      Transform animation;Animate.Interpolate(.5f,&animation);
+      preview_scene->Record(i,0,entry,animation*TempM);
     }
     if(importance_sample && shape_type != INSTANCE && !(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))) {
       imp_sample_objects.add(entry);

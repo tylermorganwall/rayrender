@@ -6,6 +6,7 @@
 #include "../math/float.h"
 using namespace Rcpp;
 
+class PreviewScene;
 class TransformCache;
 class TextureCache;
 class material;
@@ -38,7 +39,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
                                      std::vector<int>& texture_idx,
                                      bool verbose,
-                                     random_gen& rng); 
+                                     random_gen& rng, PreviewScene* preview_scene = nullptr);
 
 
 #endif

@@ -6,12 +6,15 @@
 #include <string>
 #include <vector>
 #include "Rcpp.h"
+#include "rimgui_adapter.h"
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
+#include "preview_color.h"
 #include "../core/camera.h"
 #include "../hitables/hitable.h"
 
 class VolumeScene;
+class PreviewScene;
 
 struct PreviewTextOverlay {
   point3f anchor;
@@ -89,6 +92,17 @@ public:
                  bool _auto_exposure);
 #endif
   ~PreviewDisplay();
+  PreviewScene* scene_editor = nullptr;
+  bool ApplyNativeObjectControls();
+  void UpdateNativeObjectCamera();
+  RayrenderGui* native_gui = nullptr; // Owned by the outer R unwind boundary.
+  void AttachNativeGui(RayrenderGui*,bool edit,bool deferred);
+  bool DrawNativeGui(adaptive_sampler&,size_t,Float,hitable*,random_gen&);
+  bool ApplyNativeControls(hitable* world);
+  void ApplyNativeSkyControls();
+  void SetSunControls(double elevation,double azimuth,std::function<void(double,double)> update);
+  void SetSkyControls(double latitude,double longitude,const std::string& datetime,
+                      std::function<std::string(double,double,const std::string&)> update);
   void SetCamera(RayCamera* _cam);
   // Coordinates match the renderer's film samples, independent of window API.
   bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
@@ -121,7 +135,11 @@ public:
                                 RayMatrix& rgb,
                                 size_t ns);
   void ResetPreviewExposure();
-  Float ApplyPreviewExposure(Float value, Float sample_count) const;
+  void SetToneMap(const std::string& method) { color_transform.SetToneMap(method); }
+  void PreparePreviewColor(adaptive_sampler& sampler, RayMatrix& rgb, size_t ns);
+  point3f ApplyPreviewColor(const point3f& value, Float sample_count) const;
+  point3f ApplyPreviewColor(const RayMatrix& rgb, unsigned int x,
+                            unsigned int y, Float sample_count) const;
   void IncreasePreviewExposure();
   void DecreasePreviewExposure();
   void SetShutterSpeed(Float value);
@@ -219,6 +237,7 @@ public:
   bool preview_exposure_calibrated;
   Float preview_exposure_scale;
   Float preview_exposure_adjustment;
+  PreviewColorTransform color_transform;
   bool write_fast_output;
   bool interactive;
   bool deferred_render;
@@ -258,6 +277,10 @@ public:
   std::vector<PreviewLineOverlay> line_overlays;
 
 private:
+  Float native_env_angle = 0, native_base_step = 1;
+  double sun_elevation = 0, sun_azimuth = 0;
+  std::function<void(double,double)> update_sun;
+  std::function<std::string(double,double,const std::string&)> update_sky;
   bool UpdateAtmosphere(bool haze, bool query_altitude);
   std::function<void(bool, bool)> update_atmosphere;
   bool atmosphere_haze = false, atmosphere_query_altitude = false;

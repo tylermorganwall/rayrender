@@ -93,7 +93,9 @@ group_objects = function(
     stopifnot(sum(axis_rotation * axis_rotation) > 0)
     Rotation = RotateAxis(angle, axis_rotation)
   }
+  preview_group = new.env(parent = emptyenv())
   for (i in seq_len(nrow(scene))) {
+    attr(scene$transforms[[i]], "rayrender_preview_group") = preview_group
     if (nrow(scene$transforms[[i]]$group_transform[[1]]) == 1) {
       scene$transforms[[i]]$group_transform[[1]] = Translation %*%
         PivotTranslateEnd %*%

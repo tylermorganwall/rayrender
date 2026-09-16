@@ -1,5 +1,29 @@
 # rayrender 0.42.0
 
+- Add native Shift-click object selection, transform gizmos, and a material-specific
+  panel. Selection stops at outer groups, instance placements, and mesh roots.
+  Edits rebuild geometry, volume boundaries, and light sampling after workers
+  drain; returned images carry committed `scene_edits` metadata. Requires rimgui
+  0.0.6 or later.
+
+- Native preview: fix macOS keyboard focus with rimgui 0.0.5, add a Fast preview
+  checkbox synchronized with F, and make UTC date/time components draggable and
+  directly editable before applying location/time.
+
+* Connect standard camera movement, lens, picking and keyframe controls to the
+  native preview. Add Sun elevation/azimuth and latitude/longitude/UTC controls
+  for atmospheric skies, applying scene changes between completed samples.
+
+* Use the selected tone map and the sRGB display transfer in live previews and
+  preview snapshots, matching final image color processing instead of using
+  a square-root gamma approximation. This applies to stills and animations,
+  including the legacy and native preview windows.
+
+* Add an optional native preview through rimgui. Choose `gui = "auto"`,
+  `"imgui"`, `"legacy"`, or `"none"` in `render_scene()`. The native window
+  displays progressive CPU renders with exposure and render/atmosphere controls;
+  rayrender still builds and renders without rimgui.
+
 * Move EXR white-balance baking controls from the render functions to
   `sky_light_image()`. Cache each adapted sky for use in stills and animations,
   reusing the generated sky when only the target white point changes.

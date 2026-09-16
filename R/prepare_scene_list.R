@@ -318,6 +318,7 @@ prepare_scene_list = function(
   camera_info$keep_colors = keep_colors
   camera_info$deferred_render = isTRUE(deferred_render)
   camera_info$iso = iso
+  camera_info$tonemap = tonemap
 
   if (max_depth <= 0) {
     stop("max_depth must be greater than zero")
@@ -350,6 +351,7 @@ prepare_scene_list = function(
   render_info$rotate_env = rotate_env
   render_info$intensity_env = intensity_env
   render_info$infinite_lights = prepare_scene_infinite_lights(infinite_lights)
+  render_info$native_sky = native_sky_controls(infinite_lights)
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene

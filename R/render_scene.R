@@ -13,6 +13,10 @@
 #' @param samples Default `100`. The maximum number of samples for each pixel. If this is a length-2
 #' vector and the `sample_method` is `stratified`, this will control the number of strata in each dimension.
 #' The total number of samples in this case will be the product of the two numbers.
+#' @param gui Default `c("auto", "imgui", "legacy", "none")`. Preview provider.
+#' Auto tries the optional native provider for still renders and falls back on
+#' classified availability failures. Imgui requires it; legacy uses the existing
+#' preview; none opens no window. Animation retains the legacy path in this version.
 #' @param preview Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 #' If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.
 #' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
@@ -305,9 +309,16 @@ render_scene = function(
   camera = NULL,
   start_frame = 1,
   end_frame = NA,
-  mode = c("auto", "image", "animation", "preview")
+  mode = c("auto", "image", "animation", "preview"),
+  gui = c("auto", "imgui", "legacy", "none")
 ) {
   mode = match.arg(mode)
+  gui = match.arg(gui)
+  if (gui == "none") {
+    preview = FALSE
+    interactive = FALSE
+    deferred_render = FALSE
+  }
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
@@ -446,6 +457,9 @@ render_scene = function(
     ) {
       batch_blockers = c(batch_blockers, "interactive preview is enabled")
     }
+    if (gui == "imgui") {
+      batch_blockers = c(batch_blockers, "native editor requested")
+    }
     if (length(batch_blockers) == 0) {
       return(render_camera_batch(
         scene = scene,
@@ -455,7 +469,8 @@ render_scene = function(
         end_frame = end_frame,
         width = width,
         height = height,
-        preview = if (identical(mode, "preview")) TRUE else preview,
+        preview = gui != "none" &&
+          (if (identical(mode, "preview")) TRUE else preview),
         denoise = denoise,
         samples = samples,
         min_variance = min_variance,
@@ -532,7 +547,8 @@ render_scene = function(
         camera = cam,
         start_frame = start_frame,
         end_frame = end_frame,
-        mode = mode
+        mode = mode,
+        gui = gui
       )
     })
     names(output) = vapply(cameras, function(cam) cam$name, character(1))
@@ -545,6 +561,12 @@ render_scene = function(
     render_mode == "animation" ||
       (render_mode == "preview" && nrow(selected_camera$motion) > 1)
   ) {
+    if (gui == "imgui") {
+      stop(
+        "The native editor currently supports still-image renders only.",
+        call. = FALSE
+      )
+    }
     return(render_animation_camera(
       scene = scene,
       camera = selected_camera,
@@ -552,7 +574,8 @@ render_scene = function(
       end_frame = end_frame,
       width = width,
       height = height,
-      preview = if (render_mode == "preview") TRUE else preview,
+      preview = gui != "none" &&
+        (if (render_mode == "preview") TRUE else preview),
       denoise = denoise,
       samples = samples,
       min_variance = min_variance,
@@ -625,6 +648,13 @@ render_scene = function(
     plot_scene = FALSE
   }
 
+  if (gui == "none") {
+    preview = FALSE
+  }
+  if (gui == "imgui") {
+    preview = TRUE
+  }
+
   init_time()
   if (print_debug_info) {
     message(sprintf(
@@ -657,7 +687,8 @@ HAS_OIDN: %s
     stop("Must specify a minimum width/height of 3 or more pixels")
   }
   if (
-    preview &&
+    gui == "legacy" &&
+      preview &&
       interactive &&
       has_gui_capability() &&
       !is.numeric(debug_channel) &&
@@ -751,7 +782,9 @@ HAS_OIDN: %s
   } else {
     list(active = FALSE)
   }
-  render_info$screen_text_occlusion = prepare_screen_text_occlusion(screen_text)
+  render_info$screen_text_occlusion = prepare_screen_text_occlusion(
+    screen_text
+  )
   render_info$screen_text_native_overlay = screen_text_native_overlay
   render_info$screen_line_preview = if (
     isTRUE(preview) || screen_line_native_overlay
@@ -760,7 +793,9 @@ HAS_OIDN: %s
   } else {
     list(active = FALSE)
   }
-  render_info$screen_line_occlusion = prepare_screen_line_occlusion(screen_line)
+  render_info$screen_line_occlusion = prepare_screen_line_occlusion(
+    screen_line
+  )
   render_info$screen_line_native_overlay = screen_line_native_overlay
 
   camera_info$preview = preview
@@ -773,6 +808,24 @@ HAS_OIDN: %s
     selected_camera$keyframe_motion_args
   )
   debug_channel = scene_info$debug_channel # converted to numeric
+
+  if (gui == "imgui" && render_info$debug_channel != 0) {
+    stop(
+      "The native editor currently requires debug_channel = 'none'.",
+      call. = FALSE
+    )
+  }
+  native_gui = resolve_native_gui(
+    gui,
+    isTRUE(preview) && render_info$debug_channel == 0
+  )
+  if (!is.null(native_gui$api)) {
+    on.exit(rimgui::release_api(native_gui$api), add = TRUE)
+  }
+  render_info$native_gui = native_gui
+  if (identical(native_gui$mode, "imgui") && isTRUE(interactive)) {
+    processed_scene = native_editor_scene(processed_scene)
+  }
 
   #Pathtrace Scene
   rgb_mat = render_scene_rcpp(
@@ -827,6 +880,9 @@ HAS_OIDN: %s
     screen_line_overlay = attr(rgb_mat, "screen_line_overlay"),
     exposure_adjustment = preview_exposure
   )
+  if (!is.null(attr(rgb_mat, "scene_edits"))) {
+    attr(return_array, "scene_edits") = attr(rgb_mat, "scene_edits")
+  }
   print_time(verbose, "Post-processed image")
 
   return(invisible(return_array))

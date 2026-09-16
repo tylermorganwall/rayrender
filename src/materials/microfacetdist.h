@@ -7,6 +7,7 @@
 #include "../materials/texture.h"
 
 class MicrofacetDistribution {
+  friend struct PreviewMaterialAccess;
 public:
   virtual ~MicrofacetDistribution() {}
   virtual Float D(const vec3f &wh) const = 0;
@@ -38,6 +39,7 @@ protected:
 };
 
 class BeckmannDistribution : public MicrofacetDistribution {
+  friend struct PreviewMaterialAccess;
 public:
   static Float RoughnessToAlpha(Float roughness) {
     roughness = std::fmax(roughness, (Float)0.0001550155);
@@ -57,6 +59,7 @@ public:
   BeckmannDistribution(Float alphax_, Float alphay_, std::shared_ptr<roughness_texture> roughness,
                        bool has_roughness, bool samplevis = true)
     : MicrofacetDistribution(samplevis), roughness(roughness), has_roughness(has_roughness) {
+    roughness_input=point2f(alphax_,alphay_);
     alphax_constant = RoughnessToAlpha(alphax_);
     alphay_constant = RoughnessToAlpha(alphay_);
     alphax_constant *= alphax_constant;
@@ -73,6 +76,7 @@ public:
   Float Lambda(const vec3f &w, Float u, Float v) const;
 private:
   
+  point2f roughness_input;
   Float alphax_constant, alphay_constant;
   std::shared_ptr<roughness_texture> roughness;
   bool has_roughness;
@@ -80,10 +84,12 @@ private:
 
 
 class TrowbridgeReitzDistribution : public MicrofacetDistribution {
+  friend struct PreviewMaterialAccess;
 public:
   TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, std::shared_ptr<roughness_texture> roughness,
                               bool has_roughness, bool samplevis = true)
     : MicrofacetDistribution(samplevis), roughness(roughness), has_roughness(has_roughness) {
+    roughness_input=point2f(alphax_,alphay_);
     alphax_constant = RoughnessToAlpha(alphax_);
     alphay_constant = RoughnessToAlpha(alphay_);
     alphax_constant *= alphax_constant;
@@ -107,6 +113,7 @@ public:
   Float Lambda(const vec3f &w, Float u, Float v) const;
 
 private:
+  point2f roughness_input;
   Float alphax_constant, alphay_constant;
   std::shared_ptr<roughness_texture> roughness;
   bool has_roughness;

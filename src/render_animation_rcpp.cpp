@@ -655,6 +655,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        &oidn_normal_output,
                                        denoise_frame);
         }
+        preview_display->SetToneMap(as<std::string>(tonemap(0)));
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -675,6 +676,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                      &oidn_albedo_output,
                      &oidn_normal_output,
                      denoise_frame, false);
+        d.SetToneMap(as<std::string>(tonemap(0)));
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -696,6 +698,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         } else {
           preview_display->SetCamera(frame_cam);
         }
+        preview_display->SetToneMap(as<std::string>(tonemap(0)));
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -713,6 +716,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          false);
+        d.SetToneMap(as<std::string>(tonemap(0)));
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,

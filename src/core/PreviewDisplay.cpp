@@ -342,10 +342,36 @@ void PreviewDisplay::CalibratePreviewExposure(adaptive_sampler& adaptive_pixel_s
   preview_exposure_calibrated = true;
 }
 
-Float PreviewDisplay::ApplyPreviewExposure(Float value, Float sample_count) const {
-  return std::sqrt(std::fmax((Float)0,
-                            value * preview_exposure_scale *
-                            preview_exposure_adjustment / sample_count));
+void PreviewDisplay::PreparePreviewColor(adaptive_sampler& sampler, RayMatrix& rgb,
+                                         size_t ns) {
+  CalibratePreviewExposure(sampler, rgb, ns);
+  if(!color_transform.NeedsLogAverage()) return;
+  const double gain = double(preview_exposure_scale) * preview_exposure_adjustment;
+  double log_sum = 0;
+  for(unsigned int x = 0; x < rgb.rows(); ++x) {
+    for(unsigned int y = 0; y < rgb.cols(); ++y) {
+      const double count = sampler.finalized[x + rgb.rows() * y] ?
+        (interactive ? 1.0 : 4.0) : double(ns) + 1;
+      PreviewColorTransform::RGB pixel = {
+        rgb(x,y,0) * gain / count, rgb(x,y,1) * gain / count,
+        rgb(x,y,2) * gain / count};
+      log_sum += std::log(std::max(PreviewColorTransform::Luminance(pixel), 1e-6));
+    }
+  }
+  color_transform.log_average = std::exp(log_sum / std::max(1u, rgb.size()));
+}
+
+point3f PreviewDisplay::ApplyPreviewColor(const point3f& value, Float sample_count) const {
+  const double gain = double(preview_exposure_scale) *
+                      preview_exposure_adjustment / sample_count;
+  const auto rgb = color_transform.Apply({value[0] * gain, value[1] * gain, value[2] * gain});
+  return point3f(rgb[0], rgb[1], rgb[2]);
+}
+
+point3f PreviewDisplay::ApplyPreviewColor(const RayMatrix& rgb, unsigned int x,
+                                         unsigned int y, Float sample_count) const {
+  return ApplyPreviewColor(point3f(rgb.value(x,y,0), rgb.value(x,y,1),
+                                    rgb.value(x,y,2)), sample_count);
 }
 
 void PreviewDisplay::ResetPreviewExposure() {
@@ -886,16 +912,8 @@ bool PreviewDisplay::ProjectWorldPoint(const point3f& point,
   if(!cam) {
     return false;
   }
-  unsigned int display_width = 0;
-  unsigned int display_height = 0;
-#ifdef RAY_HAS_X11
-  display_width = width;
-  display_height = height;
-#endif
-#ifdef RAY_WINDOWS
-  display_width = ::width;
-  display_height = ::height;
-#endif
+  const unsigned int display_width = snapshot_width;
+  const unsigned int display_height = snapshot_height;
   if(display_width == 0 || display_height == 0) {
     return false;
   }
@@ -965,16 +983,8 @@ bool PreviewDisplay::ProjectTextAnchor(const PreviewTextOverlay& overlay,
   if(!cam) {
     return false;
   }
-  unsigned int display_width = 0;
-  unsigned int display_height = 0;
-#ifdef RAY_HAS_X11
-  display_width = width;
-  display_height = height;
-#endif
-#ifdef RAY_WINDOWS
-  display_width = ::width;
-  display_height = ::height;
-#endif
+  const unsigned int display_width = snapshot_width;
+  const unsigned int display_height = snapshot_height;
   if(display_width == 0 || display_height == 0) {
     return false;
   }
@@ -1089,16 +1099,8 @@ bool PreviewDisplay::IsTextPixelOccluded(const PreviewTextOverlay& overlay,
   if(!overlay.partial_occlusion || !cam || !world) {
     return false;
   }
-  unsigned int display_width = 0;
-  unsigned int display_height = 0;
-#ifdef RAY_HAS_X11
-  display_width = width;
-  display_height = height;
-#endif
-#ifdef RAY_WINDOWS
-  display_width = ::width;
-  display_height = ::height;
-#endif
+  const unsigned int display_width = snapshot_width;
+  const unsigned int display_height = snapshot_height;
   if(display_width == 0 || display_height == 0 || cam->get_fov() < 0) {
     return false;
   }
@@ -1184,16 +1186,8 @@ bool PreviewDisplay::IsLinePixelOccluded(const PreviewLineOverlay& overlay,
   if(!overlay.partial_occlusion || !cam || !world) {
     return false;
   }
-  unsigned int display_width = 0;
-  unsigned int display_height = 0;
-#ifdef RAY_HAS_X11
-  display_width = width;
-  display_height = height;
-#endif
-#ifdef RAY_WINDOWS
-  display_width = ::width;
-  display_height = ::height;
-#endif
+  const unsigned int display_width = snapshot_width;
+  const unsigned int display_height = snapshot_height;
   if(display_width == 0 || display_height == 0 || cam->get_fov() < 0) {
     return false;
   }
@@ -1442,6 +1436,7 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
 void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
                                                         random_gen& rng, std::vector<Float>* coverage) {
+  const unsigned int width=snapshot_width,height=snapshot_height;
   if(text_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -1503,6 +1498,7 @@ void PreviewDisplay::CompositeTextOverlaysToFloatBuffer(std::vector<Float>& rgb,
 void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
                                                         hitable* world,
                                                         random_gen& rng, std::vector<Float>* coverage) {
+  const unsigned int width=snapshot_width,height=snapshot_height;
   if(line_overlays.empty() || rgb.empty()) {
     return;
   }
@@ -1628,6 +1624,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   if(PollCloseEvent()) {
     return;
   }
+  if(native_gui) {
+    if(DrawNativeGui(adaptive_pixel_sampler,ns,percent_done,world,rng)) reset_preview_render();
+    return;
+  }
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
@@ -1647,7 +1647,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #else
     RayMatrix &rgb  = adaptive_pixel_sampler.rgb;
 #endif
-    CalibratePreviewExposure(adaptive_pixel_sampler, rgb, ns);
+    PreparePreviewColor(adaptive_pixel_sampler, rgb, ns);
     std::vector<bool>& finalized = adaptive_pixel_sampler.finalized;
     std::vector<bool>& just_finalized = adaptive_pixel_sampler.just_finalized;
     
@@ -1664,15 +1664,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             b_col = 0;
           } else {
             Float sample_count = interactive ? 1.f : 4.f;
-            r_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,0), sample_count);
-            g_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,1), sample_count);
-            b_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,2), sample_count);
+            const point3f mapped = ApplyPreviewColor(rgb, width-1-i/4, height-1-j, sample_count);
+            r_col = mapped[0]; g_col = mapped[1]; b_col = mapped[2];
           }
         } else {
           samples = ns+1;
-          r_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,0), samples);
-          g_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,1), samples);
-          b_col = ApplyPreviewExposure(rgb((width - 1 - i/4),height-1-j,2), samples);
+          const point3f mapped = ApplyPreviewColor(rgb, width-1-i/4, height-1-j, samples);
+          r_col = mapped[0]; g_col = mapped[1]; b_col = mapped[2];
         }
 
         data[i + 4*width*j]   = (unsigned char)(255*clamp(b_col,0,1));
@@ -2275,7 +2273,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #else
     RayMatrix &rgb_s  = adaptive_pixel_sampler.rgb;
 #endif
-    CalibratePreviewExposure(adaptive_pixel_sampler, rgb_s, ns);
+    PreparePreviewColor(adaptive_pixel_sampler, rgb_s, ns);
     EnvWorldToObject_w = EnvWorldToObject;
     EnvObjectToWorld_w = EnvObjectToWorld;
     Start_EnvWorldToObject_w = Start_EnvWorldToObject;
@@ -2302,15 +2300,13 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             b_col = 0.f;
           } else {
             Float sample_count = interactive ? 1.f : 4.f;
-            r_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,0), sample_count);
-            g_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,1), sample_count);
-            b_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,2), sample_count);
+            const point3f mapped = ApplyPreviewColor(rgb_s, width-1-i/3, height-1-j, sample_count);
+            r_col = mapped[0]; g_col = mapped[1]; b_col = mapped[2];
           }
         } else {
           samples = (Float)ns+1.f;
-          r_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,0), samples);
-          g_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,1), samples);
-          b_col = ApplyPreviewExposure(rgb_s((width - 1 - i/3),height-1-j,2), samples);
+          const point3f mapped = ApplyPreviewColor(rgb_s, width-1-i/3, height-1-j, samples);
+          r_col = mapped[0]; g_col = mapped[1]; b_col = mapped[2];
         }
         rgb[i+3*width*j]   = clamp(r_col,0.f,1.f);
         rgb[i+3*width*j+1] = clamp(g_col,0.f,1.f);
@@ -2409,8 +2405,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   preview_motion_frame = 0;
   preview_motion_restore_keyframe = -1;
   preview_motion_active = false;
-  snapshot_width = 0;
-  snapshot_height = 0;
+  snapshot_width = _width;
+  snapshot_height = _height;
   write_fast_output = false;
   terminate = false;
   deferred_render = _deferred_render && preview && _interactive;
@@ -2559,8 +2555,10 @@ void PreviewDisplay::CaptureVolumeSnapshot(adaptive_sampler& sampler, RayMatrix&
     Float count=final ? 1 : std::max(size_t(1),samples);
     Float alpha=clamp(final ? sampler.a(sx,sy,0) : 1-sampler.a(sx,sy,0)/count,0.f,1.f);
     snapshot_alpha[pixel]=alpha;
-    for(int channel=0;channel<3;++channel)
-      rgb[3*pixel+channel]=alpha>0 ? ApplyPreviewExposure(color(sx,sy,channel)/alpha,count) : 0;
+    const point3f mapped = alpha > 0 ?
+      ApplyPreviewColor(point3f(color(sx,sy,0),color(sx,sy,1),color(sx,sy,2))/alpha,count) :
+      point3f(0);
+    for(int channel=0;channel<3;++channel) rgb[3*pixel+channel]=mapped[channel];
   }
   CompositeTextOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
   CompositeLineOverlaysToFloatBuffer(rgb,world,rng,&snapshot_alpha);
@@ -2619,6 +2617,8 @@ void PreviewDisplay::SavePreviewSnapshot() const {
 }
 
 bool PreviewDisplay::PollCloseEvent() {
+  // During worker waits this touches only GUI-owned state and its last image.
+  if(native_gui) { terminate=native_gui->poll();return terminate; }
 #ifdef RAY_HAS_X11
   if(d != nullptr && !terminate) {
     std::vector<XEvent> deferred_events;
@@ -3219,6 +3219,66 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
 }
 }
 
+context("Preview color processing") {
+  test_that("all tone maps match rayimage on progressive and finalized pixels") {
+    Transform identity;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+               60.f, 1.f, 0.f, 5.f, 0.f, 1.f, 1.f);
+    auto display = MakeTestPreviewDisplay(cam, identity);
+    RayMatrix rgb(4,4,3), secondary(4,4,3), normals(4,4,3), albedo(4,4,3);
+    RayMatrix alpha(4,4,1), draw(4,4,3);
+    adaptive_sampler sampler(1,4,4,8,0,0,1,rgb,secondary,normals,albedo,alpha,draw,false);
+    Rcpp::Environment rayimage = Rcpp::Environment::namespace_env("rayimage");
+    Rcpp::Function read_image = rayimage["ray_read_image"];
+    Rcpp::Function tonemap = rayimage["render_tonemap"];
+    Rcpp::Function encode = rayimage["render_gamma_linear"];
+    const double values[] = {0, .001, .0031308, .01, .18, .5, 1, 16};
+    for(bool interactive : {false, true}) {
+      display->interactive = interactive;
+      for(Float gain : {Float(.25), Float(1), Float(4)}) {
+        display->preview_exposure_adjustment = gain;
+        Rcpp::NumericVector image(4*4*3);
+        image.attr("dim") = Rcpp::IntegerVector::create(4,4,3);
+        for(unsigned int x=0; x<4; ++x) for(unsigned int y=0; y<4; ++y) {
+          sampler.finalized[x+4*y] = (x+y)%2 == 0;
+          const double count = sampler.finalized[x+4*y] ? (interactive ? 1 : 4) : 8;
+          for(unsigned int channel=0; channel<3; ++channel) {
+            rgb(x,y,channel) = values[(x+4*y+channel*3)%8] * count;
+            image[y+4*x+16*channel] = double(rgb(x,y,channel)) * gain / count;
+          }
+        }
+        Rcpp::RObject input = read_image(image,
+          Rcpp::Named("assume_colorspace") = rayimage["CS_SRGB"]);
+        for(const std::string method : {"raw", "hbd", "reinhard", "uncharted"}) {
+          display->SetToneMap(method);
+          display->PreparePreviewColor(sampler,rgb,7);
+          Rcpp::RObject mapped = tonemap(input,Rcpp::Named("method")=method);
+          Rcpp::NumericVector expected = encode(mapped,Rcpp::Named("srgb_to_linear")=false);
+          for(unsigned int x=0; x<4; ++x) for(unsigned int y=0; y<4; ++y) {
+            const Float count = sampler.finalized[x+4*y] ? (interactive ? 1 : 4) : 8;
+            const point3f actual = display->ApplyPreviewColor(rgb,x,y,count);
+            for(unsigned int channel=0; channel<3; ++channel)
+              expect_true(std::abs(actual[channel]-expected[y+4*x+16*channel]) < 2e-6);
+          }
+        }
+      }
+    }
+  }
+
+  test_that("raw uses the sRGB toe and HBD does not encode twice") {
+    PreviewColorTransform transform;
+    auto rgb = transform.Apply({.001, .18, 4});
+    expect_true(std::abs(rgb[0] - .01292) < 1e-10);
+    expect_true(std::abs(rgb[1] - .46135612950044164) < 1e-10);
+    expect_true(std::abs(rgb[2] - 1) < 1e-10);
+    transform.SetToneMap("hbd");
+    rgb = transform.Apply({0, .18, 4});
+    expect_true(rgb[0] == 0);
+    expect_true(std::abs(rgb[1] - .508028281843196) < 1e-10);
+    expect_true(rgb[2] < 1);
+  }
+}
+
 context("Preview atmosphere controls") {
   test_that("replacing an environment updates emission as well as sampling") {
     Transform identity;
@@ -3455,3 +3515,5 @@ context("Preview shutter speed controls") {
   }
 }
 #endif
+
+#include "rimgui_preview.h"

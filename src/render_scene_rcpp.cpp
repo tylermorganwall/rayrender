@@ -1,3 +1,6 @@
+#include "core/preview_sky.h"
+#include "core/preview_scene.h"
+#include "volumes/lights.h"
 #include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
@@ -775,8 +778,7 @@ static NumericVector composite_screen_line_overlay(
 }
 
 
-// [[Rcpp::export]]
-List render_scene_rcpp(List scene, List camera_info, List scene_info, List render_info) {
+static List render_scene_impl(List scene, List camera_info, List scene_info, List render_info, RayrenderGui* native_gui) {
   RESET_RAYLOG();
   START_TIMER("Overall Time");
   feclearexcept(FE_ALL_EXCEPT);
@@ -962,6 +964,12 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::vector<std::shared_ptr<roughness_texture> > roughness;
   std::vector<int> texture_idx;
 
+  std::unique_ptr<PreviewScene> scene_editor;
+  if(interactive && render_info.containsElementNamed("native_gui")) {
+    List selection=render_info["native_gui"];
+    if(as<std::string>(selection["mode"])=="imgui")scene_editor=std::make_unique<PreviewScene>(scene);
+  }
+  const random_gen scene_build_rng=rng;
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
                                                    static_cast<Float>(0),
@@ -980,7 +988,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    instance_importance_sampled,
                                                    texture_idx,
                                                    verbose, 
-                                                   rng);
+                                                   rng, scene_editor.get());
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -1087,8 +1095,31 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::vector<PreviewLineOverlay> line_overlays =
     parse_preview_line_overlays(render_info);
   preview = preview && debug_channel == 0;
+  bool use_native_gui=false;
+  if(render_info.containsElementNamed("native_gui")) {
+    List selection=render_info["native_gui"];
+    const std::string mode=as<std::string>(selection["mode"]);
+    if(mode=="none") preview=false;
+    if(mode=="imgui") {
+      int32_t status=native_gui->acquire(selection["api"]);
+      if(!status) status=native_gui->open(nx,ny);
+      if(status) {
+        const std::string detail=native_gui->message;
+        native_gui->close();
+        if(as<bool>(selection["fallback"]) && RayrenderGui::expected_unavailability(status)) {
+          Rprintf("Native editor unavailable (status %d, %s); using existing preview.\n",status,detail.c_str());
+        } else {
+          stop("Native editor initialization failed (status %d): %s",status,detail.c_str());
+        }
+      } else {
+        use_native_gui=true;
+        native_gui->objects=shape.size();
+      }
+    }
+  }
+  const bool legacy_preview=preview && !use_native_gui;
 #ifdef HAS_OIDN
-  PreviewDisplay Display(nx,ny, preview, interactive, 
+  PreviewDisplay Display(nx,ny, legacy_preview, interactive,
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
@@ -1097,20 +1128,21 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          &oidn_normal_output,
                          denoise, auto_exposure);
 #else
-  PreviewDisplay Display(nx,ny, preview, interactive, 
+  PreviewDisplay Display(nx,ny, legacy_preview, interactive,
                          deferred_render, (lookat-lookfrom).length(), cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
-  // Keep complete, immutable light variants for interactive atmosphere changes.
-  // Rebuilding the mixture also updates altitude-dependent sampling weights and
-  // celestial filtering. Coefficients and image textures use their existing caches.
+  if(camera_info.containsElementNamed("tonemap"))
+    Display.SetToneMap(as<std::string>(camera_info["tonemap"]));
+  if(use_native_gui) Display.AttachNativeGui(native_gui,interactive,deferred_render);
+  // Replace immutable light snapshots only after sample workers have drained.
   if(interactive && has_atmosphere && hasbackground) {
     auto environment_light = std::static_pointer_cast<InfiniteAreaLight>(background_sphere);
-    Rcpp::List descriptions = Rcpp::as<Rcpp::List>(render_info["infinite_lights"]);
-    for(R_xlen_t i = 0; i < descriptions.size(); ++i) {
-      Rcpp::List description = descriptions[i];
+    auto descriptions = std::make_shared<Rcpp::List>(Rcpp::as<Rcpp::List>(render_info["infinite_lights"]));
+    for(R_xlen_t i = 0; i < descriptions->size(); ++i) {
+      Rcpp::List description = (*descriptions)[i];
       if(Rcpp::as<std::string>(description["type"]) != "prague") continue;
       const bool haze = !description.containsElementNamed("haze") || Rcpp::as<bool>(description["haze"]);
       const bool query_altitude = !description.containsElementNamed("query_altitude") ||
@@ -1118,19 +1150,54 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       auto variants = std::make_shared<std::array<std::shared_ptr<InfiniteLight>, 4>>();
       (*variants)[2 * query_altitude + haze] = environment_light->light;
       auto volume_scene = imp_sample_objects.volume_scene;
+      auto publish = [descriptions, i, variants, environment_light, volume_scene, &texCache](Rcpp::List updated) {
+        auto light=BuildInfiniteLights(updated,texCache);
+        // Construction and all R work finish before changing either owner.
+        Rcpp::List atmosphere=updated[i];
+        const bool haze=Rcpp::as<bool>(atmosphere["haze"]);
+        const bool altitude=Rcpp::as<bool>(atmosphere["query_altitude"]);
+        environment_light->SetLight(light);
+        volume_scene->atmosphere=light->GetTransportAtmosphere();
+        *descriptions=updated;
+        variants->fill(nullptr);
+        (*variants)[2*altitude+haze]=light;
+      };
       Display.SetAtmosphereControls(haze, query_altitude,
         [descriptions, i, variants, environment_light, volume_scene, &texCache](bool haze, bool altitude) {
+          Rcpp::List updated=Rcpp::clone(*descriptions);
+          Rcpp::List atmosphere=updated[i];
+          atmosphere["haze"]=haze;atmosphere["query_altitude"]=altitude;
           auto &light = (*variants)[2 * altitude + haze];
-          if(!light) {
-            Rcpp::List updated = Rcpp::clone(descriptions);
-            Rcpp::List atmosphere = updated[i];
-            atmosphere["haze"] = haze;
-            atmosphere["query_altitude"] = altitude;
-            light = BuildInfiniteLights(updated, texCache);
-          }
+          if(!light) light=BuildInfiniteLights(updated,texCache);
           environment_light->SetLight(light);
           volume_scene->atmosphere = light->GetTransportAtmosphere();
+          *descriptions=updated;
         });
+      auto move_sun=[descriptions,i,publish](double elevation,double azimuth) {
+        publish(PreviewSunDescriptions(*descriptions,i,elevation,azimuth));
+      };
+      Display.SetSunControls(Rcpp::as<double>(description["elevation"]),
+                             Rcpp::as<double>(description["azimuth"]),move_sun);
+      if(use_native_gui && render_info.containsElementNamed("native_sky") &&
+         !Rf_isNull(render_info["native_sky"])) {
+        Rcpp::List sky=render_info["native_sky"];
+        Rcpp::Function update=sky["update"];
+        Display.SetSkyControls(Rcpp::as<double>(sky["latitude"]),Rcpp::as<double>(sky["longitude"]),
+          Rcpp::as<std::string>(sky["datetime"]),
+          [update,descriptions,i,publish,move_sun,&Display](double latitude,double longitude,const std::string& datetime) {
+            Rcpp::List result=update(latitude,longitude,datetime);
+            std::string error=Rcpp::as<std::string>(result["error"]);
+            if(!error.empty())return error;
+            Rcpp::List updated=result["lights"];
+            Rcpp::List current=(*descriptions)[i],atmosphere=updated[i];
+            atmosphere["haze"]=current["haze"];atmosphere["query_altitude"]=current["query_altitude"];
+            const double elevation=Rcpp::as<double>(atmosphere["elevation"]);
+            const double azimuth=Rcpp::as<double>(atmosphere["azimuth"]);
+            publish(updated);
+            Display.SetSunControls(elevation,azimuth,move_sun);
+            return std::string();
+          });
+      }
       break;
     }
   }
@@ -1141,6 +1208,60 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   
   if(impl_only_bg || hasbackground) {
     imp_sample_objects.add(background_sphere);
+  }
+
+  if(use_native_gui && scene_editor) {
+    Display.scene_editor=scene_editor.get();
+    // All ownership needed by a replacement scene lives until its commit finishes.
+    struct PreparedScene {
+      std::vector<Float*> textures;
+      std::vector<unsigned char*> alpha_textures,bump_textures,roughness_textures;
+      std::vector<std::shared_ptr<material>> materials;
+      std::vector<std::shared_ptr<alpha_texture>> alpha;
+      std::vector<std::shared_ptr<bump_texture>> bump;
+      std::vector<std::shared_ptr<roughness_texture>> roughness;
+      std::vector<std::shared_ptr<hitable>> instances;
+      std::vector<std::shared_ptr<hitable_list>> instance_lights;
+      std::vector<int> texture_idx;
+      hitable_list lights;
+      std::shared_ptr<hitable> root;
+    };
+    scene_editor->prepare_rebuild=[&](PreviewScene& next)->std::function<void()> {
+      auto prepared=std::make_shared<PreparedScene>();
+      auto volume=imp_sample_objects.volume_scene;
+      if(volume) {
+        prepared->lights.volume_scene=std::make_shared<VolumeScene>();
+        prepared->lights.volume_scene->transparent_background=volume->transparent_background;
+        prepared->lights.volume_scene->atmosphere=volume->atmosphere;
+      }
+      random_gen build_rng=scene_build_rng;
+      prepared->root=build_scene(scene,shape,0,1,prepared->textures,
+        prepared->alpha_textures,prepared->bump_textures,prepared->roughness_textures,
+        &prepared->materials,prepared->alpha,prepared->bump,prepared->roughness,bvh_type,
+        transformCache,texCache,prepared->lights,prepared->instances,prepared->instance_lights,
+        prepared->texture_idx,false,build_rng,&next);
+      if(impl_only_bg || hasbackground)prepared->lights.add(background_sphere);
+      if(volume) {
+        prepared->lights.volume_scene->has_media |= has_atmosphere;
+        const char* choice=std::getenv("RAYRENDER_LIGHT_SAMPLER");
+        const auto method=(integrator_type!=IntegratorType::ShadowRays || (choice && std::string(choice)=="fixed"))
+          ? VolumeLightSampler::SelectionMethod::Fixed : VolumeLightSampler::SelectionMethod::BVH;
+        prepared->lights.volume_scene->light_sampler=std::make_shared<VolumeLightSampler>(prepared->lights,method);
+      }
+      return [&,prepared,volume]() {
+        // This checkpoint runs after sample workers drain. Keep the original
+        // VolumeScene address used by the integrator and atmosphere controls.
+        if(volume)volume->ReplacePreparedScene(*prepared->lights.volume_scene);
+        imp_sample_objects.objects.swap(prepared->lights.objects);
+        worldbvh.swap(prepared->root);world.objects[0]=worldbvh;
+        textures.swap(prepared->textures);alpha_textures.swap(prepared->alpha_textures);
+        bump_textures.swap(prepared->bump_textures);roughness_textures.swap(prepared->roughness_textures);
+        shared_materials->swap(prepared->materials);alpha.swap(prepared->alpha);
+        bump.swap(prepared->bump);roughness.swap(prepared->roughness);
+        instanced_objects.swap(prepared->instances);instance_importance_sampled.swap(prepared->instance_lights);
+        texture_idx.swap(prepared->texture_idx);
+      };
+    };
   }
 
   QUERY_MEMORY_USAGE();
@@ -1240,6 +1361,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
     final_image.attr("keyframes") = keyframes;
   }
+  if(use_native_gui && scene_editor)final_image.attr("scene_edits")=scene_editor->ExportEdits();
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
   final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
@@ -1276,4 +1398,48 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   PRINT_CURRENT_MEMORY("After cleanup");
   
   return(final_image);
+}
+
+/* Copyright (c) 2026 Tyler Morgan-Wall. MIT; LICENSE.protocol.
+ * Included once after render_scene_impl. The .Call signature stays unchanged.
+ * R_UnwindProtect owns GUI cleanup even if R performs a nonlocal jump.
+ */
+#include <exception>
+struct RayrenderGuiRun {
+  SEXP scene,camera,scene_info,render;
+  RayrenderGui* gui;
+  std::exception_ptr failure;
+};
+static SEXP rayrender_gui_body(void* data) {
+  RayrenderGuiRun* run=static_cast<RayrenderGuiRun*>(data);
+  try {
+    return render_scene_impl(Rcpp::List(run->scene),Rcpp::List(run->camera),
+                             Rcpp::List(run->scene_info),Rcpp::List(run->render),run->gui);
+  } catch(...) {
+    // Never let a C++ exception escape through R_UnwindProtect's C frames.
+    run->failure=std::current_exception();
+    return R_NilValue;
+  }
+}
+static void rayrender_gui_cleanup(void* data,Rboolean) {
+  RayrenderGuiRun* run=static_cast<RayrenderGuiRun*>(data);
+  if(run->gui) { run->gui->close();delete run->gui;run->gui=nullptr; }
+}
+// [[Rcpp::export]]
+List render_scene_rcpp(List scene,List camera_info,List scene_info,List render_info) {
+  // Allocate the continuation before opening any native resources.
+  SEXP token=PROTECT(R_MakeUnwindCont());
+  RayrenderGuiRun run{scene,camera_info,scene_info,render_info,nullptr,{}};
+  SEXP result;
+  try {
+    run.gui=new RayrenderGui;
+    result=R_UnwindProtect(rayrender_gui_body,&run,rayrender_gui_cleanup,&run,token);
+  } catch(...) {
+    rayrender_gui_cleanup(&run,static_cast<Rboolean>(0));
+    UNPROTECT(1);
+    throw;
+  }
+  UNPROTECT(1);
+  if(run.failure) std::rethrow_exception(run.failure);
+  return Rcpp::List(result);
 }
