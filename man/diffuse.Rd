@@ -118,10 +118,10 @@ scene = scene |>
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 
-#Add an orange volumetric (fog) cube
+#Add an rougher (Oren-Nayar) surface
 scene = scene |>
-  add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
-  material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
+  add_object(sphere(x=555/2-555/4,y=555/2,z=555/2,radius = 555/8,
+  material = diffuse(sigma = 80)))
 render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 

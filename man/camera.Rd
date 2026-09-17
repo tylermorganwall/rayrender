@@ -89,8 +89,7 @@ scene = generate_ground(depth = -0.5, material = diffuse(checkercolor = "blue"))
     name = "main",
     lookfrom = c(7, 1.5, 10),
     lookat = c(0, 0.5, 0),
-    fov = 15,
-    filename = NA_character_
+    fov = 15
   ))
 render_scene(scene, samples = 16, parallel = TRUE)
 
@@ -130,7 +129,7 @@ animated_scene = generate_ground(material = diffuse(checkercolor = "grey20"), de
   add_camera(camera(
     name = "flythrough_medium_blur",
     motion = camera_motion,
-    camera_motion_blur = FALSE,
+    camera_motion_blur = TRUE,
     shutter_speed = 4
   ))
 #We can render these individual cameras by calling out their specific name in render_scene()
@@ -161,7 +160,6 @@ render_scene(
   height = 400
 )
 #Now, with less blur
-#' #Now, with blur
 render_scene(
   animated_scene,
   camera = "flythrough_medium_blur",

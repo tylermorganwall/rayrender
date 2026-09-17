@@ -54,8 +54,6 @@ Dielectric (glass) Material
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a checkered ground
 scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
-render_scene(scene,parallel=TRUE, samples=16)
-
 #Add a glass sphere
 scene |>
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) |>
@@ -71,10 +69,10 @@ scene |>
 scene |>
   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) |>
   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) |>
-  add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-                     material=light(intensity=15),
-                     angle=c(0,-90,45), order_rotation = c(3,2,1))) |>
-  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16)
+  add_object(yz_rect(z=3,y=1,x=0,zwidth=3,ywidth=0.5,
+                     material=light(intensity=30),
+                     angle=c(0,90,-45), order_rotation = c(3,2,1))) |>
+  render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16, lookfrom=c(0,3,-10))
 
 #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
 #basis as it travels through the material. This effect is what gives some types of glass
@@ -82,8 +80,9 @@ scene |>
 #for the `green` (second) channel in the dielectric `attenuation` argument.
 generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) |>
   add_object(sphere(z=5,x=-0.5,y=1,material=light(intensity=10))) |>
-  add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
-                  material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) |>
+  add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,angle=c(45,110,0),
+                  material=dielectric(attenuation=c(1.2,0.2,1.2),
+                                      attenuation_intensity=2))) |>
   render_scene(parallel=TRUE, samples = 16)
 
 #If you have overlapping dielectrics, the `priority` value can help disambiguate what
@@ -96,18 +95,7 @@ generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod
                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) |>
   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
                     material = dielectric(priority=0,attenuation = c(10,3,10)))) |>
+  add_object(sphere(y=5,x=-5,radius=3,material=light())) |>
   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5))
-
-# We can also use this as a basic Constructive Solid Geometry interface by setting
-# the index of refraction equal to empty space, 1. This will subtract out those regions.
-# Here I make a concave lens by subtracting two spheres from a cube.
-generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) |>
-  add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) |>
-  add_object(sphere(radius=1,x=1.01,
-                    material = dielectric(priority=0,refraction=1))) |>
-  add_object(sphere(radius=1,x=-1.01,
-                    material = dielectric(priority=0,refraction=1))) |>
-  add_object(sphere(y=10,x=3,material=light(intensit=150))) |>
-  render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,3,5))
 \dontshow{\}) # examplesIf}
 }

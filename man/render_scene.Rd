@@ -53,7 +53,7 @@ render_scene(
   verbose = FALSE,
   print_debug_info = FALSE,
   new_page = TRUE,
-  integrator_type = "rtiow",
+  integrator_type = "nee",
   screen_text = NULL,
   screen_line = NULL,
   camera = NULL,
@@ -263,8 +263,8 @@ each render.}
 \item{new_page}{Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}
 
-\item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+\item{integrator_type}{Default `"nee"` (Next Event Estimation, with direct light sampling).
+Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 With `nee`, surfaces and participating media use RGB null-scattering transport;
 \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached

@@ -139,14 +139,14 @@
 #'   # Rebuilding a frame at the same t value always gives the same cloud.
 #'   for (frame in 0:10) {
 #'     set.seed(2026)
-#' ground_sphere |>
-#'     add_object(cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
-#'                width = 300, height = 10, depth = 300, animation_seed = 3, t=frame/15,
-#'                coverage = 0.01, detail = 0.99, optical_depth = 6, g = 0.6)) |>
-#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
-#'  render_scene(lookfrom = c(100, 100, -100), lookat = c(0, 20, 0),rotate_env=180,
-#' width=100,height=100,
-#'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
+#'     ground_sphere |>
+#'       add_object(cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
+#'                        width = 300, height = 10, depth = 300, animation_seed = 3, t=frame/10,
+#'                        coverage = 0.01, detail = 0.99, optical_depth = 6, g = 0.6)) |>
+#'       add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'       render_scene(lookfrom = c(100, 100, -100), lookat = c(0, 20, 0),rotate_env=180,
+#'               width=100,height=100,
+#'               fov = 35, integrator_type = "nee", samples = 16, iso=4)
 #'   }
 cloud = function(
   x = 0,

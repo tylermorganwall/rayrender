@@ -137,8 +137,8 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
-#' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-#' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+#' @param integrator_type Default `"nee"` (Next Event Estimation, with direct light sampling).
+#' Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 #' With `nee`, surfaces and participating media use RGB null-scattering transport;
 #' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
@@ -299,7 +299,7 @@ render_scene = function(
   verbose = FALSE,
   print_debug_info = FALSE,
   new_page = TRUE,
-  integrator_type = "rtiow",
+  integrator_type = "nee",
   screen_text = NULL,
   screen_line = NULL,
   camera = NULL,
