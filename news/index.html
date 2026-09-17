@@ -91,7 +91,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="page-header" data-toc-text="0.42.0" id="rayrender-0420">rayrender 0.42.0<a class="anchor" aria-label="anchor" href="#rayrender-0420"></a></h2>
+<h2 class="page-header" data-toc-text="0.42.0" id="rayrender-0420">rayrender 0.42.0<small>2026-09-16</small><a class="anchor" aria-label="anchor" href="#rayrender-0420"></a></h2>
 <ul><li><p>Move EXR white-balance baking controls from the render functions to <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code>. Cache each adapted sky for use in stills and animations, reusing the generated sky when only the target white point changes.</p></li>
 <li><p>Fix Windows <code>near</code>/<code>far</code> macro collisions in geometry and volume code. Remove unused preview state and signedness warnings in BVH construction and spline interpolation, and make haze-cut sorting bounds explicit. Correct RGB-to-HSV conversion to include blue when finding the maximum channel and initialize hue on every path.</p></li>
 <li><p>Automatically select the NEE integrator for scenes containing native atmospheric skies or attached media, including clouds and instanced media, instead of requiring an explicit <code>integrator_type = "nee"</code> selection. Recognize emitting media when deciding whether to add automatic ambient illumination.</p></li>
