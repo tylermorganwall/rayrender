@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.3</span>
       </span>
     </div>
 
@@ -141,6 +141,96 @@
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, samples <span class="op">=</span> <span class="fl">16</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="add_camera-1.png" alt="" width="768" height="768"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Stereoscopic Cornell box: objects at different depths emphasize parallax.</span></span></span>
+<span class="r-in"><span><span class="va">stereo_scene</span> <span class="op">=</span> <span class="fu"><a href="generate_cornell.html">generate_cornell</a></span><span class="op">(</span>lightwidth <span class="op">=</span> <span class="fl">200</span>, lightdepth <span class="op">=</span> <span class="fl">200</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="cube.html">cube</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">130</span>, y <span class="op">=</span> <span class="fl">140</span>, z <span class="op">=</span> <span class="fl">420</span>, scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">110</span>, <span class="fl">280</span>, <span class="fl">110</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">20</span>, <span class="fl">0</span><span class="op">)</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"ivory"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">130</span>, y <span class="op">=</span> <span class="fl">325</span>, z <span class="op">=</span> <span class="fl">420</span>, radius <span class="op">=</span> <span class="fl">45</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"gold"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="cube.html">cube</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">390</span>, y <span class="op">=</span> <span class="fl">90</span>, z <span class="op">=</span> <span class="fl">360</span>, scale <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">130</span>, <span class="fl">180</span>, <span class="fl">130</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    angle <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="op">-</span><span class="fl">25</span>, <span class="fl">0</span><span class="op">)</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"steelblue"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">390</span>, y <span class="op">=</span> <span class="fl">240</span>, z <span class="op">=</span> <span class="fl">360</span>, radius <span class="op">=</span> <span class="fl">60</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="dielectric.html">dielectric</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="cylinder.html">cylinder</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">270</span>, y <span class="op">=</span> <span class="fl">90</span>, z <span class="op">=</span> <span class="fl">270</span>, radius <span class="op">=</span> <span class="fl">40</span>, length <span class="op">=</span> <span class="fl">180</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"orchid"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">270</span>, y <span class="op">=</span> <span class="fl">215</span>, z <span class="op">=</span> <span class="fl">270</span>, radius <span class="op">=</span> <span class="fl">35</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">115</span>, y <span class="op">=</span> <span class="fl">65</span>, z <span class="op">=</span> <span class="fl">145</span>, radius <span class="op">=</span> <span class="fl">65</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"goldenrod"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    x <span class="op">=</span> <span class="fl">420</span>, y <span class="op">=</span> <span class="fl">55</span>, z <span class="op">=</span> <span class="fl">115</span>, radius <span class="op">=</span> <span class="fl">55</span>,</span></span>
+<span class="r-in"><span>    material <span class="op">=</span> <span class="fu"><a href="metal.html">metal</a></span><span class="op">(</span>color <span class="op">=</span> <span class="st">"#B87333"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Small foreground balls and suspended balls add more depth cues.</span></span></span>
+<span class="r-in"><span><span class="kw">for</span> <span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq_len</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">stereo_scene</span> <span class="op">=</span> <span class="va">stereo_scene</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      x <span class="op">=</span> <span class="fl">150</span> <span class="op">+</span> <span class="fl">45</span> <span class="op">*</span> <span class="va">i</span>, y <span class="op">=</span> <span class="fl">18</span>, z <span class="op">=</span> <span class="fl">35</span> <span class="op">+</span> <span class="fl">12</span> <span class="op">*</span> <span class="va">i</span>, radius <span class="op">=</span> <span class="fl">18</span>,</span></span>
+<span class="r-in"><span>      material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"coral"</span>, <span class="st">"cyan"</span>, <span class="st">"ivory"</span>, <span class="st">"limegreen"</span>, <span class="st">"plum"</span><span class="op">)</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      x <span class="op">=</span> <span class="fl">70</span> <span class="op">+</span> <span class="fl">75</span> <span class="op">*</span> <span class="va">i</span>, y <span class="op">=</span> <span class="fl">420</span>, z <span class="op">=</span> <span class="fl">70</span> <span class="op">*</span> <span class="va">i</span>, radius <span class="op">=</span> <span class="fl">25</span>,</span></span>
+<span class="r-in"><span>      material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span>color <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cyan"</span>, <span class="st">"coral"</span>, <span class="st">"gold"</span>, <span class="st">"plum"</span>, <span class="st">"ivory"</span><span class="op">)</span><span class="op">[</span><span class="va">i</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Looking into the box along +z, the viewer's left is the +x direction.</span></span></span>
+<span class="r-in"><span><span class="co"># Offset both lookfrom and lookat equally to keep the cameras parallel.</span></span></span>
+<span class="r-in"><span><span class="va">eye_separation</span> <span class="op">=</span> <span class="fl">40</span></span></span>
+<span class="r-in"><span><span class="va">stereo_scene_camera</span> <span class="op">=</span> <span class="va">stereo_scene</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">add_camera</span><span class="op">(</span><span class="fu"><a href="camera.html">camera</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    name <span class="op">=</span> <span class="st">"left_eye"</span>,</span></span>
+<span class="r-in"><span>    lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span> <span class="op">+</span> <span class="va">eye_separation</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">278</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span> <span class="op">+</span> <span class="va">eye_separation</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">278</span>, <span class="fl">278</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    fov <span class="op">=</span> <span class="fl">80</span>, aperture <span class="op">=</span> <span class="fl">0</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">add_camera</span><span class="op">(</span><span class="fu"><a href="camera.html">camera</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    name <span class="op">=</span> <span class="st">"right_eye"</span>,</span></span>
+<span class="r-in"><span>    lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span> <span class="op">-</span> <span class="va">eye_separation</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">278</span>, <span class="op">-</span><span class="fl">278</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">278</span> <span class="op">-</span> <span class="va">eye_separation</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">278</span>, <span class="fl">278</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    fov <span class="op">=</span> <span class="fl">80</span>, aperture <span class="op">=</span> <span class="fl">0</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">left_image</span> <span class="op">=</span> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">stereo_scene_camera</span>, camera <span class="op">=</span> <span class="st">"left_eye"</span>, width <span class="op">=</span> <span class="fl">400</span>, height <span class="op">=</span> <span class="fl">400</span>,</span></span>
+<span class="r-in"><span>  samples <span class="op">=</span> <span class="fl">16</span>, ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, clamp_value <span class="op">=</span> <span class="fl">10</span>,</span></span>
+<span class="r-in"><span>  preview <span class="op">=</span> <span class="cn">FALSE</span>, plot_scene <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">right_image</span> <span class="op">=</span> <span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">stereo_scene_camera</span>, camera <span class="op">=</span> <span class="st">"right_eye"</span>, width <span class="op">=</span> <span class="fl">400</span>, height <span class="op">=</span> <span class="fl">400</span>,</span></span>
+<span class="r-in"><span>  samples <span class="op">=</span> <span class="fl">16</span>, ambient_light <span class="op">=</span> <span class="cn">FALSE</span>, clamp_value <span class="op">=</span> <span class="fl">10</span>,</span></span>
+<span class="r-in"><span>  preview <span class="op">=</span> <span class="cn">FALSE</span>, plot_scene <span class="op">=</span> <span class="cn">FALSE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Parallel (non-cross-eyed) viewing: left eye image on the left.</span></span></span>
+<span class="r-in"><span><span class="co"># Look through the pair; display it small enough to fuse comfortably.</span></span></span>
+<span class="r-in"><span><span class="va">parallel_stereo</span> <span class="op">=</span> <span class="fu">rayimage</span><span class="fu">::</span><span class="fu"><a href="https://www.rayimage.dev/reference/render_stack.html" class="external-link">render_stack</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">left_image</span>, <span class="va">right_image</span><span class="op">)</span>, stack <span class="op">=</span> <span class="st">"horizontal"</span>, preview <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="add_camera-2.png" alt="" width="768" height="768"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Cross-eyed viewing: right eye image on the left.</span></span></span>
+<span class="r-in"><span><span class="co"># Cross your eyes until the two central images overlap.</span></span></span>
+<span class="r-in"><span><span class="va">cross_eyed_stereo</span> <span class="op">=</span> <span class="fu">rayimage</span><span class="fu">::</span><span class="fu"><a href="https://www.rayimage.dev/reference/render_stack.html" class="external-link">render_stack</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">right_image</span>, <span class="va">left_image</span><span class="op">)</span>, stack <span class="op">=</span> <span class="st">"horizontal"</span>, preview <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="add_camera-3.png" alt="" width="768" height="768"></span>
 </code></pre></div>
     </div>
   </div>

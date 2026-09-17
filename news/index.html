@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.3</span>
       </span>
     </div>
 
@@ -92,7 +92,8 @@
 
     <div class="section level2">
 <h2 class="page-header" data-toc-text="0.42.0" id="rayrender-0420">rayrender 0.42.0<small>2026-09-16</small><a class="anchor" aria-label="anchor" href="#rayrender-0420"></a></h2>
-<ul><li><p>Move EXR white-balance baking controls from the render functions to <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code>. Cache each adapted sky for use in stills and animations, reusing the generated sky when only the target white point changes.</p></li>
+<ul><li><p>Allow <code><a href="../reference/sky_light.html">sky_light()</a></code> and <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code> to position the Sun with <code>elevation</code> and <code>azimuth</code> instead of latitude, longitude, and date/time. Add rendered light management, standalone Sun/Moon, and medium examples, and install Prague sky datasets before building the pkgdown site.</p></li>
+<li><p>Move EXR white-balance baking controls from the render functions to <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code>. Cache each adapted sky for use in stills and animations, reusing the generated sky when only the target white point changes.</p></li>
 <li><p>Fix Windows <code>near</code>/<code>far</code> macro collisions in geometry and volume code. Remove unused preview state and signedness warnings in BVH construction and spline interpolation, and make haze-cut sorting bounds explicit. Correct RGB-to-HSV conversion to include blue when finding the maximum channel and initialize hue on every path.</p></li>
 <li><p>Automatically select the NEE integrator for scenes containing native atmospheric skies or attached media, including clouds and instanced media, instead of requiring an explicit <code>integrator_type = "nee"</code> selection. Recognize emitting media when deciding whether to add automatic ambient illumination.</p></li>
 <li><p>Fix Windows macro collisions in atmospheric lighting and preview test builds using X11. Emit the transform error-bound overloads needed by volume boundaries explicitly so optimized GCC builds load reliably.</p></li>
@@ -106,7 +107,7 @@
 <li><p>Skip grid emission lookups for media with zero RGB emission and no temperature field, or with emission disabled by a zero scale.</p></li>
 <li><p>Keep interpolated camera-up vectors at keyframes to avoid brief roll wobbles when damping camera motion. Keyed positions and lookat targets are retained.</p></li>
 <li><p>Allow <code><a href="../reference/sky_light.html">sky_light()</a></code> below a Sun elevation of -4.2 degrees. Prague contributes black sky and no solar haze, while enabled Moon, stars, and planets retain their light, atmospheric transmission, and Earth occlusion.</p></li>
-<li><p>Add continuous local evolution to <code><a href="../reference/cloud.html">cloud()</a></code> with <code>t</code> and an independent <code>animation_seed</code>. Broad and fine noise evolve smoothly while position remains controlled by x/y/z. Time zero preserves existing clouds exactly.</p></li>
+<li><p>Animate <code><a href="../reference/cloud.html">cloud()</a></code> by translating sampling coordinates through fixed Perlin fields with <code>t</code>; <code>animation_seed</code> selects the direction. Broad and fine noise move together while the envelope and boundary stay fixed. This changes the seeded density fields from the previous simplex-perturbation implementation. Whole-cloud placement remains controlled by x/y/z.</p></li>
 <li><p>Expose sky model settings directly in <code><a href="../reference/sky_light.html">sky_light()</a></code> and <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code>. Both accept <code>altitude</code>, <code>visibility</code>, and other named settings instead of a <code>sky_args</code> list. Image resolution and Hosek settings belong to <code><a href="../reference/sky_light_image.html">sky_light_image()</a></code>; native atmospheric sampling uses <code>sampling_resolution</code>.</p></li>
 <li><p>Add <code><a href="../reference/cloud.html">cloud()</a></code>, a procedural cumulus/stratus volume centered at the origin, with standard position, rotation, and scale controls. The density field and its boundary transform together. Sky examples now use the exported constructor.</p></li>
 <li><p>Correct the Z rotation matrix used by R-side group and animation transforms to match the positive-angle convention of direct objects and instances.</p></li>

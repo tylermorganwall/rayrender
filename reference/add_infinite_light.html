@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.3</span>
       </span>
     </div>
 
@@ -125,6 +125,18 @@
     <p>A modified scene.</p>
     </div>
 
+    <div id="ref-examples">
+    <h2>Examples</h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="generate_ground.html">generate_ground</a></span><span class="op">(</span>depth <span class="op">=</span> <span class="op">-</span><span class="fl">1</span>, material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="st">"grey40"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_object.html">add_object</a></span><span class="op">(</span><span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span>material <span class="op">=</span> <span class="fu"><a href="diffuse.html">diffuse</a></span><span class="op">(</span><span class="st">"coral"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu">add_infinite_light</span><span class="op">(</span><span class="fu"><a href="sky_light_image.html">sky_light_image</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    elevation <span class="op">=</span> <span class="fl">30</span>, azimuth <span class="op">=</span> <span class="fl">120</span>, resolution <span class="op">=</span> <span class="fl">512</span>, name <span class="op">=</span> <span class="st">"daylight"</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="render_scene.html">render_scene</a></span><span class="op">(</span><span class="va">scene</span>, lookfrom <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span>, <span class="op">-</span><span class="fl">6</span><span class="op">)</span>, lookat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             aperture <span class="op">=</span> <span class="fl">0</span>, fov <span class="op">=</span> <span class="fl">35</span>, samples <span class="op">=</span> <span class="fl">32</span>, iso <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="add_infinite_light-1.png" alt="" width="768" height="768"></span>
+</code></pre></div>
+    </div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top"><h2 data-toc-skip>Contents</h2>

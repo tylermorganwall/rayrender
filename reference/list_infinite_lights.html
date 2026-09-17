@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">rayrender</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">0.42.3</span>
       </span>
     </div>
 
@@ -112,6 +112,32 @@
     <p>A named list of `ray_infinite_light` objects.</p>
     </div>
 
+    <div id="ref-examples">
+    <h2>Examples</h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">scene</span> <span class="op">=</span> <span class="fu"><a href="sphere.html">sphere</a></span><span class="op">(</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_infinite_light.html">add_infinite_light</a></span><span class="op">(</span><span class="fu"><a href="sky_light_image.html">sky_light_image</a></span><span class="op">(</span>elevation <span class="op">=</span> <span class="fl">30</span>, azimuth <span class="op">=</span> <span class="fl">120</span>, name <span class="op">=</span> <span class="st">"key"</span><span class="op">)</span><span class="op">)</span> <span class="op">|&gt;</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="add_infinite_light.html">add_infinite_light</a></span><span class="op">(</span><span class="fu"><a href="sky_light_image.html">sky_light_image</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    elevation <span class="op">=</span> <span class="fl">60</span>, azimuth <span class="op">=</span> <span class="fl">240</span>, intensity <span class="op">=</span> <span class="fl">0.2</span>, name <span class="op">=</span> <span class="st">"fill"</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">list_infinite_lights</span><span class="op">(</span><span class="va">scene</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $key</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Infinite light 'key' (sky_image)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   elevation: 30 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   azimuth: 120 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   intensity: 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   rotation: 0 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $fill</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Infinite light 'fill' (sky_image)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   elevation: 60 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   azimuth: 240 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   intensity: 0.2</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   rotation: 0 degrees</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu">list_infinite_lights</span><span class="op">(</span><span class="va">scene</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "key"  "fill"</span>
+</code></pre></div>
+    </div>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
     <nav id="toc" data-toggle="toc" class="sticky-top"><h2 data-toc-skip>Contents</h2>
