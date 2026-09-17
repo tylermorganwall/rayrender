@@ -208,6 +208,11 @@ public:
   Float base_step;
   int s;
 #endif
+#if !defined(RAY_HAS_X11) && !defined(RAY_WINDOWS)
+  // Shared buffer/snapshot code also needs dimensions without a window.
+  unsigned int width;
+  unsigned int height;
+#endif
 #ifdef RAY_WINDOWS
   HWND hwnd;
   HINSTANCE hInstance;

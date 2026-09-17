@@ -2396,6 +2396,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   Start_EnvObjectToWorld(*_EnvObjectToWorld), Start_EnvWorldToObject(*_EnvWorldToObject) {
 #endif
   width = _width; height = _height;
+  interactive = _interactive;
   Keyframes.clear();
   current_keyframe = -1;
   keyframe_motion_args = Rcpp::List::create(
@@ -2421,7 +2422,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   ApplyShutterSpeedToCameras();
 #ifdef RAY_HAS_X11
   speed = 1.f;
-  interactive = _interactive;
   env_y_angle = 0;
   orbit = true;
   base_step = initial_lookat_distance/20;
@@ -2469,7 +2469,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #endif
 #ifdef RAY_WINDOWS
   speed = 1.f;
-  interactive = _interactive;
   term = false;
   env_y_angle = 0;
   Keyframes_w = &Keyframes;
