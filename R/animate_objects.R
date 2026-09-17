@@ -49,7 +49,7 @@
 #'   add_object(
 #'     animate_objects(
 #'       pig(y=-1.2,scale=0.5,angle=c(0,110,0)),
-#'       start_scale = c(1,1,1), end_scale = c(0.5,0.5,0.5))
+#'       start_scale = c(1,1,1), end_scale = c(0.5,0.5,0.5)/4)
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
@@ -58,7 +58,7 @@
 #'   add_object(
 #'     animate_objects(
 #'       pig(y=-1.2,scale=0.5,angle=c(0,110,0)),
-#'       start_angle = c(0,-30,0), end_angle = c(0,30,0))
+#'       start_angle = c(0,-60,0), end_angle = c(0,60,0))
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
@@ -68,32 +68,31 @@
 #'   add_object(
 #'     animate_objects(
 #'       pig(y=-1.2,scale=0.5,angle=c(0,110,0)),
-#'       start_angle = c(0,-30,0), end_angle = c(0,30,0))
+#'       start_angle = c(0,-60,0), end_angle = c(0,60,0))
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
-#'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
-#'                shutteropen=0.4, shutterclose = 0.6)
+#'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
 #' #Change the time frame when the shutter is open
 #' generate_studio() |>
 #'   add_object(
 #'     animate_objects(
 #'       pig(y=-1.2,scale=0.5,angle=c(0,110,0)),
-#'       start_angle = c(0,-30,0), end_angle = c(0,30,0))
+#'       start_angle = c(0,-60,0), end_angle = c(0,60,0))
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
-#'                shutteropen=0, shutterclose = 0.1)
+#'                shutter_speed=4)
 #' #Shorten the time span in which the movement occurs (which, in effect,
 #' #increases the speed of the transition).
 #' generate_studio() |>
 #'   add_object(
-#'     animate_objects(start_time = 0, end_time=0.1,
+#'     animate_objects(start_time = 0, end_time=0.2,
 #'       pig(y=-1.2,scale=0.5,angle=c(0,110,0)),
 #'       start_angle = c(0,-30,0), end_angle = c(0,30,0))
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
-#'                shutteropen=0, shutterclose = 0.1)
+#'                shutter_speed = 4)
 animate_objects = function(
   scene,
   start_time = 0,

@@ -15,7 +15,7 @@ pig(
   scale = c(1, 1, 1),
   diffuse_sigma = 0,
   ski = FALSE,
-  hair_count = 12000,
+  hair_count = 5000,
   hair_length = 1,
   hair_seed = 8,
   hair_material = NULL
@@ -77,19 +77,23 @@ finite bounce limit, such as \code{max_depth = 12}, is useful for dense fur.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+sky_light_hosek = sky_light_image(40,-74,datetime = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York"))
 generate_ground(depth = -0.6) |>
   add_object(pig()) |>
-  render_scene(lookfrom = c(8, 5, 8), lookat = c(0, 1, 0), samples = 64)
+  add_infinite_light(sky_light_hosek) |>
+  render_scene(lookfrom = c(5.46, 3.03, 2.48), iso=4,
+               lookat = c(1.90, 1.65, 0.62), fov=40, samples=16)
 
 generate_ground(depth = -0.6, material = glossy(color="white")) |>
   add_object(pig(ski = TRUE)) |>
-  render_scene(lookfrom = c(8, 5, 8),
-               lookat = c(0, 1, 0),
-               fov=40,samples = 64)
+  add_infinite_light(sky_light_hosek) |>
+  render_scene(lookfrom = c(5.46, 3.03, 2.48),  iso=4,
+               lookat = c(1.90, 1.65, 0.62), fov=40, samples=16)
 
 generate_ground(depth = -0.6) |>
-  add_object(pig(spider = TRUE)) |>
-  render_scene(lookfrom = c(10, 7, 8), lookat = c(0, 1, 0),
-               samples = 64, max_depth = 12)
+  add_infinite_light(sky_light_hosek) |>
+  add_object(pig(spider = TRUE, hair_count = 5000)) |>
+  render_scene(lookfrom =  c(10.48, 3.31, -3.45), iso=4,
+               lookat = c(1.97, 1.46, -0.36), fov=40, samples=16)
 \dontshow{\}) # examplesIf}
 }

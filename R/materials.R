@@ -66,10 +66,10 @@
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #'
-#' #Add an orange volumetric (fog) cube
+#' #Add an rougher (Oren-Nayar) surface
 #' scene = scene |>
-#'   add_object(cube(x=555/2-555/4,y=555/2,z=555/2,xwidth=555/4,ywidth=555/4,zwidth=555/4,
-#'   material = diffuse(fog=TRUE, fogdensity=0.05,color="orange")))
+#'   add_object(sphere(x=555/2-555/4,y=555/2,z=555/2,radius = 555/8,
+#'   material = diffuse(sigma = 80)))
 #' render_scene(scene, lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=16,
 #'              aperture=0, fov=40, ambient_light=FALSE, parallel=TRUE)
 #'
@@ -393,8 +393,6 @@ metal = function(
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Generate a checkered ground
 #' scene = generate_ground(depth=-0.5, material = diffuse(checkercolor="grey30",checkerperiod=2))
-#' render_scene(scene,parallel=TRUE, samples=16)
-#'
 #' #Add a glass sphere
 #' scene |>
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) |>
@@ -410,10 +408,10 @@ metal = function(
 #' scene |>
 #'   add_object(sphere(x=-0.5,radius=0.5,material=dielectric())) |>
 #'   add_object(cube(x=0.5,xwidth=0.5,material=dielectric(color="darkgreen"),angle=c(0,-45,0))) |>
-#'   add_object(yz_rect(z=-3,y=1,x=0,zwidth=3,ywidth=1.5,
-#'                      material=light(intensity=15),
-#'                      angle=c(0,-90,45), order_rotation = c(3,2,1))) |>
-#'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16)
+#'   add_object(yz_rect(z=3,y=1,x=0,zwidth=3,ywidth=0.5,
+#'                      material=light(intensity=30),
+#'                      angle=c(0,90,-45), order_rotation = c(3,2,1))) |>
+#'   render_scene(parallel=TRUE,aperture=0, ambient_light=FALSE,samples=16, lookfrom=c(0,3,-10))
 #'
 #' #Color glass using Beer-Lambert attenuation, which attenuates light on a per-channel
 #' #basis as it travels through the material. This effect is what gives some types of glass
@@ -421,8 +419,9 @@ metal = function(
 #' #for the `green` (second) channel in the dielectric `attenuation` argument.
 #' generate_ground(depth=-0.5,material=diffuse(checkercolor="grey30",checkerperiod=2)) |>
 #'   add_object(sphere(z=5,x=-0.5,y=1,material=light(intensity=10))) |>
-#'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,
-#'                   material=dielectric(attenuation=c(1.2,0.2,1.2)),angle=c(45,110,0))) |>
+#'   add_object(cube(y=0.3,ywidth=0.1,xwidth=2,zwidth=2,angle=c(45,110,0),
+#'                   material=dielectric(attenuation=c(1.2,0.2,1.2),
+#'                                       attenuation_intensity=2))) |>
 #'   render_scene(parallel=TRUE, samples = 16)
 #'
 #' #If you have overlapping dielectrics, the `priority` value can help disambiguate what
@@ -435,19 +434,8 @@ metal = function(
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10) ))) |>
 #'   add_object(sphere(radius=0.25,x=-0.5,z=0.5,y=0.5,
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) |>
+#'   add_object(sphere(y=5,x=-5,radius=3,material=light())) |>
 #'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5))
-#'
-#' # We can also use this as a basic Constructive Solid Geometry interface by setting
-#' # the index of refraction equal to empty space, 1. This will subtract out those regions.
-#' # Here I make a concave lens by subtracting two spheres from a cube.
-#' generate_ground(depth=-0.51,material=diffuse(checkercolor="grey30",checkerperiod=2,sigma=90)) |>
-#'   add_object(cube(material = dielectric(attenuation = c(3,3,1),priority=1))) |>
-#'   add_object(sphere(radius=1,x=1.01,
-#'                     material = dielectric(priority=0,refraction=1))) |>
-#'   add_object(sphere(radius=1,x=-1.01,
-#'                     material = dielectric(priority=0,refraction=1))) |>
-#'   add_object(sphere(y=10,x=3,material=light(intensit=150))) |>
-#'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,3,5))
 dielectric = function(
   color = "white",
   refraction = 1.5,
@@ -585,7 +573,7 @@ dielectric = function(
 #' #Render a rough silver R with a smaller golden egg in front
 #' generate_cornell() |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
 #'              material=microfacet(roughness=0.2,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -596,7 +584,7 @@ dielectric = function(
 #' #Increase the roughness
 #' generate_cornell() |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
 #'              material=microfacet(roughness=0.5,
 #'                                  eta=c(1.1583,0.9302,0.5996), kappa=c(6.9650,6.396,5.332)))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
@@ -606,11 +594,14 @@ dielectric = function(
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10)
 #'  #Use transmission for a rough dielectric
 #' generate_cornell() |>
+#'   add_object(text3d(label="XY Plane", z=550,y=555/2,x=555/2,text_height=200,
+#'                     orientation = "xy",
+#'                     material=diffuse(color="grey10"), angle=c(0,0,0))) |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,200,0),
-#'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
+#'                        x=555/2,z=350,y=0, scale_obj = 200, angle=c(0,20,0),
+#'              material=microfacet(roughness=0.25, transmission=T, eta=1.3))) |>
 #'  add_object(ellipsoid(x=200,z=200,y=80, a=50,b=80,c=50,
-#'              material=microfacet(roughness=0.3, transmission=T, eta=1.6))) |>
+#'              material=microfacet(roughness=0.15, transmission=T, eta=1.6))) |>
 #'  render_scene(lookfrom=c(278,278,-800),lookat = c(278,278,0), samples=64,
 #'              aperture=0, fov=40, parallel=TRUE,clamp_value=10, min_variance=1e-6)
 microfacet = function(
@@ -1056,11 +1047,11 @@ light = function(
 #'   add_object(sphere(y=0.2,x=2.1,material=glossy(color="blue",gradient_color="#2fed4f"))) |>
 #'   add_object(sphere(y=8,z=-5,radius=3,material=light(intensity=20))) |>
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=16,fov=40,sample_method="sobol_blue")
-#' #Add an R and a fill light (this may look familiar)
+#' #Add an R and a fill light
 #' generate_ground(material=diffuse()) |>
 #'   add_object(sphere(y=0.2,material=glossy(color="#2b6eff",reflectance=0.05))) |>
 #'   add_object(obj_model(r_obj(simple_r = TRUE),
-#'                        z=-1,y=-0.05,scale=0.45,angle=c(0,180,0),material=diffuse())) |>
+#'                        z=-1,y=-0.05,scale=0.45,material=diffuse())) |>
 #'   add_object(sphere(y=6,z=-1,radius=4,material=light(intensity=3))) |>
 #'   add_object(sphere(z=-15,material=light(intensity=50))) |>
 #'   render_scene(parallel=TRUE,clamp_value=10,samples=16,sample_method="sobol_blue")

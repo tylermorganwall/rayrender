@@ -42,8 +42,7 @@
 #'     name = "main",
 #'     lookfrom = c(7, 1.5, 10),
 #'     lookat = c(0, 0.5, 0),
-#'     fov = 15,
-#'     filename = NA_character_
+#'     fov = 15
 #'   ))
 #' render_scene(scene, samples = 16, parallel = TRUE)
 #'
@@ -83,7 +82,7 @@
 #'   add_camera(camera(
 #'     name = "flythrough_medium_blur",
 #'     motion = camera_motion,
-#'     camera_motion_blur = FALSE,
+#'     camera_motion_blur = TRUE,
 #'     shutter_speed = 4
 #'   ))
 #' #We can render these individual cameras by calling out their specific name in render_scene()
@@ -114,7 +113,6 @@
 #'   height = 400
 #' )
 #' #Now, with less blur
-#' #' #Now, with blur
 #' render_scene(
 #'   animated_scene,
 #'   camera = "flythrough_medium_blur",
@@ -332,6 +330,94 @@ print.ray_camera = function(x, ...) {
 #'   ))
 #'
 #' render_scene(scene, samples = 16)
+#'
+#' # Stereoscopic Cornell box: objects at different depths emphasize parallax.
+#' stereo_scene = generate_cornell(lightwidth = 200, lightdepth = 200) |>
+#'   add_object(cube(
+#'     x = 130, y = 140, z = 420, scale = c(110, 280, 110),
+#'     angle = c(0, 20, 0), material = diffuse(color = "ivory")
+#'   )) |>
+#'   add_object(sphere(
+#'     x = 130, y = 325, z = 420, radius = 45,
+#'     material = metal(color = "gold")
+#'   )) |>
+#'   add_object(cube(
+#'     x = 390, y = 90, z = 360, scale = c(130, 180, 130),
+#'     angle = c(0, -25, 0), material = diffuse(color = "steelblue")
+#'   )) |>
+#'   add_object(sphere(
+#'     x = 390, y = 240, z = 360, radius = 60,
+#'     material = dielectric()
+#'   )) |>
+#'   add_object(cylinder(
+#'     x = 270, y = 90, z = 270, radius = 40, length = 180,
+#'     material = diffuse(color = "orchid")
+#'   )) |>
+#'   add_object(sphere(
+#'     x = 270, y = 215, z = 270, radius = 35,
+#'     material = metal()
+#'   )) |>
+#'   add_object(sphere(
+#'     x = 115, y = 65, z = 145, radius = 65,
+#'     material = diffuse(color = "goldenrod")
+#'   )) |>
+#'   add_object(sphere(
+#'     x = 420, y = 55, z = 115, radius = 55,
+#'     material = metal(color = "#B87333")
+#'   ))
+#'
+#' # Small foreground balls and suspended balls add more depth cues.
+#' for (i in seq_len(5)) {
+#'   stereo_scene = stereo_scene |>
+#'     add_object(sphere(
+#'       x = 150 + 45 * i, y = 18, z = 35 + 12 * i, radius = 18,
+#'       material = diffuse(color = c("coral", "cyan", "ivory", "limegreen", "plum")[i])
+#'     )) |>
+#'     add_object(sphere(
+#'       x = 70 + 75 * i, y = 420, z = 70 * i, radius = 25,
+#'       material = diffuse(color = c("cyan", "coral", "gold", "plum", "ivory")[i])
+#'     ))
+#' }
+#'
+#' # Looking into the box along +z, the viewer's left is the +x direction.
+#' # Offset both lookfrom and lookat equally to keep the cameras parallel.
+#' eye_separation = 40
+#' stereo_scene_camera = stereo_scene |>
+#'   add_camera(camera(
+#'     name = "left_eye",
+#'     lookfrom = c(278 + eye_separation / 2, 278, -278),
+#'     lookat = c(278 + eye_separation / 2, 278, 278),
+#'     fov = 80, aperture = 0
+#'   )) |>
+#'   add_camera(camera(
+#'     name = "right_eye",
+#'     lookfrom = c(278 - eye_separation / 2, 278, -278),
+#'     lookat = c(278 - eye_separation / 2, 278, 278),
+#'     fov = 80, aperture = 0
+#'   ))
+#'
+#' left_image = render_scene(
+#'   stereo_scene_camera, camera = "left_eye", width = 400, height = 400,
+#'   samples = 16, ambient_light = FALSE, clamp_value = 10,
+#'   preview = FALSE, plot_scene = FALSE
+#' )
+#' right_image = render_scene(
+#'   stereo_scene_camera, camera = "right_eye", width = 400, height = 400,
+#'   samples = 16, ambient_light = FALSE, clamp_value = 10,
+#'   preview = FALSE, plot_scene = FALSE
+#' )
+#'
+#' # Parallel (non-cross-eyed) viewing: left eye image on the left.
+#' # Look through the pair; display it small enough to fuse comfortably.
+#' parallel_stereo = rayimage::render_stack(
+#'   list(left_image, right_image), stack = "horizontal", preview = TRUE
+#' )
+#'
+#' # Cross-eyed viewing: right eye image on the left.
+#' # Cross your eyes until the two central images overlap.
+#' cross_eyed_stereo = rayimage::render_stack(
+#'   list(right_image, left_image), stack = "horizontal", preview = TRUE
+#' )
 add_camera = function(
   scene,
   camera,

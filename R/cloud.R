@@ -96,50 +96,57 @@
 #' @examplesIf requireNamespace("ambient", quietly = TRUE) && (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true"))
 #'   # The default cloud is centered at the origin. Raise a cloud by its center
 #'   # to put its base above the ground, then rotate the entire density field.
-#'   puff = cloud(y = 20, width = 60, height = 20, depth = 40,
+#' ground_sphere = generate_ground(material = diffuse("#699447", checkercolor="#aedd89",
+#'                                                    checkerperiod=30))
+#'   time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
+#' puff = cloud(y = 20, width = 60, height = 20, depth = 40,
 #'                angle = c(0, 25, 0), resolution = 64, optical_depth = 4)
-#'   scene = generate_ground(material = diffuse("#699447")) |>
+#'   ground_sphere |>
 #'     add_object(puff) |>
-#'     add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
-#'                       material = light(intensity = 40)))
-#'   render_scene(scene, lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
-#'                fov = 35, integrator_type = "nee", samples = 64,
-#'                clamp_value = Inf, aperture = 0)
+#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'     render_scene(lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
+#'                fov = 35, integrator_type = "nee", samples = 16, iso=5)
 #'
 #'   # Reuse the shape at another position, or change the style and its detail.
-#'   bank = cloud(x = 0, y = w0, z = 6, style = "stratus", seed = 17,
-#'                width = 80, height = 10, depth = 50,
-#'                coverage = 0.7, detail = 0.2, optical_depth = 6, g = 0.6)
-#'   scaled = cloud(scale = c(1.5, 1, 0.75), angle = c(10, 30, 0),
-#'                  order_rotation = c(2, 1, 3), resolution = 64)
-#' generate_ground(material = diffuse("#699447")) |>
-#'     add_object(bank) |>
-#'     add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
-#'                       material = light(intensity = 40))) |>
-#'  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),
-#'                fov = 35, integrator_type = "nee", samples = 64,
-#'                clamp_value = Inf, aperture = 0)
-#'
-#' generate_ground(material = diffuse("#699447")) |>
-#'     add_object(scaled) |>
-#'     add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
-#'                       material = light(intensity = 40))) |>
-#'  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),
-#'                fov = 35, integrator_type = "nee", samples = 64,
-#'                clamp_value = Inf, aperture = 0)
+#'   scattered = cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
+#'                width = 300, height = 10, depth = 300,
+#'                coverage = 0.01, detail = 0.99, optical_depth = 6, g = 0.6)
+#'   dense = cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
+#'                width = 300, height = 10, depth = 300,
+#'                coverage = 0.6, detail = 0.99, optical_depth = 6, g = 0.6)
+#'   thin = cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
+#'                width = 300, height = 10, depth = 300,
+#'                coverage = 0.6, detail = 0.99, optical_depth = 2, g = 0.6)
+#' #Sparse (low coverage) clouds
+#' ground_sphere |>
+#'     add_object(scattered) |>
+#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'  render_scene(lookfrom = c(100, 100, -100), lookat = c(0, 20, 0),rotate_env=180,
+#'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
+#' #Dense (high coverage) clouds
+#' ground_sphere |>
+#'     add_object(dense) |>
+#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),rotate_env=170,
+#'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
+#' #Thin but high coverage clouds
+#' generate_ground(material = diffuse("#699447", checkercolor="#aedd89", checkerperiod=30)) |>
+#'     add_object(thin) |>
+#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),rotate_env=170,
+#'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
 #'   # Keep seeds and position fixed to evolve the cloud locally over time.
 #'   # Rebuilding a frame at the same t value always gives the same cloud.
-#'   for (frame in 0:3) {
+#'   for (frame in 0:10) {
 #'     set.seed(2026)
-#'     generate_ground(material = diffuse("#699447")) |>
-#'       add_object(cloud(y = 20, width = 60, height = 20, depth = 40,
-#'       seed = 42, t = frame / 3, animation_seed = 17,
-#'       resolution = 64, optical_depth = 4)) |>
-#'       add_object(sphere(x = -50, y = 80, z = -30, radius = 15,
-#'         material = light(intensity = 40))) |>
-#'     render_scene(lookfrom = c(80, 35, -100), lookat = c(0, 20, 0),
-#'       width = 256, height = 160, fov = 35, integrator_type = "nee",
-#'       samples = 64, iso = 100, aperture = 0)
+#' ground_sphere |>
+#'     add_object(cloud(x = 0, y = 0, z = 6, style = "stratus", seed = 17,
+#'                width = 300, height = 10, depth = 300, animation_seed = 3, t=frame/15,
+#'                coverage = 0.01, detail = 0.99, optical_depth = 6, g = 0.6)) |>
+#'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
+#'  render_scene(lookfrom = c(100, 100, -100), lookat = c(0, 20, 0),rotate_env=180,
+#' width=100,height=100,
+#'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
 #'   }
 cloud = function(
   x = 0,

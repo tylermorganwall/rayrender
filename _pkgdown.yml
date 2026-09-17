@@ -95,7 +95,6 @@ reference:
   desc: Function for adding objects together to form a scene.
   contents:
   - add_object
-  - add_points_polygon
   - starts_with("group")
   - starts_with("create")
 - title: Screen-space Annotations
