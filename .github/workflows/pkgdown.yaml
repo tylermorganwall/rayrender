@@ -70,6 +70,10 @@ jobs:
       - name: Fix git pkgdown build
         run: git config --global http.postBuffer 524288000
 
+      - name: Download sky model data for rendered examples
+        run: |
+          Rscript -e 'skymodelr::download_sky_data(sea_level = TRUE); skymodelr::download_sky_data(sea_level = FALSE)'
+
       - name: Build site
         run: Rscript -e "pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)"
 

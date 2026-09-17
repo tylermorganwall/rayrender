@@ -1,3 +1,30 @@
+#' @keywords internal
+prepare_pkgdown_sky_data = function(
+  altitude = 0,
+  wide_spectrum = FALSE,
+  native = FALSE
+) {
+  if (!identical(Sys.getenv("IN_PKGDOWN"), "true")) {
+    return(invisible(NULL))
+  }
+  sea_level = !native && altitude == 0
+  filename = if (!sea_level) {
+    "SkyModelDataset.dat"
+  } else if (wide_spectrum) {
+    "PragueSkyModelDatasetGroundInfra.dat"
+  } else {
+    "SkyModelDatasetGround.dat"
+  }
+  installed = skymodelr::list_sky_data()
+  if (!filename %in% installed$file) {
+    skymodelr::download_sky_data(
+      sea_level = sea_level,
+      wide_spectrum = sea_level && wide_spectrum
+    )
+  }
+  invisible(NULL)
+}
+
 #' @importFrom skymodelr get_prague_sky_metadata
 #' @keywords internal
 prague_sky_settings = function(args) {
@@ -126,14 +153,24 @@ prepare_prague_sky_light = function(light) {
     )
   }
   settings = prague_sky_settings(light$sky_args)
+  prepare_pkgdown_sky_data(native = TRUE)
+  direct = !is.null(light$elevation)
+  # The metadata API requires an ephemeris even when only its dataset path and
+  # RGB calibration are needed. Use a fixed reference for those two fields;
+  # direct skies replace all solar geometry below and never use its ephemeris.
+  location = if (direct) {
+    list(
+      datetime = as.POSIXct("2000-01-01 12:00:00", tz = "UTC"),
+      lat = 0,
+      lon = 0
+    )
+  } else {
+    list(datetime = light$datetime, lat = light$lat, lon = light$long)
+  }
   metadata = do.call(
     skymodelr::get_prague_sky_metadata,
     c(
-      list(
-        datetime = light$datetime,
-        lat = light$lat,
-        lon = light$long
-      ),
+      location,
       settings[c(
         "altitude",
         "visibility",
@@ -144,6 +181,11 @@ prepare_prague_sky_light = function(light) {
       )]
     )
   )
+  if (direct) {
+    metadata$elevation_deg = light$elevation
+    metadata$azimuth_deg = light$azimuth
+    metadata$angular_diameter_deg = 0.533
+  }
   list(
     type = "prague",
     filename = metadata$filename,

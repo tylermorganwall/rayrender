@@ -174,6 +174,14 @@ infinite_light = function(
 #' @param replace Default `FALSE`. Replace an existing light with the same name.
 #' @return A modified scene.
 #' @export
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' scene = generate_ground(depth = -1, material = diffuse("grey40")) |>
+#'   add_object(sphere(material = diffuse("coral"))) |>
+#'   add_infinite_light(sky_light_image(
+#'     elevation = 30, azimuth = 120, resolution = 512, name = "daylight"
+#'   ))
+#' render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+#'              aperture = 0, fov = 35, samples = 32, iso = 5)
 add_infinite_light = function(scene, light, name = NULL, replace = FALSE) {
   if (!inherits(light, "ray_infinite_light")) {
     stop("light must inherit from class 'ray_infinite_light'.", call. = FALSE)
@@ -223,6 +231,14 @@ get_infinite_light = function(scene, name) {
 #' @param scene Scene containing infinite lights.
 #' @return A named list of `ray_infinite_light` objects.
 #' @export
+#' @examples
+#' scene = sphere() |>
+#'   add_infinite_light(sky_light_image(elevation = 30, azimuth = 120, name = "key")) |>
+#'   add_infinite_light(sky_light_image(
+#'     elevation = 60, azimuth = 240, intensity = 0.2, name = "fill"
+#'   ))
+#' list_infinite_lights(scene)
+#' names(list_infinite_lights(scene))
 list_infinite_lights = function(scene) {
   ray_scene_infinite_lights(scene)
 }
@@ -233,6 +249,20 @@ list_infinite_lights = function(scene) {
 #' @param name Name of the infinite light to remove.
 #' @return A modified scene.
 #' @export
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' scene = generate_ground(depth = -1, material = diffuse("grey40")) |>
+#'   add_object(sphere(material = diffuse("coral"))) |>
+#'   add_object(sphere(y = 4, z = -2, radius = 1, material = light(intensity = 30))) |>
+#'   add_infinite_light(sky_light_image(
+#'     elevation = 30, azimuth = 120, resolution = 512, intensity = 0.02, name = "fill"
+#'   ))
+#' render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+#'              aperture = 0, fov = 35, samples = 32, ambient_light = FALSE)
+#' # Remove the sky fill while keeping the sphere light and exposure unchanged.
+#' scene = remove_infinite_light(scene, "fill")
+#' list_infinite_lights(scene)
+#' render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+#'              aperture = 0, fov = 35, samples = 32, ambient_light = FALSE)
 remove_infinite_light = function(scene, name) {
   get_infinite_light(scene, name)
   lights = ray_scene_infinite_lights(scene)
@@ -243,6 +273,18 @@ remove_infinite_light = function(scene, name) {
 
 #' @export
 print.ray_infinite_light = function(x, ...) {
+  if (!is.null(x$elevation)) {
+    cat(sprintf(
+      "Infinite light '%s' (%s)\n  elevation: %g degrees\n  azimuth: %g degrees\n  intensity: %g\n  rotation: %g degrees\n",
+      x$name,
+      x$type,
+      x$elevation,
+      x$azimuth,
+      x$intensity,
+      x$rotation
+    ))
+    return(invisible(x))
+  }
   if (x$type %in% c("sky", "sky_image", "sun", "moon")) {
     cat(sprintf(
       "Infinite light '%s' (%s)\n  location: %g, %g\n  datetime: %s\n  intensity: %g\n  rotation: %g degrees\n",

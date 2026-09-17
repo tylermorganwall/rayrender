@@ -74,15 +74,14 @@ x, y, and z. Must be a permutation of \code{c(1, 2, 3)}.}
 A single value scales uniformly. Scales the density field and its boundary
 together, retaining extinction per world-space unit.}
 
-\item{t}{Default \code{0}. Continuous, dimensionless evolution time.
-Small changes gently reshape the broad and fine density features without
-moving the bounding box. Zero reproduces the original static cloud.
+\item{t}{Default \code{0}. Continuous, dimensionless translation time.
+Increasing time translates the sampling coordinates through Perlin noise without
+moving the bounding box. Zero gives the static cloud.
 Keep both seeds fixed and increase this value between frames; for example,
 use \code{seq(0, 1, length.out = 30)} for a gentle transition. Negative times work.}
 
-\item{animation_seed}{Default \code{1}. Nonnegative integer seed for the local
-evolution, independent of the shape's \code{seed}. Changing it selects a different
-evolution of the same cloud; it has no effect at \code{t = 0}.}
+\item{animation_seed}{Default \code{1}. Nonnegative integer seed selecting the translation
+direction, independent of the shape's \code{seed}. It has no effect at \code{t = 0}.}
 
 \item{haze}{Default \code{FALSE}. Include clear-air atmospheric haze inside the
 cloud boundary when enabled by \code{\link[=sky_light]{sky_light()}}. The default omits haze
@@ -123,12 +122,12 @@ a ray increases that ray's optical depth. Standard \code{\link[=group_objects]{g
 \code{\link[=animate_objects]{animate_objects()}}, and \code{\link[=create_instances]{create_instances()}} operations transform the cloud
 using the same object machinery as other closed shapes.
 
-Evolution adds small, bounded perturbations to the broad and fine noise
-fields using separately seeded four-dimensional simplex noise (space and
-time). Subtracting the perturbation at time zero anchors the original shape.
-Broad domes, the base profile, and edge fades stay fixed while local density
-swells and erodes. Evolution is procedural rather than a fluid simulation;
-cloud mass is not conserved. Use \code{x}, \code{y}, and \code{z} for bulk movement.
+Animation translates the sampling coordinates through fixed three-dimensional
+Perlin fields. Broad and fine features share a direction selected by
+\code{animation_seed}; one time unit travels 0.1 times the longest box dimension.
+Broad domes, the base profile, and edge fades stay fixed while noise passes
+through them. This is procedural animation, not a fluid simulation; cloud
+mass is not conserved. Use \code{x}, \code{y}, and \code{z} to move the whole cloud.
 
 Rebuild the cloud with a new \code{t} value for each rendered frame.
 \code{\link[=animate_objects]{animate_objects()}} animates its transform; it does not evolve the density
@@ -183,7 +182,7 @@ generate_ground(material = diffuse("#699447", checkercolor="#aedd89", checkerper
     add_infinite_light(sky_light_image(40.7, -74, time)) |>
  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),rotate_env=170,
                fov = 35, integrator_type = "nee", samples = 16, iso=4)
-  # Keep seeds and position fixed to evolve the cloud locally over time.
+  # Keep seeds and position fixed to translate through the same Perlin field.
   # Rebuilding a frame at the same t value always gives the same cloud.
   for (frame in 0:10) {
     set.seed(2026)

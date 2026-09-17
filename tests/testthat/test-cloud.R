@@ -40,7 +40,13 @@ test_that("clouds are centered volumes with local density and standard transform
   expect_equal(taller$sigma_a, medium$sigma_a / 2)
   vacuum = cloud(optical_depth = 0, resolution = 24)$shape_info[[1]]$medium
   expect_equal(vacuum$sigma_s + vacuum$sigma_a, rep(0, 3))
-  expect_error(prepare_scene_list(original, integrator_type = "basic"), "nee")
+  expect_identical(
+    prepare_scene_list(
+      original,
+      integrator_type = "basic"
+    )$render_info$integrator_type,
+    1L
+  )
 })
 
 test_that("cloud shapes are repeatable without consuming the caller's RNG", {
@@ -321,4 +327,36 @@ test_that("cloud density follows object, group, and instance transformations in 
   expect_lt(min(reference[,, 4]), 0.01)
   expect_equal(render(grouped), reference, tolerance = 1e-4)
   expect_equal(render(instanced), reference, tolerance = 1e-4)
+})
+
+test_that("cloud animation translates both Perlin fields without changing their seeds", {
+  skip_if_not_installed("ambient")
+  original = ambient::gen_perlin
+  seen = list()
+  local_mocked_bindings(
+    gen_perlin = function(x, y, z, frequency, seed, ...) {
+      seen[[length(seen) + 1L]] <<- list(
+        coordinates = cbind(x, y, z),
+        frequency = frequency,
+        seed = seed
+      )
+      original(x, y, z, frequency = frequency, seed = seed, ...)
+    },
+    .package = "ambient"
+  )
+  invisible(cloud(resolution = 24, t = 0, animation_seed = 7))
+  initial = seen
+  seen = list()
+  invisible(cloud(resolution = 24, t = 1, animation_seed = 7))
+  expect_length(seen, length(initial))
+  displacement = seen[[1]]$coordinates[1, ] - initial[[1]]$coordinates[1, ]
+  expect_equal(sqrt(sum(displacement^2)), 0.1)
+  for (i in seq_along(initial)) {
+    expect_equal(seen[[i]]$seed, initial[[i]]$seed)
+    expect_equal(seen[[i]]$frequency, initial[[i]]$frequency)
+    expect_equal(
+      seen[[i]]$coordinates,
+      sweep(initial[[i]]$coordinates, 2, displacement, "+")
+    )
+  }
 })

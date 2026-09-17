@@ -15,3 +15,12 @@ A named list of `ray_infinite_light` objects.
 \description{
 List Infinite Lights
 }
+\examples{
+scene = sphere() |>
+  add_infinite_light(sky_light_image(elevation = 30, azimuth = 120, name = "key")) |>
+  add_infinite_light(sky_light_image(
+    elevation = 60, azimuth = 240, intensity = 0.2, name = "fill"
+  ))
+list_infinite_lights(scene)
+names(list_infinite_lights(scene))
+}

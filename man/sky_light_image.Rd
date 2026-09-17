@@ -2,12 +2,12 @@
 % Please edit documentation in R/sky_light_image.R
 \name{sky_light_image}
 \alias{sky_light_image}
-\title{Image-Based Location and Time Sky Light}
+\title{Image-Based Sky Light}
 \usage{
 sky_light_image(
-  lat,
-  long,
-  datetime,
+  lat = NULL,
+  long = NULL,
+  datetime = NULL,
   intensity = 1,
   rotation = 0,
   name = "sky",
@@ -37,15 +37,18 @@ sky_light_image(
   sun = TRUE,
   environment_light_bake_white = FALSE,
   environment_light_bake_white_target = "D65",
+  elevation = NULL,
+  azimuth = NULL,
   ...
 )
 }
 \arguments{
-\item{lat}{Latitude in degrees, between -90 and 90.}
+\item{lat}{Default \code{NULL}. Latitude in degrees, between -90 and 90. Supply
+\code{lat}, \code{long}, and \code{datetime} together, or use \code{elevation} and \code{azimuth}.}
 
-\item{long}{Longitude in degrees, between -180 and 180.}
+\item{long}{Default \code{NULL}. Longitude in degrees, between -180 and 180.}
 
-\item{datetime}{A single \code{POSIXct} date and time. Specify its time zone when
+\item{datetime}{Default \code{NULL}. A single \code{POSIXct} date and time. Specify its time zone when
 constructing it with \code{as.POSIXct()}.}
 
 \item{intensity}{Default \code{1}. Nonnegative multiplier for this light's radiance.}
@@ -98,7 +101,7 @@ gains, or a numeric vector of three finite, positive linear RGB multipliers.}
 
 \item{planets}{Default \code{FALSE}. Composite bright planets into the sky image.}
 
-\item{moon}{Default \code{TRUE}. Composite a Moon image into the sky.
+\item{moon}{Default \code{TRUE} for location/time skies, \code{FALSE} for direct skies. Composite a Moon image into the sky.
 Set \code{FALSE} when adding a separate \code{\link[=moon_light]{moon_light()}}.}
 
 \item{moon_atmosphere}{Default \code{FALSE}. Include atmospheric scattering of moonlight.}
@@ -128,8 +131,17 @@ when baking: \code{"D50"}, \code{"D55"}, \code{"D60"}, \code{"D65"}, \code{"D75"
 numeric XYZ vector with positive Y (normalized to Y = 1). Unlike
 \code{exr_adopted_white}, this changes the image pixels when baking is enabled.}
 
+\item{elevation}{Default \code{NULL}. Direct solar elevation in degrees, from -90
+to 90. Supply with \code{azimuth} instead of location and time. Prague sky radiance
+is supported down to -4.2 degrees; Hosek image skies require elevation >= 0.}
+
+\item{azimuth}{Default \code{NULL}. Direct solar azimuth in degrees, from 0
+(north) clockwise through 90 (east), less than 360. Direct skies omit the
+Moon by default and cannot include Moon, stars, or planets without an ephemeris.}
+
 \item{...}{Additional named arguments forwarded by
 \code{skymodelr::generate_sky_latlong()} to its star, planet, and Moon generators.
+These extra celestial settings apply only to location/time skies.
 Pass settings directly; location, datetime, and the cached filename are
 managed by this light. Native atmospheric controls belong to \code{\link[=sky_light]{sky_light()}}.}
 }
@@ -137,12 +149,14 @@ managed by this light. Native atmospheric controls belong to \code{\link[=sky_li
 A \code{ray_infinite_light} containing a cached-image sky description.
 }
 \description{
-Generate a cached sky EXR with \code{skymodelr::generate_sky_latlong()} and use it
+Generate a cached sky EXR with \code{skymodelr::generate_sky_latlong()} (location
+and time) or \code{skymodelr::generate_sky()} (direct Sun angles) and use it
 as an infinite light. Add it to a scene with \code{\link[=add_infinite_light]{add_infinite_light()}}. The image
 represents one observer and illuminates every scene position with the same
 sky. Use \code{\link[=sky_light]{sky_light()}} for altitude-dependent lighting and finite-distance haze.
-Both constructors include Sun and Moon by default, controlled with \code{sun} and
-\code{moon}, and support optional stars and planets.
+Location/time skies include Sun and Moon by default, controlled with \code{sun} and
+\code{moon}, and support optional stars and planets. Direct-angle skies include
+the Sun and have no ephemeris-dependent celestial components.
 }
 \details{
 Image generation happens before rendering and is cached for the R
@@ -152,7 +166,8 @@ separate adapted image. White-balance controls belong to this light; pass the
 light to \code{\link[=add_infinite_light]{add_infinite_light()}} before calling \code{\link[=render_scene]{render_scene()}} or
 \code{\link[=render_animation]{render_animation()}}.
 Install any required Prague data with \code{skymodelr::download_sky_data()} first;
-rendering does not download datasets.
+ordinary rendering does not download datasets. Pkgdown builds download
+missing datasets automatically.
 
 With zero rotation, north is world +Z and east is world -X. Date, time, and
 observer altitude remain fixed throughout the image. This light supports the
@@ -165,6 +180,15 @@ avoids relying on the environment image to resolve the small solar disk.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# Direct Sun angles also work with the other atmospheric controls.
+generate_ground() |>
+  add_object(sphere(y = 1)) |>
+  add_infinite_light(sky_light_image(
+    elevation = 25, azimuth = 135, turbidity = 4, resolution = 512
+  )) |>
+  render_scene(lookfrom = c(0, 2, -8), lookat = c(0, 1, 0),
+               aperture = 0, samples = 32, iso = 5)
+
 time = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
 scene = sphere(material = diffuse("white")) |>
   add_object(generate_ground())

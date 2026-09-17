@@ -1,17 +1,25 @@
-#' Atmospheric Location and Time Sky Light
+#' Atmospheric Sky Light
 #' @md
 #'
 #' @description
 #' Evaluate the native Prague atmosphere at scene interactions, including
 #' altitude-dependent Sun and sky lighting, finite-distance haze, and
-#' in-scattering. Sun and Moon disk lights are included automatically.
+#' in-scattering. Supply location and time, or direct Sun elevation and azimuth.
+#' Location/time skies include Sun and Moon disk lights automatically.
 #' Add the light with [add_infinite_light()]. Rendering automatically selects
 #' `integrator_type = "nee"`. Use [sky_light_image()] for a cached sky image.
 #'
-#' @param lat Latitude in degrees, between -90 and 90.
-#' @param long Longitude in degrees, between -180 and 180.
-#' @param datetime A single `POSIXct` date and time. Specify its time zone when
+#' @param lat Default `NULL`. Latitude in degrees, between -90 and 90. Supply
+#' `lat`, `long`, and `datetime` together, or use `elevation` and `azimuth`.
+#' @param long Default `NULL`. Longitude in degrees, between -180 and 180.
+#' @param datetime Default `NULL`. A single `POSIXct` date and time. Specify its time zone when
 #' constructing it with `as.POSIXct()`.
+#' @param elevation Default `NULL`. Direct solar elevation in degrees, from -90
+#' to 90. Supply with `azimuth` instead of location and time. Prague sky radiance
+#' is supported down to -4.2 degrees; Hosek image skies require elevation >= 0.
+#' @param azimuth Default `NULL`. Direct solar azimuth in degrees, from 0
+#' (north) clockwise through 90 (east), less than 360. Direct skies omit the
+#' Moon by default and cannot include Moon, stars, or planets without an ephemeris.
 #' @param altitude Default `0`. Reference altitude in meters above sea level,
 #' at `atmosphere_origin`. Prague supports 0--15000 m.
 #' @param visibility Default `131.8`. Prague meteorological visibility in kilometers,
@@ -27,7 +35,7 @@
 #' selected by `render_mode`. Set `FALSE` to omit direct sunlight and the visible
 #' disk; solar sky radiance and haze remain. A separate [sun_light()] overrides
 #' the automatic Sun.
-#' @param moon Default `TRUE`. Include an independently sampled Moon disk with
+#' @param moon Default `TRUE` for location/time skies, `FALSE` for direct skies. Include an independently sampled Moon disk with
 #' its phase and earthshine for this location and time. A separate [moon_light()]
 #' overrides the automatic Moon. Set `FALSE` to omit the automatic disk.
 #' @param sun_resolution Default `256`. Sun disk texture width and height in
@@ -121,6 +129,8 @@
 #'
 #' @details Install the full-altitude Prague data with
 #' `skymodelr::download_sky_data(sea_level = FALSE)` before rendering.
+#' Pkgdown builds download missing datasets automatically; ordinary renders
+#' require an explicit download.
 #' Atmospheric queries share skymodelr's coefficients and registered native API.
 #'
 #' With `query_altitude = TRUE`, the sky and Sun elevation change with the altitude of
@@ -162,7 +172,9 @@
 #' regularization of the finite source. It does not blur the environment image
 #' or surface geometry.
 #'
-#' Sun and Moon are prepared automatically using [sun_light()] and [moon_light()]
+#' Direct-angle skies use the native Prague solar disk with a fixed angular
+#' diameter of 0.533 degrees. They retain altitude-dependent lighting and haze.
+#' For location/time skies, Sun and Moon are prepared using [sun_light()] and [moon_light()]
 #' with this sky's location, time, altitude, rotation, intensity, and color settings.
 #' Disk textures are generated without atmospheric filtering or a fixed horizon
 #' mask, then cached. The renderer applies spectral atmospheric filtering and
@@ -203,6 +215,13 @@
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Install the full-altitude Prague data once before rendering:
 #' # skymodelr::download_sky_data(sea_level = FALSE)
+#' # Place the Sun directly, without specifying a location or date.
+#' generate_ground() |>
+#'   add_object(sphere(y = 1)) |>
+#'   add_infinite_light(sky_light(elevation = 25, azimuth = 135)) |>
+#'   render_scene(lookfrom = c(0, 2, -8), lookat = c(0, 1, 0),
+#'                aperture = 0, samples = 32, iso = 5)
+#'
 #' if (
 #'   requireNamespace("ambient", quietly = TRUE) &&
 #'     requireNamespace("tree3d", quietly = TRUE)
@@ -491,9 +510,9 @@
 #'   )
 #' }
 sky_light = function(
-  lat,
-  long,
-  datetime,
+  lat = NULL,
+  long = NULL,
+  datetime = NULL,
   intensity = 1,
   rotation = 0,
   name = "sky",
@@ -527,8 +546,13 @@ sky_light = function(
   planets = FALSE,
   celestial_resolution = 2048,
   number_cores = 1,
-  haze_filter = TRUE
+  haze_filter = TRUE,
+  elevation = NULL,
+  azimuth = NULL
 ) {
+  if (missing(moon) && (!is.null(elevation) || !is.null(azimuth))) {
+    moon = FALSE
+  }
   sky_args = list(
     altitude = altitude,
     visibility = visibility,
@@ -550,6 +574,8 @@ sky_light = function(
     name
   )
   controls = list(
+    elevation = elevation,
+    azimuth = azimuth,
     atmosphere = TRUE,
     meters_per_unit = meters_per_unit,
     atmosphere_origin = atmosphere_origin,
@@ -623,36 +649,73 @@ validate_sky_light = function(light) {
       )
     }
   }
-  for (field in c("lat", "long")) {
-    value = light[[field]]
-    limit = if (field == "lat") 90 else 180
+  direct = !is.null(light$elevation) || !is.null(light$azimuth)
+  if (direct) {
     if (
-      !is.numeric(value) ||
-        length(value) != 1 ||
-        !is.finite(value) ||
-        abs(value) > limit
+      any(!vapply(light[c("lat", "long", "datetime")], is.null, logical(1)))
     ) {
       stop(
-        "Sky light ",
-        field,
-        " must be a finite number between -",
-        limit,
-        " and ",
-        limit,
-        ".",
+        "Supply either elevation/azimuth or lat/long/datetime, not both.",
         call. = FALSE
       )
     }
-  }
-  if (
-    !inherits(light$datetime, "POSIXct") ||
-      length(light$datetime) != 1 ||
-      !is.finite(as.numeric(light$datetime))
-  ) {
-    stop(
-      "Sky light datetime must be one finite POSIXct date and time.",
-      call. = FALSE
-    )
+    for (field in c("elevation", "azimuth")) {
+      value = light[[field]]
+      bounds = if (field == "elevation") c(-90, 90) else c(0, 360)
+      if (
+        !is.numeric(value) ||
+          length(value) != 1L ||
+          !is.finite(value) ||
+          value < bounds[1] ||
+          value > bounds[2] ||
+          (field == "azimuth" && value == 360)
+      ) {
+        stop(
+          "Invalid direct sky ",
+          field,
+          ". Supply both elevation and azimuth in degrees.",
+          call. = FALSE
+        )
+      }
+    }
+    controls = if (isTRUE(light$atmosphere)) light else light$sky_args
+    for (field in c("moon", "stars", "planets", "moon_atmosphere")) {
+      if (isTRUE(controls[[field]])) {
+        stop(field, " requires lat, long, and datetime.", call. = FALSE)
+      }
+    }
+  } else {
+    for (field in c("lat", "long")) {
+      value = light[[field]]
+      limit = if (field == "lat") 90 else 180
+      if (
+        !is.numeric(value) ||
+          length(value) != 1 ||
+          !is.finite(value) ||
+          abs(value) > limit
+      ) {
+        stop(
+          "Sky light ",
+          field,
+          " must be a finite number between -",
+          limit,
+          " and ",
+          limit,
+          ".",
+          call. = FALSE
+        )
+      }
+    }
+    if (
+      !inherits(light$datetime, "POSIXct") ||
+        length(light$datetime) != 1 ||
+        !is.finite(as.numeric(light$datetime))
+    ) {
+      stop(
+        "Sky light datetime must be one finite POSIXct date and time.",
+        call. = FALSE
+      )
+    }
   }
   args = light$sky_args
   if (

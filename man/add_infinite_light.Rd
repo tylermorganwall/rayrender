@@ -22,3 +22,14 @@ A modified scene.
 \description{
 Add an Infinite Light
 }
+\examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+scene = generate_ground(depth = -1, material = diffuse("grey40")) |>
+  add_object(sphere(material = diffuse("coral"))) |>
+  add_infinite_light(sky_light_image(
+    elevation = 30, azimuth = 120, resolution = 512, name = "daylight"
+  ))
+render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+             aperture = 0, fov = 35, samples = 32, iso = 5)
+\dontshow{\}) # examplesIf}
+}

@@ -1,5 +1,10 @@
 # rayrender 0.42.0
 
+* Allow `sky_light()` and `sky_light_image()` to position the Sun with `elevation`
+  and `azimuth` instead of latitude, longitude, and date/time. Add rendered light
+  management, standalone Sun/Moon, and medium examples, and install Prague sky
+  datasets before building the pkgdown site.
+
 * Move EXR white-balance baking controls from the render functions to
   `sky_light_image()`. Cache each adapted sky for use in stills and animations,
   reusing the generated sky when only the target white point changes.
@@ -55,9 +60,11 @@
   black sky and no solar haze, while enabled Moon, stars, and planets retain
   their light, atmospheric transmission, and Earth occlusion.
 
-* Add continuous local evolution to `cloud()` with `t` and an independent
-  `animation_seed`. Broad and fine noise evolve smoothly while position remains
-  controlled by x/y/z. Time zero preserves existing clouds exactly.
+* Animate `cloud()` by translating sampling coordinates through fixed Perlin
+  fields with `t`; `animation_seed` selects the direction. Broad and fine noise
+  move together while the envelope and boundary stay fixed. This changes the
+  seeded density fields from the previous simplex-perturbation implementation.
+  Whole-cloud placement remains controlled by x/y/z.
 
 * Expose sky model settings directly in `sky_light()` and `sky_light_image()`.
   Both accept `altitude`, `visibility`, and other named settings instead of a

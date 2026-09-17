@@ -63,7 +63,7 @@
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
 #'
-#' #Shorten the open shutter time frame
+#' #The default shutter_speed = 2 exposes [0, 0.5].
 #' generate_studio() |>
 #'   add_object(
 #'     animate_objects(
@@ -72,7 +72,7 @@
 #'   ) |>
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10)
-#' #Change the time frame when the shutter is open
+#' #Shorten the exposure to [0, 0.25] with shutter_speed = 4.
 #' generate_studio() |>
 #'   add_object(
 #'     animate_objects(
@@ -82,8 +82,9 @@
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
 #'                shutter_speed=4)
-#' #Shorten the time span in which the movement occurs (which, in effect,
-#' #increases the speed of the transition).
+#' #Complete the rotation in 0.2 time units. shutter_speed = 4 exposes [0, 0.25],
+#' #so the final pose is held for 20% of the exposure and appears more distinct.
+#' #Use shutter_speed = 5 to expose only [0, 0.2], ending with the motion.
 #' generate_studio() |>
 #'   add_object(
 #'     animate_objects(start_time = 0, end_time=0.2,
@@ -93,6 +94,16 @@
 #'   add_object(sphere(y=5,x=5,z=-5,radius=2,material=light())) |>
 #'   render_scene(samples=16,sample_method = "sobol_blue",clamp_value = 10,
 #'                shutter_speed = 4)
+#' #Compare with an exposure that ends exactly when the rotation finishes.
+#' generate_studio() |>
+#'   add_object(animate_objects(
+#'     pig(y = -1.2, scale = 0.5, angle = c(0, 110, 0)),
+#'     start_time = 0, end_time = 0.2,
+#'     start_angle = c(0, -30, 0), end_angle = c(0, 30, 0)
+#'   )) |>
+#'   add_object(sphere(y = 5, x = 5, z = -5, radius = 2, material = light())) |>
+#'   render_scene(samples = 64, sample_method = "sobol_blue",
+#'                clamp_value = 10, shutter_speed = 5)
 animate_objects = function(
   scene,
   start_time = 0,

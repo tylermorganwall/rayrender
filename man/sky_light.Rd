@@ -2,12 +2,12 @@
 % Please edit documentation in R/sky_light.R
 \name{sky_light}
 \alias{sky_light}
-\title{Atmospheric Location and Time Sky Light}
+\title{Atmospheric Sky Light}
 \usage{
 sky_light(
-  lat,
-  long,
-  datetime,
+  lat = NULL,
+  long = NULL,
+  datetime = NULL,
   intensity = 1,
   rotation = 0,
   name = "sky",
@@ -41,15 +41,18 @@ sky_light(
   planets = FALSE,
   celestial_resolution = 2048,
   number_cores = 1,
-  haze_filter = TRUE
+  haze_filter = TRUE,
+  elevation = NULL,
+  azimuth = NULL
 )
 }
 \arguments{
-\item{lat}{Latitude in degrees, between -90 and 90.}
+\item{lat}{Default \code{NULL}. Latitude in degrees, between -90 and 90. Supply
+\code{lat}, \code{long}, and \code{datetime} together, or use \code{elevation} and \code{azimuth}.}
 
-\item{long}{Longitude in degrees, between -180 and 180.}
+\item{long}{Default \code{NULL}. Longitude in degrees, between -180 and 180.}
 
-\item{datetime}{A single \code{POSIXct} date and time. Specify its time zone when
+\item{datetime}{Default \code{NULL}. A single \code{POSIXct} date and time. Specify its time zone when
 constructing it with \code{as.POSIXct()}.}
 
 \item{intensity}{Default \code{1}. Nonnegative multiplier for this light's radiance.}
@@ -145,7 +148,7 @@ selected by \code{render_mode}. Set \code{FALSE} to omit direct sunlight and the
 disk; solar sky radiance and haze remain. A separate \code{\link[=sun_light]{sun_light()}} overrides
 the automatic Sun.}
 
-\item{moon}{Default \code{TRUE}. Include an independently sampled Moon disk with
+\item{moon}{Default \code{TRUE} for location/time skies, \code{FALSE} for direct skies. Include an independently sampled Moon disk with
 its phase and earthshine for this location and time. A separate \code{\link[=moon_light]{moon_light()}}
 overrides the automatic Moon. Set \code{FALSE} to omit the automatic disk.}
 
@@ -191,6 +194,14 @@ the endpoint-smoothing calculation. Each filtered haze query samples
 one of 129 weighted directions, preserving the full filter's mean with
 additional Monte Carlo noise. This sampling applies with either value of
 \code{deferred_haze}.}
+
+\item{elevation}{Default \code{NULL}. Direct solar elevation in degrees, from -90
+to 90. Supply with \code{azimuth} instead of location and time. Prague sky radiance
+is supported down to -4.2 degrees; Hosek image skies require elevation >= 0.}
+
+\item{azimuth}{Default \code{NULL}. Direct solar azimuth in degrees, from 0
+(north) clockwise through 90 (east), less than 360. Direct skies omit the
+Moon by default and cannot include Moon, stars, or planets without an ephemeris.}
 }
 \value{
 A \code{ray_infinite_light} containing a native atmospheric sky description.
@@ -198,13 +209,16 @@ A \code{ray_infinite_light} containing a native atmospheric sky description.
 \description{
 Evaluate the native Prague atmosphere at scene interactions, including
 altitude-dependent Sun and sky lighting, finite-distance haze, and
-in-scattering. Sun and Moon disk lights are included automatically.
+in-scattering. Supply location and time, or direct Sun elevation and azimuth.
+Location/time skies include Sun and Moon disk lights automatically.
 Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}}. Rendering automatically selects
 \code{integrator_type = "nee"}. Use \code{\link[=sky_light_image]{sky_light_image()}} for a cached sky image.
 }
 \details{
 Install the full-altitude Prague data with
 \code{skymodelr::download_sky_data(sea_level = FALSE)} before rendering.
+Pkgdown builds download missing datasets automatically; ordinary renders
+require an explicit download.
 Atmospheric queries share skymodelr's coefficients and registered native API.
 
 With \code{query_altitude = TRUE}, the sky and Sun elevation change with the altitude of
@@ -246,7 +260,9 @@ bands from subtracting independently fitted sky spectra. This is an angular
 regularization of the finite source. It does not blur the environment image
 or surface geometry.
 
-Sun and Moon are prepared automatically using \code{\link[=sun_light]{sun_light()}} and \code{\link[=moon_light]{moon_light()}}
+Direct-angle skies use the native Prague solar disk with a fixed angular
+diameter of 0.533 degrees. They retain altitude-dependent lighting and haze.
+For location/time skies, Sun and Moon are prepared using \code{\link[=sun_light]{sun_light()}} and \code{\link[=moon_light]{moon_light()}}
 with this sky's location, time, altitude, rotation, intensity, and color settings.
 Disk textures are generated without atmospheric filtering or a fixed horizon
 mask, then cached. The renderer applies spectral atmospheric filtering and
@@ -285,6 +301,13 @@ and demonstrates image skies, celestial lights, and additional sky controls.
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 # Install the full-altitude Prague data once before rendering:
 # skymodelr::download_sky_data(sea_level = FALSE)
+# Place the Sun directly, without specifying a location or date.
+generate_ground() |>
+  add_object(sphere(y = 1)) |>
+  add_infinite_light(sky_light(elevation = 25, azimuth = 135)) |>
+  render_scene(lookfrom = c(0, 2, -8), lookat = c(0, 1, 0),
+               aperture = 0, samples = 32, iso = 5)
+
 if (
   requireNamespace("ambient", quietly = TRUE) &&
     requireNamespace("tree3d", quietly = TRUE)

@@ -16,14 +16,13 @@
 #'   rounded bodies with billowing tops; `"stratus"` creates a shallow cloud bank.
 #' @param seed Default `42`. Nonnegative integer seed for the cloud shape.
 #'   Generating a cloud preserves the caller's random-number state.
-#' @param t Default `0`. Continuous, dimensionless evolution time.
-#'   Small changes gently reshape the broad and fine density features without
-#'   moving the bounding box. Zero reproduces the original static cloud.
+#' @param t Default `0`. Continuous, dimensionless translation time.
+#'   Increasing time translates the sampling coordinates through Perlin noise without
+#'   moving the bounding box. Zero gives the static cloud.
 #'   Keep both seeds fixed and increase this value between frames; for example,
 #'   use `seq(0, 1, length.out = 30)` for a gentle transition. Negative times work.
-#' @param animation_seed Default `1`. Nonnegative integer seed for the local
-#'   evolution, independent of the shape's `seed`. Changing it selects a different
-#'   evolution of the same cloud; it has no effect at `t = 0`.
+#' @param animation_seed Default `1`. Nonnegative integer seed selecting the translation
+#'   direction, independent of the shape's `seed`. It has no effect at `t = 0`.
 #' @param resolution Default `128`. Integer number of density cells along the
 #'   longest dimension, at least 24. Other dimensions follow the aspect ratio,
 #'   with at least eight cells each. Higher values add detail and use more memory.
@@ -72,12 +71,12 @@
 #' [animate_objects()], and [create_instances()] operations transform the cloud
 #' using the same object machinery as other closed shapes.
 #'
-#' Evolution adds small, bounded perturbations to the broad and fine noise
-#' fields using separately seeded four-dimensional simplex noise (space and
-#' time). Subtracting the perturbation at time zero anchors the original shape.
-#' Broad domes, the base profile, and edge fades stay fixed while local density
-#' swells and erodes. Evolution is procedural rather than a fluid simulation;
-#' cloud mass is not conserved. Use `x`, `y`, and `z` for bulk movement.
+#' Animation translates the sampling coordinates through fixed three-dimensional
+#' Perlin fields. Broad and fine features share a direction selected by
+#' `animation_seed`; one time unit travels 0.1 times the longest box dimension.
+#' Broad domes, the base profile, and edge fades stay fixed while noise passes
+#' through them. This is procedural animation, not a fluid simulation; cloud
+#' mass is not conserved. Use `x`, `y`, and `z` to move the whole cloud.
 #'
 #' Rebuild the cloud with a new `t` value for each rendered frame.
 #' [animate_objects()] animates its transform; it does not evolve the density
@@ -135,7 +134,7 @@
 #'     add_infinite_light(sky_light_image(40.7, -74, time)) |>
 #'  render_scene(lookfrom = c(80, 100, -100), lookat = c(0, 20, 0),rotate_env=170,
 #'                fov = 35, integrator_type = "nee", samples = 16, iso=4)
-#'   # Keep seeds and position fixed to evolve the cloud locally over time.
+#'   # Keep seeds and position fixed to translate through the same Perlin field.
 #'   # Rebuilding a frame at the same t value always gives the same cloud.
 #'   for (frame in 0:10) {
 #'     set.seed(2026)
@@ -323,7 +322,7 @@ perlin_cloud_density = function(
     }
   }
   dims = pmax(8L, as.integer(ceiling(resolution * (size / max(size)))))
-  # noise_perlin() draws its seed from R's RNG. Restore the caller's RNG state.
+  # Preserve the caller's RNG while choosing Perlin seeds and puff centers.
   had_seed = exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
   if (had_seed) {
     previous_seed = get(".Random.seed", envir = .GlobalEnv)
@@ -339,57 +338,19 @@ perlin_cloud_density = function(
     add = TRUE
   )
   set.seed(seed)
-  broad = ambient::noise_perlin(
-    dim = dims,
-    frequency = 5 / max(dims),
-    fractal = "fbm",
-    octaves = 4,
-    gain = 0.5,
-    lacunarity = 2
+  broad_seed = sample.int(.Machine$integer.max, 1)
+  fine_seed = sample.int(.Machine$integer.max, 1)
+  direction = withr::with_seed(animation_seed, stats::runif(3, -1, 1))
+  direction = direction / sqrt(sum(direction^2))
+  coordinates = expand.grid(
+    x = (seq_len(dims[1]) - 0.5) / max(dims),
+    y = (seq_len(dims[2]) - 0.5) / max(dims),
+    z = (seq_len(dims[3]) - 0.5) / max(dims),
+    KEEP.OUT.ATTRS = FALSE
   )
-  fine = ambient::noise_perlin(
-    dim = dims,
-    frequency = 11 / max(dims),
-    fractal = "fbm",
-    octaves = 3,
-    gain = 0.5,
-    lacunarity = 2
-  )
-  # Time changes the local erosion fields, not the domes or object placement.
-  # Explicit simplex seeds leave the shape RNG sequence (including puff centers)
-  # untouched. Skip this work at zero to preserve the original field exactly.
-  if (t != 0) {
-    coordinates = expand.grid(
-      x = (seq_len(dims[1]) - 0.5) / max(dims),
-      y = (seq_len(dims[2]) - 0.5) / max(dims),
-      z = (seq_len(dims[3]) - 0.5) / max(dims),
-      KEEP.OUT.ATTRS = FALSE
-    )
-    broad = broad +
-      array(
-        cloud_evolution_noise(
-          coordinates,
-          t,
-          animation_seed,
-          frequency = 3,
-          speed = 1
-        ),
-        dims
-      ) *
-        0.12
-    fine = fine +
-      array(
-        cloud_evolution_noise(
-          coordinates,
-          t,
-          (animation_seed + 1) %% .Machine$integer.max,
-          frequency = 9,
-          speed = 1.5
-        ),
-        dims
-      ) *
-        0.18
-  }
+  coordinates = sweep(as.matrix(coordinates), 2, 0.1 * t * direction, "+")
+  broad = array(cloud_perlin_noise(coordinates, broad_seed, 5, 4), dims)
+  fine = array(cloud_perlin_noise(coordinates, fine_seed, 11, 3), dims)
 
   # Cell centers, in the same x/y/z order as grid_medium().
   x = (seq_len(dims[1]) - 0.5) / dims[1]
@@ -453,28 +414,19 @@ perlin_cloud_density = function(
 }
 
 #' @keywords internal
-cloud_evolution_noise = function(
-  coordinates,
-  t,
-  seed,
-  frequency,
-  speed
-) {
-  # The fourth coordinate supplies smooth temporal change at each fixed point.
-  # Anchor at zero; bounded simplex values keep even long evolutions local.
-  initial = ambient::gen_simplex(
-    x = coordinates$x * frequency,
-    y = coordinates$y * frequency,
-    z = coordinates$z * frequency,
-    t = 0,
-    seed = seed
-  )
-  evolved = ambient::gen_simplex(
-    x = coordinates$x * frequency,
-    y = coordinates$y * frequency,
-    z = coordinates$z * frequency,
-    t = t * speed,
-    seed = seed
-  )
-  evolved - initial
+cloud_perlin_noise = function(coordinates, seed, frequency, octaves) {
+  noise = numeric(nrow(coordinates))
+  weights = 0.5^(seq_len(octaves) - 1)
+  for (i in seq_len(octaves)) {
+    noise = noise +
+      weights[i] *
+        ambient::gen_perlin(
+          x = coordinates[, 1],
+          y = coordinates[, 2],
+          z = coordinates[, 3],
+          frequency = frequency * 2^(i - 1),
+          seed = (as.double(seed) + i - 1) %% .Machine$integer.max
+        )
+  }
+  noise / sum(weights)
 }

@@ -17,3 +17,20 @@ A modified scene.
 \description{
 Remove an Infinite Light
 }
+\examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+scene = generate_ground(depth = -1, material = diffuse("grey40")) |>
+  add_object(sphere(material = diffuse("coral"))) |>
+  add_object(sphere(y = 4, z = -2, radius = 1, material = light(intensity = 30))) |>
+  add_infinite_light(sky_light_image(
+    elevation = 30, azimuth = 120, resolution = 512, intensity = 0.02, name = "fill"
+  ))
+render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+             aperture = 0, fov = 35, samples = 32, ambient_light = FALSE)
+# Remove the sky fill while keeping the sphere light and exposure unchanged.
+scene = remove_infinite_light(scene, "fill")
+list_infinite_lights(scene)
+render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+             aperture = 0, fov = 35, samples = 32, ambient_light = FALSE)
+\dontshow{\}) # examplesIf}
+}

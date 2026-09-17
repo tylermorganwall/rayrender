@@ -26,7 +26,24 @@ media are detected automatically. A medium with zero absorption and scattering
 creates a vacuum cavity. Intersecting, non-nested volume boundaries are unsupported.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# An invisible boundary containing a scattering medium.
+fog = homogeneous_medium(sigma_s = 2, g = 0.4)
+scene = generate_ground(depth = -1, material = diffuse("grey30")) |>
+  add_object(set_medium(sphere(x = -1.2), fog, keep_surface = FALSE)) |>
+  add_object(sphere(x = 1.2, material = diffuse("coral"))) |>
+  add_object(sphere(y = 4, z = -2, radius = 1, material = light(intensity = 30)))
+render_scene(scene, lookfrom = c(0, 2, -8), lookat = c(0, 0, 0),
+             fov = 40, aperture = 0, samples = 64, ambient_light = FALSE)
+
+# Keep a glass surface around an absorbing water medium.
 water = homogeneous_medium(sigma_a = c(0.3, 0.05, 0.02), sigma_s = 0.01)
 glass = sphere(material = dielectric())
-scene = set_medium(glass, water, keep_surface = TRUE)
+scene = set_medium(glass, water, keep_surface = TRUE) |>
+  add_object(generate_ground(depth = -1,
+    material = diffuse("white", checkercolor = "grey30"))) |>
+  add_object(sphere(y = 4, z = -2, radius = 1, material = light(intensity = 30)))
+render_scene(scene, lookfrom = c(0, 1, -6), lookat = c(0, 0, 0),
+             fov = 35, aperture = 0, samples = 64, ambient_light = FALSE)
+\dontshow{\}) # examplesIf}
 }

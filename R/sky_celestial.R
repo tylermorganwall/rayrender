@@ -76,6 +76,10 @@ sky_light_celestial_settings = function(light) {
 
 #' @keywords internal
 sky_light_celestial_lights = function(light) {
+  # Direct-angle skies use the native Prague solar disk and have no ephemeris.
+  if (!is.null(light$elevation)) {
+    return(list())
+  }
   controls = sky_light_celestial_settings(light)
   settings = prague_sky_settings(light$sky_args)
   sky_args = settings[c(

@@ -75,7 +75,8 @@ Add these descriptions to a scene with \code{\link[=add_infinite_light]{add_infi
 }
 \details{
 Requires skymodelr and its Prague data. Install datasets with
-\code{skymodelr::download_sky_data()} before rendering. Requires the public
+\code{skymodelr::download_sky_data()} before rendering. Pkgdown builds download
+missing datasets automatically. Requires the public
 \code{skymodelr::generate_sun_disk()} and \code{skymodelr::generate_moon_disk()} exports.
 
 Pair a Sun disk with \code{sky_light_image(..., hosek = FALSE, render_mode = "atmosphere")} to exclude the sky map's rasterized Sun. Leave
@@ -117,10 +118,26 @@ and halos are not modeled. See \code{\link[=sky_light]{sky_light()}} for the mod
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-time = as.POSIXct("2026-01-28 21:00:00", tz = "Pacific/Auckland")
-scene = sphere(material = diffuse()) |>
-  add_infinite_light(moon_light(-36.87593, 174.7647, time)) |>
-  add_camera(camera(aperture = 0))
-render_scene(scene, integrator_type = "nee", auto_exposure = TRUE)
+# Sun alone: direct illumination and shadows without a sky environment.
+sun_time = as.POSIXct("2026-06-21 15:00:00", tz = "America/New_York")
+sun_scene = generate_ground(depth = -1, material = diffuse("grey60")) |>
+  add_object(sphere(material = diffuse("coral"))) |>
+  add_object(cube(x = 2, y = -0.25, width = 1.5,
+                  material = diffuse("steelblue"))) |>
+  add_infinite_light(sun_light(40.7, -74, sun_time))
+render_scene(sun_scene, lookfrom = c(4, 3, -8), lookat = c(0.5, 0, 0),
+             aperture = 0, fov = 40, samples = 64,
+             integrator_type = "nee", ambient_light = FALSE, iso = 5)
+
+# Moon alone: exposure is adjusted to reveal its much weaker illumination.
+moon_time = as.POSIXct("2026-01-28 21:00:00", tz = "Pacific/Auckland")
+moon_scene = generate_ground(depth = -1, material = diffuse("grey60")) |>
+  add_object(sphere(material = diffuse("coral"))) |>
+  add_object(cube(x = 2, y = -0.25, width = 1.5,
+                  material = diffuse("steelblue"))) |>
+  add_infinite_light(moon_light(-36.87593, 174.7647, moon_time))
+render_scene(moon_scene, lookfrom = c(4, 3, -8), lookat = c(0.5, 0, 0),
+             aperture = 0, fov = 40, samples = 64,
+             integrator_type = "nee", ambient_light = FALSE, auto_exposure = TRUE)
 \dontshow{\}) # examplesIf}
 }
