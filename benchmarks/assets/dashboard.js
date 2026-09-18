@@ -1,368 +1,141 @@
-(function () {
-  const state = {
-    rows: [],
-    filtered: []
-  };
-
-  const metricConfigs = [
-    { id: "renderChart", field: "render_seconds", label: "render_seconds" },
-    { id: "bvhChart", field: "bvh_build_seconds", label: "bvh_build_seconds" },
-    { id: "memoryChart", field: "max_rss_mb", label: "max_rss_mb" },
-    {
-      id: "packageChart",
-      field: "package_build_seconds",
-      fallback: "build_seconds",
-      label: "package build seconds"
-    }
-  ];
-
-  function embeddedCsv() {
-    const node = document.getElementById("benchmark-csv");
-    return node ? node.textContent.trim() : "";
+(async function () {
+  "use strict";
+  const node = (id) => document.getElementById(id);
+  const text = (id, value) => { node(id).textContent = value; };
+  const available = (value) => typeof value === "number" && Number.isFinite(value);
+  const numberText = (value) => value > 0 && value < 0.001 ? value.toPrecision(4) : value.toFixed(4);
+  const label = (attempt) => `run ${attempt.run_id || "legacy"} / attempt ${attempt.run_attempt || "unknown"} / ${(attempt.commit_sha || "unknown").slice(0, 12)} · ${attempt.status}`;
+  const metric = (row, name, unit) => available(row[name]) ? `${numberText(row[name])} ${unit} (n=${row[`${name}_n`]})` : name === "bvh_build_seconds" ? "BVH timing not recorded" : "Unavailable";
+  const settings = (row) => `${row.benchmark_settings_json || `${row.width}×${row.height}, ${row.samples} samples, ${row.threads} threads, seed ${row.seed}`} · warmups ${row.warmup_iterations || "unrecorded"} · requested iterations ${row.iterations || "unrecorded"}`;
+  const list = (value) => Array.isArray(value) ? value : value ? [value] : [];
+  function select(id, values, all = true) {
+    node(id).replaceChildren();
+    if (all) node(id).add(new Option("All", ""));
+    values.forEach(([value, title]) => node(id).add(new Option(title, value)));
   }
-
-  function parseCsv(text) {
-    const rows = [];
-    let row = [];
-    let field = "";
-    let inQuotes = false;
-    for (let i = 0; i < text.length; i += 1) {
-      const ch = text[i];
-      const next = text[i + 1];
-      if (inQuotes) {
-        if (ch === '"' && next === '"') {
-          field += '"';
-          i += 1;
-        } else if (ch === '"') {
-          inQuotes = false;
-        } else {
-          field += ch;
-        }
-      } else if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ",") {
-        row.push(field);
-        field = "";
-      } else if (ch === "\n") {
-        row.push(field);
-        rows.push(row);
-        row = [];
-        field = "";
-      } else if (ch !== "\r") {
-        field += ch;
-      }
-    }
-    if (field.length || row.length) {
-      row.push(field);
-      rows.push(row);
-    }
-    if (!rows.length) {
-      return [];
-    }
-    const header = rows.shift();
-    return rows
-      .filter((item) => item.length && item.some((value) => value.length))
-      .map((item) => {
-        const out = {};
-        header.forEach((name, index) => {
-          out[name] = item[index] || "";
-        });
-        return out;
-      });
+  function addText(parent, tag, value) {
+    const child = document.createElement(tag);
+    child.textContent = value;
+    parent.appendChild(child);
+    return child;
   }
-
-  function numberValue(row, field, fallback) {
-    const value = row[field] || (fallback ? row[fallback] : "");
-    if (!value || value === "NA") {
-      return NaN;
-    }
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : NaN;
-  }
-
-  function uniqueValues(rows, field) {
-    return Array.from(new Set(rows.map((row) => row[field] || "NA"))).sort();
-  }
-
-  function populateSelect(id, values) {
-    const select = document.getElementById(id);
-    const previous = select.value;
-    select.innerHTML = "";
-    const all = document.createElement("option");
-    all.value = "";
-    all.textContent = "All";
-    select.appendChild(all);
-    values.forEach((value) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = value;
-      select.appendChild(option);
-    });
-    if (values.includes(previous)) {
-      select.value = previous;
-    }
-  }
-
-  function median(values) {
-    const clean = values
-      .map(Number)
-      .filter((value) => Number.isFinite(value))
-      .sort((a, b) => a - b);
-    if (!clean.length) {
-      return NaN;
-    }
-    const middle = Math.floor(clean.length / 2);
-    return clean.length % 2 ? clean[middle] : (clean[middle - 1] + clean[middle]) / 2;
-  }
-
-  function mean(values) {
-    const clean = values
-      .map(Number)
-      .filter((value) => Number.isFinite(value));
-    if (!clean.length) {
-      return NaN;
-    }
-    return clean.reduce((total, value) => total + value, 0) / clean.length;
-  }
-
-  function groupKey(row) {
-    return [
-      row.branch_name || "NA",
-      row.commit_sha || "NA",
-      row.timestamp_utc || "NA",
-      row.benchmark_name || "NA",
-      row.build_config_name || "NA",
-      row.width || "NA",
-      row.height || "NA",
-      row.samples || "NA",
-      row.threads || "NA"
-    ].join("\u001f");
-  }
-
-  function summarize(rows) {
-    const groups = new Map();
-    rows.forEach((row) => {
-      const key = groupKey(row);
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key).push(row);
-    });
-    return Array.from(groups.values()).map((items) => {
-      const first = items[0];
-      return {
-        branch_name: first.branch_name || "NA",
-        commit_sha: first.commit_sha || "NA",
-        short_sha: (first.commit_sha || "NA").slice(0, 8),
-        timestamp_utc: first.timestamp_utc || "NA",
-        benchmark_name: first.benchmark_name || "NA",
-        build_config_name: first.build_config_name || "NA",
-        width: first.width || "NA",
-        height: first.height || "NA",
-        samples: first.samples || "NA",
-        threads: first.threads || "NA",
-        n: items.length,
-        median_render_seconds: median(items.map((row) => numberValue(row, "render_seconds"))),
-        mean_render_seconds: mean(items.map((row) => numberValue(row, "render_seconds"))),
-        min_render_seconds: Math.min(...items.map((row) => numberValue(row, "render_seconds")).filter(Number.isFinite)),
-        max_render_seconds: Math.max(...items.map((row) => numberValue(row, "render_seconds")).filter(Number.isFinite)),
-        median_bvh_build_seconds: median(items.map((row) => numberValue(row, "bvh_build_seconds"))),
-        median_max_rss_mb: median(items.map((row) => numberValue(row, "max_rss_mb"))),
-        median_total_seconds: median(items.map((row) => numberValue(row, "total_seconds"))),
-        median_package_build_seconds: median(
-          items.map((row) => numberValue(row, "package_build_seconds", "build_seconds"))
-        )
-      };
-    });
-  }
-
-  function formatNumber(value) {
-    return Number.isFinite(value) ? value.toFixed(3) : "NA";
-  }
-
-  function applyFilters() {
-    const benchmark = document.getElementById("benchmarkFilter").value;
-    const config = document.getElementById("configFilter").value;
-    const branch = document.getElementById("branchFilter").value;
-    state.filtered = state.rows.filter((row) => {
-      return (!benchmark || row.benchmark_name === benchmark) &&
-        (!config || row.build_config_name === config) &&
-        (!branch || row.branch_name === branch);
-    });
-    render();
-  }
-
-  function latestRows(summary) {
-    const sorted = [...summary].sort((a, b) => {
-      return String(a.timestamp_utc).localeCompare(String(b.timestamp_utc));
-    });
-    const latest = new Map();
-    sorted.forEach((row) => {
-      latest.set([row.branch_name, row.benchmark_name, row.build_config_name].join("\u001f"), row);
-    });
-    return Array.from(latest.values()).sort((a, b) => {
-      return [a.branch_name, a.benchmark_name, a.build_config_name]
-        .join("\u001f")
-        .localeCompare([b.branch_name, b.benchmark_name, b.build_config_name].join("\u001f"));
-    });
-  }
-
-  function renderTable(summary) {
-    const tbody = document.querySelector("#latestTable tbody");
-    tbody.innerHTML = "";
-    latestRows(summary).forEach((row) => {
-      const tr = document.createElement("tr");
-      [
-        row.branch_name,
-        row.benchmark_name,
-        row.build_config_name,
-        row.short_sha,
-        row.timestamp_utc,
-        row.n,
-        formatNumber(row.median_render_seconds),
-        formatNumber(row.mean_render_seconds),
-        formatNumber(row.median_bvh_build_seconds),
-        formatNumber(row.median_max_rss_mb),
-        formatNumber(row.median_total_seconds)
-      ].forEach((value) => {
-        const td = document.createElement("td");
-        td.textContent = value;
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-  }
-
-  function colorFor(value) {
-    const palette = ["#2563eb", "#c2410c", "#047857", "#7c3aed", "#be123c", "#0f766e"];
-    let hash = 0;
-    for (let i = 0; i < value.length; i += 1) {
-      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
-    }
-    return palette[hash % palette.length];
-  }
-
-  function renderChart(config, summary, rows) {
-    const host = document.getElementById(config.id);
-    host.innerHTML = "";
-    const values = summary
-      .map((row) => ({
-        row,
-        x: Date.parse(row.timestamp_utc),
-        y: config.field === "render_seconds" ? row.median_render_seconds :
-          config.field === "bvh_build_seconds" ? row.median_bvh_build_seconds :
-          config.field === "max_rss_mb" ? row.median_max_rss_mb :
-          row.median_package_build_seconds
-      }))
-      .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
-    if (!values.length) {
-      host.textContent = "not available";
+  function chart(id, field, rows) {
+    const host = node(id);
+    host.replaceChildren();
+    const points = rows.filter((r) => available(r[field]) && Number.isFinite(Date.parse(r.timestamp_utc)));
+    if (!points.length) {
       host.className = "chart empty";
+      host.textContent = field === "bvh_build_seconds" ? "BVH timing not recorded" : "No successful measurements available";
       return;
     }
     host.className = "chart";
-    const width = 900;
-    const height = 260;
-    const margin = { top: 18, right: 18, bottom: 44, left: 58 };
-    const minX = Math.min(...values.map((point) => point.x));
-    const maxX = Math.max(...values.map((point) => point.x));
-    const minY = Math.min(0, Math.min(...values.map((point) => point.y)));
-    const maxY = Math.max(...values.map((point) => point.y));
-    const spanX = Math.max(1, maxX - minX);
-    const spanY = Math.max(1e-9, maxY - minY);
-    const sx = (value) => margin.left + ((value - minX) / spanX) * (width - margin.left - margin.right);
-    const sy = (value) => height - margin.bottom - ((value - minY) / spanY) * (height - margin.top - margin.bottom);
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 900 230");
     svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", config.label);
-
-    const axis = document.createElementNS(svg.namespaceURI, "path");
-    axis.setAttribute("d", `M${margin.left},${margin.top}V${height - margin.bottom}H${width - margin.right}`);
-    axis.setAttribute("class", "axis");
-    svg.appendChild(axis);
-
-    const yLabel = document.createElementNS(svg.namespaceURI, "text");
-    yLabel.setAttribute("x", 8);
-    yLabel.setAttribute("y", 18);
-    yLabel.setAttribute("class", "axis-label");
-    yLabel.textContent = config.label;
-    svg.appendChild(yLabel);
-
-    const grouped = new Map();
-    values.forEach((point) => {
-      const key = `${point.row.branch_name} / ${point.row.build_config_name}`;
-      if (!grouped.has(key)) {
-        grouped.set(key, []);
-      }
-      grouped.get(key).push(point);
-    });
-    grouped.forEach((points, key) => {
-      points.sort((a, b) => a.x - b.x);
-      const path = document.createElementNS(svg.namespaceURI, "path");
-      path.setAttribute(
-        "d",
-        points.map((point, index) => `${index ? "L" : "M"}${sx(point.x)},${sy(point.y)}`).join("")
-      );
-      path.setAttribute("fill", "none");
-      path.setAttribute("stroke", colorFor(key));
-      path.setAttribute("stroke-width", "2");
-      svg.appendChild(path);
-    });
-
-    rows.forEach((row) => {
-      const x = Date.parse(row.timestamp_utc);
-      const y = numberValue(row, config.field, config.fallback);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        return;
-      }
-      const point = document.createElementNS(svg.namespaceURI, "circle");
-      point.setAttribute("cx", sx(x));
-      point.setAttribute("cy", sy(y));
-      point.setAttribute("r", "2.5");
-      point.setAttribute("class", "raw-point");
-      svg.appendChild(point);
-    });
-
-    values.forEach((point) => {
-      const circle = document.createElementNS(svg.namespaceURI, "circle");
-      circle.setAttribute("cx", sx(point.x));
-      circle.setAttribute("cy", sy(point.y));
-      circle.setAttribute("r", "4");
-      circle.setAttribute("fill", colorFor(`${point.row.branch_name} / ${point.row.build_config_name}`));
-      const title = document.createElementNS(svg.namespaceURI, "title");
-      title.textContent = `${point.row.branch_name} ${point.row.build_config_name} ${point.row.short_sha}: ${formatNumber(point.y)}`;
-      circle.appendChild(title);
-      svg.appendChild(circle);
+    svg.setAttribute("aria-label", field);
+    const times = points.map((r) => Date.parse(r.timestamp_utc));
+    const low = Math.min(...times), high = Math.max(...times);
+    const max = Math.max(...points.map((r) => r[field]), 0.000001);
+    function svgText(x, y, content) {
+      const n = document.createElementNS(ns, "text"); n.setAttribute("x", x); n.setAttribute("y", y); n.textContent = content; svg.appendChild(n);
+    }
+    svgText(4, 20, max.toFixed(3)); svgText(4, 195, "0");
+    svgText(60, 220, new Date(low).toISOString().slice(0, 10));
+    svgText(770, 220, new Date(high).toISOString().slice(0, 10));
+    points.forEach((r) => {
+      const circle = document.createElementNS(ns, "circle");
+      circle.setAttribute("cx", 70 + (Date.parse(r.timestamp_utc) - low) / Math.max(1, high - low) * 760);
+      circle.setAttribute("cy", 195 - r[field] / max * 175);
+      circle.setAttribute("r", 5);
+      circle.setAttribute("fill", r.effective_backend === "scalar" ? "#c2410c" : "#2563eb");
+      const title = document.createElementNS(ns, "title");
+      title.textContent = `${r.build_config_name} revision ${r.config_revision || "legacy"}, ${r.benchmark_name}, run ${r.run_id}/${r.run_attempt}, ${r[field]} (n=${r[`${field}_n`]}), ${settings(r)}, ${r.effective_flags || "flags unrecorded"}`;
+      circle.appendChild(title); svg.appendChild(circle);
     });
     host.appendChild(svg);
   }
-
-  function render() {
-    const summary = summarize(state.filtered);
-    document.getElementById("rowCount").textContent = `${state.filtered.length} rows`;
-    renderTable(summary);
-    metricConfigs.forEach((config) => renderChart(config, summary, state.filtered));
-  }
-
-  async function loadData() {
-    let text = embeddedCsv();
-    if (!text) {
-      const response = await fetch("data/render_benchmarks.csv");
-      text = await response.text();
+  try {
+    const embedded = node("benchmark-data").textContent.trim();
+    let data;
+    if (embedded) data = JSON.parse(embedded);
+    else {
+      const response = await fetch("data/dashboard.json");
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      data = await response.json();
     }
-    state.rows = parseCsv(text);
-    state.filtered = state.rows;
-    populateSelect("benchmarkFilter", uniqueValues(state.rows, "benchmark_name"));
-    populateSelect("configFilter", uniqueValues(state.rows, "build_config_name"));
-    populateSelect("branchFilter", uniqueValues(state.rows, "branch_name"));
-    ["benchmarkFilter", "configFilter", "branchFilter"].forEach((id) => {
-      document.getElementById(id).addEventListener("change", applyFilters);
-    });
-    render();
+    if (!data || !Array.isArray(data.summaries) || !Array.isArray(data.attempts) || !Array.isArray(data.builds)) throw new Error("Invalid dashboard data schema");
+    data.attempts.sort((a, b) => b.timestamp_utc.localeCompare(a.timestamp_utc));
+    const values = (field) => [...new Set(data.summaries.map((r) => r[field] || "unknown"))].sort().map((x) => [x, x]);
+    select("branchFilter", values("branch_name"));
+    select("benchmarkFilter", values("benchmark_name"));
+    select("configFilter", values("build_config_name"));
+    // Start on the newest attempt's branch, and prefer its latest validated comparison.
+    if (data.attempts.length) node("branchFilter").value = data.attempts[0].branch_name;
+    function attempts() { return data.attempts.filter((a) => !node("branchFilter").value || a.branch_name === node("branchFilter").value); }
+    function updateRuns() {
+      const items = attempts();
+      select("runFilter", items.map((a) => [a.attempt_key, label(a)]), false);
+      const complete = items.find((a) => a.status === "complete");
+      if (complete) node("runFilter").value = complete.attempt_key;
+      text("latestAttempt", items.length ? `Latest attempt: ${label(items[0])} · ${items[0].timestamp_utc}` : "No benchmark attempts recorded");
+      text("latestComplete", complete ? `Latest complete valid comparison: ${label(complete)}` : "No complete valid comparison recorded. Historical measurements remain available.");
+    }
+    function render() {
+      const history = data.summaries.filter((r) => ["branch", "benchmark", "config"].every((key) => {
+        const value = node(`${key}Filter`).value;
+        const field = {branch: "branch_name", benchmark: "benchmark_name", config: "build_config_name"}[key];
+        return !value || r[field] === value;
+      }));
+      const selected = history.filter((r) => r.attempt_key === node("runFilter").value);
+      const attempt = data.attempts.find((a) => a.attempt_key === node("runFilter").value);
+      text("rowCount", `${selected.reduce((n, r) => n + r.row_count, 0)} selected rows / ${data.row_count} historical rows`);
+      text("selectionStatus", attempt ? `Displaying ${label(attempt)}. ${selected.length ? "" : "No measurements match these filters."}` : "No benchmark data available.");
+      text("comparisonNote", new Set(selected.map(settings)).size > 1 ? "Different benchmark settings are shown separately; these rows are not equivalent comparisons." : "Configuration revisions and settings identify the measurements; legacy flags are unverified.");
+      const body = document.querySelector("#latestTable tbody"); body.replaceChildren();
+      selected.forEach((r) => {
+        const tr = document.createElement("tr");
+        const status = Object.entries(r.statuses).map(([k, n]) => `${k}: ${n}`).join(", ");
+        const cells = [`${r.run_id || "legacy"} / ${r.run_attempt || "?"} / ${(r.commit_sha || "unknown").slice(0, 12)}`, r.benchmark_name, `${r.build_config_name} / rev ${r.config_revision || "legacy"} / ${r.effective_backend || "unrecorded"}`, `${r.width}×${r.height} · ${r.samples} samples · ${r.threads} threads · seed ${r.seed} · ${r.warmup_iterations || "unrecorded"} warmups`, status, metric(r, "render_seconds", "s"), metric(r, "bvh_build_seconds", "s"), metric(r, "max_rss_mb", "MB"), metric(r, "total_seconds", "s")];
+        cells.forEach((v) => addText(tr, "td", v));
+        const settingDetails = addText(tr.children[3], "details", "");
+        addText(settingDetails, "summary", "All settings");
+        addText(settingDetails, "pre", settings(r));
+        const details = addText(tr.children[2], "details", "");
+        addText(details, "summary", "Compiler and flags");
+        addText(details, "p", `${r.cxx_standard || "Standard unrecorded"}; ${r.compiler_id || "Compiler unrecorded"}; ${r.effective_flags || "Effective flags unrecorded"}`);
+        body.appendChild(tr);
+      });
+      const builds = node("buildMeasurements"); builds.replaceChildren();
+      data.builds.filter((b) => b.attempt_key === node("runFilter").value && (!node("configFilter").value || b.build_config_name === node("configFilter").value)).forEach((b) => addText(builds, "p", `${b.build_config_name} / rev ${b.config_revision || "legacy"}: ${available(b.seconds) ? `${b.seconds.toFixed(3)} s (n=${b.n} build)` : "No successful build measurement"}`));
+      const diagnostics = node("diagnostics"); diagnostics.replaceChildren();
+      // Latest failures stay visible even while the table shows the last good comparison.
+      const diagnosticKeys = new Set([node("runFilter").value, attempts()[0]?.attempt_key]);
+      data.attempts.filter((a) => diagnosticKeys.has(a.attempt_key)).forEach((a) => {
+        addText(diagnostics, "h3", label(a));
+        list(a.validation_errors).forEach((error) => addText(diagnostics, "p", error));
+        if (/^[0-9]+$/.test(a.run_id)) {
+          const link = addText(diagnostics, "a", "Actions run and diagnostic artifacts");
+          link.href = `https://github.com/tylermorganwall/rayrender/actions/runs/${a.run_id}/attempts/${a.run_attempt}`;
+        }
+        data.summaries.filter((r) => r.attempt_key === a.attempt_key).forEach((r) => {
+          const failures = list(r.failures);
+          if (failures.length) {
+            const details = addText(diagnostics, "details", "");
+            addText(details, "summary", `${r.build_config_name} / ${r.benchmark_name}: ${Object.keys(r.statuses).join(", ")}`);
+            failures.forEach((error) => addText(details, "pre", error));
+          }
+        });
+      });
+      chart("renderChart", "render_seconds", history); chart("bvhChart", "bvh_build_seconds", history); chart("memoryChart", "max_rss_mb", history);
+    }
+    updateRuns(); render();
+    node("branchFilter").addEventListener("change", () => { updateRuns(); render(); });
+    ["runFilter", "benchmarkFilter", "configFilter"].forEach((id) => node(id).addEventListener("change", render));
+    text("loadStatus", data.row_count ? "Benchmark data loaded." : "No benchmark data available.");
+    node("loadStatus").dataset.state = data.row_count ? "loaded" : "empty";
+  } catch (error) {
+    text("loadStatus", `Dashboard load error: ${error.message}`);
+    node("loadStatus").dataset.state = "error";
   }
-
-  loadData().catch((error) => {
-    document.getElementById("rowCount").textContent = `failed to load data: ${error.message}`;
-  });
 }());
