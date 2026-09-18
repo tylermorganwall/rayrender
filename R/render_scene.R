@@ -740,6 +740,7 @@ HAS_OIDN: %s
   camera_info = scene_list$camera_info
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   screen_text_native_overlay = screen_text_needs_native_overlay(screen_text)
@@ -828,6 +829,8 @@ HAS_OIDN: %s
     exposure_adjustment = preview_exposure
   )
   print_time(verbose, "Post-processed image")
+  attr(return_array, "bvh_build_seconds") = attr(rgb_mat, "bvh_build_seconds")
+  attr(return_array, "bvh_build_count") = attr(rgb_mat, "bvh_build_count")
 
   return(invisible(return_array))
 }

@@ -1,292 +1,163 @@
-# Render Benchmark Harness
+# Render benchmarks
 
-This directory contains an R-only benchmark harness for measuring rayrender
-render time across source refs, build settings, and R-defined scenes.
+The R harness installs each configuration into an isolated library, runs a fresh
+R worker for every warmup/measured iteration, and writes CSV rows plus diagnostic
+logs. Production settings remain in `configs/default.json`: 50 × 50 pixels,
+32 samples, 3,000 objects, one render thread. CI compares
+`o3_native_no_simd` and `o3_native_simd_sse` on Linux x86-64.
 
-The orchestrator copies or checks out a source tree, installs rayrender into an
-isolated temporary R library with `R CMD INSTALL -l`, then calls the R
-worker once per warmup or measured iteration. Measured iterations are appended
-to a CSV file. Each data row is one render iteration.
-
-## Current Working Tree
-
-Run the default smoke benchmark against the current checkout, including
-uncommitted changes:
+## Execution and validation
 
 ```sh
 Rscript tools/benchmarks/run_render_benchmarks.R \
-  --repo . \
-  --ref current \
-  --config tools/benchmarks/configs/default.json \
-  --benchmarks bvh_many_spheres \
-  --iterations 1 \
-  --warmup 0 \
-  --output /tmp/rayrender_benchmark_smoke.csv
-```
-
-Run the scalar optimized config and record scene construction timing when the
-scene supports it:
-
-```sh
-Rscript tools/benchmarks/run_render_benchmarks.R \
-  --repo . \
-  --ref current \
-  --config tools/benchmarks/configs/default.json \
-  --only-config o3_native_no_simd \
-  --benchmarks bvh_many_spheres \
-  --iterations 1 \
-  --warmup 0 \
-  --extra-r-arg "--time-build true" \
-  --output /tmp/rayrender_benchmark_smoke.csv
-```
-
-Run both bundled scenes with more iterations:
-
-```sh
-Rscript tools/benchmarks/run_render_benchmarks.R \
-  --repo . \
-  --ref current \
-  --config tools/benchmarks/configs/default.json \
+  --repo . --ref current --config tools/benchmarks/configs/default.json \
+  --only-config o3_native_no_simd,o3_native_simd_sse \
   --benchmarks bvh_many_spheres,bvh_mixed_primitives \
-  --iterations 5 \
-  --warmup 1 \
-  --output tools/benchmarks/results/render_benchmark_times.csv
+  --iterations 3 --warmup 1 --extra-r-arg '--time-build true' \
+  --output /tmp/render-benchmarks.csv --keep-workdirs --no-append
 ```
 
-## Git Refs
-
-Use any commit, tag, or branch in `--ref`:
+`current` includes working-tree changes; another `--ref` is exported with
+`git archive`. Scene definitions come from the current harness. `--dry-run`
+prints the plan. `--timeout-seconds`, `--workdir-root`, and `--extra-r-arg`
+control execution. A reduced local check can use:
 
 ```sh
-Rscript tools/benchmarks/run_render_benchmarks.R \
-  --repo . \
-  --ref HEAD~1 \
-  --config tools/benchmarks/configs/default.json \
-  --benchmarks bvh_many_spheres \
-  --iterations 5 \
-  --warmup 1 \
-  --output tools/benchmarks/results/render_benchmark_times.csv
+--iterations 2 --warmup 0 \
+--extra-r-arg '--time-build true --width 16 --height 16 --samples 2 --sphere-count 40 --object-count 40'
 ```
 
-For non-current refs, the harness exports the requested tree with `git archive`
-into a temporary source directory. Benchmark scene files are read from the
-current repository, so older commits do not need to contain this benchmark
-harness.
+On ARM, select scalar or the default auto-detected backend; an SSE configuration
+must not be relabeled as a successful ARM/SSE measurement. If a local compiler
+cache cannot run, use a temporary config with `MAKEFLAGS = "-j8 CCACHE="`.
+Do not weaken the checked-in production configuration for smoke tests.
 
-## Release Commits
+The harness writes `<output>.manifest.json` describing the request and validates
+only this invocation's rows. It exits nonzero for failed builds/renders, missing
+or duplicate scene/iteration pairs, wrong identity/settings/revision/backend,
+or absent/nonfinite/out-of-range required metrics. Build, render, total and
+process elapsed time and RSS must be positive; scene and BVH intervals may be
+zero at timer resolution. A positive BVH construction count is required.
+Linux runs require GNU time elapsed/RSS fields; unsupported platforms keep them
+unavailable. Warmup failures also invalidate a run. CSVs and logs are written
+before validation fails. GitHub summaries report statuses, medians, units and
+sample counts. All validation and aggregation use R (`jsonlite`, `testthat` for
+tests); Python is not used.
 
-Run the bundled benchmark across every release commit in the current
-first-parent history whose commit message contains a `v0.x.y` version:
+The worker enables the internal `rayrender.benchmark_timing` option. Native
+`steady_clock` intervals cover `BVHAggregate` constructor bodies: primitive
+bounds, building, primitive ordering, shadow classification, flattening and
+BVH4 conversion. `bvh_build_seconds` sums these intervals on the scene-building
+thread; `bvh_build_count` counts the world, mesh and volume-boundary trees.
+Nested intervals are counted once. This excludes R scene creation, constructor
+argument/member copies before the body, package compilation, ray tracing and
+the distinct light-sampling hierarchy. No constructed tree means unavailable,
+not zero. Ordinary renders do not acquire timing attributes. `render_seconds`
+is the wall time of the public `render_scene()` call, including its R/native
+preprocessing and postprocessing; `scene_build_seconds` times the R scene
+description when requested; `total_seconds` combines those two intervals.
+
+Configuration revision **2** adds `CXX20FLAGS` and corrected backend selection.
+The scalar configuration disables configure's SIMD detection without enabling
+`RAYSIMD`; the SSE configuration sets `RAYSIMD` and `HAS_SSE`. Both retain
+`-O3 -march=native`, package macros, and package linker settings. Metadata records
+the actual standard, compiler version, representative compile command, effective
+flags, and backend obtained by preprocessing `simd.h` with that command's flags.
+All emitted C++ compile commands are checked for consistent flags, final `-O3`,
+and native architecture selection. Historical rows without a revision remain
+legacy/unvalidated, separate from corrected builds.
+
+## Collection and history
+
+Data path:
+
+1. `run_render_benchmarks.R` → isolated build → `run_one_render_benchmark.R` →
+   scene → numeric worker JSON → configuration CSV.
+2. Matrix jobs always upload available CSV/manifest, worker JSON and log artifacts.
+3. `combine_benchmark_csvs.R` independently reconstructs the workflow request and
+   requires exactly one artifact for each expected configuration. Missing,
+   malformed, duplicated or mismatched artifacts create explicit failure records.
+   Original artifacts remain available; invalid identities cannot overwrite an
+   unrelated historical run.
+4. The collector writes `attempt_status=complete` only when the entire comparison
+   passes. Otherwise it writes diagnostics and exits nonzero. The publisher
+   retains that failure result after publishing diagnostics.
+5. `append_benchmark_history.R` merges `data/render_benchmarks.csv`, the RDS copy,
+   and `latest.json` on `benchmark-history`. Identity includes run, attempt,
+   commit, branch, configuration/revision, scene, settings and iteration. Repeated
+   publication is idempotent; rerun attempts are distinct. Established historical
+   rows (including failures, legacy duplicates and missing newer fields) remain.
+   `latest.json` separates the latest attempt from the latest complete comparison.
+
+The collector requires `--input-dir`, `--output`, `--config`, `--configs`,
+`--benchmarks`, `--iterations` and `--warmup`. Pass the same `--extra-r-arg` as
+execution. Outside CI, supply `--run-id`, `--run-attempt`, `--commit-sha` and
+`--branch-name` from the execution manifest/CSV. Input filenames are
+`<configuration>.csv`, including within artifact subdirectories.
 
 ```sh
-Rscript tools/benchmarks/run_release_render_benchmarks.R \
-  --repo . \
-  --config tools/benchmarks/configs/default.json \
-  --benchmarks bvh_many_spheres,bvh_mixed_primitives \
-  --iterations 5 \
-  --warmup 1 \
-  --output tools/benchmarks/results/release_render_benchmark_times.csv
-```
-
-The release wrapper writes the benchmark rows to `--output` and writes a
-sidecar commit manifest next to it with a `_commits.csv` suffix. Use
-`--max-releases N --dry-run` for a quick plan check before starting a long run,
-or `--all-refs` to search branches, tags, and remotes instead of just the
-current first-parent history. By default, the wrapper uses `--cxx-std auto`:
-it reads each release commit's `DESCRIPTION` and sets `CXX_STD` to the declared
-C++20 when required and otherwise uses `CXX17` for older releases so current R
-toolchains and Rcpp headers do not compile them as pre-C++11.
-
-## Build Configurations
-
-Build configs live in JSON under `tools/benchmarks/configs`. The default config
-contains one baseline build and smoke-sized render settings so the smoke test
-writes one data row quickly. Increase `width`, `height`, `samples`,
-`sphere_count`, or `object_count` when collecting comparison data.
-
-Additional configs can be added to `build_configs`:
-
-```json
-{
-  "name": "o3_native_simd",
-  "env": {},
-  "makevars": {
-    "CXX17FLAGS": "-O3 -march=native -DRAYSIMD",
-    "CXX14FLAGS": "-O3 -march=native -DRAYSIMD",
-    "CXXFLAGS": "-O3 -march=native -DRAYSIMD"
-  }
-}
-```
-
-Supported Makevars keys are `CXX_STD`, `CXX`, `CXX11`, `CXX14`, `CXX17`,
-`CXX20`, `CC`, `CFLAGS`, `CXXFLAGS`, `CXX11FLAGS`, `CXX14FLAGS`,
-`CXX17FLAGS`, `CXX20FLAGS`, `PKG_CXXFLAGS`, `PKG_LIBS`, and `MAKEFLAGS`.
-
-The `o3_native_no_simd` config sets `RAYRENDER_DISABLE_SIMD=true`, which tells
-the package configure script to skip auto-detected SSE/NEON flags. The
-`o3_native_simd_sse` config defines the four-wide SIMD path with `-DRAYSIMD`
-and `-DHAS_SSE`.
-
-Filter configs with:
-
-```sh
-Rscript tools/benchmarks/run_render_benchmarks.R ... --only-config default
-```
-
-## Adding Scenes
-
-Add a file at `tools/benchmarks/scenes/<name>.R`. It must define:
-
-```r
-run_benchmark = function(settings) {
-  scene = rayrender::generate_ground()
-  elapsed = system.time({
-    image = rayrender::render_scene(
-      scene,
-      width = settings$width,
-      height = settings$height,
-      samples = settings$samples,
-      preview = FALSE,
-      plot_scene = FALSE,
-      progress = FALSE,
-      denoise = FALSE
-    )
-  })[["elapsed"]]
-  attr(image, "render_seconds") = as.numeric(elapsed)
-  image
-}
-```
-
-Use `settings$time_build` if the scene should support timing both scene
-construction and rendering. The bundled scenes build scene descriptions outside
-the timed render by default, but `render_scene()` still includes user-facing
-preprocessing and BVH construction.
-
-Scenes may return either the rendered object directly or a list/data frame with
-optional metric fields. Supported optional fields are `render_seconds`,
-`bvh_build_seconds`, `scene_build_seconds`, `total_seconds`, `output_hash`, and
-`artifact_path`. If BVH construction cannot be separated through the public R
-API, set `bvh_build_seconds` to `NA` and report scene setup or total timing
-instead.
-
-## Useful Options
-
-- `--keep-workdirs`: keep temporary source, logs, artifacts, and R library.
-- `--workdir-root`: choose where temporary workdirs are created.
-- `--timeout-seconds`: stop an individual render after a timeout.
-- `--extra-r-arg`: pass an extra option to the R worker, for example
-  `--extra-r-arg "--time-build true"`.
-- `--no-append`: overwrite the output CSV.
-- `--dry-run`: print the planned matrix and build commands.
-
-## CSV Schema
-
-The CSV includes:
-
-- Run identity: `timestamp_utc`, `run_id`, `run_attempt`, `workflow`,
-  `event_name`, `source_ref`, `commit_label`, `commit_sha`, `git_dirty`,
-  `branch_name`, `pull_request_number`, `pull_request_head_ref`,
-  `pull_request_base_ref`.
-- Benchmark identity: `benchmark_name`, `benchmark_source`,
-  `benchmark_settings_json`, `iteration_index`, `iterations`,
-  `warmup_iterations`.
-- Render settings: `seed`, `width`, `height`, `samples`, `threads`.
-- Build metadata: `build_config_name`, `compiler_id`, `cc`, `cxx`,
-  `cxxflags`, `cxx14flags`, `cxx17flags`, `pkg_cxxflags`, `makeflags`,
-  `extra_env_json`, `simd_enabled`, `raysimd_defined`, `has_sse_defined`,
-  `has_avx_defined`.
-- Platform metadata: `runner_os`, `platform_system`, `platform_release`,
-  `platform_machine`, `platform_processor`, `cpu_count_logical`,
-  `python_version`, `r_version`. The compatibility field `python_version` is
-  recorded as `NA` by this R harness.
-- Package metadata: `package_name`, `package_version`.
-- Timing and memory: `package_build_seconds`, `package_install_seconds`,
-  `scene_build_seconds`, `bvh_build_seconds`, `render_seconds`,
-  `total_seconds`, `process_elapsed_seconds`, `process_user_seconds`,
-  `process_system_seconds`, `max_rss_kb`, `max_rss_mb`. Compatibility aliases
-  `build_seconds` and `install_seconds` are also retained.
-- Status and artifacts: `status`, `error`, `output_hash`, `artifact_path`,
-  `build_log_path`, `benchmark_log_path`, `time_log_path`, `workdir_path`.
-
-Rows with `status = build_failed` represent an intended benchmark that could not
-run because the package build failed. Rows with `status = render_failed`
-represent failed measured render iterations.
-
-On Linux, each measured worker process is wrapped with `/usr/bin/time -v`.
-`render_seconds` still comes from the R worker; `/usr/bin/time` supplies max RSS
-and optional outer process timing. If GNU time is unavailable, those fields are
-recorded as `NA`.
-
-## GitHub Actions Dashboard
-
-The workflow `.github/workflows/render-benchmarks.yml` runs on:
-
-- `workflow_dispatch`;
-- pushes to any branch except `gh-pages`;
-- pull requests whose target branch is not `gh-pages`.
-
-Pull requests run the benchmark matrix and upload CSV/log artifacts, but do not
-push history. Pushes to non-`gh-pages` branches and manual runs with
-`publish=true` append successful artifacts to the `benchmark-history` branch.
-The benchmark workflow does not deploy GitHub Pages directly.
-
-To run manually:
-
-1. Open Actions -> Render Benchmarks.
-2. Choose benchmark names, iterations, warmups, and whether to publish.
-3. Run the workflow.
-
-The pkgdown workflow pulls benchmark history from `benchmark-history` and
-generates `docs/benchmarks/index.html` before deploying the normal pkgdown site
-to `gh-pages`. Configure GitHub Pages the same way as the package website:
-
-1. Open repository Settings -> Pages.
-2. Set Source to deploy from the `gh-pages` branch.
-3. Run the pkgdown workflow after benchmark history has been published.
-
-Persistent files live on the `benchmark-history` branch:
-
-- `data/render_benchmarks.csv`;
-- `data/render_benchmarks.rds`;
-- `data/latest.json`.
-
-The pkgdown-generated benchmark page is static HTML, CSS, and JavaScript. It
-shows latest median and mean render rows, render time trends, BVH build time
-trends when available, max RSS, and package build time. Filters are available
-for branch, benchmark, and build configuration. The raw CSV is linked from the
-page.
-
-You can test the history append and site generation locally:
-
-```sh
-mkdir -p /tmp/benchmark-history-test
 Rscript tools/benchmarks/append_benchmark_history.R \
-  --history-dir /tmp/benchmark-history-test \
-  --new-results /tmp/rayrender_benchmark_smoke.csv
-
+  --history-dir /tmp/benchmark-history --new-results /tmp/combined-results.csv
 Rscript tools/benchmarks/build_benchmark_site.R \
-  --history-csv /tmp/benchmark-history-test/data/render_benchmarks.csv \
-  --site-dir /tmp/benchmark-history-test/site
+  --history-csv /tmp/benchmark-history/data/render_benchmarks.csv \
+  --site-dir /tmp/benchmark-site
 ```
 
-Open `/tmp/benchmark-history-test/site/index.html` in a browser to inspect the
-static page.
+Open the generated `index.html` directly or serve it over HTTP. The generator
+writes R summaries as embedded JSON and `data/dashboard.json`, with a raw CSV
+link. Failed and nonfinite samples are excluded independently for each metric;
+missing BVH timing never hides available render measurements. The page defaults
+to the latest complete comparison on the newest attempt's branch (or the latest
+attempt if none is validated) and keeps latest-attempt diagnostics visible.
+Filters select branch, run/attempt, scene and configuration. Medians group by
+run, attempt, commit, configuration/revision, scene, full settings, compiler and
+platform—not iteration timestamps. Each metric has its own sample count.
+Package installation time is counted once per build, not per scene row.
+Historical points are not connected across incompatible settings. Hosted-runner
+hardware/load still adds noise; these results indicate trends, not precise
+microbenchmark differences. Output hashes remain diagnostic rather than a gate.
 
-## Interpreting Results
+## Deployment ordering and trust
 
-Prefer medians over single timings. Use several iterations and at least one
-warmup when comparing commits. Benchmarking renderers is sensitive to thermal
-throttling, CPU frequency scaling, battery state, background processes, and
-other users of the same machine. Keep the machine plugged in, close unrelated
-CPU-heavy work, and compare refs in repeated alternating runs when changes are
-small.
+`render-benchmarks.yml` still benchmarks pushes, PRs and manual runs. Only trusted
+default-branch push/manual runs publish history. `gh-pages` and
+`benchmark-history` pushes are excluded. The history job is serialized and fails
+if established history cannot be fetched; it does not initialize over a fetch
+failure or erase the branch.
 
-The worker records an output hash for the returned render object, but hash
-changes do not fail the benchmark. Use them as a signal that a performance
-comparison may also include a rendering behavior change.
+`pkgdown.yaml` preserves push, PR, release and manual documentation builds and
+also listens for completion of **Render Benchmarks**. For that event it requires
+the same repository, default branch and a push/manual source event. It checks
+the exact workflow attempt's successful **Commit benchmark-history branch** step,
+so failed measurements can deploy diagnostics after successful publication.
+It does not depend on a `GITHUB_TOKEN` push triggering another workflow.
 
-GitHub-hosted runners are noisy. Treat the dashboard as trend detection, not
-precise microbenchmarking. Compare medians across multiple iterations and avoid
-over-interpreting small changes. Memory is Linux max RSS for the worker process,
-so it is most comparable within the same workflow environment. Pull requests
-from forks should not push benchmark history.
+Non-PR site builds check out current trusted default-branch code; no benchmark
+artifact is executed. Builds have read-only repository permission. A separate
+non-PR job receives deployment permission and only publishes generated site
+files. All non-PR documentation deployments share workflow concurrency, and the
+final deployment checks both source and history SHAs to reject superseded builds.
+Missing/corrupt established history fails generation/deployment instead of
+substituting an empty CSV.
+
+## Regression checks
+
+```sh
+Rscript -e 'testthat::test_dir("tools/benchmarks/tests", stop_on_failure = TRUE)'
+npm ci --prefix tools/benchmarks/tests/browser
+npx --prefix tools/benchmarks/tests/browser playwright install chromium
+Rscript tools/benchmarks/tests/build_fixtures.R /tmp/benchmark-fixtures
+node tools/benchmarks/tests/browser/dashboard.cjs /tmp/benchmark-fixtures
+actionlint .github/workflows/render-benchmarks.yml .github/workflows/pkgdown.yaml
+```
+
+Playwright is a pinned development-only dependency; the dashboard has no runtime
+JavaScript dependencies. The suite tests successful, failed, partial, legacy and
+empty datasets; filters, sample counts, failure text, safe JSON embedding and
+HTTP load errors; compilation/sign correctness for scalar and supported SSE/NEON
+backends; validation, missing artifacts, rerun identity and idempotent history.
+`tests/testthat/test-benchmark-timing.R` exercises the native-to-R measurement
+path against the installed package, including multiple trees and capture reset.
+
+See [repair verification](REPAIR_VERIFICATION.md) for the investigation evidence
+and local checks performed for this repair.

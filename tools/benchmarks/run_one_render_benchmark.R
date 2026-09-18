@@ -258,7 +258,11 @@ result = tryCatch(
       settings[[name]] = args$extra[[name]]
     }
 
-    options(cores = settings$threads, Ncpus = settings$threads)
+    options(
+      cores = settings$threads,
+      Ncpus = settings$threads,
+      rayrender.benchmark_timing = TRUE
+    )
     set.seed(settings$seed + settings$iteration)
 
     elapsed = system.time({
@@ -270,9 +274,6 @@ result = tryCatch(
       "render_seconds",
       NA_real_
     )
-    if (is.null(render_seconds) || is.na(render_seconds)) {
-      render_seconds = elapsed
-    }
     scene_build_seconds = numeric_metric(
       benchmark_result,
       "scene_build_seconds",
@@ -296,6 +297,11 @@ result = tryCatch(
       render_seconds = as.numeric(render_seconds),
       scene_build_seconds = scene_build_seconds,
       bvh_build_seconds = bvh_build_seconds,
+      bvh_build_count = numeric_metric(
+        benchmark_result,
+        "bvh_build_count",
+        NA_real_
+      ),
       total_seconds = total_seconds,
       status = "ok",
       error = NA_character_,

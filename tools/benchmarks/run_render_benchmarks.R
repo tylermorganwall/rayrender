@@ -1,3 +1,17 @@
+benchmark_source_frames = Filter(
+  function(frame) !is.null(frame$ofile),
+  sys.frames()
+)
+benchmark_script_path = if (length(benchmark_source_frames)) {
+  tail(benchmark_source_frames, 1)[[1]]$ofile
+} else {
+  sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)[1])
+}
+source(
+  file.path(dirname(benchmark_script_path), "benchmark_data.R"),
+  local = TRUE
+)
+
 csv_columns = c(
   "timestamp_utc",
   "run_id",
@@ -25,6 +39,15 @@ csv_columns = c(
   "threads",
   "time_build",
   "build_config_name",
+  "config_revision",
+  "build_id",
+  "cxx_standard",
+  "cxx20flags",
+  "effective_compile_command",
+  "effective_flags",
+  "effective_backend",
+  "compile_commands_valid",
+  "bvh_build_count",
   "compiler_id",
   "cc",
   "cxx",
@@ -330,6 +353,7 @@ run_logged = function(
     dir.create(dirname(time_log_path), recursive = TRUE, showWarnings = FALSE)
     actual_command = "/usr/bin/time"
     actual_args = c("-v", "-o", time_log_path, command, args)
+    env = c(env, "LC_ALL=C")
     command_for_log = actual_args
   }
   shell_args = if (length(actual_args) > 0) {
@@ -421,24 +445,22 @@ supports_gnu_time = local({
 })
 
 parse_elapsed_time = function(value) {
-  value = trimws(value)
-  if (!nzchar(value) || identical(value, "NA")) {
+  if (
+    length(value) != 1 ||
+      is.na(value) ||
+      !grepl("^[0-9]+(:[0-9]{1,2}){0,2}([.][0-9]+)?$", trimws(value))
+  ) {
     return(NA_real_)
   }
-  parts = strsplit(value, ":", fixed = TRUE)[[1]]
-  numeric_parts = suppressWarnings(as.numeric(parts))
-  if (any(is.na(numeric_parts))) {
+  parts = as.numeric(strsplit(trimws(value), ":", fixed = TRUE)[[1]])
+  if (
+    any(!is.finite(parts)) ||
+      (length(parts) > 1 && tail(parts, 1) >= 60) ||
+      (length(parts) == 3 && parts[2] >= 60)
+  ) {
     return(NA_real_)
   }
-  if (length(numeric_parts) == 3) {
-    return(
-      numeric_parts[[1]] * 3600 + numeric_parts[[2]] * 60 + numeric_parts[[3]]
-    )
-  }
-  if (length(numeric_parts) == 2) {
-    return(numeric_parts[[1]] * 60 + numeric_parts[[2]])
-  }
-  numeric_parts[[1]]
+  sum(parts * rev(60^(seq_along(parts) - 1)))
 }
 
 parse_time_log = function(path) {
@@ -459,7 +481,7 @@ parse_time_log = function(path) {
     if (length(hit) == 0) {
       return(NA_character_)
     }
-    trimws(sub("^[^:]+:\\s*", "", hit[[1]]))
+    trimws(sub("^.*:[[:space:]]+", "", hit[[1]]))
   }
   elapsed = parse_elapsed_time(field_value(
     "^\\s*Elapsed \\(wall clock\\) time"
@@ -474,11 +496,17 @@ parse_time_log = function(path) {
     "^\\s*Maximum resident set size"
   )))
   list(
-    process_elapsed_seconds = if (is.na(elapsed)) "NA" else
-      sprintf("%.6f", elapsed),
+    process_elapsed_seconds = if (is.na(elapsed)) {
+      "NA"
+    } else {
+      sprintf("%.6f", elapsed)
+    },
     process_user_seconds = if (is.na(user)) "NA" else sprintf("%.6f", user),
-    process_system_seconds = if (is.na(system)) "NA" else
-      sprintf("%.6f", system),
+    process_system_seconds = if (is.na(system)) {
+      "NA"
+    } else {
+      sprintf("%.6f", system)
+    },
     max_rss_kb = if (is.na(rss)) "NA" else sprintf("%.0f", rss),
     max_rss_mb = if (is.na(rss)) "NA" else sprintf("%.6f", rss / 1024),
     time_log_path = path
@@ -807,35 +835,84 @@ split_command_line = function(value) {
   scan(text = value, what = character(), quiet = TRUE)
 }
 
-compiler_id = function(build_config, env, source) {
-  candidates = c(
-    as.character(build_config$makevars$CXX17 %||% ""),
-    as.character(build_config$makevars$CXX %||% ""),
-    as.character(build_config$env$CXX17 %||% ""),
-    as.character(build_config$env$CXX %||% ""),
-    r_cmd_config("CXX17", source, env),
-    r_cmd_config("CXX", source, env)
+effective_build_metadata = function(log_path, build_config, source, env) {
+  lines = readLines(log_path, warn = FALSE)
+  commands = grep(" -c .*[.]cpp .* -o | -c .*[.]cpp -o ", lines, value = TRUE)
+  empty = list(
+    cxx_standard = NA_character_,
+    compiler_id = NA_character_,
+    effective_compile_command = NA_character_,
+    effective_flags = NA_character_,
+    effective_backend = NA_character_,
+    compile_commands_valid = FALSE
   )
-  for (candidate in candidates) {
-    if (!nzchar(candidate)) {
-      next
-    }
-    parts = split_command_line(candidate)
-    if (length(parts) == 0) {
-      next
-    }
-    output = run_text(
-      parts[[1]],
-      "--version",
-      cwd = source,
-      env = env,
-      check = FALSE
-    )
-    if (nzchar(output)) {
-      return(strsplit(output, "\n", fixed = TRUE)[[1]][[1]])
+  if (!length(commands)) {
+    return(empty)
+  }
+  tokens = lapply(commands, split_command_line)
+  first = tokens[[1]]
+  standard = grep("^-std=", first, value = TRUE)
+  flags = grep("^(-std=|-O|-g|-m|-D|-f)", first, value = TRUE)
+  # Query the same compiler/flags as the actual package compilation. Including
+  # simd.h applies its backend normalization (e.g. HAS_SSE is unset on ARM).
+  remove = which(first %in% c("-c", "-o"))
+  probe_args = first[-unique(c(1, remove, remove + 1))]
+  macros = run_text(
+    first[1],
+    c(probe_args, "-dM", "-E", "-x", "c++", "math/simd.h"),
+    cwd = file.path(source, "src"),
+    env = env,
+    check = FALSE
+  )
+  defined = function(name) {
+    grepl(paste0("(^|\n)#define ", name, "( |\n|$)"), macros)
+  }
+  backend = if (defined("RAYSIMD") && defined("HAS_SSE")) {
+    "sse"
+  } else if (defined("RAYSIMD") && defined("HAS_NEON")) {
+    "neon"
+  } else if (
+    !defined("RAYSIMD") && !defined("HAS_SSE") && !defined("HAS_NEON")
+  ) {
+    "scalar"
+  } else {
+    "unknown"
+  }
+  compiler_index = 1L
+  while (
+    basename(first[compiler_index]) %in%
+      c("ccache", "sccache", "distcc", "icecc")
+  ) {
+    compiler_index = compiler_index + 1L
+  }
+  compiler = run_text(
+    first[compiler_index],
+    "--version",
+    cwd = source,
+    env = env,
+    check = FALSE
+  )
+  valid = length(standard) == 1 &&
+    grepl("#define __cplusplus", macros, fixed = TRUE)
+  for (token in tokens) {
+    valid = valid &&
+      identical(grep("^(-std=|-O|-g|-m|-D|-f)", token, value = TRUE), flags)
+    if (startsWith(build_config$name, "o3_native")) {
+      valid = valid &&
+        identical(tail(grep("^-O", token, value = TRUE), 1), "-O3") &&
+        "-march=native" %in% token
     }
   }
-  "NA"
+  expected_backend = build_config$backend %||% "auto"
+  valid = valid && (expected_backend == "auto" || backend == expected_backend)
+  list(
+    cxx_standard = paste(standard, collapse = " "),
+    compiler_id = strsplit(compiler, "\n", fixed = TRUE)[[1]][1],
+    effective_compile_command = commands[1],
+    effective_flags = paste(flags, collapse = " "),
+    effective_backend = backend,
+    compile_commands_valid = valid
+  )
 }
 
 benchmark_names = function(value) {
@@ -987,8 +1064,11 @@ github_context = function(repo) {
     }
   }
   list(
-    run_id = env_or_na("GITHUB_RUN_ID"),
-    run_attempt = env_or_na("GITHUB_RUN_ATTEMPT"),
+    run_id = Sys.getenv(
+      "GITHUB_RUN_ID",
+      unset = Sys.getenv("RAYRENDER_BENCHMARK_RUN_ID", unset = "NA")
+    ),
+    run_attempt = Sys.getenv("GITHUB_RUN_ATTEMPT", unset = "1"),
     workflow = env_or_na("GITHUB_WORKFLOW"),
     event_name = event_name,
     branch_name = na(branch_name),
@@ -997,27 +1077,6 @@ github_context = function(repo) {
     pull_request_base_ref = env_or_na("GITHUB_BASE_REF"),
     runner_os = env_or_na("RUNNER_OS")
   )
-}
-
-combined_build_flags = function(build_config, env, source) {
-  names = c(
-    "CFLAGS",
-    "CXXFLAGS",
-    "CXX11FLAGS",
-    "CXX14FLAGS",
-    "CXX17FLAGS",
-    "CXX20FLAGS",
-    "PKG_CXXFLAGS",
-    "MAKEFLAGS"
-  )
-  values = c(unlist(build_config$makevars), unlist(build_config$env))
-  for (name in names) {
-    configured = configured_value(build_config, env, name, source)
-    if (!identical(configured, "NA")) {
-      values = c(values, configured)
-    }
-  }
-  paste(values, collapse = " ")
 }
 
 flag_defined = function(flags, define) {
@@ -1046,7 +1105,8 @@ base_row = function(
 ) {
   sys = Sys.info()
   ci = github_context(repo)
-  flags = combined_build_flags(build_config, env, source)
+  effective = build_config$effective
+  flags = effective$effective_flags %||% ""
   raysimd_defined = flag_defined(flags, "RAYSIMD")
   has_sse_defined = flag_defined(flags, "HAS_SSE")
   has_avx_defined = flag_defined(flags, "HAS_AVX")
@@ -1077,7 +1137,22 @@ base_row = function(
     threads = as.character(settings$threads),
     time_build = as.character(isTRUE(settings$time_build)),
     build_config_name = build_config$name,
-    compiler_id = compiler_id(build_config, env, source),
+    config_revision = build_config$revision %||% "unversioned",
+    build_id = paste(
+      ci$run_id,
+      ci$run_attempt,
+      build_config$name,
+      basename(workdir),
+      sep = "/"
+    ),
+    cxx_standard = effective$cxx_standard,
+    cxx20flags = na(build_config$makevars$CXX20FLAGS),
+    effective_compile_command = effective$effective_compile_command,
+    effective_flags = effective$effective_flags,
+    effective_backend = effective$effective_backend,
+    compile_commands_valid = as.character(effective$compile_commands_valid),
+    bvh_build_count = "NA",
+    compiler_id = effective$compiler_id,
     cc = na(configured_value(build_config, env, "CC", source)),
     cxx = na(configured_value(build_config, env, "CXX", source)),
     cxxflags = na(configured_value(build_config, env, "CXXFLAGS", source)),
@@ -1318,7 +1393,42 @@ run_benchmarks = function() {
   if (!isTRUE(args$append) && file.exists(output)) {
     unlink(output)
   }
+  dir.create(dirname(output), recursive = TRUE, showWarnings = FALSE)
   args$append = TRUE
+  if (!nzchar(Sys.getenv("RAYRENDER_BENCHMARK_RUN_ID"))) {
+    Sys.setenv(
+      RAYRENDER_BENCHMARK_RUN_ID = paste0(
+        "local-",
+        format(Sys.time(), "%Y%m%dT%H%M%S"),
+        "-",
+        Sys.getpid()
+      )
+    )
+  }
+  ci = github_context(repo)
+  meta = if (args$ref == "current") {
+    git_metadata(repo, args$ref)
+  } else {
+    list(
+      commit_sha = run_text(
+        "git",
+        c("rev-parse", paste0(args$ref, "^{commit}")),
+        cwd = repo
+      )
+    )
+  }
+  expected = benchmark_expectation(
+    configs,
+    benchmarks,
+    args$iterations,
+    args$warmup,
+    settings,
+    ci$run_id,
+    ci$run_attempt,
+    meta$commit_sha,
+    ci$branch_name
+  )
+  writeLines(benchmark_json(expected), paste0(output, ".manifest.json"))
 
   root_parent = if (!is.null(args$workdir_root)) {
     normalizePath(
@@ -1377,6 +1487,12 @@ run_benchmarks = function() {
           cwd = source,
           env = env,
           log_path = build_log_path
+        )
+        build_config$effective = effective_build_metadata(
+          build_log_path,
+          build_config,
+          source,
+          env
         )
         build_seconds = sprintf("%.6f", build$elapsed)
         install_seconds = "NA"
@@ -1531,14 +1647,25 @@ run_benchmarks = function() {
               row = apply_time_metrics(row, parse_time_log(time_log))
               if (render$status != 0 || !file.exists(output_json)) {
                 row$status = "render_failed"
-                row$error = if (nzchar(render$error)) render$error else
+                result = if (file.exists(output_json)) {
+                  tryCatch(read_json(output_json), error = function(e) NULL)
+                } else {
+                  NULL
+                }
+                row$error = if (!is.null(result$error)) {
+                  result$error
+                } else if (nzchar(render$error)) {
+                  render$error
+                } else {
                   read_tail(benchmark_log)
+                }
               } else {
                 result = read_json(output_json)
                 row$status = result$status %||% "NA"
                 row$error = na(result$error)
                 row$scene_build_seconds = na(result$scene_build_seconds)
                 row$bvh_build_seconds = na(result$bvh_build_seconds)
+                row$bvh_build_count = na(result$bvh_build_count)
                 row$render_seconds = na(result$render_seconds)
                 row$total_seconds = na(result$total_seconds)
                 row$output_hash = na(result$output_hash)
@@ -1564,6 +1691,25 @@ run_benchmarks = function() {
   } else if (isTRUE(args$keep_workdirs)) {
     message("Benchmark workdir root: ", root)
   }
+  rows = benchmark_read(output)
+  rows = rows[
+    which(
+      rows$run_id == ci$run_id &
+        rows$run_attempt == ci$run_attempt &
+        rows$build_config_name %in%
+          vapply(configs, function(x) x$name, character(1))
+    ),
+    ,
+    drop = FALSE
+  ]
+  errors = benchmark_validate(rows, expected)
+  benchmark_step_summary(rows, errors)
+  if (length(errors)) {
+    stop(
+      "Benchmark validation failed; results and logs retained",
+      call. = FALSE
+    )
+  }
   invisible(TRUE)
 }
 
@@ -1575,4 +1721,6 @@ run_benchmarks = function() {
   }
 }
 
-run_benchmarks()
+if (sys.nframe() == 0) {
+  run_benchmarks()
+}

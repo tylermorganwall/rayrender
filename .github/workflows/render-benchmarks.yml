@@ -22,16 +22,18 @@ on:
   push:
     branches-ignore:
       - gh-pages
+      - benchmark-history
   pull_request:
     branches-ignore:
       - gh-pages
+      - benchmark-history
 
 concurrency:
   group: render-benchmarks-history
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
   actions: read
   pull-requests: read
 
@@ -92,6 +94,23 @@ jobs:
             any::jsonlite
             any::remotes
 
+      - name: Benchmark regression tests
+        if: matrix.build_config_name == 'o3_native_no_simd'
+        run: Rscript -e 'testthat::test_dir("tools/benchmarks/tests", stop_on_failure = TRUE)'
+
+      - uses: actions/setup-node@v4
+        if: matrix.build_config_name == 'o3_native_no_simd'
+        with:
+          node-version: '22'
+
+      - name: Dashboard browser smoke tests
+        if: matrix.build_config_name == 'o3_native_no_simd'
+        run: |
+          npm ci --prefix tools/benchmarks/tests/browser
+          npx --prefix tools/benchmarks/tests/browser playwright install --with-deps chromium
+          Rscript tools/benchmarks/tests/build_fixtures.R "$RUNNER_TEMP/benchmark-fixtures"
+          node tools/benchmarks/tests/browser/dashboard.cjs "$RUNNER_TEMP/benchmark-fixtures"
+
       - name: Run render benchmarks
         run: |
           mkdir -p "$RUNNER_TEMP/rayrender-benchmark-workdirs"
@@ -114,31 +133,35 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results-${{ matrix.build_config_name }}
-          path: benchmark-results/*.csv
-          if-no-files-found: ignore
+          path: benchmark-results/*
+          if-no-files-found: warn
 
       - name: Upload benchmark logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-logs-${{ matrix.build_config_name }}
-          path: ${{ runner.temp }}/rayrender-benchmark-workdirs/**/logs/**
-          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/rayrender-benchmark-workdirs/**/logs/**
+            ${{ runner.temp }}/rayrender-benchmark-workdirs/**/worker-results/**
+          if-no-files-found: warn
 
   publish-history:
     needs: benchmark
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
     if: >-
       ${{
-        always() &&
-        (
-          (github.event_name == 'push' && github.ref_name != 'gh-pages') ||
-          (github.event_name == 'workflow_dispatch' && inputs.publish == 'true')
-        )
+        always() && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+        (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish == 'true'))
       }}
     env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-
+      BENCHMARKS: ${{ inputs.benchmarks || 'bvh_many_spheres,bvh_mixed_primitives' }}
+      ITERATIONS: ${{ inputs.iterations || '3' }}
+      WARMUP: ${{ inputs.warmup || '1' }}
+      MATRIX_RESULT: ${{ needs.benchmark.result }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -149,69 +172,62 @@ jobs:
           r-version: release
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          extra-packages: |
-            any::jsonlite
+      - name: Install history tooling
+        run: Rscript -e 'install.packages("jsonlite")'
 
       - name: Download benchmark result artifacts
+        id: download
         uses: actions/download-artifact@v4
         continue-on-error: true
         with:
           pattern: benchmark-results-*
           path: downloaded-benchmark-results
-          merge-multiple: true
+          merge-multiple: false
 
-      - name: Combine benchmark CSV artifacts
+      - name: Validate complete comparison and retain failures
+        id: comparison
+        continue-on-error: true
         run: |
           mkdir -p downloaded-benchmark-results
           Rscript tools/benchmarks/combine_benchmark_csvs.R \
             --input-dir downloaded-benchmark-results \
-            --output combined-new-results.csv
+            --output combined-new-results.csv \
+            --config tools/benchmarks/configs/default.json \
+            --configs o3_native_no_simd,o3_native_simd_sse \
+            --benchmarks "$BENCHMARKS" --iterations "$ITERATIONS" --warmup "$WARMUP" \
+            --extra-r-arg "--time-build true" --matrix-result "$MATRIX_RESULT"
 
-      - name: Check for benchmark rows
-        id: check_results
-        run: |
-          if [ ! -s combined-new-results.csv ]; then
-            echo "has_results=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          rows=$(Rscript -e 'x = utils::read.csv("combined-new-results.csv", check.names = FALSE); cat(nrow(x))')
-          if [ "$rows" -gt 0 ]; then
-            echo "has_results=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_results=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Upload comparison diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-comparison
+          path: combined-new-results.csv
+          if-no-files-found: error
 
       - name: Prepare benchmark-history worktree
-        if: steps.check_results.outputs.has_results == 'true'
         run: |
-          git fetch origin benchmark-history:refs/remotes/origin/benchmark-history || true
-          if git show-ref --verify --quiet refs/remotes/origin/benchmark-history; then
-            git worktree add -B benchmark-history benchmark-history-worktree origin/benchmark-history
-          else
-            mkdir benchmark-history-worktree
-            git -C benchmark-history-worktree init
-            git -C benchmark-history-worktree checkout --orphan benchmark-history
-            git -C benchmark-history-worktree remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
-            mkdir -p benchmark-history-worktree/data
-          fi
+          git fetch origin benchmark-history:refs/remotes/origin/benchmark-history
+          git worktree add --detach benchmark-history-worktree origin/benchmark-history
 
       - name: Append history
-        if: steps.check_results.outputs.has_results == 'true'
         run: |
           Rscript tools/benchmarks/append_benchmark_history.R \
-            --history-dir benchmark-history-worktree \
-            --new-results combined-new-results.csv
+            --history-dir benchmark-history-worktree --new-results combined-new-results.csv
 
       - name: Commit benchmark-history branch
-        if: steps.check_results.outputs.has_results == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd benchmark-history-worktree
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data
-          git commit -m "Update benchmark history for ${GITHUB_SHA}" || echo "No benchmark history changes"
-          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:benchmark-history
+          if ! git diff --cached --quiet; then
+            git commit -m "Update benchmark history for ${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}"
+          fi
+          git push origin HEAD:benchmark-history
+
+      # Publication succeeds independently of measurement validity. workflow_run
+      # checks the publication step so failed attempts can deploy diagnostics.
+      - name: Fail invalid benchmark attempt
+        if: steps.comparison.outcome != 'success' || needs.benchmark.result != 'success'
+        run: exit 1

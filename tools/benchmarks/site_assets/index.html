@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rayrender Benchmarks</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header><h1>rayrender render benchmarks</h1><p>Measured iterations from benchmark-history. Medians summarize successful, finite measurements; each metric reports its sample count.</p></header>
+<main>
+  <section id="loadStatus" role="status">Loading benchmark data…</section>
+  <section aria-label="History status"><p id="latestAttempt"></p><p id="latestComplete"></p><p id="comparisonNote"></p></section>
+  <section class="toolbar" aria-label="Filters">
+    <div class="field"><label for="branchFilter">Branch</label><select id="branchFilter"></select></div>
+    <div class="field"><label for="runFilter">Run / attempt / commit</label><select id="runFilter"></select></div>
+    <div class="field"><label for="benchmarkFilter">Scene</label><select id="benchmarkFilter"></select></div>
+    <div class="field"><label for="configFilter">Configuration</label><select id="configFilter"></select></div>
+    <div class="meta"><span id="rowCount"></span> · <a href="data/render_benchmarks.csv">raw CSV</a></div>
+  </section>
+  <section><h2>Selected measurements</h2><p id="selectionStatus"></p>
+    <div class="table-wrap"><table id="latestTable"><thead><tr>
+      <th>Run / attempt / commit</th><th>Scene</th><th>Configuration / revision / backend</th><th>Settings</th><th>Status</th><th>Render median</th><th>BVH median</th><th>Max RSS median</th><th>Total median</th>
+    </tr></thead><tbody></tbody></table></div>
+    <p>BVH time is the sum of native BVHAggregate constructor intervals in this render (world, mesh and volume-boundary trees). It includes bounds, tree construction and flattening, excludes R scene creation, compilation and ray tracing, and excludes the separate light-sampling hierarchy. Nested intervals are counted once.</p>
+  </section>
+  <section><h2>Package build measurements</h2><p>One R CMD INSTALL wall-time measurement per configuration build, including installation. Repeated scene rows do not add build samples.</p><div id="buildMeasurements"></div></section>
+  <section><h2>Attempt diagnostics</h2><div id="diagnostics"></div></section>
+  <section class="charts">
+    <div class="chart-panel"><h2>Render history (seconds)</h2><div id="renderChart" class="chart"></div></div>
+    <div class="chart-panel"><h2>BVH history (seconds)</h2><div id="bvhChart" class="chart"></div></div>
+    <div class="chart-panel"><h2>Max RSS history (MB)</h2><div id="memoryChart" class="chart"></div></div>
+    <p>History points follow branch, scene and configuration filters. Hover a point for its run and settings. Different settings, revisions and compiler flags remain separate measurements. Hosted-runner timings are noisy.</p>
+  </section>
+</main>
+<script type="application/json" id="benchmark-data">
+BENCHMARK_DATA
+</script>
+<script src="assets/dashboard.js"></script>
+</body>
+</html>

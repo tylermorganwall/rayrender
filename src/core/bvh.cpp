@@ -1,4 +1,5 @@
 #include "../core/bvh.h"
+#include "bvh_timing.h"
 #include "../utils/assert.h"
 #include "../math/mathinline.h"
 #include <cmath>
@@ -129,6 +130,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         { 
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
+    ScopedBVHBuildTiming build_timing;
     if (primitives.empty()) {
 #ifndef RAYSIMD
       nodes.reset();
@@ -176,6 +178,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                                 primitives(prims) { 
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
+    ScopedBVHBuildTiming build_timing;
     if (primitives.empty()) {
 #ifndef RAYSIMD
       nodes.reset();

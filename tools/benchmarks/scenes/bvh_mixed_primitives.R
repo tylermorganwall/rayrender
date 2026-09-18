@@ -135,7 +135,6 @@ run_benchmark = function(settings) {
   }
   attr(image, "render_seconds") = as.numeric(render_seconds)
   attr(image, "scene_build_seconds") = as.numeric(scene_build_seconds)
-  attr(image, "bvh_build_seconds") = NA_real_
   attr(image, "total_seconds") = as.numeric(total_seconds)
   image
 }

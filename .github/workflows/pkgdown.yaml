@@ -7,23 +7,64 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+  workflow_run:
+    workflows: [Render Benchmarks]
+    types: [completed]
 
 name: pkgdown.yaml
 
-permissions: read-all
+permissions:
+  contents: read
+
+concurrency:
+  group: pkgdown-${{ github.event_name == 'pull_request' && github.run_id || 'deploy' }}
+  cancel-in-progress: false
 
 jobs:
-  pkgdown:
+  history-ready:
+    if: >-
+      ${{ github.event_name != 'workflow_run' ||
+          (github.event.workflow_run.head_repository.full_name == github.repository &&
+           github.event.workflow_run.head_branch == github.event.repository.default_branch &&
+           contains(fromJSON('["push", "workflow_dispatch"]'), github.event.workflow_run.event)) }}
     runs-on: ubuntu-latest
-    # Only restrict concurrency for non-PR jobs
-    concurrency:
-      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+    permissions:
+      actions: read
+    outputs:
+      ready: ${{ steps.publication.outputs.ready }}
+    steps:
+      - uses: actions/github-script@v7
+        id: publication
+        with:
+          script: |
+            if (context.eventName !== 'workflow_run') {
+              core.setOutput('ready', 'true');
+              return;
+            }
+            const run = context.payload.workflow_run;
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+              ...context.repo, run_id: run.id, attempt_number: run.run_attempt, per_page: 100
+            });
+            const published = jobs.some(job => job.name === 'publish-history' &&
+              job.steps.some(step => step.name === 'Commit benchmark-history branch' && step.conclusion === 'success'));
+            core.setOutput('ready', String(published));
+
+  pkgdown:
+    needs: history-ready
+    if: needs.history-ready.outputs.ready == 'true'
+    runs-on: ubuntu-latest
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+      history_sha: ${{ steps.history.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Deployment code comes from the trusted current default branch.
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event.repository.default_branch }}
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -78,24 +119,60 @@ jobs:
         run: Rscript -e "pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)"
 
       - name: Add benchmark page
+        id: history
         run: |
           mkdir -p "$RUNNER_TEMP/benchmark-history/data"
-          if git ls-remote --exit-code --heads origin benchmark-history > /dev/null 2>&1; then
-            git fetch --depth=1 origin benchmark-history:refs/remotes/origin/benchmark-history
-            git show origin/benchmark-history:data/render_benchmarks.csv > "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" || true
-            git show origin/benchmark-history:data/latest.json > "$RUNNER_TEMP/benchmark-history/data/latest.json" || true
-          fi
-          if [ ! -s "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" ]; then
-            cat > "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" <<'CSV'
-          timestamp_utc,branch_name,commit_sha,benchmark_name,build_config_name,render_seconds,bvh_build_seconds,max_rss_mb,package_build_seconds,total_seconds
-          CSV
-          fi
+          git fetch --depth=1 origin benchmark-history:refs/remotes/origin/benchmark-history
+          git show origin/benchmark-history:data/render_benchmarks.csv > "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv"
+          test -s "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv"
+          echo "sha=$(git rev-parse origin/benchmark-history)" >> "$GITHUB_OUTPUT"
           Rscript tools/benchmarks/build_benchmark_site.R \
             --history-csv "$RUNNER_TEMP/benchmark-history/data/render_benchmarks.csv" \
             --site-dir docs/benchmarks
 
-      - name: Deploy to GitHub pages 🚀
+      - name: Record site source
+        id: source
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload site for deployment
         if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkgdown-site
+          path: docs
+          include-hidden-files: true
+          if-no-files-found: error
+
+  deploy:
+    needs: pkgdown
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: pkgdown-site
+          path: docs
+      - name: Check deployment freshness
+        id: freshness
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          SOURCE_SHA: ${{ needs.pkgdown.outputs.source_sha }}
+          HISTORY_SHA: ${{ needs.pkgdown.outputs.history_sha }}
+        run: |
+          current_source=$(git ls-remote origin "refs/heads/$DEFAULT_BRANCH" | cut -f1)
+          current_history=$(git ls-remote origin refs/heads/benchmark-history | cut -f1)
+          if [ "$SOURCE_SHA" = "$current_source" ] && [ "$HISTORY_SHA" = "$current_history" ]; then
+            echo 'current=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'Skipping superseded site build; a newer completion rebuilds the site.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Deploy to GitHub pages 🚀
+        if: steps.freshness.outputs.current == 'true'
         uses: JamesIves/github-pages-deploy-action@v4.5.0
         with:
           clean: false

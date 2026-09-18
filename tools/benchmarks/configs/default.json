@@ -3,7 +3,9 @@
     {
       "name": "default",
       "env": {},
-      "makevars": {}
+      "makevars": {},
+      "revision": "2",
+      "backend": "auto"
     },
     {
       "name": "o3_native_no_simd",
@@ -13,8 +15,11 @@
       "makevars": {
         "CXX17FLAGS": "-O3 -march=native",
         "CXX14FLAGS": "-O3 -march=native",
-        "CXXFLAGS": "-O3 -march=native"
-      }
+        "CXXFLAGS": "-O3 -march=native",
+        "CXX20FLAGS": "-O3 -march=native"
+      },
+      "revision": "2",
+      "backend": "scalar"
     },
     {
       "name": "o3_native_simd_sse",
@@ -22,8 +27,11 @@
       "makevars": {
         "CXX17FLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE",
         "CXX14FLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE",
-        "CXXFLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE"
-      }
+        "CXXFLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE",
+        "CXX20FLAGS": "-O3 -march=native -DRAYSIMD -DHAS_SSE"
+      },
+      "revision": "2",
+      "backend": "sse"
     }
   ],
   "benchmark_defaults": {

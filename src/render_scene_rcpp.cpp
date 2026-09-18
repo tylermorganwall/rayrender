@@ -11,6 +11,7 @@
 #include "core/camera.h"
 #include "math/float.h"
 #include "core/buildscene.h"
+#include "core/bvh_timing.h"
 #include "rng.h"
 #include "hitables/infinite_area_light.h"
 #include "core/adaptivesampler.h"
@@ -777,6 +778,9 @@ static NumericVector composite_screen_line_overlay(
 
 // [[Rcpp::export]]
 List render_scene_rcpp(List scene, List camera_info, List scene_info, List render_info) {
+  const bool benchmark_timing = render_info.containsElementNamed("benchmark_timing") &&
+    as<bool>(render_info["benchmark_timing"]);
+  BVHBuildTiming bvh_timing(benchmark_timing);
   RESET_RAYLOG();
   START_TIMER("Overall Time");
   feclearexcept(FE_ALL_EXCEPT);
@@ -1239,6 +1243,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       keyframes(i) = Display.Keyframes[i];
     }
     final_image.attr("keyframes") = keyframes;
+  }
+  if (benchmark_timing) {
+    final_image.attr("bvh_build_seconds") = bvh_timing.count ? bvh_timing.seconds : NA_REAL;
+    final_image.attr("bvh_build_count") = bvh_timing.count;
   }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;

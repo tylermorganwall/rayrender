@@ -727,7 +727,7 @@ inline FVec4 simd_sgn(const FVec4& a) {
 inline IVec4 simd_sgn(const IVec4& a) {
     IVec4 result;
 
-#if defined(__SSE2__)
+#if defined(HAS_SSE)
     // SSE2 provides _mm_set1_epi32, _mm_cmpgt_epi32, and other integer intrinsics.
     __m128i zero = _mm_setzero_si128();
     __m128i one = _mm_set1_epi32(1);
@@ -755,7 +755,7 @@ inline IVec4 simd_sgn(const IVec4& a) {
     result.v = vaddq_s32(pos_result, neg_result);
 
 #else
-    // Fallback scalar implementation if SSE2 (or NEON) isn't available.
+    // Match the scalar storage backend, even on CPUs that support SSE2.
     result.xyzw[0] = sgn_local(a.xyzw[0]);
     result.xyzw[1] = sgn_local(a.xyzw[1]);
     result.xyzw[2] = sgn_local(a.xyzw[2]);
@@ -1064,7 +1064,7 @@ inline IVec4 simd_sub(IVec4 a, IVec4 b) {
 
 inline IVec4 simd_mul(IVec4 a, IVec4 b) {
     IVec4 result;
-#if defined(__SSE4_1__)
+#if defined(HAS_SSE) && defined(__SSE4_1__)
     result.v = _mm_mullo_epi32(a.v, b.v);
 #elif defined(HAS_NEON)
     result.v = vmulq_s32(a.v, b.v);

@@ -180,3 +180,18 @@ a {
     margin-left: 0;
   }
 }
+
+#loadStatus[data-state="error"] { color: #b42318; }
+section > p + p, #buildMeasurements p { margin-top: 10px; }
+td:nth-child(4) { white-space: normal; min-width: 240px; max-width: 360px; }
+details p { white-space: normal; min-width: 260px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; }
+summary { cursor: pointer; }
+
+main > section { min-width: 0; }
+.table-wrap { max-width: 100%; }
+th, td { white-space: normal; overflow-wrap: anywhere; vertical-align: top; }
+td:nth-child(4) { min-width: 180px; }
+td:nth-child(6), td:nth-child(7), td:nth-child(8), td:nth-child(9) { min-width: 115px; }
+details p { min-width: 0; }
+select { max-width: 100%; }
