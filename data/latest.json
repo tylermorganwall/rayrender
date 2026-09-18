@@ -1,13 +1,1 @@
-{
-  "row_count": 212,
-  "latest_row_count": 8,
-  "latest_timestamp_utc": "2026-09-17T06:38:58Z",
-  "latest_run_id": "35189477771",
-  "latest_run_attempt": "1",
-  "latest_commit_sha": "3bc8ef54fe424d5bf890bee213f77abf10776242",
-  "latest_branch_name": "master",
-  "latest_status_counts": {
-    "build_failed": 2,
-    "ok": 6
-  }
-}
+{"row_count":224,"latest_attempt":{"attempt_key":"[\"35306804880\",\"1\",\"98655fb48d372b1e8c4b221635608b96caf61db2\",\"master\"]","run_id":"35306804880","run_attempt":"1","commit_sha":"98655fb48d372b1e8c4b221635608b96caf61db2","branch_name":"master","timestamp_utc":"2026-09-18T04:40:23Z","status":"complete","validation_errors":[]},"latest_complete":{"attempt_key":"[\"35306804880\",\"1\",\"98655fb48d372b1e8c4b221635608b96caf61db2\",\"master\"]","run_id":"35306804880","run_attempt":"1","commit_sha":"98655fb48d372b1e8c4b221635608b96caf61db2","branch_name":"master","timestamp_utc":"2026-09-18T04:40:23Z","status":"complete","validation_errors":[]}}
