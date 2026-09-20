@@ -59,3 +59,14 @@ test_that("none disables even an explicitly requested interactive preview", {
   expect_identical(calls[[1]], list(gui = "none", preview = FALSE))
   expect_identical(calls[[2]], list(gui = "auto", preview = FALSE))
 })
+
+test_that("native hierarchy preserves nested groups without merging independent groups", {
+  inner = group_objects(rbind(sphere(), cube(x = 2)))
+  outer = group_objects(rbind(inner, sphere(x = 4)))
+  separate = group_objects(sphere(x = 8))
+  scene = native_editor_scene(process_scene(rbind(outer, separate))$scene)
+  expect_identical(scene$preview_paths[[1]], scene$preview_paths[[2]])
+  expect_length(scene$preview_paths[[1]], 2L)
+  expect_identical(scene$preview_paths[[3]], scene$preview_paths[[1]][1])
+  expect_false(scene$preview_paths[[4]][1] %in% scene$preview_paths[[1]])
+})

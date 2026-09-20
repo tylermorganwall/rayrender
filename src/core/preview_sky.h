@@ -1,6 +1,7 @@
 #ifndef RAYRENDER_PREVIEW_SKY_H
 #define RAYRENDER_PREVIEW_SKY_H
 #include <Rcpp.h>
+#include "../lights/sun_direction.h"
 #include <cmath>
 #include <stdexcept>
 
@@ -12,6 +13,9 @@ inline Rcpp::List PreviewSunDescriptions(const Rcpp::List& descriptions, R_xlen_
       !std::isfinite(azimuth) || azimuth < 0 || azimuth > 360) {
     throw std::runtime_error("Invalid preview Sun direction.");
   }
+
+  // The sky and separate solar disks must use the same clamped direction.
+  elevation = ClampSunElevation(elevation);
 
   // Clone before editing: failed sky construction must leave the active R
   // descriptions available for the next frame and for subsequent edits.

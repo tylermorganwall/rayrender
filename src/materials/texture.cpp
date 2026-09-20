@@ -152,39 +152,62 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
 }
 
 point2f roughness_texture::value(Float u, Float v) const {
-  while(u < 0) u += 1;
-  while(v < 0) v += 1;
-  while(u > 1) u -= 1;
-  while(v > 1) v -= 1;
-  int i = u * nx;
-  int j = (1-v) * ny;
-  if (i < 0) i = 0;
-  if (j < 0) j = 0;
-  if (i > nx-1) i = nx-1;
-  if (j > ny-1) j = ny-1;
-  Float alphax = RoughnessToAlpha((Float)data[channels*i + channels*nx*j] * rescale);
-  Float alphay = channels > 1 ? RoughnessToAlpha((Float)data[channels*i + channels*nx*j+1] * rescale) : alphax;
-  return(point2f(alphax * alphax, alphay * alphay));
+  u = u < 0 || u > 1 ? u - std::floor(u) : u;
+  v = v < 0 || v > 1 ? v - std::floor(v) : v;
+  const int x = std::clamp(int(u * nx), 0, nx - 1);
+  const int y = std::clamp(int((1 - v) * ny), 0, ny - 1);
+  auto alpha = [&](int channel) {
+    double value = data[channels * (x + nx * y) + channel] / 255.0;
+    // Remap in floating point: writing fractional roughness back into the byte
+    // buffer rounded it to zero and also changed every material sharing it.
+    value = minimum + (flip ? 1 - value : value) * (maximum - minimum);
+    const Float result = RoughnessToAlpha(value);
+    return result * result;
+  };
+  return point2f(alpha(0), alpha(channels > 1 ? 1 : 0));
 }
 
 Float roughness_texture::RoughnessToAlpha(Float roughness) {
   roughness = std::fmax(roughness, (Float)0.0001550155);
   Float x = std::log(roughness);
-  return(1.62142f + 0.819955f * x + 0.1734f * x * x +
-         0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
+  return (1.62142f + 0.819955f * x + 0.1734f * x * x + 0.0171201f * x * x * x +
+          0.000640711f * x * x * x * x);
 }
 
 #ifdef NOT_CRAN
 #include <testthat.h>
 
+context("Roughness texture mapping") {
+  test_that("fractional ranges and flips preserve shared image pixels") {
+    const unsigned char pixels[] = {0, 255, 128};
+    roughness_texture first(pixels, 3, 1, 1, .03, .45);
+    roughness_texture second(pixels, 3, 1, 1, .2, .7, true);
+    const auto smooth = first.value(0, .5);
+    const auto rough = first.value(.5, .5);
+    const auto middle = first.value(1, .5);
+    expect_true((std::isfinite(smooth[0]) && smooth[0] > 0));
+    expect_true((smooth[0] < middle[0] && middle[0] < rough[0]));
+    expect_true((smooth[0] == smooth[1] && rough[0] == rough[1]));
+    expect_true((second.value(0, .5)[0] > second.value(.5, .5)[0]));
+    expect_true((first.value(0, .5)[0] == smooth[0]));
+    expect_true((pixels[0] == 0 && pixels[1] == 255 && pixels[2] == 128));
+  }
+  test_that(
+      "constant and anisotropic masks remain finite without histogram normalization") {
+    const unsigned char constant[] = {0, 0, 0, 0};
+    roughness_texture black(constant, 2, 2, 1, .03, .45);
+    expect_true((std::isfinite(black.value(.5, .5)[0]) && black.value(.5, .5)[0] > 0));
+    const unsigned char channels[] = {0, 255, 128};
+    roughness_texture anisotropic(channels, 1, 1, 3, .03, .45);
+    expect_true((anisotropic.value(.5, .5)[0] < anisotropic.value(.5, .5)[1]));
+    roughness_texture uniform(channels, 1, 1, 3, .3, .3);
+    expect_true((uniform.value(.5, .5)[0] == uniform.value(.5, .5)[1]));
+  }
+}
+
 context("Image texture interpolation") {
   test_that("[floating-point textures interpolate between texels]") {
-    Float pixels[] = {
-      0, 0, 0,
-      1, 0, 0,
-      0, 1, 0,
-      0, 0, 1
-    };
+    Float pixels[] = {0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1};
     image_texture_float texture(pixels, 2, 2, 3);
     point3f center = texture.value(0.5, 0.5, point3f(0, 0, 0));
     expect_true(center.xyz.x == Approx(0.25));

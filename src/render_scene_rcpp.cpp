@@ -28,6 +28,7 @@
 #include "hitables/box.h"
 #include "hitables/sphere.h"
 #include "core/PreviewDisplay.h"
+#include "core/preview_sky_controls.h"
 #include "utils/raylog.h"
 #include <cfenv>
 #include <array>
@@ -841,6 +842,18 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview     = as<bool>(camera_info["preview"]);
   bool interactive = as<bool>(camera_info["interactive"]);
+  bool editable_sky = false;
+  if (interactive && render_info.containsElementNamed("native_gui") &&
+      render_info.containsElementNamed("native_sky") &&
+      !Rf_isNull(render_info["native_sky"])) {
+    List selection = render_info["native_gui"];
+    editable_sky = as<std::string>(selection["mode"]) == "imgui";
+  }
+  if (editable_sky) {
+    // A Hosek image can become a native atmosphere between samples. Reserve
+    // volume transport from the start, including when R requested rtiow/basic.
+    integrator_type = IntegratorType::ShadowRays;
+  }
   bool deferred_render = as<bool>(camera_info["deferred_render"]);
   bool auto_exposure = as<bool>(camera_info["auto_exposure"]);
   bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
@@ -969,6 +982,12 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
     List selection=render_info["native_gui"];
     if(as<std::string>(selection["mode"])=="imgui")scene_editor=std::make_unique<PreviewScene>(scene);
   }
+  if (render_info.containsElementNamed("scene_edits")) {
+    if (!scene_editor) {
+      scene_editor = std::make_unique<PreviewScene>(scene);
+    }
+    scene_editor->ImportEdits(scene, render_info["scene_edits"]);
+  }
   const random_gen scene_build_rng=rng;
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
@@ -991,8 +1010,10 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
                                                    rng, scene_editor.get());
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
-  if (has_atmosphere && imp_sample_objects.volume_scene)
+  // Keep volume-aware accumulation and denoising throughout sky-model changes.
+  if ((has_atmosphere || editable_sky) && imp_sample_objects.volume_scene) {
     imp_sample_objects.volume_scene->has_media = true;
+  }
 #ifdef HAS_OIDN
   bool has_media = imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_media;
   if(denoise) {
@@ -1136,9 +1157,32 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
 #endif
   if(camera_info.containsElementNamed("tonemap"))
     Display.SetToneMap(as<std::string>(camera_info["tonemap"]));
+  if (camera_info.containsElementNamed("exposure")) {
+    Display.preview_exposure_adjustment = Rcpp::as<double>(camera_info["exposure"]);
+  }
   if(use_native_gui) Display.AttachNativeGui(native_gui,interactive,deferred_render);
-  // Replace immutable light snapshots only after sample workers have drained.
-  if(interactive && has_atmosphere && hasbackground) {
+  if (use_native_gui && render_info.containsElementNamed("export_scene")) {
+    Rcpp::Function write_export = render_info["export_scene"];
+    Display.export_scene = [write_export](const Rcpp::List& state, const std::string& path) {
+      return Rcpp::as<std::string>(write_export(state, path));
+    };
+    Display.native_integrator = integrator_type == IntegratorType::ShadowRays ? "nee" :
+                                integrator_type == IntegratorType::Basic ? "basic" : "rtiow";
+    native_gui->export_available = true;
+  }
+  // The native panel supports image skies as well as native Prague atmospheres.
+  if (interactive && use_native_gui && hasbackground &&
+      render_info.containsElementNamed("native_sky") &&
+      !Rf_isNull(render_info["native_sky"])) {
+    ConfigureNativeSky(Display,
+                       std::static_pointer_cast<InfiniteAreaLight>(background_sphere),
+                       imp_sample_objects.volume_scene,
+                       texCache,
+                       Rcpp::as<Rcpp::List>(render_info["native_sky"]),
+                       Rcpp::as<Rcpp::List>(render_info["infinite_lights"]));
+  }
+  // Preserve legacy atmosphere shortcuts outside the native editor.
+  if(interactive && !use_native_gui && has_atmosphere && hasbackground) {
     auto environment_light = std::static_pointer_cast<InfiniteAreaLight>(background_sphere);
     auto descriptions = std::make_shared<Rcpp::List>(Rcpp::as<Rcpp::List>(render_info["infinite_lights"]));
     for(R_xlen_t i = 0; i < descriptions->size(); ++i) {
@@ -1178,26 +1222,6 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
       };
       Display.SetSunControls(Rcpp::as<double>(description["elevation"]),
                              Rcpp::as<double>(description["azimuth"]),move_sun);
-      if(use_native_gui && render_info.containsElementNamed("native_sky") &&
-         !Rf_isNull(render_info["native_sky"])) {
-        Rcpp::List sky=render_info["native_sky"];
-        Rcpp::Function update=sky["update"];
-        Display.SetSkyControls(Rcpp::as<double>(sky["latitude"]),Rcpp::as<double>(sky["longitude"]),
-          Rcpp::as<std::string>(sky["datetime"]),
-          [update,descriptions,i,publish,move_sun,&Display](double latitude,double longitude,const std::string& datetime) {
-            Rcpp::List result=update(latitude,longitude,datetime);
-            std::string error=Rcpp::as<std::string>(result["error"]);
-            if(!error.empty())return error;
-            Rcpp::List updated=result["lights"];
-            Rcpp::List current=(*descriptions)[i],atmosphere=updated[i];
-            atmosphere["haze"]=current["haze"];atmosphere["query_altitude"]=current["query_altitude"];
-            const double elevation=Rcpp::as<double>(atmosphere["elevation"]);
-            const double azimuth=Rcpp::as<double>(atmosphere["azimuth"]);
-            publish(updated);
-            Display.SetSunControls(elevation,azimuth,move_sun);
-            return std::string();
-          });
-      }
       break;
     }
   }
@@ -1212,6 +1236,7 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
 
   if(use_native_gui && scene_editor) {
     Display.scene_editor=scene_editor.get();
+    native_gui->object.hierarchy = scene_editor->Hierarchy();
     // All ownership needed by a replacement scene lives until its commit finishes.
     struct PreparedScene {
       std::vector<Float*> textures;
@@ -1242,7 +1267,7 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
         prepared->texture_idx,false,build_rng,&next);
       if(impl_only_bg || hasbackground)prepared->lights.add(background_sphere);
       if(volume) {
-        prepared->lights.volume_scene->has_media |= has_atmosphere;
+        prepared->lights.volume_scene->has_media |= has_atmosphere || editable_sky;
         const char* choice=std::getenv("RAYRENDER_LIGHT_SAMPLER");
         const auto method=(integrator_type!=IntegratorType::ShadowRays || (choice && std::string(choice)=="fixed"))
           ? VolumeLightSampler::SelectionMethod::Fixed : VolumeLightSampler::SelectionMethod::BVH;
@@ -1292,8 +1317,9 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
   Display.PollCloseEvent();
-  bool denoise_output = denoise && !Display.terminate;
-  bool use_cached_denoised_preview = denoise &&
+  // The native control can change the requested setting during preview.
+  bool denoise_output = Display.denoise && !Display.terminate;
+  bool use_cached_denoised_preview = Display.denoise &&
     Display.terminate &&
     Display.HasDenoisedPreview();
   if(denoise_output) {
@@ -1361,7 +1387,12 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
     }
     final_image.attr("keyframes") = keyframes;
   }
-  if(use_native_gui && scene_editor)final_image.attr("scene_edits")=scene_editor->ExportEdits();
+  if (scene_editor) {
+    final_image.attr("scene_edits") = scene_editor->ExportEdits();
+  }
+  if (use_native_gui && Display.export_scene) {
+    final_image.attr("editor_state") = Display.NativeEditorState();
+  }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
   final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());

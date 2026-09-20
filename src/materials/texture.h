@@ -6,6 +6,7 @@
 #include "../math/point3.h"
 #include "../math/mathinline.h"
 #include <memory>
+#include <string>
 
 class texture {
 public: 
@@ -101,6 +102,7 @@ public:
 class image_texture_float : public texture {
 public:
   image_texture_float() {}
+  std::string preview_path;
   image_texture_float(Float *pixels, int A, int B, int nn, 
                 Float repeatu = 1.0f, Float repeatv = 1.0f, Float intensity = 1.0f) : 
     data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
@@ -114,6 +116,7 @@ public:
 class image_texture_char : public texture {
 public:
   image_texture_char() {}
+  std::string preview_path;
   image_texture_char(unsigned char * pixels, int A, int B, int nn, 
                 Float repeatu = 1.0f, Float repeatv = 1.0f, Float intensity = 1.0f) : 
     data(pixels), nx(A), ny(B), channels(nn), repeatu(repeatu), repeatv(repeatv), intensity(intensity) {}
@@ -154,6 +157,8 @@ public:
 
 class alpha_texture {
 public:
+  std::string preview_path;
+  std::shared_ptr<void> preview_owner;
   alpha_texture() {}
   alpha_texture(unsigned char *pixels, int A, int B, int nn) : 
     data(pixels), nx(A), ny(B), channels(nn) {}
@@ -165,6 +170,8 @@ public:
 
 class bump_texture {
 public:
+  std::string preview_path;
+  std::shared_ptr<void> preview_owner;
   bump_texture() {}
   bump_texture(unsigned char *pixels, int A, int B, int nn, Float intensity, 
                Float repeatu = 1.f, Float repeatv = 1.f) : 
@@ -181,15 +188,22 @@ public:
 
 class roughness_texture {
 public:
-  roughness_texture() {}
-  roughness_texture(unsigned char *pixels, int A, int B, int nn) : 
-    data(pixels), nx(A), ny(B), channels(nn) {}
-  point2f value(Float u, Float v) const;
+  roughness_texture() = default;
+  virtual ~roughness_texture() = default;
+  roughness_texture(const unsigned char* pixels, int width, int height, int count,
+                    double low = 0, double high = 1, bool invert = false)
+      : data(pixels), nx(width), ny(height), channels(count), minimum(low),
+        maximum(high), flip(invert) {
+  }
+  virtual point2f value(Float u, Float v) const;
   static Float RoughnessToAlpha(Float roughness);
-  unsigned char *data;
-  int nx, ny, channels;
+  // Cached pixels are shared, while mapping settings belong to this material.
+  const unsigned char* data = nullptr;
+  int nx = 0, ny = 0, channels = 0;
+  double minimum = 0, maximum = 1;
+  bool flip = false;
+  std::string preview_path;
   vec3f u_vec, v_vec;
 };
-
 
 #endif

@@ -1,7 +1,7 @@
-# Proposed rayrender R helper. Keep gui out of prepare_scene_list's renderer data.
+# Resolve the optional native provider. Keep gui out of prepare_scene_list's renderer data.
 #' @keywords internal
-#' @param gui Required; no default. One of auto, imgui, legacy or none.
-#' @param preview Required; no default. Existing effective preview choice.
+#' @param gui One of auto, imgui, legacy or none.
+#' @param preview Existing effective preview choice.
 resolve_native_gui = function(gui, preview) {
   gui = match.arg(gui, c("auto", "imgui", "legacy", "none"))
   if (gui == "none" || (gui == "auto" && !isTRUE(preview))) {
@@ -17,14 +17,14 @@ resolve_native_gui = function(gui, preview) {
     message("Native editor unavailable (", reason, "); using existing preview.")
     list(mode = "legacy", api = NULL, fallback = FALSE)
   }
-  if (!requireNamespace("rimgui", quietly = TRUE)) {
+  if (!requireNamespace("rayimgui", quietly = TRUE)) {
     return(unavailable("provider_absent"))
   }
   api = tryCatch(
-    rimgui::acquire_api(major = 1L),
-    rimgui_unavailable = identity
+    rayimgui::acquire_api(major = 1L),
+    rayimgui_unavailable = identity
   )
-  if (inherits(api, "rimgui_unavailable")) {
+  if (inherits(api, "rayimgui_unavailable")) {
     return(unavailable(api$reason))
   }
   list(mode = "imgui", api = api, fallback = gui == "auto")

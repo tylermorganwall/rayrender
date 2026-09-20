@@ -352,6 +352,18 @@ prepare_scene_list = function(
   render_info$intensity_env = intensity_env
   render_info$infinite_lights = prepare_scene_infinite_lights(infinite_lights)
   render_info$native_sky = native_sky_controls(infinite_lights)
+  sky_edit = attr(scene, "rayrender_sky_edit", exact = TRUE)
+  if (!is.null(sky_edit)) {
+    restored = native_sky_restore(infinite_lights, sky_edit)
+    render_info$infinite_lights = restored$lights
+    render_info$native_sky = restored$controls
+    render_info$has_atmosphere = any(vapply(
+      restored$lights,
+      function(light) identical(light$type, "prague"),
+      logical(1)
+    ))
+    if (render_info$has_atmosphere) integrator_type = 1L
+  }
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene

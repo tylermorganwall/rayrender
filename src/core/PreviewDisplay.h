@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 #include "Rcpp.h"
-#include "rimgui_adapter.h"
+#include "rayimgui_adapter.h"
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "preview_color.h"
@@ -15,6 +15,7 @@
 
 class VolumeScene;
 class PreviewScene;
+struct PreviewHistory;
 
 struct PreviewTextOverlay {
   point3f anchor;
@@ -95,12 +96,30 @@ public:
   PreviewScene* scene_editor = nullptr;
   bool ApplyNativeObjectControls();
   void UpdateNativeObjectCamera();
+  bool UpdateNativeSelectionMask();
   RayrenderGui* native_gui = nullptr; // Owned by the outer R unwind boundary.
   void AttachNativeGui(RayrenderGui*,bool edit,bool deferred);
   bool DrawNativeGui(adaptive_sampler&,size_t,Float,hitable*,random_gen&);
   bool ApplyNativeControls(hitable* world);
+  void BeginNativeHistory();
+  void FinishNativeHistory(bool edited);
+  bool ApplyNativeHistory();
+  bool CommitNativeEdits(hitable* world);
+  std::shared_ptr<PreviewHistory> native_history;
+  // Prepare expensive lighting restoration before committing any history state.
+  std::function<std::function<void()>(const Rcpp::List&)> prepare_sky_restore;
+  bool ApplyNativeAnimationControls();
+  void SyncNativeAnimationState();
   void ApplyNativeSkyControls();
+  // Export callbacks run only at a render checkpoint on R's main thread.
+  std::function<std::string(const Rcpp::List&, const std::string&)> export_scene;
+  std::function<Rcpp::List()> export_sky;
+  std::string native_integrator = "nee";
+  Rcpp::List NativeEditorState() const;
+  void ApplyNativeExport();
+  void SetSunPosition(double elevation, double azimuth);
   void SetSunControls(double elevation,double azimuth,std::function<void(double,double)> update);
+  void SetSkyModelControls(int model, std::function<std::string(int)> update);
   void SetSkyControls(double latitude,double longitude,const std::string& datetime,
                       std::function<std::string(double,double,const std::string&)> update);
   void SetCamera(RayCamera* _cam);
@@ -285,6 +304,8 @@ private:
   Float native_env_angle = 0, native_base_step = 1;
   double sun_elevation = 0, sun_azimuth = 0;
   std::function<void(double,double)> update_sun;
+  int sky_model = 0;
+  std::function<std::string(int)> update_sky_model;
   std::function<std::string(double,double,const std::string&)> update_sky;
   bool UpdateAtmosphere(bool haze, bool query_altitude);
   std::function<void(bool, bool)> update_atmosphere;

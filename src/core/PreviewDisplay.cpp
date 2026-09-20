@@ -492,13 +492,34 @@ Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
                             Named("upz") = cam_up.xyz.z);
 }
 
-void PreviewDisplay::SaveCurrentKeyframe(Float env_rotation) {
-  Keyframes.push_back(CreateCurrentKeyframe(env_rotation));
-  current_keyframe = static_cast<int>(Keyframes.size()) - 1;
+// Preserve the same field ordering as CreateCurrentKeyframe for cheap comparisons
+// between a saved camera and the camera that produced the latest preview pixels.
+static std::vector<double> NativeKeyframeCamera(const Rcpp::List& keyframe) {
+  std::vector<double> values;
+  values.reserve(keyframe.size());
+  for (R_xlen_t i = 0; i < keyframe.size(); ++i) {
+    values.push_back(Rcpp::as<double>(keyframe[i]));
+  }
+  return values;
 }
 
-bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
-                                      Float* env_rotation) {
+void PreviewDisplay::SaveCurrentKeyframe(Float env_rotation) {
+  if (native_gui) {
+    if (Keyframes.size() >= RayrenderGui::MaxKeyframeSnapshots) {
+      native_gui->animation_message =
+          "120 keyframes saved. Delete a keyframe before saving another.";
+      return;
+    }
+    native_gui->animation_message.clear();
+  }
+  Keyframes.push_back(CreateCurrentKeyframe(env_rotation));
+  current_keyframe = static_cast<int>(Keyframes.size()) - 1;
+  if (native_gui) {
+    native_gui->save_keyframe_snapshot(NativeKeyframeCamera(Keyframes.back()));
+  }
+}
+
+bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state, Float* env_rotation) {
   point3f key_pos = point3f(Rcpp::as<Float>(state["x"]),
                             Rcpp::as<Float>(state["y"]),
                             Rcpp::as<Float>(state["z"]));
@@ -580,6 +601,9 @@ bool PreviewDisplay::DeleteCurrentKeyframe(Float* env_rotation) {
     current_keyframe = keyframe_count - 1;
   }
   int deleted_keyframe = current_keyframe;
+  if (native_gui) {
+    native_gui->delete_keyframe_snapshot(current_keyframe);
+  }
   Keyframes.erase(Keyframes.begin() + current_keyframe);
 
   if(Keyframes.empty()) {
@@ -2617,7 +2641,11 @@ void PreviewDisplay::SavePreviewSnapshot() const {
 
 bool PreviewDisplay::PollCloseEvent() {
   // During worker waits this touches only GUI-owned state and its last image.
-  if(native_gui) { terminate=native_gui->poll();return terminate; }
+  if (native_gui) {
+    BeginNativeHistory();
+    terminate = native_gui->poll();
+    return terminate;
+  }
 #ifdef RAY_HAS_X11
   if(d != nullptr && !terminate) {
     std::vector<XEvent> deferred_events;
@@ -3515,4 +3543,4 @@ context("Preview shutter speed controls") {
 }
 #endif
 
-#include "rimgui_preview.h"
+#include "rayimgui_preview.h"

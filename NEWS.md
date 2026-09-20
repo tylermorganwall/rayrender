@@ -1,12 +1,74 @@
 # rayrender 0.42.0
 
+* Escape closes the native editor from every panel, including active text inputs,
+  popups, transform drags and animation playback. Requires rayimgui 0.0.12 (ABI 1.8).
+
+* Add native editor undo/redo for inputs, scene edits, camera/render/sky settings
+  and keyframes. Control/Command-Z undoes; add Shift to redo. Drags coalesce into
+  one edit, text fields retain local history, and failed restores preserve state.
+  Requires rayimgui 0.0.11 (ABI 1.7).
+
+* Add a bottom native animation panel with camera keyframe navigation, saving,
+  deletion and playback, camera motion blur/shutter and open/closed paths.
+  Saved keyframes have clickable immutable thumbnails. Requires rayimgui 0.0.10.
+
+- Add Export R code to the native editor. Save cumulative object and material
+  changes, nested instance overrides, sky, camera and viewport appearance as a
+  runnable script with companion scene data. Preserve temporary assets and
+  replay exports in headless renders through `apply_scene_edits()`.
+
+- Cap sky Sun elevation at 89.9 degrees before image generation or native Prague
+  sampling. Keep the editor angle and separate solar disks synchronized with
+  the clamped direction, including typed values and model changes.
+
+- Preserve fractional roughness-map values instead of truncating them in the
+  shared byte cache. Each material samples its own range/flip settings, and the
+  editor retains the original map path and mapping when applying other edits.
+
+- Use native Prague atmosphere transport when selected in the editor, including
+  scenes that start with a Hosek image. Expose haze and altitude-query controls,
+  preserve their settings across model changes, and reserve volume transport
+  before interactive sampling begins.
+
+- Add visual Sun controls: a quarter-circle elevation handle and circular
+  azimuth dial, each with a numeric input inside. Requires rayimgui 0.0.9 (ABI 1.5).
+
+- Restore the native editor sky panel for image and atmospheric skies, with a
+  Hosek/Prague selector, Sun direction, and location/UTC controls. The demo starts
+  with Hosek; failed sky loads leave the current lighting intact.
+
+- Expand the native material inspector with type-specific surface parameters,
+  procedural textures, and color/alpha/bump/roughness file inputs. Edits preserve
+  per-instance isolation and apply atomically; alpha changes refresh mesh shadow
+  classification and texture paths are included in exported scene edits.
+
+- Show preview FPS beside the sample count in the left render panel. The counter
+  averages completed preview frames over half a second, including denoising.
+
+- Add a Denoise checkbox to the native editor's left render panel. It updates
+  normal and fast previews plus the final render, preserves accumulated samples,
+  and is disabled when denoising support is unavailable.
+
+- Restore Shift-click viewport selection. Repeated Shift-clicks descend through
+  groups and instance contents, with child edits isolated to the clicked copy.
+  Nested objects appear in the scene tree and use matching visibility masks.
+  Idle transform handles yield to Shift-click; active drags retain ownership.
+
+- Editing a material on an Instances hierarchy node now updates the matching
+  source slot on every placement, while preserving untouched per-instance values.
+- Add an occlusion-aware selection outline for viewport and hierarchy
+  selections, including groups and instance collections. A continuous dark/light
+  border comes from cached binary coverage, with a transparent interior that
+  preserves the object's rendered colors. Render noise cannot flip outline
+  pixels, and preview-only resets reuse the mask. Requires rayimgui 0.0.8 (ABI 1.4).
+
 - Add native Shift-click object selection, transform gizmos, and a material-specific
   panel. Selection stops at outer groups, instance placements, and mesh roots.
   Edits rebuild geometry, volume boundaries, and light sampling after workers
-  drain; returned images carry committed `scene_edits` metadata. Requires rimgui
+  drain; returned images carry committed `scene_edits` metadata. Requires rayimgui
   0.0.6 or later.
 
-- Native preview: fix macOS keyboard focus with rimgui 0.0.5, add a Fast preview
+- Native preview: fix macOS keyboard focus with rayimgui 0.0.5, add a Fast preview
   checkbox synchronized with F, and make UTC date/time components draggable and
   directly editable before applying location/time.
 
@@ -19,10 +81,10 @@
   a square-root gamma approximation. This applies to stills and animations,
   including the legacy and native preview windows.
 
-* Add an optional native preview through rimgui. Choose `gui = "auto"`,
+* Add an optional native preview through rayimgui. Choose `gui = "auto"`,
   `"imgui"`, `"legacy"`, or `"none"` in `render_scene()`. The native window
   displays progressive CPU renders with exposure and render/atmosphere controls;
-  rayrender still builds and renders without rimgui.
+  rayrender still builds and renders without rayimgui.
 
 * Move EXR white-balance baking controls from the render functions to
   `sky_light_image()`. Cache each adapted sky for use in stills and animations,

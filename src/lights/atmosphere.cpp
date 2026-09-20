@@ -1,4 +1,5 @@
 #include "atmosphere.h"
+#include "sun_direction.h"
 #include "../volumes/cie.h"
 #include <algorithm>
 #include <limits>
@@ -279,7 +280,9 @@ PragueInfiniteLight::PragueInfiniteLight(const Rcpp::List &description, bool bui
   altitude = scalar(description, "altitude", 0, 15000);
   visibility = scalar(description, "visibility", 20, 131.8);
   albedo = scalar(description, "albedo", 0, 1);
-  elevation = scalar(description, "elevation", -90, 90) * pi / 180;
+  // Protect direct renderer inputs as well as editor updates, before building
+  // radiance and importance-sampling tables or the solar sampling frame.
+  elevation = ClampSunElevation(scalar(description, "elevation", -90, 90)) * pi / 180;
   azimuth = scalar(description, "azimuth", 0, 360) * pi / 180;
   intensity = scalar(description, "intensity", 0, 1e30);
   haze = flag(description, "haze");

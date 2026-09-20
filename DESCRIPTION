@@ -28,7 +28,7 @@ Imports:
     pillar,
     skymodelr (>= 0.6.3),
 Suggests:
-    rimgui (>= 0.0.6),
+    rayimgui (>= 0.0.12),
     ambient,
     knitr,
     rmarkdown,

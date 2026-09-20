@@ -177,6 +177,8 @@
 #' @param start_frame Default `1`. First camera frame to render when using an animated camera.
 #' @param end_frame Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.
 #' @param mode Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.
+#' @param exposure Default `1`. Positive multiplier for image and preview brightness,
+#' applied after optional automatic exposure and before tone mapping.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
@@ -310,8 +312,17 @@ render_scene = function(
   start_frame = 1,
   end_frame = NA,
   mode = c("auto", "image", "animation", "preview"),
-  gui = c("auto", "imgui", "legacy", "none")
+  gui = c("auto", "imgui", "legacy", "none"),
+  exposure = 1
 ) {
+  if (
+    !is.numeric(exposure) ||
+      length(exposure) != 1L ||
+      !is.finite(exposure) ||
+      exposure <= 0
+  ) {
+    stop("exposure must be a finite positive number.", call. = FALSE)
+  }
   mode = match.arg(mode)
   gui = match.arg(gui)
   if (gui == "none") {
@@ -801,6 +812,7 @@ HAS_OIDN: %s
   camera_info$preview = preview
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
+  camera_info$exposure = exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$shutter_speed = shutter_speed
   camera_info$snapshot_filename = snapshot_filename
@@ -820,11 +832,28 @@ HAS_OIDN: %s
     isTRUE(preview) && render_info$debug_channel == 0
   )
   if (!is.null(native_gui$api)) {
-    on.exit(rimgui::release_api(native_gui$api), add = TRUE)
+    on.exit(rayimgui::release_api(native_gui$api), add = TRUE)
   }
   render_info$native_gui = native_gui
-  if (identical(native_gui$mode, "imgui") && isTRUE(interactive)) {
+  saved_edits = attr(scene, "rayrender_scene_edits", exact = TRUE)
+  if (
+    (identical(native_gui$mode, "imgui") && isTRUE(interactive)) ||
+      length(saved_edits)
+  ) {
     processed_scene = native_editor_scene(processed_scene)
+  }
+  if (length(saved_edits)) {
+    render_info$scene_edits = saved_edits
+  }
+  if (identical(native_gui$mode, "imgui")) {
+    # Capture resolved values rather than promises or expressions from the caller.
+    export_names = setdiff(
+      names(formals(render_scene)),
+      c("scene", "camera", "start_frame", "end_frame")
+    )
+    export_args = mget(export_names, envir = environment(), inherits = FALSE)
+    export_args$debug_channel = debug_string
+    render_info$export_scene = native_scene_exporter(scene, export_args)
   }
 
   #Pathtrace Scene
@@ -882,6 +911,9 @@ HAS_OIDN: %s
   )
   if (!is.null(attr(rgb_mat, "scene_edits"))) {
     attr(return_array, "scene_edits") = attr(rgb_mat, "scene_edits")
+  }
+  if (!is.null(attr(rgb_mat, "editor_state"))) {
+    attr(return_array, "editor_state") = attr(rgb_mat, "editor_state")
   }
   print_time(verbose, "Post-processed image")
 

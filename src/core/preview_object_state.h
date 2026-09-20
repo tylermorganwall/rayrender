@@ -10,16 +10,33 @@
 struct PreviewField {
   std::string name;
   bool color = false;
+  bool boolean = false, integer = false, text_input = false;
+  std::string text, section;
+  std::vector<std::string> choices;
+  // A field may depend on another choice without changing its saved identity.
+  std::string condition;
+  std::vector<int> visible_choices;
+  // Mixed selections display the first value until that property is edited.
+  bool mixed = false, changed = false;
   unsigned count = 1;
   std::array<double, 3> values{};
   double minimum = 0, maximum = 1, speed = .01;
 };
-// One material slot under a selected root; changed tracks uncommitted field edits.
+struct PreviewMaterialTarget {
+  size_t row = 0, placement = 0, slot = 0;
+};
+// Corresponding slots in an instance collection share one inspector panel.
 struct PreviewMaterialPanel {
   size_t row = 0, placement = 0, slot = 0;
   bool changed = false;
   std::string label, type;
   std::vector<PreviewField> fields;
+  std::vector<PreviewMaterialTarget> targets;
+};
+// Stable, pointer-free hierarchy nodes. Parent zero denotes the scene root.
+struct PreviewHierarchyNode {
+  uint64_t id = 0, parent = 0;
+  std::string label;
 };
 // GUI callbacks stage requests here; the renderer consumes them between samples.
 // Pending flags retain edits across frame refreshes. Apply flags request a commit;
@@ -30,7 +47,9 @@ struct PreviewObjectState {
   bool material_pending = false, apply_material = false, revert = false;
   bool projection_valid = false;
   float pick_u = 0, pick_v = 0;
-  uint64_t id = 0;
+  uint64_t id = 0, select_id = 0;
+  bool select_pending = false;
+  std::vector<PreviewHierarchyNode> hierarchy;
   std::string label, error;
   int32_t operation = 0, mode = 1, material_slot = 0;
   // Column-major gizmo matrices. model is editable UI state; the renderer keeps

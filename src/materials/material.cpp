@@ -27,6 +27,9 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
 point3f lambertian::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Lambertian F");
+  if (preview_rough_model) {
+    return preview_rough_model->f(r_in, rec, scattered);
+  }
   
   //unit_vector(scattered) == wo
   //r_in.direction() == wi

@@ -70,8 +70,10 @@ inline point3f FrCond(Float cosi, const point3f &eta, const point3f &k) {
   return((Rparl2 + Rperp2) / 2.0f);
 }
 
+struct PreviewSurfaceMapSettings;
 class material {
   public:
+    std::shared_ptr<PreviewSurfaceMapSettings> preview_maps;
     virtual bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
       return(false);
     };
@@ -99,9 +101,14 @@ class material {
 };
 
 
+class orennayar;
 class lambertian : public material {
   public: 
     lambertian(std::shared_ptr<texture> a) : albedo(a) {}
+    // An optional rough diffuse model lets the editor adjust sigma from zero
+    // while retaining the material's identity and all geometry references.
+    Float preview_sigma = 0;
+    std::shared_ptr<orennayar> preview_rough_model;
     point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
     bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
     bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
@@ -204,7 +211,7 @@ class spot_light : public material {
     std::shared_ptr<texture>  emit;
     vec3f spot_direction;
     Float intensity;
-    const Float cosTotalWidth, cosFalloffStart;
+    Float cosTotalWidth, cosFalloffStart;
     bool invisible;
 };
 
@@ -360,6 +367,9 @@ class hair : public material {
     };
     
     point3f sigma_a;
+    int preview_color_mode = 0;
+    point3f preview_color = point3f(1);
+    Float preview_pigment = 1.3, preview_red_pigment = 0;
     Float eta;
     Float beta_m, beta_n;
     Float alpha;

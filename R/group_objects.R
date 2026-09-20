@@ -95,6 +95,13 @@ group_objects = function(
   }
   preview_group = new.env(parent = emptyenv())
   for (i in seq_len(nrow(scene))) {
+    # Retain the nested group path for the native scene hierarchy. Matrices
+    # remain flattened for rendering; these tokens only describe membership.
+    path = attr(scene$transforms[[i]], "rayrender_preview_groups")
+    attr(scene$transforms[[i]], "rayrender_preview_groups") = c(
+      list(preview_group),
+      path
+    )
     attr(scene$transforms[[i]], "rayrender_preview_group") = preview_group
     if (nrow(scene$transforms[[i]]$group_transform[[1]]) == 1) {
       scene$transforms[[i]]$group_transform[[1]] = Translation %*%

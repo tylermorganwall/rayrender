@@ -97,18 +97,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RayMatrix oidn_normal_output_small(nx_small, ny_small, 3);
   RayMatrix oidn_albedo_output_small(nx_small, ny_small, 3);
   RayOidnDenoiser fast_preview_denoiser;
-  bool denoise_fast_preview = display.denoise;
-  if(denoise_fast_preview) {
-    fast_preview_denoiser.Setup(rgb_output_small,
-                                oidn_albedo_output_small,
-                                oidn_normal_output_small,
-                                draw_rgb_output_small,
-                                nx_small,
-                                ny_small,
-                                RayOidnQuality::Fast,
-                                false,
-                                false, !has_media);
-  }
 #endif
 
   std::vector<random_gen > rngs;
@@ -197,15 +185,33 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_full_preview_oidn_aux = [&]() {
-    if(has_media) { display.oidn_aux_dirty = false; return; }
-    if(!display.preview ||
-       !display.denoise ||
-       !display.oidn_aux_dirty ||
-       display.oidn_albedo_output == nullptr ||
-       display.oidn_normal_output == nullptr) {
+    if (!display.preview || !display.denoise || display.denoiser == nullptr ||
+        display.oidn_albedo_output == nullptr ||
+        display.oidn_normal_output == nullptr) {
       return;
     }
-    if(display.PollCloseEvent()) {
+    // A session can start with denoise = FALSE and enable it later. Bind the
+    // full-resolution filter only when it is first needed, between samples.
+    if (!display.denoiser->Ready()) {
+      display.denoiser->Setup(rgb_output,
+                              *display.oidn_albedo_output,
+                              *display.oidn_normal_output,
+                              draw_rgb_output,
+                              nx,
+                              ny,
+                              RayOidnQuality::Balanced,
+                              false,
+                              false,
+                              !has_media);
+    }
+    if (has_media) {
+      display.oidn_aux_dirty = false;
+      return;
+    }
+    if (!display.oidn_aux_dirty) {
+      return;
+    }
+    if (display.PollCloseEvent()) {
       return;
     }
     OidnAuxRenderOptions options = make_oidn_aux_options(1);
@@ -226,13 +232,31 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_fast_preview_oidn_aux = [&]() {
-    if(has_media) { display.oidn_fast_aux_dirty = false; return; }
-    if(!display.preview ||
-       !denoise_fast_preview ||
-       !display.oidn_fast_aux_dirty) {
+    if (!display.preview || !display.denoise) {
       return;
     }
-    if(display.PollCloseEvent()) {
+    // Fast preview has its own small image buffers. Consult the live setting
+    // and initialize this filter lazily too, instead of capturing the startup flag.
+    if (!fast_preview_denoiser.Ready()) {
+      fast_preview_denoiser.Setup(rgb_output_small,
+                                  oidn_albedo_output_small,
+                                  oidn_normal_output_small,
+                                  draw_rgb_output_small,
+                                  nx_small,
+                                  ny_small,
+                                  RayOidnQuality::Fast,
+                                  false,
+                                  false,
+                                  !has_media);
+    }
+    if (has_media) {
+      display.oidn_fast_aux_dirty = false;
+      return;
+    }
+    if (!display.oidn_fast_aux_dirty) {
+      return;
+    }
+    if (display.PollCloseEvent()) {
       return;
     }
     OidnAuxRenderOptions options = make_oidn_aux_options(1);
@@ -479,7 +503,6 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                      &display
 #ifdef HAS_OIDN
                                      ,
-                                     denoise_fast_preview,
                                      &fast_preview_denoiser,
                                      &ensure_fast_preview_oidn_aux
 #endif
@@ -503,7 +526,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     copy_small_preview();
     adaptive_pixel_sampler.max_s = std::max(adaptive_pixel_sampler.max_s, s + 1);
 #ifdef HAS_OIDN
-    if(denoise_fast_preview) {
+    if (display.denoise) {
       if(display.PollCloseEvent()) {
         return true;
       }

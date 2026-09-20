@@ -143,6 +143,8 @@ public:
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
     OpaqueShadowType ShadowType() const { return shadow_type; }
+    // Editor map changes can alter opacity without moving any geometry.
+    void RefreshShadowType() { classifyOpaqueShadow(); }
     bool OpaqueHit(const Ray&, Float, Float, random_gen&) const;
     // Mesh construction releases its temporary list; light sampling borrows
     // these same owned primitives instead of retaining a duplicate mesh list.
