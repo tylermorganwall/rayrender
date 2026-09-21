@@ -500,3 +500,102 @@ test_that("bezier camera motion handles repeated scalar keyframe values", {
   expect_equal(nrow(motion), 4)
   expect_true(all(is.finite(as.matrix(motion))))
 })
+test_that("unequal keyframe durations synchronize position, lens and orientation", {
+  positions = rbind(c(0, 1, -10), c(2, 2, -8), c(8, 3, -5))
+  lookats = rbind(c(0, 0, 0), c(1, 1, 0), c(3, 0, 1))
+  durations = c(3L, 7L)
+  rows = c(1L, 4L, 11L)
+  for (type in c("spline", "linear", "quad", "cubic", "exp")) {
+    motion = generate_camera_motion(
+      positions,
+      lookats = lookats,
+      fovs = c(30, 45, 60),
+      apertures = c(0, .1, .2),
+      focal_distances = c(4, 6, 8),
+      ortho_dims = list(c(1, 2), c(2, 3), c(3, 4)),
+      segment_frames = durations,
+      frames = 999,
+      type = type,
+      progress = FALSE
+    )
+    expect_equal(nrow(motion), 11L)
+    if (type != "exp") {
+      expect_equal(unname(as.matrix(motion[rows, c("x", "y", "z")])), positions)
+    }
+    expect_equal(unname(as.matrix(motion[rows, c("dx", "dy", "dz")])), lookats)
+    expect_equal(motion$fov[rows], c(30, 45, 60))
+    expect_equal(motion$aperture[rows], c(0, .1, .2))
+    expect_equal(motion$focal[rows], c(4, 6, 8))
+    expect_equal(motion$orthox[rows], c(1, 2, 3))
+    expect_equal(motion$orthoy[rows], c(2, 3, 4))
+    expect_true(all(is.finite(as.matrix(motion))))
+  }
+})
+
+test_that("closed keyframe timing includes the return leg and one-frame transitions", {
+  positions = rbind(c(0, 1, -10), c(2, 2, -8), c(8, 3, -5))
+  motion = generate_camera_motion(
+    positions,
+    closed = TRUE,
+    segment_frames = c(1, 3, 5),
+    progress = FALSE
+  )
+  expect_equal(nrow(motion), 10L)
+  expect_equal(
+    unname(as.matrix(motion[c(1, 2, 5, 10), c("x", "y", "z")])),
+    rbind(positions, positions[1, ])
+  )
+  expect_equal(
+    as.numeric(motion[1, ]),
+    as.numeric(motion[10, ]),
+    tolerance = 1e-8
+  )
+  hold = generate_camera_motion(
+    rbind(positions[1, ], positions[1, ], positions[2, ]),
+    segment_frames = c(4, 2),
+    progress = FALSE
+  )
+  expect_equal(hold$x[1:5], rep(0, 5))
+  expect_equal(hold$z[1:5], rep(-10, 5))
+})
+
+test_that("segment timing validates counts and preserves automatic interpolation", {
+  positions = rbind(c(0, 1, -10), c(2, 2, -8), c(8, 3, -5))
+  for (value in list(
+    c(0, 2),
+    c(-1, 2),
+    c(1.5, 3),
+    c(NA, 3),
+    c(Inf, 3),
+    3,
+    c(1, 2, 3)
+  )) {
+    expect_error(
+      generate_camera_motion(positions, segment_frames = value),
+      "positive whole number"
+    )
+  }
+  for (type in c("spline", "linear", "quad", "cubic", "exp")) {
+    auto = generate_camera_motion(
+      positions,
+      frames = 10,
+      type = type,
+      progress = FALSE
+    )
+    timed = generate_camera_motion(
+      positions,
+      segment_frames = c(5, 4),
+      type = type,
+      progress = FALSE
+    )
+    expect_equal(timed, auto)
+  }
+  expect_error(
+    generate_camera_motion(
+      positions,
+      type = "bezier",
+      segment_frames = c(3, 4)
+    ),
+    "requires spline"
+  )
+})

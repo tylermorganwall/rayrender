@@ -70,3 +70,32 @@ test_that("native hierarchy preserves nested groups without merging independent 
   expect_identical(scene$preview_paths[[3]], scene$preview_paths[[1]][1])
   expect_false(scene$preview_paths[[4]][1] %in% scene$preview_paths[[1]])
 })
+
+test_that("interactive camera rotation is validated and passed to the renderer", {
+  expect_error(render_scene(sphere(), camera_rotation = "sideways"), "arg")
+  received = NULL
+  local_mocked_bindings(render_scene_rcpp = function(
+    scene,
+    camera_info,
+    scene_info,
+    render_info
+  ) {
+    received <<- camera_info$free_rotation
+    stop("captured camera rotation")
+  })
+  for (mode in c("clamped", "free")) {
+    expect_error(
+      render_scene(
+        sphere(),
+        width = 4,
+        height = 4,
+        samples = 1,
+        gui = "none",
+        denoise = FALSE,
+        camera_rotation = mode
+      ),
+      "captured camera rotation"
+    )
+    expect_identical(received, mode == "free")
+  }
+})

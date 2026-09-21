@@ -38,14 +38,15 @@ point3f Color(const std::array<double, 3>& p) {
 // Walk through placement and acceleration wrappers to find the materials beneath
 // a selected root. Deduplicate shared pointers while retaining first-seen slot order;
 // this traversal discovers material slots without changing object selection depth.
-void Gather(hitable* h, std::vector<material*>& out, std::set<material*>& seen) {
+void Gather(hitable* h, std::vector<PreviewMaterialSlot>& out,
+            std::set<const void*>& seen) {
   if (!h) {
     return;
   }
 
   auto add = [&](material* m) {
     if (m && seen.insert(m).second) {
-      out.push_back(m);
+      out.push_back({m, nullptr});
     }
   };
   if (auto p = dynamic_cast<AnimatedHitable*>(h)) {
@@ -53,7 +54,15 @@ void Gather(hitable* h, std::vector<material*>& out, std::set<material*>& seen) 
   }
 
   if (auto p = dynamic_cast<MediumBoundary*>(h)) {
-    return Gather(p->geometry.get(), out, seen);
+    // Keep existing surface slots first for glass with an attached medium.
+    // Invisible containers expose only their volume, not the unused surface.
+    if (p->keep_surface) {
+      Gather(p->geometry.get(), out, seen);
+    }
+    if (p->medium && seen.insert(p).second) {
+      out.push_back({nullptr, p});
+    }
+    return;
   }
 
   if (auto p = dynamic_cast<instance*>(h)) {
@@ -256,6 +265,7 @@ struct PreviewMaterialAccess {
     file("Color texture file", draft->path, [draft](const std::string& value) {
       draft->path = value;
     });
+    fields.back().field.texture_available = bool(draft->image_source);
     visible("Texture mode", {5});
     vector(
         "Image repeat U/V", draft->repeat, 2, .0001, 1000, [draft](const auto& value) {
@@ -326,6 +336,7 @@ struct PreviewMaterialAccess {
     file("Roughness map file", map->path, [map](const std::string& value) {
       map->path = value;
     });
+    fields.back().field.texture_available = bool(map->data);
     visible("Use roughness map", {1});
     vector("Roughness map range",
            {map->minimum, map->maximum, 0},
@@ -404,6 +415,7 @@ struct PreviewMaterialAccess {
       file("Alpha map file", draft->alpha_path, [draft](const std::string& value) {
         draft->alpha_path = value;
       });
+      fields.back().field.texture_available = bool(draft->alpha);
       visible("Use alpha map", {1});
     }
     if (!targets->bump.empty()) {
@@ -414,6 +426,7 @@ struct PreviewMaterialAccess {
       file("Bump map file", draft->bump_path, [draft](const std::string& value) {
         draft->bump_path = value;
       });
+      fields.back().field.texture_available = bool(draft->bump);
       visible("Use bump map", {1});
       scalar("Bump intensity", draft->bump_intensity, -100, 100, [draft](double value) {
         draft->bump_intensity = value;
@@ -452,6 +465,86 @@ struct PreviewMaterialAccess {
                std::function<void(point3f)> set) {
     vector(name, Values(value), 3, 0, 100, [set](const auto& value) {
       set(Color(value));
+    });
+  }
+
+  void describe(const PreviewMaterialSlot& slot, hitable* root) {
+    if (!slot.volume) {
+      describe(slot.surface, root);
+      return;
+    }
+    auto* boundary = slot.volume;
+    // Duplicate the list shell, retaining immutable grid arrays and source paths.
+    // Setters replace numeric entries; they never mutate the shared source medium.
+    auto draft = std::make_shared<Rcpp::List>(
+        Rf_shallow_duplicate(boundary->medium->description));
+    if (!draft->containsElementNamed("type")) {
+      (*draft)["type"] = "homogeneous";
+    }
+    section = "Volume";
+    auto number = [&](const char* label, const char* key, double lo, double hi) {
+      scalar(
+          label, Rcpp::as<double>((*draft)[key]), lo, hi, [draft, key](double value) {
+            (*draft)[key] = value;
+          });
+    };
+    auto rgb = [&](const char* label, const char* key) {
+      Rcpp::NumericVector source = (*draft)[key];
+      std::array<double, 3> value;
+      for (int i = 0; i < 3; ++i) {
+        value[i] = source[source.size() == 1 ? 0 : i];
+      }
+      vector(label, value, 3, 0, 1000000, [draft, key](const auto& values) {
+        (*draft)[key] = Rcpp::NumericVector(values.begin(), values.end());
+      });
+    };
+    number("Density multiplier", "density_scale", 0, 1000000);
+    fields.back().field.help =
+        "Multiplies scattering and absorption. Zero clears the volume; increasing it restores the original density pattern.";
+    rgb("Scattering RGB (1/unit)", "sigma_s");
+    fields.back().field.help =
+        "Scattering strength per scene unit for red, green and blue light, before the density multiplier.";
+    rgb("Absorption RGB (1/unit)", "sigma_a");
+    fields.back().field.help =
+        "Absorption strength per scene unit for red, green and blue light, before the density multiplier.";
+    const double limit = std::nextafter(Float(1), Float(0));
+    number("Anisotropy (g)", "g", -limit, limit);
+    fields.back().field.help =
+        "0 scatters equally in all directions; positive values scatter forward, negative values backward. Must stay strictly between -1 and 1.";
+
+    section = "Volume emission";
+    number("Emission multiplier", "emission_scale", 0, 1000000);
+    fields.back().field.help =
+        "Scales emitted light. Volume emission also requires nonzero absorption.";
+    if (boundary->medium->has_temperature) {
+      // Grids retain their temperature field; scalar temperatures can be edited.
+      SEXP temperature = (*draft)["temperature"];
+      const bool file_temperature = draft->containsElementNamed("temperature_grid") &&
+                                    !Rf_isNull((*draft)["temperature_grid"]);
+      if (Rf_xlength(temperature) == 1 && !file_temperature) {
+        number("Temperature (K)", "temperature", 0, 1000000);
+      }
+      number("Temperature multiplier", "temperature_scale", 0, 1000000);
+      number("Temperature offset (K)", "temperature_offset", -1000000, 1000000);
+    } else {
+      SEXP emission = (*draft)["emission"];
+      if (Rf_isNull(Rf_getAttrib(emission, R_DimSymbol))) {
+        rgb("Emitted radiance RGB", "emission");
+      }
+    }
+    section = "Atmosphere inside volume";
+    boolean("Atmospheric haze", boundary->medium->haze, [draft](bool value) {
+      (*draft)["haze"] = value;
+    });
+    fields.back().field.help =
+        "Include atmospheric haze inside this boundary when enabled by the sky. The sky's global volume-haze setting still applies.";
+    finish.push_back([boundary, draft] {
+      // Loading a replacement recomputes extinction/majorants consistently and
+      // avoids changing a cached medium used by another object or placement.
+      auto replacement = LoadMedium(*draft);
+      std::const_pointer_cast<Medium>(replacement)->legacy_albedo =
+          boundary->medium->legacy_albedo;
+      boundary->medium = std::move(replacement);
     });
   }
 
@@ -651,10 +744,35 @@ struct PreviewMaterialAccess {
   }
 };
 
+std::string PreviewMaterialSlot::Name() const {
+  if (surface) {
+    return surface->GetName();
+  }
+  const auto& source = volume->medium->description;
+  const auto type = source.containsElementNamed("type")
+                        ? Rcpp::as<std::string>(source["type"])
+                        : "homogeneous";
+  return "Volume (" + type + ")";
+}
+
+const void* PreviewMaterialSlot::Identity() const {
+  return volume ? static_cast<const void*>(volume) : static_cast<const void*>(surface);
+}
+
+std::vector<PreviewMaterialSlot> PreviewMaterialSlots(hitable* root) {
+  std::vector<PreviewMaterialSlot> result;
+  std::set<const void*> seen;
+  Gather(root, result, seen);
+  return result;
+}
+
 std::vector<material*> PreviewMaterials(hitable* root) {
   std::vector<material*> result;
-  std::set<material*> seen;
-  Gather(root, result, seen);
+  for (const auto& slot : PreviewMaterialSlots(root)) {
+    if (slot.surface) {
+      result.push_back(slot.surface);
+    }
+  }
   return result;
 }
 
@@ -665,15 +783,27 @@ std::vector<PreviewMaterialBinding> PreviewMaterialFields(material* mat,
   return std::move(access.fields);
 }
 
+std::vector<PreviewMaterialBinding>
+PreviewMaterialFields(const PreviewMaterialSlot& slot, hitable* root) {
+  PreviewMaterialAccess access;
+  access.describe(slot, root);
+  return std::move(access.fields);
+}
+
 // Reject stale layouts and invalid values before running any setters. Setters and
 // finalizers touch only the unpublished candidate; failures discard that rebuild.
 void PreviewApplyMaterial(material* mat, const PreviewMaterialEdit& edit,
                           hitable* root) {
-  if (mat->GetName() != edit.type) {
+  PreviewApplyMaterial(PreviewMaterialSlot{mat, nullptr}, edit, root);
+}
+
+void PreviewApplyMaterial(const PreviewMaterialSlot& slot,
+                          const PreviewMaterialEdit& edit, hitable* root) {
+  if (slot.Name() != edit.type) {
     throw std::runtime_error("The selected material changed; select the object again.");
   }
   PreviewMaterialAccess access;
-  access.describe(mat, root);
+  access.describe(slot, root);
   auto& bindings = access.fields;
   if (bindings.size() != edit.fields.size()) {
     throw std::runtime_error("Material options changed; select the object again.");

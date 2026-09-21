@@ -1,5 +1,85 @@
 # rayrender 0.42.0
 
+* Clamp interactive orbit and pitch at the camera up axis by default. Add
+  quaternion-based free rotation with consistent local pitch/roll controls,
+  available in the Camera pane and via `camera_rotation = "free"`.
+
+* Align realistic-camera navigation and horizontal image orientation with the
+  perspective camera, including viewport picking and animation.
+
+* Fix spurious repeated-entry errors at translated fog-box boundaries, including
+  Fast preview after volume edits near a surface.
+
+* Native editor volumes now expose density, scattering, absorption, anisotropy,
+  emission and haze controls, with live validation, undo and exported overrides.
+
+* Organize the left pane into Camera and Sky tabs. Move Start final render and
+  Export R code together above Undo/Redo, keeping shared render settings visible
+  in either tab. Requires rayimgui 0.0.17 (ABI 1.12).
+
+* Stop animation playback when the viewport is clicked or receives manual input.
+  Clicks restore the starting camera; navigation restores it before moving.
+  Keep M for pause/resume and F for preview quality, including during playback.
+
+* Handle F in every focused editor pane and during animation playback. Share
+  the Fast preview checkbox state, toggle once per press, and preserve text-field
+  keyboard ownership and undo/redo.
+
+* Add Loop playback to the Animation panel to repeat saved frames continuously.
+  Toggle it while playing or paused; turning it off finishes the current pass.
+  Preserve pause/resume, Stop restoration, and undo/redo of the loop setting.
+
+* Right-click a keyframe to replace its saved camera and thumbnail with the
+  current viewport view. Preserve its order and timing, with undo/redo support.
+  Requires rayimgui 0.0.16 (ABI 1.11).
+
+* Keep M available for animation playback after clicking a keyframe thumbnail.
+  The Animation panel handles its own shortcut while active inputs retain
+  keyboard focus. Add prominent Play/Pause/Resume and Stop buttons; pausing
+  holds the current frame and resuming continues the same path. Requires
+  rayimgui 0.0.15 (ABI 1.10).
+
+* Add editable frame intervals between camera keyframe snapshots, including the
+  closing transition, with undo/redo and synchronized position, lens, and
+  orientation timing. `generate_camera_motion()` accepts `segment_frames` for
+  spline, linear, quad, cubic, and exp interpolation.
+
+* Preserve physical ray geometry above Prague's 15 km coefficient range.
+  Downward haze no longer disappears in a growing circle, and celestial
+  visibility follows the observer's actual horizon. Out-of-range coefficients
+  still use their nearest available altitude. Remote rays advance along their
+  physical direction to atmospheric entry, preserving vacuum distances and
+  avoiding invalid native queries beyond the outer atmosphere.
+
+* Sample Hosek's Sun as a celestial disk alongside an atmosphere-only image,
+  using skymodelr 0.6.5. Initial renders, live Fast Sun drags, undo and exports
+  keep the same solar size and illumination, including the 89.9-degree limit.
+  `sun_light()` now supports Hosek turbidity and manual Sun angles.
+
+* Update Sun direction continuously during drags with temporary Fast quality.
+  Add a live Camera pane with validated position, target, up direction and lens
+  controls, synchronized with navigation, keyframes, undo/redo and export.
+
+* Keep the selection outline visible with its matching viewport image during
+  object drags and render restarts, preventing flicker between completed samples.
+
+* Add validated Prague atmosphere scale (meters per scene unit) and base altitude
+  (meters above sea level) inputs to the editor. Edits rebuild lighting after
+  release, persist across sky-model changes, and support undo/redo and export.
+
+* Restart preview sample counts correctly after camera or scene edits and quality
+  changes. This prevents auto-exposure from doubling after movement and avoids
+  brightness drift with manual exposure.
+
+* Hovering the editor export status shows the complete saved path. Repeated live
+  object transforms retain affine matrices and consistent inverses, preventing
+  accumulated shading errors and rejected translation edits.
+
+* Preview object transforms during drags at Fast quality, restoring the chosen
+  quality on release. Valid material inputs update immediately; invalid drafts
+  show red fields with hover diagnostics. Texture paths include Browse dialogs.
+  Requires rayimgui 0.0.13 (ABI 1.9).
+
 * Escape closes the native editor from every panel, including active text inputs,
   popups, transform drags and animation playback. Requires rayimgui 0.0.12 (ABI 1.8).
 

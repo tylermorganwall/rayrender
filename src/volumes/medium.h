@@ -84,6 +84,9 @@ public:
     return {1, 1, 1, 1, 1, 1, 1, 1};
   }
   virtual point3f Emission(const point3f &) const;
+  // Retain immutable source inputs for editor rebuilds. In particular, density
+  // zero must not discard the unscaled coefficients or the original grid fields.
+  const Rcpp::List description;
   point3f sigma_a, sigma_s, emission;
   Float g, emission_scale, temperature_scale, temperature_offset;
   bool has_temperature = false, has_rgb_emission = false;

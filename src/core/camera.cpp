@@ -109,6 +109,115 @@ inline CameraMotionFrame InterpolateCameraMotionFrame(
 }
 } // namespace
 
+namespace {
+// Stop at the first entry into either polar cap along the requested arc. Checking
+// only the final elevation misses a large step that passes right over a pole.
+Float LimitCameraRotation(const vec3f &forward, const vec3f &tangent, const vec3f &up_hint,
+                          Float angle) {
+  const vec3f up = up_hint.squared_length() > 0 ? unit_vector(up_hint) : vec3f(0, 1, 0);
+  const double limit = std::cos(.1 * M_PI / 180);
+  const double a =
+      double(forward[0]) * up[0] + double(forward[1]) * up[1] + double(forward[2]) * up[2];
+  const double b =
+      double(tangent[0]) * up[0] + double(tangent[1]) * up[1] + double(tangent[2]) * up[2];
+  // At the stop, repeated input must stay still; reversing direction is allowed.
+  if ((a >= limit && b > 0) || (a <= -limit && b < 0)) {
+    return 0;
+  }
+  const double radius = std::hypot(a, b);
+  if (radius <= limit) {
+    return angle;
+  }
+  const double phase = std::atan2(b, a);
+  double allowed = angle;
+  for (double side : {-1., 1.}) {
+    const double offset = std::acos(std::clamp(side * limit / radius, -1., 1.));
+    for (double root : {phase - offset, phase + offset}) {
+      double t = std::fmod(root, 2 * M_PI);
+      if (t < 0) {
+        t += 2 * M_PI;
+      }
+      const double derivative = -a * std::sin(t) + b * std::cos(t);
+      if (side * derivative > 0 && t <= allowed) {
+        allowed = std::max(0., t - 1e-6);
+      }
+    }
+  }
+  return Float(allowed);
+}
+
+// Compose a rotation with the complete optical frame. Carrying the up vector
+// with the forward direction preserves roll through every pole, without an
+// Euler-angle decomposition or a fixed world-axis fallback.
+void RotateCameraOrientation(const vec3f &old_forward, const vec3f &old_up, const vec3f &axis,
+                             Float angle, vec3f &forward, vec3f &up) {
+  vec3f right;
+  BuildPBRTCameraFrame(old_forward, old_up, forward, right, up);
+  const Quaternion orientation(CameraBasisMatrix(right, up, forward));
+  Quaternion delta;
+  delta.v = unit_vector(axis) * std::sin(angle / 2);
+  delta.w = std::cos(angle / 2);
+  Quaternion result;
+  result.v = delta.w * orientation.v + orientation.w * delta.v + cross(delta.v, orientation.v);
+  result.w = delta.w * orientation.w - dot(delta.v, orientation.v);
+  CameraBasisFromQuaternion(Normalize(result), right, up, forward);
+}
+} // namespace
+
+RayCamera::NavigationPose RayCamera::OrbitPose(const vec3f &delta, bool keep_distance) {
+  const point3f origin = get_origin(), target = get_lookat();
+  const vec3f old_offset = target - origin, next_offset = target - (origin + delta);
+  const Float distance = old_offset.length(), next_distance = next_offset.length();
+  NavigationPose pose{origin, get_w(), get_up()};
+  if (!(distance > 0) || !(next_distance > 0)) {
+    return pose;
+  }
+  const vec3f from = free_rotation ? unit_vector(get_w()) : old_offset / distance;
+  const vec3f to = next_offset / next_distance;
+  vec3f axis = cross(from, to);
+  const Float sine = axis.length();
+  Float angle = std::atan2(sine, std::clamp(dot(from, to), Float(-1), Float(1)));
+  if (sine > 1e-7f) {
+    axis /= sine;
+  } else {
+    axis = unit_vector(get_u());
+  }
+  if (!free_rotation) {
+    angle = LimitCameraRotation(from, cross(axis, from), get_up(), angle);
+  }
+  if (angle == 0 && keep_distance) {
+    return pose; // A held key at the clamp must not accumulate positional drift.
+  }
+  vec3f rotated_up;
+  RotateCameraOrientation(from, get_v(), axis, angle, pose.forward, rotated_up);
+  if (free_rotation) {
+    pose.up = rotated_up;
+  }
+  pose.origin = target - pose.forward * (keep_distance ? distance : next_distance);
+  return pose;
+}
+
+void RayCamera::RotateView(Float degrees, bool roll, vec3f &forward, vec3f &up) {
+  const vec3f old_forward = unit_vector(get_w());
+  vec3f axis = unit_vector(roll ? get_w() : get_u());
+  if (degrees < 0) {
+    axis = -axis;
+  }
+  Float angle = std::abs(degrees) * Float(M_PI / 180);
+  if (!roll && !free_rotation) {
+    angle = LimitCameraRotation(old_forward, cross(axis, old_forward), get_up(), angle);
+  }
+  if (angle == 0) {
+    forward = old_forward;
+    up = get_up();
+    return;
+  }
+  RotateCameraOrientation(old_forward, get_v(), axis, angle, forward, up);
+  if (!roll && !free_rotation) {
+    up = get_up();
+  }
+}
+
 camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov, 
                Float _aspect, Float aperture, Float _focus_dist,
                Float t0, Float t1, Float _iso) {
@@ -170,23 +279,18 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
-  Float orbit_distance = (origin - lookat).length();
-  origin += delta;
-  if(update_uvw) {
-    if(update_focal) {
-      vec3f from_lookat = origin - lookat;
-      if(from_lookat.length() > 0) {
-        origin = lookat + unit_vector(from_lookat) * orbit_distance;
-      }
-    } else {
+  if (update_uvw) {
+    const auto pose = OrbitPose(delta, update_focal);
+    origin = pose.origin;
+    vup = pose.up;
+    if (!update_focal) {
       focus_dist = (origin - lookat).length();
     }
-    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+    BuildPBRTCameraFrame(pose.forward, vup, w, u, v);
+  } else {
+    origin += delta;
   }
   RecomputePerspectiveScreen(*this);
-  if(w.length() == 0 && u.length() == 0) {
-    reset();
-  } 
 }
 
 void camera::update_fov(Float delta_fov) {
@@ -237,19 +341,20 @@ void camera::update_up(vec3f up) {
 }
 
 void camera::rotate_up(Float angle_degrees) {
-  vec3f forward = w;
-  vup = unit_vector(Rotate(angle_degrees, forward)(v));
-  lookat = origin + focus_dist * forward;
+  vec3f forward, up;
+  RotateView(angle_degrees, true, forward, up);
+  lookat = origin + std::max(focus_dist, Float(.001)) * forward;
+  vup = up;
   BuildPBRTCameraFrame(forward, vup, w, u, v);
   RecomputePerspectiveScreen(*this);
 }
 
 void camera::rotate_forward(Float angle_degrees) {
-  Transform rotate = Rotate(angle_degrees, u);
-  vec3f new_forward = unit_vector(rotate(w));
-  vup = unit_vector(rotate(v));
-  lookat = origin + focus_dist * new_forward;
-  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  vec3f forward, up;
+  RotateView(angle_degrees, false, forward, up);
+  lookat = origin + std::max(focus_dist, Float(.001)) * forward;
+  vup = up;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
   RecomputePerspectiveScreen(*this);
 }
 
@@ -378,21 +483,16 @@ Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
-  origin += delta;
-  if(update_uvw) {
-    if(update_focal) {
-      vec3f from_lookat = origin - lookat;
-      if(from_lookat.length() > 0) {
-        origin = lookat + unit_vector(from_lookat) * focus_dist;
-      }
-    } 
-    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  if (update_uvw) {
+    const auto pose = OrbitPose(delta, update_focal);
+    origin = pose.origin;
+    vup = pose.up;
+    BuildPBRTCameraFrame(pose.forward, vup, w, u, v);
+  } else {
+    origin += delta;
   }
   focus_dist = (origin - lookat).length();
   RecomputeOrthoScreen(*this);
-  if(w.length() == 0 && u.length() == 0) {
-    reset();
-  } 
 }
 
 void ortho_camera::update_fov(Float delta_fov) {
@@ -439,21 +539,20 @@ void ortho_camera::update_up(vec3f up) {
 }
 
 void ortho_camera::rotate_up(Float angle_degrees) {
-  vec3f forward = w;
-  vup = unit_vector(Rotate(angle_degrees, forward)(v));
-  Float dist = focus_dist > 0 ? focus_dist : static_cast<Float>(1);
-  lookat = origin + dist * forward;
+  vec3f forward, up;
+  RotateView(angle_degrees, true, forward, up);
+  lookat = origin + std::max(focus_dist, Float(.001)) * forward;
+  vup = up;
   BuildPBRTCameraFrame(forward, vup, w, u, v);
   RecomputeOrthoScreen(*this);
 }
 
 void ortho_camera::rotate_forward(Float angle_degrees) {
-  Transform rotate = Rotate(angle_degrees, u);
-  vec3f new_forward = unit_vector(rotate(w));
-  vup = unit_vector(rotate(v));
-  Float dist = focus_dist > 0 ? focus_dist : static_cast<Float>(1);
-  lookat = origin + dist * new_forward;
-  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  vec3f forward, up;
+  RotateView(angle_degrees, false, forward, up);
+  lookat = origin + std::max(focus_dist, Float(.001)) * forward;
+  vup = up;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
   RecomputeOrthoScreen(*this);
 }
 
@@ -567,23 +666,15 @@ Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
-  Float focus_dist = (origin - lookat).length();
-  origin += delta;
-  if(update_uvw) {
-    if(update_focal) {
-      vec3f from_lookat = origin - lookat;
-      if(from_lookat.length() > 0) {
-        origin = lookat + unit_vector(from_lookat) * focus_dist;
-      }
-    } else {
-      focus_dist = (origin - lookat).length();
-    }
-    BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  if (update_uvw) {
+    const auto pose = OrbitPose(delta, update_focal);
+    origin = pose.origin;
+    vup = pose.up;
+    BuildPBRTCameraFrame(pose.forward, vup, w, u, v);
     uvw = onb(u, v, w);
+  } else {
+    origin += delta;
   }
-  if(w.length() == 0 && u.length() == 0) {
-    reset();
-  } 
 }
 
 void environment_camera::update_fov(Float delta_fov) {
@@ -624,27 +715,20 @@ void environment_camera::update_up(vec3f up) {
 }
 
 void environment_camera::rotate_up(Float angle_degrees) {
-  vec3f forward = w;
-  vup = unit_vector(Rotate(angle_degrees, forward)(v));
-  Float dist = (origin - lookat).length();
-  if(dist <= 0) {
-    dist = static_cast<Float>(1);
-  }
-  lookat = origin + dist * forward;
+  vec3f forward, up;
+  RotateView(angle_degrees, true, forward, up);
+  lookat = origin + std::max((lookat - origin).length(), Float(.001)) * forward;
+  vup = up;
   BuildPBRTCameraFrame(forward, vup, w, u, v);
   uvw = onb(u, v, w);
 }
 
 void environment_camera::rotate_forward(Float angle_degrees) {
-  Transform rotate = Rotate(angle_degrees, u);
-  vec3f new_forward = unit_vector(rotate(w));
-  vup = unit_vector(rotate(v));
-  Float dist = (origin - lookat).length();
-  if(dist <= 0) {
-    dist = static_cast<Float>(1);
-  }
-  lookat = origin + dist * new_forward;
-  BuildPBRTCameraFrameFromLookAt(origin, lookat, vup, w, u, v);
+  vec3f forward, up;
+  RotateView(angle_degrees, false, forward, up);
+  lookat = origin + std::max((lookat - origin).length(), Float(.001)) * forward;
+  vup = up;
+  BuildPBRTCameraFrame(forward, vup, w, u, v);
   uvw = onb(u, v, w);
 }
 
@@ -762,11 +846,15 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
     init = true;
   }
 
+  aperture_diameter = initial_aperture = apertureDiameter;
+  lens_scale = camera_scale;
   if(init) {
     for (int i = 0; i < (int)lensData.size(); i += 4) {
+      stop_limits.push_back(lensData[i] == 0 ? lensData[i + 3] : 0);
       if (lensData[i] == 0) {
-        if (apertureDiameter > lensData[i + 3]*camera_scale) {
+        if (apertureDiameter > lensData[i + 3]) {
           Rcpp::Rcout << "Specified aperture diameter is greater than maximum possible.  Clamping it.\n";
+          aperture_diameter = initial_aperture = lensData[i + 3];
         } else {
           lensData[i + 3] = apertureDiameter;
         }
@@ -775,7 +863,7 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
       {lensData[i] * (Float).001 * camera_scale, lensData[i + 1] * (Float).001 * camera_scale,
        lensData[i + 2], lensData[i + 3] * Float(.001) / Float(2.) * camera_scale}));
     }
-    min_aperture = elementInterfaces[0].apertureRadius * camera_scale;
+    min_aperture = elementInterfaces[0].apertureRadius;
     for(unsigned int i = 1; i < elementInterfaces.size(); i++) {
       min_aperture = elementInterfaces[i].apertureRadius < min_aperture ? elementInterfaces[i].apertureRadius : min_aperture;
     }
@@ -1191,7 +1279,10 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   Float motion_time = sample_motion_time(sample.time);
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
-  point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
+  // Render and picking callers already reverse both film coordinates to
+  // account for lens inversion. An additional X flip mirrors the scene relative
+  // to the perspective camera and makes horizontal navigation appear reversed.
+  point3f pFilm(pFilm2.xy.x, pFilm2.xy.y, 0);
 
   // Trace ray from _pFilm_ through lens system
   Float exitPupilBoundsArea;
@@ -1241,14 +1332,10 @@ point3f RealisticCamera::get_origin() {
 }
 
 void RealisticCamera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
-  if(update_uvw) {
-    point3f old_lookfrom =  CamTransform(point3f(0.f));
-    try{
-      CamTransform = Inverse(LookAt(old_lookfrom + delta, lookat, camera_up));
-    } catch (const std::runtime_error& error) {
-      Rprintf("Can't move there, singular inverse matrix--moving back to previous position.\n");
-      CamTransform = Inverse(LookAt(old_lookfrom, lookat, camera_up));
-    }
+  if (update_uvw) {
+    const auto pose = OrbitPose(delta, update_focal);
+    CamTransform = Inverse(LookAt(pose.origin, lookat, pose.up));
+    camera_up = pose.up;
   } else {
     CamTransform = Translate(delta) * CamTransform;
   }
@@ -1267,6 +1354,7 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
   if(new_fd > 0) {
     focusDistance = focusDistance + delta_focus;
     elementInterfaces.back().thickness = new_fd;
+    UseConservativePupilBounds();
   } else {
     Rprintf("Cannot focus to distance %.2f; Maintaining focal distance of %.2f\n",focusDistance + delta_focus,focusDistance);
   }
@@ -1297,39 +1385,89 @@ void RealisticCamera::update_up(vec3f up) {
 }
 
 void RealisticCamera::rotate_up(Float angle_degrees) {
-  camera_up = unit_vector(Rotate(angle_degrees, get_w())(get_v()));
-  point3f origin = get_origin();
-  Float dist = (lookat - origin).length();
-  if(dist <= 0) {
-    dist = focusDistance > 0 ? focusDistance : static_cast<Float>(1);
-  }
-  lookat = origin + dist * get_w();
-  CamTransform = Transform(LookAt(origin, lookat, camera_up).GetInverseMatrix());
+  vec3f forward, up;
+  RotateView(angle_degrees, true, forward, up);
+  const point3f origin = get_origin();
+  const Float distance = std::max((lookat - origin).length(), Float(.001));
+  lookat = origin + distance * forward;
+  camera_up = up;
+  CamTransform = Inverse(LookAt(origin, lookat, camera_up));
 }
 
 void RealisticCamera::rotate_forward(Float angle_degrees) {
-  point3f origin = get_origin();
-  Float dist = (lookat - origin).length();
-  if(dist <= 0) {
-    dist = focusDistance > 0 ? focusDistance : static_cast<Float>(1);
-  }
-  Transform rotate = Rotate(angle_degrees, get_u());
-  vec3f new_forward = unit_vector(rotate(get_w()));
-  camera_up = unit_vector(rotate(get_v()));
-  lookat = origin + dist * new_forward;
-  CamTransform = Transform(LookAt(origin, lookat, camera_up).GetInverseMatrix());
+  vec3f forward, up;
+  RotateView(angle_degrees, false, forward, up);
+  const point3f origin = get_origin();
+  const Float distance = std::max((lookat - origin).length(), Float(.001));
+  lookat = origin + distance * forward;
+  camera_up = up;
+  CamTransform = Inverse(LookAt(origin, lookat, camera_up));
 }
 
 void RealisticCamera::update_position_absolute(point3f point) {
+  // Translate the optical frame without constructing a temporarily singular pose.
+  CamTransform = Translate(point - get_origin()) * CamTransform;
+}
+
+void RealisticCamera::update_pose_absolute(point3f origin, point3f target, vec3f up) {
+  Transform pose = LookAt(origin, target, up).GetInverseMatrix();
+  CamTransform = pose;
+  lookat = target;
+  camera_up = up;
+}
+
+void RealisticCamera::UseConservativePupilBounds() {
+  // Optical edits invalidate the tight bounds sampled at construction. Sampling
+  // the full original rear-element search region preserves valid light paths
+  // while avoiding a 64-million-ray rebuild during a focus or aperture gesture.
+  const Float radius = 1.5f * RearElementRadius();
+  exitPupilBounds.assign(64,
+                         Bounds2f(point2f(-radius, -radius), point2f(radius, radius)));
 }
 
 void RealisticCamera::update_ortho_absolute(vec2f o_size) {
 }
 
 void RealisticCamera::update_aperture_absolute(Float aperture) {
+  if (aperture == aperture_diameter) {
+    return;
+  }
+  if (!std::isfinite(aperture) || aperture <= 0) {
+    throw std::runtime_error("Lens aperture must be greater than zero (millimeters).");
+  }
+  for (const Float limit : stop_limits) {
+    if (limit > 0 && aperture > limit) {
+      throw std::runtime_error("Aperture exceeds the maximum opening of this lens.");
+    }
+  }
+  for (size_t i = 0; i < elementInterfaces.size(); ++i) {
+    if (stop_limits[i] > 0) {
+      elementInterfaces[i].apertureRadius = aperture * .0005f * lens_scale;
+    }
+  }
+  min_aperture = elementInterfaces[0].apertureRadius;
+  for (const auto& element : elementInterfaces) {
+    min_aperture = std::min(min_aperture, element.apertureRadius);
+  }
+  elementInterfaces.back().thickness = FocusThickLens(focusDistance);
+  aperture_diameter = aperture;
+  UseConservativePupilBounds();
 }
 
 void RealisticCamera::update_focal_absolute(Float focal_length) {
+  if (focal_length == focusDistance) {
+    return;
+  }
+  if (!std::isfinite(focal_length) || focal_length <= 0) {
+    throw std::runtime_error("Focus distance must be positive and finite.");
+  }
+  const Float distance = FocusThickLens(focal_length);
+  if (!std::isfinite(distance) || distance <= 0) {
+    throw std::runtime_error("This lens cannot focus at that distance.");
+  }
+  elementInterfaces.back().thickness = distance;
+  focusDistance = focal_length;
+  UseConservativePupilBounds();
 }
 void RealisticCamera::update_fov_absolute(Float fov_new) {
 }
@@ -1363,13 +1501,26 @@ void RealisticCamera::reset() {
   lookat = start_lookat;
   camera_up = start_camera_up;
   camera_motion_blur_has_range = false;
+  update_aperture_absolute(initial_aperture);
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
+  UseConservativePupilBounds();
 }
 
 
-vec3f RealisticCamera::get_w() {return(-CamTransform.w());}
-vec3f RealisticCamera::get_u() {return(-CamTransform.u());}
-vec3f RealisticCamera::get_v() {return(CamTransform.v());}
+// LookAt and lens tracing both use camera +Z toward the scene. Expose the
+// same basis as the other cameras so navigation, orbiting, and saved targets
+// agree with the rays that produce the image.
+vec3f RealisticCamera::get_w() {
+  return CamTransform.w();
+}
+
+vec3f RealisticCamera::get_u() {
+  return CamTransform.u();
+}
+
+vec3f RealisticCamera::get_v() {
+  return CamTransform.v();
+}
 
 #ifdef NOT_CRAN
 namespace {

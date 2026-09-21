@@ -29,6 +29,10 @@ class RayCamera {
     virtual Ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(Ray());
     };
+    // Clamped navigation uses the chosen up axis; free navigation transports
+    // the complete camera orientation through the poles. Absolute poses remain valid.
+    void set_free_rotation(bool enabled) { free_rotation = enabled; }
+    bool get_free_rotation() const { return free_rotation; }
     virtual void update_position(vec3f delta, bool update_uvw, bool update_focal = true) = 0;
     virtual void update_fov(Float delta_fov)  = 0;
     virtual void update_aperture(Float delta_aperture)  = 0;
@@ -43,6 +47,11 @@ class RayCamera {
     virtual void update_aperture_absolute(Float aperture) = 0;
     virtual void update_focal_absolute(Float focal_length) = 0;
     virtual void update_fov_absolute(Float fov) = 0;
+    virtual void update_pose_absolute(point3f origin, point3f target, vec3f up) {
+      update_position_absolute(origin);
+      update_up(up);
+      update_lookat(target);
+    }
     virtual void set_camera_motion_blur(bool enabled) = 0;
     virtual bool get_camera_motion_blur() const = 0;
     virtual void set_camera_motion_blur_range(point3f start_origin,
@@ -80,6 +89,14 @@ class RayCamera {
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
   protected:
+    struct NavigationPose {
+      point3f origin;
+      vec3f forward, up;
+    };
+    NavigationPose OrbitPose(const vec3f &delta, bool keep_distance);
+    void RotateView(Float degrees, bool roll, vec3f &forward, vec3f &up);
+    bool free_rotation = false;
+
     Float sample_motion_time(Float unit_time) const {
       Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
       if(std::isinf(shutter_speed)) {
@@ -331,6 +348,7 @@ public:
   void rotate_up(Float angle_degrees);
   void rotate_forward(Float angle_degrees);
   void update_position_absolute(point3f point);
+  void update_pose_absolute(point3f origin, point3f target, vec3f up);
   void update_ortho_absolute(vec2f o_size);
   void update_aperture_absolute(Float aperture);
   void update_focal_absolute(Float focal_length);
@@ -351,7 +369,9 @@ public:
   vec3f get_u();
   vec3f get_v();
   Float get_fov() {return(-1);}
-  Float get_aperture() {return(0);}
+  Float get_aperture() {
+    return (aperture_diameter);
+  }
   Float get_focal_distance() {return(focusDistance);}
   point3f get_origin();
   Float get_iso() {return(iso);}
@@ -412,6 +432,9 @@ private:
   Float cam_height;
   Float diag;
   Float min_aperture;
+  Float aperture_diameter, initial_aperture, lens_scale;
+  std::vector<Float> stop_limits;
+  void UseConservativePupilBounds();
   bool init;
   Float iso;
   vec3f camera_up;

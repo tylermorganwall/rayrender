@@ -28,6 +28,18 @@ struct PreviewSceneSettings {
   std::map<PreviewObjectKey, PreviewSceneSettings> children;
   bool Empty() const;
 };
+class MediumBoundary;
+// A volume and a retained surface have separate editable slots. Boundary identity
+// keeps shared density data from merging independent objects in the inspector.
+struct PreviewMaterialSlot {
+  material* surface = nullptr;
+  MediumBoundary* volume = nullptr;
+  std::string Name() const;
+  const void* Identity() const;
+  bool operator==(const PreviewMaterialSlot& other) const {
+    return surface == other.surface && volume == other.volume;
+  }
+};
 class PreviewScene;
 // A selectable outer object, its shared group ID, and its world placement frame.
 struct PreviewObjectRoot {
@@ -61,7 +73,9 @@ public:
   uint64_t Revision() const {
     return revision;
   }
-  void CancelTransform(PreviewObjectState& ui);
+  void BeginTransform();
+  void EndTransform();
+  bool CancelTransform(PreviewObjectState& ui);
   // Build replacement geometry into the supplied candidate and return its commit
   // closure. Preparation may throw; the commit must publish without further R work
   // or allocations, after all renderer workers have drained.
@@ -86,7 +100,8 @@ private:
   SelectionContext Resolve(uint64_t id) const;
   void ReplayMaterials();
   void ForwardMaterial(const PreviewObjectRoot& root, PreviewSceneSettings& next,
-                       material* target, const PreviewMaterialEdit& edit) const;
+                       const PreviewMaterialSlot& target,
+                       const PreviewMaterialEdit& edit) const;
   void PrepareSelectionBvh();
   const PreviewObjectRoot* HitRoot(const Ray& ray, material*& picked, random_gen& rng);
   std::vector<uint64_t> HitPath(const Ray& ray, material*& picked, random_gen& rng,
@@ -96,6 +111,9 @@ private:
   uint64_t selected_id = 0, revision = 0;
   std::shared_ptr<hitable> selection_bvh;
   Transform selected_model;
+  std::shared_ptr<PreviewSceneSettings> drag_settings;
+  Transform drag_model;
+  uint64_t drag_revision = 0;
   void DescribeMaterials(uint64_t id, PreviewObjectState& ui, material* hit_material);
 };
 
@@ -107,6 +125,11 @@ struct PreviewMaterialBinding {
   std::function<void(const std::string&)> set_text;
 };
 std::vector<material*> PreviewMaterials(hitable* root);
+std::vector<PreviewMaterialSlot> PreviewMaterialSlots(hitable* root);
+std::vector<PreviewMaterialBinding>
+PreviewMaterialFields(const PreviewMaterialSlot& slot, hitable* root = nullptr);
+void PreviewApplyMaterial(const PreviewMaterialSlot& slot,
+                          const PreviewMaterialEdit& edit, hitable* root = nullptr);
 std::vector<PreviewMaterialBinding> PreviewMaterialFields(material* mat,
                                                           hitable* root = nullptr);
 void PreviewApplyMaterial(material* mat, const PreviewMaterialEdit& edit,

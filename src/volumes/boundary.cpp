@@ -41,15 +41,19 @@ double signed_mesh_volume(const TriangleMesh &mesh) {
   return sum / 6;
 }
 struct MediumBoxInterval {
-  point3f origin;
-  vec3f direction;
+  point3<double> origin;
+  vec3<double> direction;
   double t_near = -INFINITY, t_far = INFINITY;
   int near_axis = -1, far_axis = -1;
 };
 // A contact with no resolvable interior interval is not a boundary crossing.
 bool box_interval(const box &geometry, const Ray &ray, MediumBoxInterval &interval) {
-  interval.origin = (*geometry.WorldToObject)(ray.o);
-  interval.direction = (*geometry.WorldToObject)(ray.d);
+  // Preserve the world-space gap when converting a ray close to a face.
+  // Subtracting a box translation in Float can round an outside origin onto
+  // the face. Containment then expects a t=0 exit that the world bounds reject,
+  // leaving the next surface bounce with stale medium membership.
+  interval.origin = (*geometry.WorldToObject)(point3<double>(ray.o[0], ray.o[1], ray.o[2]));
+  interval.direction = (*geometry.WorldToObject)(vec3<double>(ray.d[0], ray.d[1], ray.d[2]));
   for (int axis = 0; axis < 3; ++axis) {
     if (interval.direction[axis] == 0) {
       if (interval.origin[axis] <= geometry.pmin[axis] ||

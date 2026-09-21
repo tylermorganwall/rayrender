@@ -26,13 +26,26 @@ native_sky_controls = function(lights) {
     datetime = format(sky$datetime, "%Y-%m-%d %H:%M:%S", tz = "UTC"),
     elevation = position$elevation,
     azimuth = position$azimuth,
+    base_altitude = if (is.null(sky$sky_args$altitude)) {
+      0
+    } else {
+      sky$sky_args$altitude
+    },
+    meters_per_unit = if (is.null(sky$meters_per_unit)) {
+      1
+    } else {
+      sky$meters_per_unit
+    },
     update = function(
       latitude,
       longitude,
       datetime,
       model = initial_model,
       elevation = NULL,
-      azimuth = NULL
+      azimuth = NULL,
+      base_altitude = NULL,
+      meters_per_unit = NULL,
+      fast = FALSE
     ) {
       if (
         !is.finite(latitude) ||
@@ -53,6 +66,30 @@ native_sky_controls = function(lights) {
       }
       if (!model %in% 0:1) {
         return(list(error = "Choose Hosek or Prague."))
+      }
+      if (
+        !is.null(base_altitude) &&
+          (!is.numeric(base_altitude) ||
+            length(base_altitude) != 1L ||
+            !is.finite(base_altitude) ||
+            base_altitude < 0 ||
+            base_altitude > 15000)
+      ) {
+        return(list(
+          error = "Base altitude must be between 0 and 15000 meters."
+        ))
+      }
+      if (
+        !is.null(meters_per_unit) &&
+          (!is.numeric(meters_per_unit) ||
+            length(meters_per_unit) != 1L ||
+            !is.finite(meters_per_unit) ||
+            meters_per_unit <= 0 ||
+            meters_per_unit > 1e12)
+      ) {
+        return(list(
+          error = "Atmosphere scale must be positive and at most 1e12 meters per unit."
+        ))
       }
       manual = !is.null(elevation) || !is.null(azimuth)
       if (
@@ -76,6 +113,25 @@ native_sky_controls = function(lights) {
           next_sky$lat = latitude
           next_sky$long = longitude
           next_sky$datetime = time
+          # Reduce only the temporary sky map/proposal during a sun gesture.
+          # The original description is unchanged, so release, undo and export
+          # always rebuild with the scene's requested resolution.
+          if (isTRUE(fast)) {
+            resolution = next_sky$sky_args$resolution
+            if (is.null(resolution)) {
+              resolution = 512L
+            }
+            limit = if (isTRUE(next_sky$atmosphere)) 16L else 128L
+            next_sky$sky_args$resolution = min(resolution, limit)
+          }
+          # Altitude affects ephemerides and Prague's RGB calibration as well as
+          # transport. Set it before preparing any component of the replacement.
+          if (!is.null(base_altitude)) {
+            next_sky$sky_args$altitude = base_altitude
+          }
+          if (isTRUE(next_sky$atmosphere) && !is.null(meters_per_unit)) {
+            next_sky$meters_per_unit = meters_per_unit
+          }
           position = if (manual) {
             list(
               elevation = clamp_sky_sun_elevation(elevation),
@@ -86,8 +142,14 @@ native_sky_controls = function(lights) {
           }
           updated[[index]] = next_sky
           if (manual && !isTRUE(next_sky$atmosphere)) {
+            updated = split_hosek_sky_lights(
+              updated,
+              index,
+              position$elevation,
+              position$azimuth
+            )
             updated[[index]] = native_sky_manual_image(
-              next_sky,
+              updated[[index]],
               position$elevation,
               position$azimuth
             )
@@ -234,6 +296,10 @@ native_sky_manual_image = function(sky, elevation, azimuth) {
     success = FALSE
     on.exit(if (!success) unlink(filename), add = TRUE)
     pixels = do.call(skymodelr::generate_sky, solar_args)
+    if (isTRUE(sky$omit_solar_atmosphere)) {
+      # A sun-only sky still keeps its own slot and optional celestial background.
+      pixels[,, 1:3] = 0
+    }
     if (any(vapply(args[c("moon", "stars", "planets")], isTRUE, logical(1)))) {
       # Move only the Sun and its scattering. Retain the Moon, stars and planets
       # from the scene's location/time instead of dropping them during a drag.
@@ -334,7 +400,9 @@ native_sky_restore = function(lights, state) {
     state$datetime,
     state$model,
     if (isTRUE(state$manual)) state$elevation else NULL,
-    if (isTRUE(state$manual)) state$azimuth else NULL
+    if (isTRUE(state$manual)) state$azimuth else NULL,
+    base_altitude = state$base_altitude,
+    meters_per_unit = state$meters_per_unit
   )
   if (nzchar(result$error)) {
     stop(result$error, call. = FALSE)
@@ -344,7 +412,11 @@ native_sky_restore = function(lights, state) {
     result$lights[[index]]$haze = isTRUE(state$haze)
     result$lights[[index]]$query_altitude = isTRUE(state$altitude)
   }
-  for (name in required) {
+  # Older exports have no numeric atmosphere controls; preserve their defaults.
+  for (name in c(
+    required,
+    intersect(c("base_altitude", "meters_per_unit"), names(state))
+  )) {
     controls[[name]] = state[[name]]
   }
   controls$elevation = result$elevation

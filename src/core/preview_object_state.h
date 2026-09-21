@@ -11,7 +11,9 @@ struct PreviewField {
   std::string name;
   bool color = false;
   bool boolean = false, integer = false, text_input = false;
-  std::string text, section;
+  std::string text, section, help;
+  std::string error, load_error, input_error;
+  bool texture_available = false;
   std::vector<std::string> choices;
   // A field may depend on another choice without changing its saved identity.
   std::string condition;
@@ -39,8 +41,8 @@ struct PreviewHierarchyNode {
   std::string label;
 };
 // GUI callbacks stage requests here; the renderer consumes them between samples.
-// Pending flags retain edits across frame refreshes. Apply flags request a commit;
-// merely dragging a handle or editing a field does not mutate rendered geometry.
+// Pending flags retain drafts across frames. Changed inputs request live updates;
+// only renderer checkpoints may validate/load textures or replace scene geometry.
 struct PreviewObjectState {
   bool enabled = false, selected = false, pick_pending = false, clear_pending = false;
   bool transform_pending = false, transform_active = false, apply_transform = false;
@@ -59,6 +61,7 @@ struct PreviewObjectState {
   uint32_t projection_kind = 1;
   std::array<double, 3> translation{}, rotation{}, scale{1, 1, 1};
   bool numeric_transform = false, cancel_transform = false;
+  bool begin_transform = false, end_transform = false, drag_cancelled = false;
   std::vector<PreviewMaterialPanel> materials;
 };
 #endif

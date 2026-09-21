@@ -116,7 +116,7 @@ Set \code{FALSE} to use Prague.}
 \item{verbose}{Default \code{FALSE}. Print sky-generation progress information.}
 
 \item{sun}{Default \code{TRUE}. Include the solar disk when selected by \code{render_mode}.
-Set \code{FALSE} to omit it from the image.}
+Set \code{FALSE} to omit it. Hosek uses a separately sampled celestial disk.}
 
 \item{environment_light_bake_white}{Default \code{FALSE}. Bake chromatic adaptation
 from the generated EXR's \code{white_current} metadata into its RGB pixels before
@@ -159,7 +159,10 @@ observer altitude remain fixed throughout the image. This light supports the
 same integrators as \code{\link[=infinite_light]{infinite_light()}} and adds no finite atmospheric haze.
 Use \code{\link[=render_scene]{render_scene()}}'s \code{iso} to adjust exposure.
 
-For a separately sampled Sun, set \code{render_mode = "atmosphere"} and add
+Hosek skies automatically use a separately sampled Sun with matching turbidity,
+intensity, rotation, and white adaptation. This keeps direct light independent
+of image resolution. An explicit \code{\link[=sun_light]{sun_light()}} replaces that automatic disk.
+For a separately sampled Sun with a Prague image, set \code{render_mode = "atmosphere"} and add
 \code{\link[=sun_light]{sun_light()}} with matching location, time, and atmospheric settings. This
 avoids relying on the environment image to resolve the small solar disk.
 }

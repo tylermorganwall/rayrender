@@ -128,6 +128,7 @@ private:
   vec3f World(const Vector &) const;
   Model::Parameters Parameters(Vector, Vector) const;
   double Height(Vector) const;
+  bool EnterAtmosphere(Vector &position, Vector direction, double &distance) const;
   bool PlanetOccludes(Vector, Vector, double distance) const;
   SpectrumValues Spectrum(Vector, Vector, bool sun, bool sky, bool smooth = true) const;
   point3f SpectrumToRGB(const SpectrumValues &) const;

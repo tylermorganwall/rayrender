@@ -141,8 +141,14 @@
 #' A scene can contain one atmospheric sky. When the reference Sun elevation is
 #' below -4.2 degrees, Prague contributes black sky and no solar in-scattering.
 #' Enabled Moon, star, and planet lights still contribute, with atmospheric
-#' transmission and Earth occlusion applied normally. Queries outside 0--15000 m
-#' use the nearest modeled altitude; keep scene interactions within that range.
+#' transmission and Earth occlusion applied normally. Outside the fitted
+#' 0--15000 m range, coefficient lookups use the nearest available altitude while
+#' ray distances and Earth visibility retain the physical observer position.
+#' Lighting above 15000 m is an approximation. Rays starting beyond the outer
+#' atmosphere advance to atmospheric entry along their physical direction; the
+#' preceding vacuum distance contributes no haze or attenuation. Rays that miss
+#' the atmosphere remain clear. Entry accounts for the model's 50 m safety offset
+#' inside its 100 km outer boundary.
 #' Do not add another medium
 #' modeling the same clear-air scattering or absorption. Separate clouds can be
 #' added normally. Clouds default to no interior haze; `cloud(haze = TRUE)`

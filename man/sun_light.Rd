@@ -38,8 +38,10 @@ moon_light(
 \item{sky_args}{Default \code{list()}. Named atmospheric settings for skymodelr's
 Prague model: \code{altitude}, \code{visibility}, \code{albedo}, \code{wide_spectrum},
 \code{number_cores}, and the \code{prague_rgb_correction} options accepted by
-\code{skymodelr::calculate_sky_values()}. \code{hosek = FALSE} is accepted;
-\code{hosek = TRUE} is unsupported because these lights use per-direction queries.
+\code{skymodelr::calculate_sky_values()}. Sun lights also accept \code{hosek = TRUE}
+with \code{turbidity = 3} (1.7--10), without requiring Prague data. Optional paired
+\code{elevation} (-90--90) and \code{azimuth} (0--360) override the Sun's ephemeris
+direction and atmospheric attenuation. Moon lights require Prague.
 Defaults match that function. Without a native atmospheric sky, altitude
 describes one observer for the whole light. With \code{\link[=sky_light]{sky_light()}}, a missing
 altitude uses that sky's reference altitude
@@ -69,12 +71,12 @@ A \code{ray_infinite_light} description.
 \description{
 Create detailed celestial disks without embedding them in a latitude-longitude
 environment map. skymodelr supplies the position and apparent angular size for
-the observer, date, and time. The Sun uses Prague solar radiance queries; the
+the observer, date, and time. The Sun supports Prague and Hosek radiance; the
 Moon uses skymodelr's surface texture, phase, earthshine, and radiometry routines.
 Add these descriptions to a scene with \code{\link[=add_infinite_light]{add_infinite_light()}}.
 }
 \details{
-Requires skymodelr and its Prague data. Install datasets with
+Requires skymodelr. Prague disks also require its data. Install datasets with
 \code{skymodelr::download_sky_data()} before rendering. Requires the public
 \code{skymodelr::generate_sun_disk()} and \code{skymodelr::generate_moon_disk()} exports.
 
@@ -93,12 +95,14 @@ linear EXRs before worker threads start; phase, time, and position stay fixed
 during animation. Direct illumination samples each disk's solid angle, so a
 small apparent diameter does not depend on a high-resolution sky sampler.
 
-The Sun texture uses Prague's solar disk profile, mapped to the ephemeris
+The Sun texture uses the selected model's solar profile, mapped to the ephemeris
 angular diameter. Moon radiance preserves skymodelr's phase-dependent total
 irradiance and atmospheric extinction, with its spectral RGB and atmospheric
 tint. Earthshine is part of the generated phase texture. These are radiance
 images; exposure and tone mapping are applied only by the final render.
 
+Hosek Sun lights pair with image skies and include fixed-observer attenuation;
+they cannot be combined with a native Prague atmosphere.
 With a native atmospheric sky, preparation automatically requests
 \code{atmospheric_attenuation = FALSE} through skymodelr's public disk generators.
 Sun radiance and lunar phase, surface detail, and earthshine are generated

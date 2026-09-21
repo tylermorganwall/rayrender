@@ -61,7 +61,8 @@ render_scene(
   end_frame = NA,
   mode = c("auto", "image", "animation", "preview"),
   gui = c("auto", "imgui", "legacy", "none"),
-  exposure = 1
+  exposure = 1,
+  camera_rotation = "clamped"
 )
 }
 \arguments{
@@ -121,6 +122,12 @@ view unchanged. Selected surface and volume points remain the orbit center when 
 Right clicking preserves the focal distance.
 Some options aren't available for all cameras. When using a realistic camera,
 the aperture and field of view cannot be changed from their initial settings.}
+
+\item{camera_rotation}{Default `"clamped"`. Interactive camera rotation mode.
+`"clamped"` stops orbit and pitch movement 0.1 degrees short of the current
+camera up axis (Y by default). `"free"` carries the camera orientation through
+the poles using quaternions. Shift-W/S pitch and Shift-A/D roll use the camera's
+local axes. The native Camera pane can toggle free rotation during preview.}
 
 \item{deferred_render}{Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the

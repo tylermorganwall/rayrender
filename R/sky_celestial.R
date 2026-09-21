@@ -196,3 +196,67 @@ prepare_sky_celestial_background = function(light) {
     name = paste0(light$name, "::background")
   )
 }
+
+#' @keywords internal
+split_hosek_sky_lights = function(
+  lights,
+  index = NULL,
+  elevation = NULL,
+  azimuth = NULL
+) {
+  # Keep the editable sky in its original slot and append automatic emitters.
+  # Explicit Sun lights replace the automatic disk, just as for native Prague.
+  explicit_sun = any(vapply(
+    lights,
+    function(light) light$type == "sun",
+    logical(1)
+  ))
+  indices = if (is.null(index)) seq_along(lights) else index
+  for (i in indices) {
+    sky = lights[[i]]
+    if (
+      !identical(sky$type, "sky_image") || identical(sky$sky_args$hosek, FALSE)
+    ) {
+      next
+    }
+    mode = sky$sky_args$render_mode
+    if (is.null(mode)) {
+      mode = "all"
+    }
+    include_sun = !identical(sky$sun, FALSE) && mode != "atmosphere"
+    if (!include_sun) {
+      next
+    }
+    if (!explicit_sun) {
+      args = sky$sky_args[intersect(
+        names(sky$sky_args),
+        c("altitude", "albedo", "turbidity", "number_cores")
+      )]
+      args$hosek = TRUE
+      if (!is.null(elevation)) {
+        args$elevation = clamp_sky_sun_elevation(elevation)
+        args$azimuth = azimuth
+      }
+      sun = sun_light(
+        sky$lat,
+        sky$long,
+        sky$datetime,
+        sky_args = args,
+        resolution = 64,
+        intensity = sky$intensity,
+        rotation = sky$rotation,
+        name = paste0(sky$name, "::sun")
+      )
+      # Apply the same optional white adaptation to the sky and its solar disk.
+      sun$environment_light_bake_white = sky$environment_light_bake_white
+      sun$environment_light_bake_white_target = sky$environment_light_bake_white_target
+      sun$exr_adopted_white = sky$sky_args$exr_adopted_white
+      lights = c(lights, list(sun))
+    }
+    sky$sun = FALSE
+    sky$separate_sun = TRUE
+    sky$omit_solar_atmosphere = identical(mode, "sun")
+    lights[[i]] = sky
+  }
+  lights
+}

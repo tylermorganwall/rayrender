@@ -4,7 +4,7 @@
 \alias{tween_spline_path}
 \title{Interpolate Speed Along a Piecewise Linear Path}
 \usage{
-tween_spline_path(points, n, closed = FALSE)
+tween_spline_path(points, n, closed = FALSE, segment_frames = NULL)
 }
 \arguments{
 \item{points}{Matrix of path points.}
@@ -12,6 +12,8 @@ tween_spline_path(points, n, closed = FALSE)
 \item{n}{Number of frames.}
 
 \item{closed}{Default `FALSE`. Whether to match speed at the path boundaries.}
+
+\item{segment_frames}{Default `NULL`. Explicit frame intervals per segment.}
 }
 \value{
 Matrix of interpolated points.

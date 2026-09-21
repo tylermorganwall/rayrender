@@ -13,6 +13,7 @@ struct PreviewSkySettings {
   double latitude = 0, longitude = 0, elevation = 0, azimuth = 0;
   std::string datetime;
   bool manual = false, haze = true, altitude = true;
+  double base_altitude = 0, meters_per_unit = 1;
 };
 
 inline void ConfigureNativeSky(PreviewDisplay& display,
@@ -37,6 +38,12 @@ inline void ConfigureNativeSky(PreviewDisplay& display,
   if (controls.containsElementNamed("altitude")) {
     settings->altitude = Rcpp::as<bool>(controls["altitude"]);
   }
+  if (controls.containsElementNamed("base_altitude")) {
+    settings->base_altitude = Rcpp::as<double>(controls["base_altitude"]);
+  }
+  if (controls.containsElementNamed("meters_per_unit")) {
+    settings->meters_per_unit = Rcpp::as<double>(controls["meters_per_unit"]);
+  }
   display.export_sky = [settings] {
     return Rcpp::List::create(Rcpp::_["model"] = settings->model,
                               Rcpp::_["latitude"] = settings->latitude,
@@ -46,12 +53,16 @@ inline void ConfigureNativeSky(PreviewDisplay& display,
                               Rcpp::_["elevation"] = settings->elevation,
                               Rcpp::_["azimuth"] = settings->azimuth,
                               Rcpp::_["haze"] = settings->haze,
-                              Rcpp::_["altitude"] = settings->altitude);
+                              Rcpp::_["altitude"] = settings->altitude,
+                              Rcpp::_["base_altitude"] = settings->base_altitude,
+                              Rcpp::_["meters_per_unit"] = settings->meters_per_unit);
   };
   Rcpp::List initial = original[index];
   if (Rcpp::as<std::string>(initial["type"]) == "prague") {
     settings->haze = Rcpp::as<bool>(initial["haze"]);
     settings->altitude = Rcpp::as<bool>(initial["query_altitude"]);
+    settings->base_altitude = Rcpp::as<double>(initial["altitude"]);
+    settings->meters_per_unit = Rcpp::as<double>(initial["meters_per_unit"]);
   }
 
   // Build the complete replacement before swapping either owner. The native
@@ -88,15 +99,26 @@ inline void ConfigureNativeSky(PreviewDisplay& display,
     display.native_gui->haze = native && settings->haze;
     display.native_gui->altitude = native && settings->altitude;
     display.native_gui->atmosphere_pending = false;
+    display.native_gui->base_altitude = settings->base_altitude;
+    display.native_gui->meters_per_unit = settings->meters_per_unit;
+    display.native_gui->atmosphere_parameters_pending = false;
+    display.native_gui->atmosphere_parameters_editing = false;
   };
   Rcpp::Function update = controls["update"];
   auto prepare_restore =
       [settings, update, prepare_publish, configure_atmosphere, index, &display](
-          PreviewSkySettings next) -> std::function<void()> {
+          PreviewSkySettings next, bool fast = false) -> std::function<void()> {
     Rcpp::RObject elevation = next.manual ? Rcpp::wrap(next.elevation) : R_NilValue;
     Rcpp::RObject azimuth = next.manual ? Rcpp::wrap(next.azimuth) : R_NilValue;
-    Rcpp::List result = update(
-        next.latitude, next.longitude, next.datetime, next.model, elevation, azimuth);
+    Rcpp::List result = update(next.latitude,
+                               next.longitude,
+                               next.datetime,
+                               next.model,
+                               elevation,
+                               azimuth,
+                               Rcpp::_["base_altitude"] = next.base_altitude,
+                               Rcpp::_["meters_per_unit"] = next.meters_per_unit,
+                               Rcpp::_["fast"] = fast);
     const std::string error = Rcpp::as<std::string>(result["error"]);
     if (!error.empty()) {
       throw std::runtime_error(error);
@@ -122,9 +144,10 @@ inline void ConfigureNativeSky(PreviewDisplay& display,
       configure_atmosphere();
     };
   };
-  auto rebuild = [prepare_restore](PreviewSkySettings next) -> std::string {
+  auto rebuild = [prepare_restore](PreviewSkySettings next,
+                                   bool fast = false) -> std::string {
     try {
-      prepare_restore(next)();
+      prepare_restore(next, fast)();
       return {};
     } catch (const Rcpp::internal::InterruptedException&) {
       throw;
@@ -145,22 +168,32 @@ inline void ConfigureNativeSky(PreviewDisplay& display,
     next.azimuth = Rcpp::as<double>(saved["azimuth"]);
     next.haze = Rcpp::as<bool>(saved["haze"]);
     next.altitude = Rcpp::as<bool>(saved["altitude"]);
+    next.base_altitude = Rcpp::as<double>(saved["base_altitude"]);
+    next.meters_per_unit = Rcpp::as<double>(saved["meters_per_unit"]);
     return prepare_restore(next);
   };
 
+  display.update_atmosphere_parameters = [settings, rebuild](double base_altitude,
+                                                             double meters_per_unit) {
+    auto next = *settings;
+    next.base_altitude = base_altitude;
+    next.meters_per_unit = meters_per_unit;
+    return rebuild(next);
+  };
   configure_atmosphere();
-  display.SetSunControls(settings->elevation,
-                         settings->azimuth,
-                         [settings, rebuild](double elevation, double azimuth) {
-                           auto next = *settings;
-                           next.manual = true;
-                           next.elevation = elevation;
-                           next.azimuth = azimuth;
-                           const auto error = rebuild(next);
-                           if (!error.empty()) {
-                             throw std::runtime_error(error);
-                           }
-                         });
+  display.SetSunControls(
+      settings->elevation,
+      settings->azimuth,
+      [settings, rebuild, &display](double elevation, double azimuth) {
+        auto next = *settings;
+        next.manual = true;
+        next.elevation = elevation;
+        next.azimuth = azimuth;
+        const auto error = rebuild(next, display.native_gui->sun_editing);
+        if (!error.empty()) {
+          throw std::runtime_error(error);
+        }
+      });
   display.SetSkyControls(settings->latitude,
                          settings->longitude,
                          settings->datetime,

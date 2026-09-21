@@ -771,6 +771,54 @@ context("Participating media geometry and sampling") {
     expect_true(outside.media.empty());
     expect_true(inside.media.size() == 1);
   }
+
+  test_that("translated fog boxes preserve tiny gaps on both sides of a face") {
+    // The magnifier leg can reflect a ray barely below the fog floor.
+    // Its Float local origin used to round onto the face, so containment claimed
+    // it was inside while the world-space BVH correctly rejected the exit.
+    Transform transform = Translate(vec3f(-.5, .54015674164922156, -5));
+    Transform inverse = Inverse(transform);
+    const vec3f half_size(.95, Float(1.0783134832984433) / 2, .95);
+    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto geometry = std::make_shared<box>(-half_size, half_size, material, nullptr, nullptr,
+                                          &transform, &inverse, false);
+    auto medium = std::make_shared<Medium>(medium_description(0));
+    VolumeScene scene;
+    auto boundary = std::make_shared<MediumBoundary>(geometry, medium, transform, false,
+                                                     scene.NextBoundaryId());
+    scene.boundaries.add(boundary);
+    scene.Finish(0, 1);
+    const Float floor = transform(point3f(0, -half_size[1], 0))[1];
+    random_gen rng(4);
+    RandomSampler sampler(rng);
+    bool containment_matches = true, crossings_match = true;
+    for (bool inside : {false, true}) {
+      point3f origin(-1.366940022,
+                     std::nextafter(floor, inside ? Float(INFINITY) : Float(-INFINITY)),
+                     -5.93054533);
+      for (Float direction : {Float(-1), Float(1)}) {
+        Ray ray(origin, vec3f(0, direction, 0));
+        auto state = scene.InitialState(ray, nullptr);
+        containment_matches &= state.media.size() == (inside ? 1 : 0);
+        state.SetRay(ray);
+        hit_record direct, accelerated, sampled;
+        const bool expected = inside || direction > 0;
+        const bool hit = boundary->hit(ray, 0, MaxT, direct, rng);
+        crossings_match &= hit == expected;
+        const bool accelerated_hit = scene.boundary_bvh->hit(ray, 0, MaxT, accelerated, rng);
+        const bool sampled_hit = boundary->hit(ray, 0, MaxT, sampled, &sampler);
+        crossings_match &= accelerated_hit == hit && sampled_hit == hit;
+        if (hit && accelerated_hit && sampled_hit) {
+          crossings_match &= direct.t > 0 && sampled.t == direct.t && accelerated.t == direct.t;
+          crossings_match &= (dot(ray.d, direct.geometric_normal) > 0) == inside;
+          state.Cross(direct, ray.d);
+          crossings_match &= state.media.size() == (inside ? 0 : 1);
+        }
+      }
+    }
+    expect_true(containment_matches);
+    expect_true(crossings_match);
+  }
   test_that("rays starting on a box face count the initial crossing once") {
     Transform transform = Translate(vec3f(0, 10.5, 0)), inverse = Inverse(transform);
     auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));

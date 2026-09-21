@@ -10,6 +10,7 @@
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "preview_color.h"
+#include "preview_camera_rig.h"
 #include "../core/camera.h"
 #include "../hitables/hitable.h"
 
@@ -94,10 +95,19 @@ public:
 #endif
   ~PreviewDisplay();
   PreviewScene* scene_editor = nullptr;
+  PreviewCameraRig* camera_rig = nullptr; // Owned by render_scene_impl.
+  size_t max_depth = 50;
   bool ApplyNativeObjectControls();
+  bool ApplyNativeCameraControls();
+  void SyncNativeCameraControls(bool force = false);
   void UpdateNativeObjectCamera();
   bool UpdateNativeSelectionMask();
   RayrenderGui* native_gui = nullptr; // Owned by the outer R unwind boundary.
+  // Fast quality is temporary during object, camera and sun gestures; the
+  // checkbox/history continue to describe the user's preferred quality after the
+  // gesture ends.
+  bool native_drag_fast = false, native_fast_saved = false;
+  bool native_sun_preview = false;
   void AttachNativeGui(RayrenderGui*,bool edit,bool deferred);
   bool DrawNativeGui(adaptive_sampler&,size_t,Float,hitable*,random_gen&);
   bool ApplyNativeControls(hitable* world);
@@ -114,6 +124,7 @@ public:
   // Export callbacks run only at a render checkpoint on R's main thread.
   std::function<std::string(const Rcpp::List&, const std::string&)> export_scene;
   std::function<Rcpp::List()> export_sky;
+  std::function<std::string(double, double)> update_atmosphere_parameters;
   std::string native_integrator = "nee";
   Rcpp::List NativeEditorState() const;
   void ApplyNativeExport();
@@ -168,7 +179,8 @@ public:
   void PrintShutterSpeed() const;
   Rcpp::List CreateCurrentKeyframe(Float env_rotation) const;
   void SaveCurrentKeyframe(Float env_rotation);
-  bool ApplyCameraState(const Rcpp::List& state, Float* env_rotation);
+  bool ApplyCameraState(const Rcpp::List& state, Float* env_rotation,
+                        bool prepared = false);
   bool ApplyKeyframe(int index, Float* env_rotation);
   bool JumpKeyframe(int step, Float* env_rotation);
   bool DeleteCurrentKeyframe(Float* env_rotation);

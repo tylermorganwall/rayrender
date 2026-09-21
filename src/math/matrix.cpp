@@ -106,6 +106,36 @@ Matrix4x4::Matrix4x4(Float t00, Float t01, Float t02, Float t03,
 // }
 // #else
 Matrix4x4 Inverse(const Matrix4x4 &m) {
+  if (m.m[3][0] == 0 && m.m[3][1] == 0 && m.m[3][2] == 0 && m.m[3][3] == 1) {
+    // Invert affine geometry as a 3 x 3 basis plus translation. General 4 x 4
+    // elimination can introduce perspective terms in the bottom row; repeated
+    // editor transforms then drift and no longer map rays like affine geometry.
+    // Double intermediates also keep translated/scaled inverse pairs accurate.
+    const double a = m.m[0][0], b = m.m[0][1], c = m.m[0][2];
+    const double d = m.m[1][0], e = m.m[1][1], f = m.m[1][2];
+    const double g = m.m[2][0], h = m.m[2][1], i = m.m[2][2];
+    const double cofactors[3][3] = {{e * i - f * h, c * h - b * i, b * f - c * e},
+                                    {f * g - d * i, a * i - c * g, c * d - a * f},
+                                    {d * h - e * g, b * g - a * h, a * e - b * d}};
+    const double determinant =
+        a * cofactors[0][0] + b * cofactors[1][0] + c * cofactors[2][0];
+    if (determinant == 0) {
+      throw std::runtime_error("Singular matrix in MatrixInvert");
+    }
+    Matrix4x4 inverse;
+    for (int row = 0; row < 3; ++row) {
+      double translation = 0;
+      for (int col = 0; col < 3; ++col) {
+        const double value = cofactors[row][col] / determinant;
+        inverse.m[row][col] = value;
+        translation -= value * m.m[col][3];
+      }
+      inverse.m[row][3] = translation;
+    }
+    return inverse;
+  }
+
+  // Projective matrices (including cameras) retain the general inverse path.
   int indxc[4], indxr[4];
   int ipiv[4] = {0, 0, 0, 0};
   Float minv[4][4];

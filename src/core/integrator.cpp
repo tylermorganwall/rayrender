@@ -49,6 +49,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   }
   RayMatrix rgb_output2(nx,ny,3);
   display.write_fast_output = false;
+  display.max_depth = max_depth;
   bool adaptive_on = min_variance > 0;
   bool has_media = hlist.volume_scene && hlist.volume_scene->has_media;
   display.volume_scene = hlist.volume_scene;
@@ -170,19 +171,17 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   random_gen rng_interactive(next_seed());
 
 #ifdef HAS_OIDN
-  auto make_oidn_aux_options = [sample_method,
-                                stratified_x,
-                                stratified_y,
-                                max_depth] (std::size_t samples) {
-    OidnAuxRenderOptions options;
-    options.samples = samples;
-    options.max_depth = max_depth;
-    options.max_dielectric_splits = 1;
-    options.sample_method = sample_method;
-    options.stratified_x = stratified_x;
-    options.stratified_y = stratified_y;
-    return options;
-  };
+  auto make_oidn_aux_options =
+      [sample_method, stratified_x, stratified_y, &display](std::size_t samples) {
+        OidnAuxRenderOptions options;
+        options.samples = samples;
+        options.max_depth = display.max_depth;
+        options.max_dielectric_splits = 1;
+        options.sample_method = sample_method;
+        options.stratified_x = stratified_x;
+        options.stratified_y = stratified_y;
+        return options;
+      };
 
   auto ensure_full_preview_oidn_aux = [&]() {
     if (!display.preview || !display.denoise || display.denoiser == nullptr ||
@@ -218,13 +217,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     render_oidn_aux_features(numbercores,
                              nx,
                              ny,
-                             cam,
-                             fov,
+                             display.cam,
+                             display.cam->get_fov(),
                              &world,
                              options,
                              *display.oidn_normal_output,
                              *display.oidn_albedo_output,
-                             [&display]() { return display.PollCloseEvent(); });
+                             [&display]() {
+                               return display.PollCloseEvent();
+                             });
     if(display.terminate) {
       return;
     }
@@ -263,13 +264,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     render_oidn_aux_features(numbercores,
                              nx_small,
                              ny_small,
-                             cam,
-                             fov,
+                             display.cam,
+                             display.cam->get_fov(),
                              &world,
                              options,
                              oidn_normal_output_small,
                              oidn_albedo_output_small,
-                             [&display]() { return display.PollCloseEvent(); });
+                             [&display]() {
+                               return display.PollCloseEvent();
+                             });
     if(display.terminate) {
       return;
     }
@@ -317,10 +320,26 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         hlist.volume_scene->atmosphere->DeferredHaze() ? -std::numeric_limits<Float>::infinity() : 0;
   };
 
-  auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, sample_method,
-                             &rngs, fov, &samplers, cam, &world, &hlist,
-                             clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                             &render_cancelled, &render_pool, &display] (size_t s) -> bool {
+  auto render_full_sample = [&adaptive_pixel_sampler,
+                             nx,
+                             ny,
+                             sample_method,
+                             &rngs,
+                             &samplers,
+                             &world,
+                             &hlist,
+                             clampval,
+                             sample_floor,
+                             roulette_active,
+                             integrator_type,
+                             &render_cancelled,
+                             &render_pool,
+                             &display](size_t s) -> bool {
+    // Freeze one camera/depth snapshot for the entire worker batch. Widget
+    // callbacks only queue changes until every worker has joined.
+    RayCamera* cam = display.cam;
+    const Float fov = cam->get_fov();
+    const size_t max_depth = display.max_depth;
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler,
@@ -405,10 +424,26 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     return completed_sample;
   };
 
-  auto render_small_sample = [&adaptive_pixel_sampler_small, nx_small, ny_small, sample_method,
-                              &rngs_small, fov, &samplers_small, cam, &world, &hlist,
-                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                              &render_cancelled, &render_pool, &display] (size_t s) -> bool {
+  auto render_small_sample = [&adaptive_pixel_sampler_small,
+                              nx_small,
+                              ny_small,
+                              sample_method,
+                              &rngs_small,
+                              &samplers_small,
+                              &world,
+                              &hlist,
+                              clampval,
+                              sample_floor,
+                              roulette_active,
+                              integrator_type,
+                              &render_cancelled,
+                              &render_pool,
+                              &display](size_t s) -> bool {
+    // Freeze one camera/depth snapshot for the entire worker batch. Widget
+    // callbacks only queue changes until every worker has joined.
+    RayCamera* cam = display.cam;
+    const Float fov = cam->get_fov();
+    const size_t max_depth = display.max_depth;
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler_small,

@@ -4,7 +4,7 @@
 \alias{tween}
 \title{Tween}
 \usage{
-tween(vals, n, ease = "cubic", closed = FALSE)
+tween(vals, n, ease = "cubic", closed = FALSE, segment_frames = NULL)
 }
 \arguments{
 \item{vals}{Numeric values.}
@@ -15,6 +15,8 @@ tween(vals, n, ease = "cubic", closed = FALSE)
 
 \item{closed}{Default `FALSE`. Whether spline interpolation should match speed
 at the path boundaries.}
+
+\item{segment_frames}{Default `NULL`. Explicit frame intervals per segment.}
 }
 \value{
 number

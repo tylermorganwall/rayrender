@@ -6,8 +6,14 @@
 #include "preview_history.h"
 
 void PreviewDisplay::AttachNativeGui(RayrenderGui* gui, bool edit, bool deferred) {
+  gui->max_depth = int32_t(max_depth);
+  gui->free_rotation = cam->get_free_rotation();
   native_gui = gui;
   native_history.reset();
+  native_drag_fast = false;
+  native_fast_saved = write_fast_output;
+  native_sun_preview = false;
+  gui->animation_paused = false;
   gui->can_undo = gui->can_redo = gui->history_dirty = false;
   gui->history_requests.clear();
   preview = true;
@@ -17,6 +23,7 @@ void PreviewDisplay::AttachNativeGui(RayrenderGui* gui, bool edit, bool deferred
   gui->can_edit = edit;
   gui->deferred = deferred_render;
   gui->exposure = preview_exposure_adjustment;
+  SyncNativeCameraControls(true);
   SyncNativeAnimationState();
 #ifdef HAS_OIDN
   gui->denoise_available = denoiser != nullptr && oidn_albedo_output != nullptr &&
@@ -73,6 +80,51 @@ void PreviewDisplay::SyncNativeAnimationState() {
   auto& gui = *native_gui;
   gui.animation_current = current_keyframe;
   gui.animation_playing = IsPreviewMotionActive();
+  if (!gui.animation_playing) {
+    gui.animation_paused = false;
+  }
+  const std::string type = keyframe_motion_args.containsElementNamed("type")
+                               ? Rcpp::as<std::string>(keyframe_motion_args["type"])
+                               : "spline";
+  gui.animation_timing_available = type == "spline" || type == "linear" ||
+                                   type == "quad" || type == "cubic" || type == "exp";
+  // Each transition starts at 30 frame intervals. An explicitly supplied total
+  // can override that allocation until the first individual duration edit.
+  if (!gui.animation_timing_custom && Keyframes.size() > 1 &&
+      gui.keyframe_snapshots.size() == Keyframes.size()) {
+    const size_t segments = Keyframes.size() - (KeyframeMotionClosed() ? 0 : 1);
+    double total = segments * 30 + 1;
+    if (keyframe_motion_args.containsElementNamed("frames")) {
+      const double supplied = Rcpp::as<double>(keyframe_motion_args["frames"]);
+      if (std::isfinite(supplied)) {
+        total = supplied;
+      }
+    }
+    const size_t intervals =
+        size_t(std::clamp(total - 1,
+                          double(segments),
+                          double(segments * RayrenderGui::MaxSegmentFrames)));
+    for (size_t i = 0; i < segments; ++i) {
+      gui.keyframe_snapshots[i].frames_to_next =
+          int32_t(intervals / segments + (i < intervals % segments));
+    }
+    if (gui.animation_timing_available &&
+        keyframe_motion_args.containsElementNamed("segment_frames")) {
+      Rcpp::NumericVector supplied = keyframe_motion_args["segment_frames"];
+      const bool valid =
+          supplied.size() == R_xlen_t(segments) &&
+          std::all_of(supplied.begin(), supplied.end(), [](double value) {
+            return std::isfinite(value) && value == std::floor(value) && value >= 1 &&
+                   value <= RayrenderGui::MaxSegmentFrames;
+          });
+      if (valid) {
+        for (size_t i = 0; i < segments; ++i) {
+          gui.keyframe_snapshots[i].frames_to_next = int32_t(supplied[i]);
+        }
+        gui.animation_timing_custom = true;
+      }
+    }
+  }
   if (!gui.animation_settings_pending) {
     gui.animation_blur = CameraMotionBlurEnabled();
     gui.animation_closed = KeyframeMotionClosed();
@@ -106,14 +158,23 @@ bool PreviewDisplay::ApplyNativeAnimationControls() {
   }
   if (action == Action::Play) {
     gui.animation_message.clear();
-    const bool changed = IsPreviewMotionActive()
-                             ? CancelPreviewMotion(&native_env_angle)
-                             : StartPreviewMotion(native_env_angle);
-    if (!changed) {
-      gui.animation_message =
-          "Could not play camera path; check keyframe motion settings in the R console.";
+    if (IsPreviewMotionActive()) {
+      // Pausing keeps both the next frame index and the original restore pose.
+      // The normal reset below freezes the shutter at the displayed camera.
+      gui.animation_paused = !gui.animation_paused;
+      reset = true;
+    } else {
+      gui.animation_paused = false;
+      const bool started = StartPreviewMotion(native_env_angle);
+      if (!started) {
+        gui.animation_message =
+            "Could not play camera path; check keyframe motion settings in the R console.";
+      }
+      reset = started || reset;
     }
-    reset = changed || reset;
+  } else if (action == Action::Stop) {
+    reset = CancelPreviewMotion(&native_env_angle) || reset;
+    gui.animation_paused = false;
   } else if (!IsPreviewMotionActive()) {
     switch (action) {
     case Action::Save:
@@ -127,6 +188,21 @@ bool PreviewDisplay::ApplyNativeAnimationControls() {
       break;
     case Action::Delete:
       reset = DeleteCurrentKeyframe(&native_env_angle) || reset;
+      break;
+    case Action::Replace:
+      // Opening a context menu must not apply its saved camera first. Capture
+      // the live camera here, after renderer workers have finished their sample.
+      for (size_t i = 0; i < gui.keyframe_snapshots.size(); ++i) {
+        if (gui.keyframe_snapshots[i].id == gui.animation_target &&
+            i < Keyframes.size()) {
+          auto keyframe = CreateCurrentKeyframe(native_env_angle);
+          gui.replace_keyframe_snapshot(i, NativeKeyframeCamera(keyframe));
+          Keyframes[i] = keyframe;
+          current_keyframe = int(i);
+          gui.animation_message.clear();
+          break;
+        }
+      }
       break;
     case Action::Select:
       // Stable IDs prevent a queued thumbnail click selecting a different frame
@@ -145,10 +221,85 @@ bool PreviewDisplay::ApplyNativeAnimationControls() {
   return reset;
 }
 
+// Synchronize the pane after navigation and keyframe changes without overwriting
+// an active text edit or a rejected draft the user still needs to correct.
+void PreviewDisplay::SyncNativeCameraControls(bool force) {
+  if (!native_gui || !cam) {
+    return;
+  }
+  auto& input = native_gui->camera;
+  const double fov = cam->get_fov();
+  input.available = true;
+  input.editable = interactive && !IsPreviewMotionActive();
+  if (!force && (input.pending || input.editing || !input.Valid())) {
+    return;
+  }
+  input.model = camera_rig ? camera_rig->model : PreviewCameraRig::ModelForFov(fov);
+  input.models.resize(3);
+  input.lens_apertures.clear();
+  if (camera_rig) {
+    for (const auto& lens : camera_rig->lenses) {
+      input.models.push_back(lens.name);
+      input.lens_apertures.push_back(lens.aperture);
+    }
+  }
+  input.projection = fov < 0      ? PreviewCameraInputs::Realistic
+                     : fov == 0   ? PreviewCameraInputs::Orthographic
+                     : fov >= 180 ? PreviewCameraInputs::Environment
+                                  : PreviewCameraInputs::Perspective;
+
+  input.Read(CreateCurrentKeyframe(native_env_angle));
+  input.input_errors.fill({});
+  if (force) {
+    input.optical_error.clear();
+  }
+  input.Validate();
+  if (force) {
+    input.pending = input.editing = false;
+  }
+}
+
+bool PreviewDisplay::ApplyNativeCameraControls() {
+  auto& input = native_gui->camera;
+  if (!input.pending) {
+    return false;
+  }
+  // Film size and scene-to-lens scale rebuild the sampled optical bounds.
+  // Retain the last draft through a drag and prepare it once on release.
+  if (input.editing && camera_rig &&
+      input.projection == PreviewCameraInputs::Realistic &&
+      (input.values[PreviewCameraInputs::Film][0] != camera_rig->film_size ||
+       input.values[PreviewCameraInputs::Scale][0] != camera_rig->camera_scale)) {
+    return false;
+  }
+  input.pending = false;
+  if (!interactive || IsPreviewMotionActive() || !input.editable || !input.Validate()) {
+    return false;
+  }
+  // Preserve exposure/environment and parameters unsupported by this camera.
+  // Validate the complete pose before any setter can change the live camera.
+  auto state = CreateCurrentKeyframe(native_env_angle);
+  input.Write(state);
+  try {
+    ApplyCameraState(state, &native_env_angle);
+  } catch (const std::exception& error) {
+    input.optical_error = error.what();
+    input.Validate();
+    return false;
+  }
+  ApplyStaticPreviewCameraMotionRange(cam);
+  // FOV zero switches the rig immediately; the next pane shows orthographic size.
+  if (input.model != (camera_rig ? camera_rig->model : input.model)) {
+    SyncNativeCameraControls(true);
+  }
+  return true;
+}
+
 // Replay queued input through the existing camera controls. Returning true asks
 // the caller to discard accumulated samples after the camera or preview mode changes.
 bool PreviewDisplay::ApplyNativeControls(hitable* world) {
   RayrenderGui& gui = *native_gui;
+  bool stopped = gui.animation_action == RayrenderGui::AnimationAction::Stop;
   bool reset = ApplyNativeAnimationControls();
   // Denoising changes display/output processing, so it is available even when
   // camera editing is off and does not discard accumulated samples or masks.
@@ -166,25 +317,45 @@ bool PreviewDisplay::ApplyNativeControls(hitable* world) {
 #endif
     gui.denoise_pending = false;
   }
+  if (gui.depth_pending) {
+    if (gui.max_depth >= 1 && gui.max_depth <= 10000) {
+      reset = max_depth != size_t(gui.max_depth) || reset;
+      max_depth = size_t(gui.max_depth);
+    }
+    gui.depth_pending = false;
+  }
   if (!interactive) {
     gui.keys.clear();
     gui.pick_pending = false;
-    return false;
+    return reset;
   }
 
   if (gui.fast_pending) {
-    reset = write_fast_output != (gui.fast_preview != 0) || reset;
-    write_fast_output = gui.fast_preview != 0;
+    if (native_drag_fast) {
+      native_fast_saved = gui.fast_preview != 0;
+    } else {
+      reset = write_fast_output != (gui.fast_preview != 0) || reset;
+      write_fast_output = gui.fast_preview != 0;
+    }
     gui.fast_pending = false;
   }
+
+  // This navigation preference changes no pixels until the camera moves.
+  cam->set_free_rotation(gui.free_rotation != 0);
 
   for (const auto& key : gui.keys) {
     for (unsigned count = 0; count < key.count; ++count) {
       const bool shift = (key.modifiers & RAYIMGUI_SHIFT) != 0;
       const Float speed =
           static_cast<Float>(std::clamp(gui.movement_speed, .001, 128.0));
-      if (IsPreviewMotionActive() && key.code != RAYIMGUI_KEY_M) {
-        continue;
+      // Manual viewport input takes control from playback. Restore the same
+      // camera as Stop before applying navigation; M and F retain their own
+      // playback/quality behavior. This also covers a paused or looping path.
+      if (IsPreviewMotionActive() && key.code != RAYIMGUI_KEY_M &&
+          key.code != RAYIMGUI_KEY_F) {
+        gui.animation_action = RayrenderGui::AnimationAction::Stop;
+        reset = ApplyNativeAnimationControls() || reset;
+        stopped = true;
       }
       switch (key.code) {
       case RAYIMGUI_KEY_W:
@@ -240,8 +411,12 @@ bool PreviewDisplay::ApplyNativeControls(hitable* world) {
         gui.orbit = !gui.orbit;
         break;
       case RAYIMGUI_KEY_F:
-        write_fast_output = !write_fast_output;
-        gui.fast_preview = write_fast_output;
+        if (native_drag_fast) {
+          native_fast_saved = !native_fast_saved;
+        } else {
+          write_fast_output = !write_fast_output;
+        }
+        gui.fast_preview = native_drag_fast ? native_fast_saved : write_fast_output;
         reset = true;
         break;
       case RAYIMGUI_KEY_UP:
@@ -333,9 +508,12 @@ bool PreviewDisplay::ApplyNativeControls(hitable* world) {
         reset = DeleteCurrentKeyframe(&native_env_angle) || reset;
         break;
       case RAYIMGUI_KEY_M:
-        reset = (IsPreviewMotionActive() ? CancelPreviewMotion(&native_env_angle)
-                                         : StartPreviewMotion(native_env_angle)) ||
-                reset;
+        // A viewport click or navigation in this batch takes priority over M.
+        if (stopped) {
+          break;
+        }
+        gui.animation_action = RayrenderGui::AnimationAction::Play;
+        reset = ApplyNativeAnimationControls() || reset;
         break;
       case RAYIMGUI_KEY_B:
         ToggleCameraMotionBlur();
@@ -373,8 +551,10 @@ bool PreviewDisplay::ApplyNativeControls(hitable* world) {
     gui.pick_pending = false;
   }
 
+  reset = ApplyNativeCameraControls() || reset;
   if (gui.request_reset) {
     cam->reset();
+    SyncNativeCameraControls(true);
     gui.movement_speed = 1;
     gui.request_reset = false;
     *EnvObjectToWorld = Start_EnvObjectToWorld;
@@ -387,11 +567,12 @@ bool PreviewDisplay::ApplyNativeControls(hitable* world) {
     ApplyStaticPreviewCameraMotionRange(cam);
   }
 
-  if (AdvancePreviewMotion(&native_env_angle)) {
+  if (!gui.animation_paused && AdvancePreviewMotion(&native_env_angle)) {
     reset = true;
   }
   SyncNativeAnimationState();
   gui.exposure = preview_exposure_adjustment;
+  SyncNativeCameraControls();
 
   return reset;
 }
@@ -408,10 +589,12 @@ bool PreviewDisplay::CommitNativeEdits(hitable* world) {
   }
   const bool edited =
       gui.history_dirty || gui.exposure_pending || gui.denoise_pending ||
-      gui.fast_pending || gui.request_reset || gui.pick_pending || !gui.keys.empty() ||
-      gui.object.apply_transform || gui.object.apply_material || gui.object.revert ||
-      gui.object.cancel_transform || gui.sky_model_pending || gui.atmosphere_pending ||
-      (gui.sun_pending && !gui.sun_editing) || gui.location_pending ||
+      gui.fast_pending || gui.depth_pending || gui.request_reset || gui.pick_pending ||
+      !gui.keys.empty() || gui.object.apply_transform || gui.object.apply_material ||
+      gui.object.revert || gui.object.cancel_transform || gui.sky_model_pending ||
+      gui.atmosphere_pending || gui.sun_pending || gui.location_pending ||
+      gui.camera.pending ||
+      (gui.atmosphere_parameters_pending && !gui.atmosphere_parameters_editing) ||
       gui.animation_settings_pending ||
       (gui.animation_action != RayrenderGui::AnimationAction::None &&
        gui.animation_action != RayrenderGui::AnimationAction::Play);
@@ -421,6 +604,20 @@ bool PreviewDisplay::CommitNativeEdits(hitable* world) {
   }
   reset = ApplyNativeControls(world) || reset;
   reset = ApplyNativeObjectControls() || reset;
+  const bool dragging = (gui.object.selected && gui.object.transform_active) ||
+                        (gui.sun_editing && bool(update_sun)) ||
+                        (gui.camera.editing && gui.camera.editable);
+  if (dragging != native_drag_fast) {
+    if (dragging) {
+      native_fast_saved = write_fast_output;
+      reset = !write_fast_output || reset;
+      write_fast_output = true;
+    } else {
+      reset = write_fast_output != native_fast_saved || reset;
+      write_fast_output = native_fast_saved;
+    }
+    native_drag_fast = dragging;
+  }
   ApplyNativeSkyControls();
   FinishNativeHistory(edited);
   reset = ApplyNativeHistory() || reset;
@@ -429,9 +626,9 @@ bool PreviewDisplay::CommitNativeEdits(hitable* world) {
     gui.request_render = false;
   }
   ApplyNativeExport();
-  if (reset) {
-    gui.selection_visible = false;
-  }
+  // A restart changes the scene being sampled, not the image already displayed.
+  // Keep that image's outline visible through worker-wait polls; the next
+  // completed sample replaces both layers before presenting another frame.
   return reset;
 }
 
@@ -498,7 +695,7 @@ bool PreviewDisplay::DrawNativeGui(adaptive_sampler& sampler, size_t ns,
   // Refresh from renderer state only when doing so would not overwrite a user
   // change that has been queued by an intervening GUI poll.
   if (!gui.fast_pending) {
-    gui.fast_preview = write_fast_output;
+    gui.fast_preview = native_drag_fast ? native_fast_saved : write_fast_output;
   }
 #ifdef HAS_OIDN
   if (!gui.denoise_pending) {
@@ -518,6 +715,7 @@ bool PreviewDisplay::DrawNativeGui(adaptive_sampler& sampler, size_t ns,
     gui.altitude = atmosphere_query_altitude;
   }
 
+  SyncNativeCameraControls();
   UpdateNativeObjectCamera();
   UpdateNativeSelectionMask();
   gui.snapshot_camera = NativeKeyframeCamera(CreateCurrentKeyframe(native_env_angle));
@@ -531,19 +729,18 @@ bool PreviewDisplay::DrawNativeGui(adaptive_sampler& sampler, size_t ns,
   }
 
   bool reset = CommitNativeEdits(world);
-  if (reset) {
-    // The published image still depicts the previous camera/geometry. Wait for
-    // the next completed sample before showing a mask for the rebuilt scene.
-    gui.selection_visible = false;
-  } else if (UpdateNativeSelectionMask()) {
+  // After a scene/camera edit, retain the published image and its cached outline
+  // as a pair. Updating or hiding only the outline here makes GUI-only frames
+  // disagree with the render frames while the replacement image is sampled.
+  if (!reset && UpdateNativeSelectionMask()) {
     // Selection alone does not restart rendering; show its feedback immediately.
     terminate = gui.poll(true);
   }
   return reset;
 }
 
-// Apply expensive sky rebuilds at the renderer checkpoint. Sun drags wait for
-// release; location/time updates commit only after the R callback validates them.
+// Apply the latest queued sky edit at a worker-drained renderer checkpoint.
+// Sun drags update each preview sample; location/time still requires validation.
 void PreviewDisplay::ApplyNativeSkyControls() {
   RayrenderGui& gui = *native_gui;
   if (gui.sky_model_pending && update_sky_model) {
@@ -551,6 +748,7 @@ void PreviewDisplay::ApplyNativeSkyControls() {
     gui.sky_model_pending = false;
     if (gui.sky_error.empty()) {
       sky_model = gui.sky_model;
+      native_sun_preview = false;
       atmosphere_changed = true;
     } else {
       gui.sky_model = sky_model;
@@ -567,18 +765,36 @@ void PreviewDisplay::ApplyNativeSkyControls() {
     gui.atmosphere_pending = false;
   }
 
-  if (gui.sun_pending && !gui.sun_editing && update_sun) {
+  if (gui.atmosphere_parameters_pending && !gui.atmosphere_parameters_editing &&
+      update_atmosphere_parameters) {
+    // Rebuild all sky components together, retaining the active light if any
+    // validation, metadata query or texture preparation fails.
+    gui.sky_error =
+        update_atmosphere_parameters(gui.base_altitude, gui.meters_per_unit);
+    gui.atmosphere_parameters_pending = false;
+    if (gui.sky_error.empty()) {
+      atmosphere_changed = true;
+    }
+  }
+
+  // A drag uses a cheaper sky map/proposal as well as Fast scene sampling.
+  // Refine that sky once on release, even if the last angle did not change.
+  if ((gui.sun_pending || (native_sun_preview && !gui.sun_editing)) && update_sun) {
+    const bool previous_preview = native_sun_preview;
+    native_sun_preview = false;
     gui.sun_elevation = std::clamp(gui.sun_elevation, -90.0, MaxSunElevationDegrees);
     gui.sun_azimuth = std::clamp(gui.sun_azimuth, 0.0, 360.0);
     try {
       update_sun(gui.sun_elevation, gui.sun_azimuth);
       gui.sky_error.clear();
     } catch (const std::exception& error) {
+      native_sun_preview = gui.sun_editing && previous_preview;
       gui.sky_error = error.what();
       gui.sun_pending = false;
       SetSunPosition(sun_elevation, sun_azimuth);
       return;
     }
+    native_sun_preview = gui.sun_editing;
     sun_elevation = gui.sun_elevation;
     sun_azimuth = gui.sun_azimuth;
     atmosphere_changed = true;
@@ -605,6 +821,14 @@ bool PreviewDisplay::ApplyNativeObjectControls() {
   }
 
   auto& ui = native_gui->object;
+  bool reset = false;
+  if (ui.begin_transform && ui.selected) {
+    scene_editor->BeginTransform();
+    ui.begin_transform = false;
+  }
+  if (ui.clear_pending || ui.select_pending || ui.pick_pending) {
+    scene_editor->EndTransform();
+  }
   if (ui.clear_pending) {
     scene_editor->Describe(0, ui);
     ui.clear_pending = false;
@@ -618,7 +842,15 @@ bool PreviewDisplay::ApplyNativeObjectControls() {
   }
 
   if (ui.cancel_transform) {
-    scene_editor->CancelTransform(ui);
+    try {
+      reset = scene_editor->CancelTransform(ui);
+    } catch (const Rcpp::internal::InterruptedException&) {
+      throw;
+    } catch (const std::exception& error) {
+      ui.error = std::string("Cannot cancel transform: ") + error.what();
+      ui.cancel_transform = ui.transform_active = false;
+      scene_editor->EndTransform();
+    }
   }
 
   if (ui.pick_pending) {
@@ -648,7 +880,12 @@ bool PreviewDisplay::ApplyNativeObjectControls() {
     PreviewDecompose(ui);
   }
 
-  return scene_editor->Apply(ui);
+  reset = scene_editor->Apply(ui) || reset;
+  if (ui.end_transform && !ui.transform_active) {
+    scene_editor->EndTransform();
+    ui.end_transform = false;
+  }
+  return reset;
 }
 
 // Visibility is refreshed only when selection, geometry, camera or film size
@@ -666,7 +903,9 @@ bool PreviewDisplay::UpdateNativeSelectionMask() {
     gui.selection_visible = false;
     return changed;
   }
-  const double reduction = std::min(1.0, 768.0 / std::max(gui.width, gui.height));
+  // Keep silhouette feedback inexpensive during live transforms; refine it on release.
+  const double mask_limit = gui.object.transform_active ? 192.0 : 768.0;
+  const double reduction = std::min(1.0, mask_limit / std::max(gui.width, gui.height));
   const uint32_t width = std::max(1u, uint32_t(gui.width * reduction));
   const uint32_t height = std::max(1u, uint32_t(gui.height * reduction));
   std::vector<double> camera_state;
@@ -811,7 +1050,10 @@ Rcpp::List PreviewDisplay::NativeEditorState() const {
           double(preview_exposure_scale) * preview_exposure_adjustment,
       Rcpp::_["camera_motion_blur"] = CameraMotionBlurEnabled(),
       Rcpp::_["shutter_speed"] = GetShutterSpeed(),
-      Rcpp::_["integrator_type"] = native_integrator);
+      Rcpp::_["integrator_type"] = native_integrator,
+      Rcpp::_["max_depth"] = double(max_depth),
+      Rcpp::_["camera_rotation"] = cam->get_free_rotation() ? "free" : "clamped",
+      Rcpp::_["camera_description_file"] = camera_rig ? camera_rig->Source() : "");
 }
 
 void PreviewDisplay::ApplyNativeExport() {

@@ -34,8 +34,10 @@ struct PreviewSurfaceMapSettings {
         (!alpha || alpha_path != alpha->preview_path)) {
       auto owner = std::make_shared<TextureCache>();
       int width, height, channels;
-      auto data = owner->LookupChar(
-          PreviewTextures::FilePath(alpha_path), width, height, channels, 0);
+      auto data = PreviewTextures::CheckedFile("Alpha map file", [&] {
+        return owner->LookupChar(
+            PreviewTextures::FilePath(alpha_path), width, height, channels, 0);
+      });
       // Grayscale/RGB files describe opacity directly; RGBA files use alpha.
       // Store our own one-channel copy so the loader cache can be released.
       auto pixels =
@@ -56,20 +58,23 @@ struct PreviewSurfaceMapSettings {
         (!bump || bump_path != bump->preview_path)) {
       auto owner = std::make_shared<TextureCache>();
       int width, height, channels;
-      auto data = owner->LookupChar(
-          PreviewTextures::FilePath(bump_path), width, height, channels, 1);
+      auto data = PreviewTextures::CheckedFile("Bump map file", [&] {
+        return owner->LookupChar(
+            PreviewTextures::FilePath(bump_path), width, height, channels, 1);
+      });
       if (width < 3 || height < 3) {
-        throw std::runtime_error("Bump maps must be at least 3 by 3 pixels.");
+        throw PreviewFieldError({"Bump map file"},
+                                "Bump maps must be at least 3 by 3 pixels.");
       }
       bump = std::make_shared<bump_texture>(data, width, height, 1, bump_intensity);
       bump->preview_path = bump_path;
       bump->preview_owner = owner;
     }
     if (alpha_enabled && !alpha) {
-      throw std::runtime_error("Choose an alpha map file before applying.");
+      throw PreviewFieldError({"Alpha map file"}, "Choose an alpha map file.");
     }
     if (bump_enabled && !bump) {
-      throw std::runtime_error("Choose a bump map file before applying.");
+      throw PreviewFieldError({"Bump map file"}, "Choose a bump map file.");
     }
     if (bump) {
       bump = std::make_shared<bump_texture>(*bump);

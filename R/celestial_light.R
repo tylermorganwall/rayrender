@@ -4,7 +4,7 @@
 #' @description
 #' Create detailed celestial disks without embedding them in a latitude-longitude
 #' environment map. skymodelr supplies the position and apparent angular size for
-#' the observer, date, and time. The Sun uses Prague solar radiance queries; the
+#' the observer, date, and time. The Sun supports Prague and Hosek radiance; the
 #' Moon uses skymodelr's surface texture, phase, earthshine, and radiometry routines.
 #' Add these descriptions to a scene with [add_infinite_light()].
 #'
@@ -14,8 +14,10 @@
 #' @param sky_args Default `list()`. Named atmospheric settings for skymodelr's
 #' Prague model: `altitude`, `visibility`, `albedo`, `wide_spectrum`,
 #' `number_cores`, and the `prague_rgb_correction` options accepted by
-#' `skymodelr::calculate_sky_values()`. `hosek = FALSE` is accepted;
-#' `hosek = TRUE` is unsupported because these lights use per-direction queries.
+#' `skymodelr::calculate_sky_values()`. Sun lights also accept `hosek = TRUE`
+#' with `turbidity = 3` (1.7--10), without requiring Prague data. Optional paired
+#' `elevation` (-90--90) and `azimuth` (0--360) override the Sun's ephemeris
+#' direction and atmospheric attenuation. Moon lights require Prague.
 #' Defaults match that function. Without a native atmospheric sky, altitude
 #' describes one observer for the whole light. With [sky_light()], a missing
 #' altitude uses that sky's reference altitude
@@ -34,7 +36,7 @@
 #' Native atmospheric scenes ignore `moon_extinction_kV`, using Prague
 #' transmission instead.
 #'
-#' @details Requires skymodelr and its Prague data. Install datasets with
+#' @details Requires skymodelr. Prague disks also require its data. Install datasets with
 #' `skymodelr::download_sky_data()` before rendering. Requires the public
 #' `skymodelr::generate_sun_disk()` and `skymodelr::generate_moon_disk()` exports.
 #'
@@ -54,12 +56,14 @@
 #' during animation. Direct illumination samples each disk's solid angle, so a
 #' small apparent diameter does not depend on a high-resolution sky sampler.
 #'
-#' The Sun texture uses Prague's solar disk profile, mapped to the ephemeris
+#' The Sun texture uses the selected model's solar profile, mapped to the ephemeris
 #' angular diameter. Moon radiance preserves skymodelr's phase-dependent total
 #' irradiance and atmospheric extinction, with its spectral RGB and atmospheric
 #' tint. Earthshine is part of the generated phase texture. These are radiance
 #' images; exposure and tone mapping are applied only by the final render.
 #'
+#' Hosek Sun lights pair with image skies and include fixed-observer attenuation;
+#' they cannot be combined with a native Prague atmosphere.
 #' With a native atmospheric sky, preparation automatically requests
 #' `atmospheric_attenuation = FALSE` through skymodelr's public disk generators.
 #' Sun radiance and lunar phase, surface detail, and earthshine are generated
@@ -139,10 +143,15 @@ moon_light = function(
 }
 
 #' @keywords internal
-celestial_sky_args = function(args) {
-  if (!is.null(args$hosek) && !identical(args$hosek, FALSE)) {
+celestial_sky_args = function(args, type = "moon") {
+  hosek = identical(args$hosek, TRUE)
+  if (
+    !is.null(args$hosek) &&
+      !identical(args$hosek, FALSE) &&
+      !(type == "sun" && hosek)
+  ) {
     stop(
-      "Sun and Moon disk lights require Prague queries: use sky_args = list(hosek = FALSE).",
+      "Moon disk lights require Prague queries; hosek must be TRUE or FALSE for Sun lights.",
       call. = FALSE
     )
   }
@@ -157,6 +166,10 @@ celestial_sky_args = function(args) {
     prague_rgb_correction_strength = 1,
     prague_rgb_correction_gain = "auto"
   )
+  if (type == "sun") {
+    defaults = c(defaults, list(elevation = NULL, azimuth = NULL))
+    if (hosek) defaults = c(defaults, list(turbidity = 3))
+  }
   unknown = setdiff(names(args), names(defaults))
   if (length(unknown)) {
     stop(
@@ -192,6 +205,32 @@ celestial_sky_args = function(args) {
       is.na(values$wide_spectrum)
   ) {
     stop("sky_args$wide_spectrum must be TRUE or FALSE.", call. = FALSE)
+  }
+  if (type == "sun") {
+    if (hosek) {
+      v = values$turbidity
+      if (
+        !is.numeric(v) || length(v) != 1 || !is.finite(v) || v < 1.7 || v > 10
+      ) {
+        stop("Invalid celestial sky_args$turbidity.", call. = FALSE)
+      }
+      values$hosek = TRUE
+    }
+    if (!is.null(values$elevation) || !is.null(values$azimuth)) {
+      for (field in c("elevation", "azimuth")) {
+        v = values[[field]]
+        bounds = if (field == "elevation") c(-90, 90) else c(0, 360)
+        if (
+          !is.numeric(v) ||
+            length(v) != 1 ||
+            !is.finite(v) ||
+            v < bounds[1] ||
+            v > bounds[2]
+        ) {
+          stop("Invalid celestial sky_args$", field, ".", call. = FALSE)
+        }
+      }
+    }
   }
   values
 }
@@ -261,7 +300,7 @@ validate_celestial_light = function(light) {
       call. = FALSE
     )
   }
-  celestial_sky_args(light$sky_args)
+  celestial_sky_args(light$sky_args, light$type)
   if (light$type == "moon") {
     celestial_moon_args(light$moon_args)
   }
@@ -345,8 +384,14 @@ prepare_celestial_light = function(light, atmospheric_attenuation = TRUE) {
       call. = FALSE
     )
   }
-  settings = celestial_sky_args(light$sky_args)
+  settings = celestial_sky_args(light$sky_args, light$type)
   if (!atmospheric_attenuation) {
+    if (isTRUE(settings$hosek)) {
+      stop(
+        "Hosek Sun lights cannot be used with a native Prague atmosphere.",
+        call. = FALSE
+      )
+    }
     settings$atmospheric_attenuation = FALSE
   }
   cache = file.path(tempdir(), "rayrender-celestial-disk-api-v2")
@@ -412,9 +457,30 @@ prepare_celestial_light = function(light, atmospheric_attenuation = TRUE) {
       pixels,
       normalize = FALSE,
       assume_colorspace = rayimage::CS_SRGB,
-      source_linear = TRUE
+      source_linear = TRUE,
+      assume_white = if (isTRUE(light$environment_light_bake_white)) {
+        environment_light_white_xyz(light$exr_adopted_white)
+      } else {
+        NULL
+      }
     )
     rayimage::ray_write_image(pixels, filename, clamp = FALSE)
+    if (isTRUE(light$environment_light_bake_white)) {
+      balance = prepare_environment_light_white_balance(
+        filename,
+        environment_light_bake_white = TRUE,
+        environment_light_bake_white_target = environment_light_white_xyz(
+          light$environment_light_bake_white_target
+        )
+      )
+      on.exit(unlink(balance$cleanup), add = TRUE)
+      if (
+        !identical(balance$environment_light, filename) &&
+          !file.copy(balance$environment_light, filename, overwrite = TRUE)
+      ) {
+        stop("Could not cache the adjusted solar disk.", call. = FALSE)
+      }
+    }
     saveRDS(list(direction = direction, diameter = diameter), metadata)
     success = TRUE
   }

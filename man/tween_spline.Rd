@@ -4,7 +4,7 @@
 \alias{tween_spline}
 \title{Interpolate Values with Smooth Speed}
 \usage{
-tween_spline(vals, n, closed = FALSE)
+tween_spline(vals, n, closed = FALSE, segment_frames = NULL)
 }
 \arguments{
 \item{vals}{Numeric values.}
@@ -12,6 +12,8 @@ tween_spline(vals, n, closed = FALSE)
 \item{n}{Number of frames.}
 
 \item{closed}{Default `FALSE`. Whether to match speed at the path boundaries.}
+
+\item{segment_frames}{Default `NULL`. Explicit frame intervals per segment.}
 }
 \value{
 Numeric vector of interpolated values.

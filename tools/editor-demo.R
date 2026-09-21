@@ -122,6 +122,71 @@ material_displays = group_objects(rbind(
   )
 ))
 
+# A tabletop magnifier waits in the foreground. Intersecting two spheres makes
+# a closed biconvex glass lens, with real refraction from both curved surfaces.
+# Keep the letter inside its roughly 2.2-unit focal length for an upright,
+# enlarged view from above. The rim hides the thin edge where the caps meet.
+lens_radius = 0.95
+lens_curvature = 2.2
+lens_height = 1.3
+lens_offset = sqrt(lens_curvature^2 - lens_radius^2)
+brass = metal(color = "#d9aa52", fuzz = 0.035)
+magnifying_glass = group_objects(rbind(
+  csg_object(
+    csg_combine(
+      csg_sphere(y = lens_height - lens_offset, radius = lens_curvature),
+      csg_sphere(y = lens_height + lens_offset, radius = lens_curvature),
+      operation = "intersection"
+    ),
+    material = dielectric(refraction = 1.5)
+  ),
+  csg_object(
+    csg_torus(y = lens_height, radius = 0.99, minor_radius = 0.075),
+    material = brass
+  ),
+  # A brass neck connects the rim to a rounded coral handle resting on the plaza.
+  segment(
+    start = c(0.96, lens_height, 0),
+    end = c(1.45, 1.05, 0),
+    radius = 0.095,
+    material = brass
+  ),
+  csg_object(
+    csg_capsule(start = c(1.4, 1.08, 0), end = c(3.05, 0.16, 0), radius = 0.16),
+    material = glossy(color = "#e35f4b", gloss = 0.65)
+  ),
+  # Two slim legs support the far side, leaving the letter and optical path open.
+  segment(
+    start = c(-0.7, lens_height, -0.7),
+    end = c(-0.9, 0, -0.9),
+    radius = 0.045,
+    material = brass
+  ),
+  segment(
+    start = c(-0.7, lens_height, 0.7),
+    end = c(-0.9, 0, 0.9),
+    radius = 0.045,
+    material = brass
+  )
+))
+
+# Lay the bundled R face-up on the ground and center its mesh bounds under the
+# lens. A small clearance above y = 0 avoids overlapping the plaza surface.
+tiny_r = obj_model(
+  r_obj(simple_r = TRUE),
+  x = 0.03622,
+  y = 0.066,
+  z = -0.206305,
+  scale_obj = 0.25,
+  angle = c(90, 0, 0),
+  load_material = FALSE,
+  material = diffuse(color = "#147cdb")
+)
+magnifier_display = group_objects(
+  magnifying_glass |> add_object(tiny_r),
+  translate = c(-0.5, 0, -5)
+)
+
 # A broad, flat plaza meets the sky cleanly in the low camera view.
 scene = xz_rect(
   y = 0,
@@ -136,6 +201,7 @@ scene = xz_rect(
   add_object(assembly) |>
   add_object(copies) |>
   add_object(material_displays) |>
+  add_object(magnifier_display) |>
   add_infinite_light(sky_light_image(
     lat = 40.7,
     long = -74,

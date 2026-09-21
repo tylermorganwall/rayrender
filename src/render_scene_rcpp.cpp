@@ -817,14 +817,9 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   Float fov = as<Float>(camera_info["fov"]);
   NumericVector lookfromvec = as<NumericVector>(camera_info["lookfrom"]);
   NumericVector lookatvec = as<NumericVector>(camera_info["lookat"]);
-  Float aperture = as<Float>(camera_info["aperture"]);
-  NumericVector camera_up = as<NumericVector>(camera_info["camera_up"]);
-  Float shutteropen = as<Float>(camera_info["shutteropen"]);
-  Float shutterclose = as<Float>(camera_info["shutterclose"]);
-  Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
-    as<Float>(camera_info["shutter_speed"]) :
-    static_cast<Float>(2);
-  Float focus_distance = as<Float>(camera_info["focal_distance"]);
+  Float shutter_speed = camera_info.containsElementNamed("shutter_speed")
+                            ? as<Float>(camera_info["shutter_speed"])
+                            : static_cast<Float>(2);
   NumericVector ortho_dimensions = as<NumericVector>(camera_info["ortho_dimensions"]);
   std::size_t max_depth = as<std::size_t>(camera_info["max_depth"]);
   std::size_t roulette_active = as<std::size_t>(camera_info["roulette_active_depth"]);
@@ -834,10 +829,8 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   int stratified_x = static_cast<int>(stratified_dim(0));
   int stratified_y = static_cast<int>(stratified_dim(1));
   vec3f preview_light_direction(light_direction(0), light_direction(1), light_direction(2));
-  Float preview_exponent = light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
-  NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
-  Float film_size = as<Float>(camera_info["film_size"]);
-  Float camera_scale = as<Float>(camera_info["camera_scale"]);
+  Float preview_exponent =
+      light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview     = as<bool>(camera_info["preview"]);
@@ -873,7 +866,6 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
       snapshot_filename = as<std::string>(snapshot_filename_value[0]);
     }
   }
-  Float iso = as<Float>(camera_info["iso"]);
   int bvh_type = as<int>(camera_info["bvh"]);
 
   
@@ -901,55 +893,19 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   point3f lookfrom(lookfromvec[0],lookfromvec[1],lookfromvec[2]);
   point3f lookat(lookatvec[0],lookatvec[1],lookatvec[2]);
   point3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
-  point3f backgroundlow(bglow[0],bglow[1],bglow[2]);
-  Float dist_to_focus = focus_distance;
-  
+  point3f backgroundlow(bglow[0], bglow[1], bglow[2]);
+
   std::vector<bool> has_image;
   std::vector<bool> has_alpha;
   std::vector<bool> has_bump;
   std::vector<bool> has_roughness;
-  
-  std::unique_ptr<RayCamera> cam;
 
+  PreviewCameraRig cameras(camera_info);
+  RayCamera* cam = cameras.Active();
 
   RcppThread::ThreadPool pool(numbercores);
   GetRNGstate();
-  random_gen rng(unif_rand() * std::pow(2,32));
-  if(fov < 0) {
-    Transform CamTransform = LookAt(lookfrom,
-                                    lookat,
-                                    vec3f(camera_up(0),camera_up(1),camera_up(2))).GetInverseMatrix();
-    Transform* CameraTransform = transformCache.Lookup(CamTransform);
-    
-    AnimatedTransform CamTr(CameraTransform,0,CameraTransform,0);
-    
-    std::vector<Float> lensData;
-    for(int i = 0; i < realCameraInfo.rows(); i++) {
-      for(int j = 0; j < realCameraInfo.cols(); j++) {
-        lensData.push_back(realCameraInfo.at(i,j));
-      }
-    }
-    
-    if(fov < 0 && lensData.size() == 0) {
-      throw std::runtime_error("No lens data passed in lens descriptor file.");
-    }
-    
-    cam = std::unique_ptr<RayCamera>(new RealisticCamera(CamTr,shutteropen, shutterclose,
-                         aperture, nx,ny, focus_distance, false, lensData,
-                         film_size, camera_scale, iso, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                         CamTransform, lookat));
-  } else if(fov == 0) {
-    cam = std::unique_ptr<RayCamera>(new ortho_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                      ortho_dimensions(0), ortho_dimensions(1),
-                      shutteropen, shutterclose, iso));
-  } else if (fov == 360) {
-    cam = std::unique_ptr<RayCamera>(new environment_camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)),
-                            shutteropen, shutterclose, iso));
-  } else {
-    cam = std::unique_ptr<RayCamera>(new camera(lookfrom, lookat, vec3f(camera_up(0),camera_up(1),camera_up(2)), fov, Float(nx)/Float(ny),
-                                     aperture, dist_to_focus,
-                                     shutteropen, shutterclose, iso));
-  }
+  random_gen rng(unif_rand() * std::pow(2, 32));
   cam->set_camera_motion_blur(camera_motion_blur);
   cam->set_shutter_speed(shutter_speed);
   print_time(verbose, "Generated Camera" );
@@ -1099,18 +1055,10 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   if(((imp_sample_objects.size() == 0 && !(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->has_emission)) || hasbackground || ambient_light || interactive) && debug_channel != 18) {
     impl_only_bg = true;
   }
-  LogicalVector screen_text_visible = compute_screen_text_visibility(
-    render_info,
-    cam.get(),
-    worldbvh.get(),
-    rng
-  );
-  LogicalVector screen_line_visible = compute_screen_line_visibility(
-    render_info,
-    cam.get(),
-    worldbvh.get(),
-    rng
-  );
+  LogicalVector screen_text_visible =
+      compute_screen_text_visibility(render_info, cam, worldbvh.get(), rng);
+  LogicalVector screen_line_visible =
+      compute_screen_line_visibility(render_info, cam, worldbvh.get(), rng);
   std::vector<PreviewTextOverlay> text_overlays =
     parse_preview_text_overlays(render_info);
   std::vector<PreviewLineOverlay> line_overlays =
@@ -1140,17 +1088,28 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   }
   const bool legacy_preview=preview && !use_native_gui;
 #ifdef HAS_OIDN
-  PreviewDisplay Display(nx,ny, legacy_preview, interactive,
-                         deferred_render, (lookat-lookfrom).length(), cam.get(),
+  PreviewDisplay Display(nx,
+                         ny,
+                         legacy_preview,
+                         interactive,
+                         deferred_render,
+                         (lookat - lookfrom).length(),
+                         cam,
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          &oidn_denoiser,
                          &oidn_albedo_output,
                          &oidn_normal_output,
-                         denoise, auto_exposure);
+                         denoise,
+                         auto_exposure);
 #else
-  PreviewDisplay Display(nx,ny, legacy_preview, interactive,
-                         deferred_render, (lookat-lookfrom).length(), cam.get(),
+  PreviewDisplay Display(nx,
+                         ny,
+                         legacy_preview,
+                         interactive,
+                         deferred_render,
+                         (lookat - lookfrom).length(),
+                         cam,
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          auto_exposure);
@@ -1160,6 +1119,8 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   if (camera_info.containsElementNamed("exposure")) {
     Display.preview_exposure_adjustment = Rcpp::as<double>(camera_info["exposure"]);
   }
+  Display.camera_rig = &cameras;
+  Display.max_depth = max_depth;
   if(use_native_gui) Display.AttachNativeGui(native_gui,interactive,deferred_render);
   if (use_native_gui && render_info.containsElementNamed("export_scene")) {
     Rcpp::Function write_export = render_info["export_scene"];
@@ -1294,26 +1255,65 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   
   // Rcpp::Rcout << "Total world size: " << world.GetSize() + texture_bytes << " (Textures: " << texture_bytes << ") \n";
   if(debug_channel != 0) {
-    debug_scene(numbercores, nx, ny, ns, debug_channel,
-                min_variance, min_adaptive_size,
-                rgb_output, normalOutput, albedoOutput,
-                progress_bar, sample_method, stratified_x, stratified_y,
-                verbose, cam.get(), fov,
-                world, imp_sample_objects, 
-                clampval, max_depth, roulette_active,
-                preview_light_direction, preview_exponent, rng, sample_dist, keep_colors,
+    debug_scene(numbercores,
+                nx,
+                ny,
+                ns,
+                debug_channel,
+                min_variance,
+                min_adaptive_size,
+                rgb_output,
+                normalOutput,
+                albedoOutput,
+                progress_bar,
+                sample_method,
+                stratified_x,
+                stratified_y,
+                verbose,
+                cam,
+                fov,
+                world,
+                imp_sample_objects,
+                clampval,
+                max_depth,
+                roulette_active,
+                preview_light_direction,
+                preview_exponent,
+                rng,
+                sample_dist,
+                keep_colors,
                 backgroundhigh);
   } else {
-    pathtracer(numbercores, nx, ny, ns, debug_channel,
-               min_variance, min_adaptive_size,
-               rgb_output, normalOutput, albedoOutput,
+    pathtracer(numbercores,
+               nx,
+               ny,
+               ns,
+               debug_channel,
+               min_variance,
+               min_adaptive_size,
+               rgb_output,
+               normalOutput,
+               albedoOutput,
                alpha_output,
                draw_rgb_output,
-               progress_bar, sample_method, stratified_x, stratified_y,
-               verbose, cam.get(),  fov,
-               world, imp_sample_objects,
-               clampval, max_depth, roulette_active, Display, integrator_type);
+               progress_bar,
+               sample_method,
+               stratified_x,
+               stratified_y,
+               verbose,
+               cam,
+               fov,
+               world,
+               imp_sample_objects,
+               clampval,
+               max_depth,
+               roulette_active,
+               Display,
+               integrator_type);
   }
+  cam = Display.cam;
+  fov = cam->get_fov();
+  max_depth = Display.max_depth;
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
   Display.PollCloseEvent();
@@ -1330,15 +1330,17 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
     oidn_aux_options.sample_method = sample_method;
     oidn_aux_options.stratified_x = stratified_x;
     oidn_aux_options.stratified_y = stratified_y;
-    if(!has_media) render_oidn_aux_features(numbercores,
-                             nx,
-                             ny,
-                             cam.get(),
-                             fov,
-                             &world,
-                             oidn_aux_options,
-                             oidn_normal_output,
-                             oidn_albedo_output);
+    if (!has_media) {
+      render_oidn_aux_features(numbercores,
+                               nx,
+                               ny,
+                               cam,
+                               fov,
+                               &world,
+                               oidn_aux_options,
+                               oidn_normal_output,
+                               oidn_albedo_output);
+    }
     oidn_denoiser.Setup(rgb_output,
                         oidn_albedo_output,
                         oidn_normal_output,
@@ -1395,7 +1397,7 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
   }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
-  final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
+  final_image.attr("screen_camera_info") = get_screen_camera_info(cam);
   if(screen_text_visible.size() > 0) {
     final_image.attr("screen_text_visible") = screen_text_visible;
   }
@@ -1403,24 +1405,22 @@ static List render_scene_impl(List scene, List camera_info, List scene_info, Lis
     final_image.attr("screen_line_visible") = screen_line_visible;
   }
   if(should_return_screen_text_overlay(render_info)) {
-    final_image.attr("screen_text_overlay") = composite_screen_text_overlay(
-      text_overlays,
-      static_cast<unsigned int>(nx),
-      static_cast<unsigned int>(ny),
-      cam.get(),
-      worldbvh.get(),
-      rng
-    );
+    final_image.attr("screen_text_overlay") =
+        composite_screen_text_overlay(text_overlays,
+                                      static_cast<unsigned int>(nx),
+                                      static_cast<unsigned int>(ny),
+                                      cam,
+                                      worldbvh.get(),
+                                      rng);
   }
   if(should_return_screen_line_overlay(render_info)) {
-    final_image.attr("screen_line_overlay") = composite_screen_line_overlay(
-      line_overlays,
-      static_cast<unsigned int>(nx),
-      static_cast<unsigned int>(ny),
-      cam.get(),
-      worldbvh.get(),
-      rng
-    );
+    final_image.attr("screen_line_overlay") =
+        composite_screen_line_overlay(line_overlays,
+                                      static_cast<unsigned int>(nx),
+                                      static_cast<unsigned int>(ny),
+                                      cam,
+                                      worldbvh.get(),
+                                      rng);
   }
   STOP_TIMER("Overall Time");
 

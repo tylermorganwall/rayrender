@@ -19,7 +19,9 @@ using V = Model::Vector3;
 // reachable, and the native solar radius defines Prague's disk profile.
 constexpr double pi = 3.14159265358979323846, earth_radius = 6378000;
 constexpr double uniform_fraction = .001, native_sun_radius = .004654793;
-
+// Prague shifts model observers up by 50 m before its 100 km transport query.
+// Keep entry points one centimetre inside that domain to absorb roundoff.
+constexpr double atmosphere_entry_height = 100000 - 50 - .01;
 
 // The validated finite-path filter: a 0.5 degree Gaussian truncated at three
 // standard deviations. Share its immutable quadrature across all sky lights.
@@ -475,27 +477,67 @@ double PragueInfiniteLight::Height(Vector p) const {
   return length(p + V(0, 0, earth_radius)) - earth_radius;
 }
 
+// An ordinary scene can have remote secondary intersections outside the
+// atmosphere even when the camera is near the ground. Advance such rays along
+// their actual direction to atmospheric entry, subtracting exactly that vacuum
+// distance. Rays that miss the atmosphere, or end before entering, remain clear.
+bool PragueInfiniteLight::EnterAtmosphere(Vector& position, Vector direction,
+                                          double& distance) const {
+  V radial = position + V(0, 0, earth_radius);
+  double radius = length(radial);
+  double boundary = earth_radius + atmosphere_entry_height;
+  if (radius <= boundary) {
+    return distance > 0;
+  }
+  double b = dotv(radial, direction);
+  if (b >= 0) {
+    return false;
+  }
+  double c = (radius - boundary) * (radius + boundary);
+  double discriminant = b * b - c;
+  if (discriminant <= 0) {
+    return false;
+  }
+  double entry = c / (-b + std::sqrt(discriminant));
+  if (entry >= distance) {
+    return false;
+  }
+  position = position + direction * entry;
+  distance -= entry;
+  return true;
+}
 
-// Keep queries within the fitted altitude range by moving along the local radial
-// direction. Sun position, visibility, and ground albedo remain fixed for the sky.
+// Keep the physical observer and ray geometry above the coefficient range.
+// skymodelr clamps coefficient interpolation independently; moving the observer
+// to 15 km while retaining the original path length invents Earth intersections.
+// Preserve the existing surface projection only for below-ground model queries.
 PragueInfiniteLight::Model::Parameters PragueInfiniteLight::Parameters(Vector p, Vector w) const {
   V radial = p + V(0, 0, earth_radius);
   double h = Height(p);
-  if (h < 0 || h > 15000)
-    p = normalized(radial) * (earth_radius + std::clamp(h, 0.0, 15000.0)) - V(0, 0, earth_radius);
-  return model->computeParameters(p, w, elevation, azimuth, visibility, albedo);
+  if (h < 0) {
+    p = normalized(radial) * earth_radius - V(0, 0, earth_radius);
+  }
+  auto params = model->computeParameters(p, w, elevation, azimuth, visibility, albedo);
+  // Every transport caller must enter the atmosphere before querying native
+  // coefficients. Check the provider's returned altitude, including its safety
+  // offset, so an accidental untrimmed ray raises an error before native asserts.
+  if (params.altitude >= 100000) {
+    throw std::runtime_error(
+        "Prague atmospheric queries must stay below the 100 km outer boundary "
+        "including the model's 50 m safety offset.");
+  }
+  return params;
 }
 
-
-// Test the Earth sphere using the same altitude clamp as the radiance queries.
-// This lets elevated observers see below their horizontal plane while still
-// blocking light whose path actually enters the planet.
+// Test the actual Earth sphere from the physical observer. Coefficient limits
+// must not change the ray origin, its endpoint or the visible horizon. Retain
+// the existing surface convention for observers below ground.
 bool PragueInfiniteLight::PlanetOccludes(Vector p, Vector w, double distance) const {
   V radial = p + V(0, 0, earth_radius);
   double h = Height(p);
-  if (h < 0 || h > 15000)
-    radial = normalized(radial) * (earth_radius + std::clamp(h, 0.0, 15000.0));
-
+  if (h < 0) {
+    radial = normalized(radial) * earth_radius;
+  }
 
   // Solve t^2 + 2*b*t + c = 0 for a unit direction. Outward and tangent rays
   // do not enter the sphere; the rationalized near root avoids cancellation
@@ -516,7 +558,7 @@ bool PragueInfiniteLight::PlanetOccludes(Vector p, Vector w, double distance) co
 bool PragueInfiniteLight::MaySeeDisk(const point3f &p, const vec3f &w, double radius) const {
   V position = LightingPosition(p);
   V up = normalized(position + V(0, 0, earth_radius));
-  double h = std::clamp(Height(position), 0.0, 15000.0);
+  double h = std::max(Height(position), 0.0);
   double horizon = -std::acos(earth_radius / (earth_radius + h));
   // Conservative support includes Float rounding at a grazing upper limb.
   return dotv(Direction(w), up) >= std::sin(horizon - radius - 2e-6);
@@ -529,11 +571,27 @@ PragueInfiniteLight::SpectrumValues PragueInfiniteLight::Spectrum(Vector p, Vect
                                                                  bool sun, bool sky, bool smooth) const {
   SpectrumValues result{};
   if (!sun && !sky) return result;
+  V observer = p;
+  double distance = std::numeric_limits<double>::max();
+  if (!EnterAtmosphere(p, w, distance)) {
+    // Outward space rays have no sky scattering. Direct sunlight still exists
+    // there; its intrinsic profile needs only the Sun/view angle, without air.
+    if (sun && !PlanetOccludes(observer, w, INFINITY)) {
+      auto solar = Parameters(V(0, 0, altitude), w);
+      if (solar.gamma <= sun_radius) {
+        solar.gamma *= native_sun_radius / sun_radius;
+        for (size_t i = 0; i < wavelengths.size(); ++i) {
+          result[i] = model->sunRadiance(solar, wavelengths[i], false);
+        }
+      }
+    }
+    return result;
+  }
   auto params = Parameters(p, w);
 
   // Map the requested apparent disk size onto Prague's native solar profile,
   // and reject each direction individually when Earth hides it.
-  if (sun && params.gamma <= sun_radius && !PlanetOccludes(p, w, INFINITY)) {
+  if (sun && params.gamma <= sun_radius && !PlanetOccludes(observer, w, INFINITY)) {
     auto solar = params;
     solar.gamma *= native_sun_radius / sun_radius;
     for (size_t i = 0; i < wavelengths.size(); ++i)
@@ -598,10 +656,14 @@ point3f PragueInfiniteLight::Transmission(const point3f &p, const vec3f &w, doub
   // Disabling finite haze does not remove extinction from space to the light's
   // observer. Additional environment images still need that infinite filtering.
   V position = std::isfinite(distance) ? Position(p) : LightingPosition(p), direction = Direction(w);
-  if (!std::isfinite(distance) && PlanetOccludes(position, direction, INFINITY)) return point3f(0);
-  auto params = Parameters(position, direction);
+  if (!std::isfinite(distance) && PlanetOccludes(position, direction, INFINITY)) {
+    return point3f(0);
+  }
   double d = std::isfinite(distance) ? distance * meters_per_unit : std::numeric_limits<double>::max();
-
+  if (!EnterAtmosphere(position, direction, d)) {
+    return point3f(1);
+  }
+  auto params = Parameters(position, direction);
 
   // The compressed fit is not exactly one at zero distance. Normalize that
   // endpoint and interpolate optical depth over the first 100 m, where raw fit
@@ -631,6 +693,10 @@ point3f PragueInfiniteLight::CelestialTransmission(const point3f &p, const vec3f
                                                   InfiniteLightSpectrum spectrum) const {
   V position = LightingPosition(p), direction = Direction(w);
   if (PlanetOccludes(position, direction, INFINITY)) return point3f(0);
+  double distance = std::numeric_limits<double>::max();
+  if (!EnterAtmosphere(position, direction, distance)) {
+    return point3f(1);
+  }
   SpectrumValues values{};
   model->transmittanceSpectrum(Parameters(position, direction), wavelengths.data(), wavelengths.size(),
                                std::numeric_limits<double>::max(), values.data());
@@ -712,16 +778,24 @@ PragueInfiniteLight::SpectrumValues PragueInfiniteLight::FilteredHaze(
     if (masses[j] == 0) continue;
     const auto &node = kernel[j];
     V ray = normalized(direction * node[0] + vertical * node[1]);
-    auto params = Parameters(position, ray);
-    auto a = Spectrum(position, ray, false, true, false);
-    auto b = Spectrum(position + ray * distance, ray, false, true, false);
+    V start = position;
+    double air_distance = distance;
+    if (!EnterAtmosphere(start, ray, air_distance)) {
+      continue;
+    }
+    auto params = Parameters(start, ray);
+    auto a = Spectrum(start, ray, false, true, false);
+    auto b = Spectrum(start + ray * air_distance, ray, false, true, false);
     SpectrumValues zero{}, transmission{};
     model->transmittanceSpectrum(params, wavelengths.data(), wavelengths.size(), 1e-6, zero.data());
-    model->transmittanceSpectrum(params, wavelengths.data(), wavelengths.size(),
-                                 std::max(100.0, distance), transmission.data());
+    model->transmittanceSpectrum(params,
+                                 wavelengths.data(),
+                                 wavelengths.size(),
+                                 std::max(100.0, air_distance),
+                                 transmission.data());
     double weight = sampled ? 1 : masses[j] / mass;
     for (size_t c = 0; c < wavelengths.size(); ++c) {
-      double tr = normalized_transmission(zero[c], transmission[c], distance);
+      double tr = normalized_transmission(zero[c], transmission[c], air_distance);
       source[c] += weight * std::max(0.0, a[c] - tr * b[c]);
     }
   }
@@ -740,6 +814,11 @@ AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const v
     result.transmission = Transmission(p, w, distance);
     return result;
   }
+  V filter_origin = position;
+  double filter_distance = d;
+  if (!EnterAtmosphere(position, direction, d)) {
+    return result;
+  }
   auto params = Parameters(position, direction);
 
 
@@ -753,7 +832,8 @@ AtmosphereSegment PragueInfiniteLight::EvaluateSegment(const point3f &p, const v
     result.transmission = Transmission(p, w, distance);
     // Every rendering query uses one weighted direction. Only internal
     // reference queries omit the variate to evaluate the complete average.
-    filtered_radiance = SpectrumToRGB(FilteredHaze(position, direction, d, uniform));
+    filtered_radiance =
+        SpectrumToRGB(FilteredHaze(filter_origin, direction, filter_distance, uniform));
     if (filter_blend == 1) {
       result.radiance = filtered_radiance;
       return result;

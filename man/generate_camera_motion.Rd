@@ -26,7 +26,8 @@ generate_camera_motion(
   damp_motion = FALSE,
   damp_magnitude = 0.1,
   progress = TRUE,
-  smooth_orientation = TRUE
+  smooth_orientation = TRUE,
+  segment_frames = NULL
 )
 }
 \arguments{
@@ -100,6 +101,11 @@ less than `1`.}
 and orientations while making angular velocity continuous through orientation keyframes. Closed
 paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
 directly with the selected `type`.}
+
+\item{segment_frames}{Default `NULL`. Positive integer frame intervals between
+successive keyframes, for `spline`, `linear`, `quad`, `cubic`, and `exp` motion.
+Include the last-to-first transition when `closed = TRUE`. Overrides `frames`;
+the resulting path has `sum(segment_frames) + 1` frames, including both endpoints.}
 }
 \value{
 Data frame of camera positions, orientations, apertures, focal distances, and field of views

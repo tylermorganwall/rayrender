@@ -185,7 +185,10 @@ prepare_scene_infinite_lights = function(lights) {
     logical(1)
   ))
   if (!length(atmospheric)) {
-    return(unname(lapply(lights, prepare_infinite_light)))
+    return(unname(lapply(
+      split_hosek_sky_lights(lights),
+      prepare_infinite_light
+    )))
   }
   sky = lights[[atmospheric]]
   settings = prague_sky_settings(sky$sky_args)

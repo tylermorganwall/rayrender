@@ -4,6 +4,7 @@
 // Included once by rayimgui_preview.h. History belongs to R's main thread and
 // stores values, never live geometry pointers or borrowed provider resources.
 struct PreviewHistoryAnimation {
+  bool timing_custom = false;
   std::vector<Rcpp::List> keyframes;
   std::vector<RayrenderGui::KeyframeSnapshot> thumbnails;
 };
@@ -15,6 +16,7 @@ struct PreviewHistoryState {
   bool denoise = false, fast = false, blur = false, closed = false;
   Float shutter = 2;
   int keyframe = -1;
+  size_t max_depth = 50;
 };
 struct PreviewHistory {
   struct Entry {
@@ -57,7 +59,12 @@ static Rcpp::List HistoryObjectValues(const PreviewObjectState& object) {
 static Rcpp::List HistoryInputs(const RayrenderGui& gui) {
   return Rcpp::List::create(Rcpp::_["exposure"] = gui.exposure,
                             Rcpp::_["orbit"] = gui.orbit,
+                            Rcpp::_["free_rotation"] = gui.free_rotation,
                             Rcpp::_["speed"] = gui.movement_speed,
+                            Rcpp::_["animation_loop"] = gui.animation_loop,
+                            Rcpp::_["camera_inputs"] = gui.camera.Numbers(),
+                            Rcpp::_["camera_model"] = gui.camera.model,
+                            Rcpp::_["max_depth"] = gui.max_depth,
                             Rcpp::_["sky_model"] = gui.sky_model,
                             Rcpp::_["latitude"] = gui.latitude,
                             Rcpp::_["longitude"] = gui.longitude,
@@ -67,6 +74,8 @@ static Rcpp::List HistoryInputs(const RayrenderGui& gui) {
                             Rcpp::_["manual"] = gui.manual_sun,
                             Rcpp::_["haze"] = gui.haze,
                             Rcpp::_["altitude"] = gui.altitude,
+                            Rcpp::_["base_altitude"] = gui.base_altitude,
+                            Rcpp::_["meters_per_unit"] = gui.meters_per_unit,
                             Rcpp::_["export_file"] = std::string(gui.export_filename));
 }
 
@@ -74,8 +83,8 @@ static bool HistoryEqual(const PreviewHistoryState& a, const PreviewHistoryState
   return a.scene == b.scene && a.animation == b.animation && a.denoise == b.denoise &&
          a.fast == b.fast && a.blur == b.blur && a.closed == b.closed &&
          a.shutter == b.shutter && a.keyframe == b.keyframe &&
-         HistoryEqual(a.camera, b.camera) && HistoryEqual(a.sky, b.sky) &&
-         HistoryEqual(a.inputs, b.inputs) &&
+         a.max_depth == b.max_depth && HistoryEqual(a.camera, b.camera) &&
+         HistoryEqual(a.sky, b.sky) && HistoryEqual(a.inputs, b.inputs) &&
          HistoryEqual(a.object_values, b.object_values);
 }
 
@@ -93,8 +102,13 @@ static PreviewHistoryState CaptureHistory(PreviewDisplay& display,
                      : camera;
   state.sky = display.export_sky ? display.export_sky() : Rcpp::List();
   state.inputs = HistoryInputs(gui);
+  state.max_depth = display.max_depth;
   if (display.IsPreviewMotionActive()) {
     state.inputs["exposure"] = state.camera["exposure"];
+    auto camera = gui.camera;
+    camera.Read(state.camera);
+    state.inputs["camera_inputs"] = camera.Numbers();
+    state.inputs["camera_model"] = state.camera["camera_model"];
   }
   state.object = gui.object;
   state.object_values = HistoryObjectValues(gui.object);
@@ -106,20 +120,26 @@ static PreviewHistoryState CaptureHistory(PreviewDisplay& display,
     history.scene_revision = display.scene_editor->Revision();
   }
   state.animation = history.current.animation;
-  bool same_keyframes = state.animation && state.animation->thumbnails.size() ==
-                                               gui.keyframe_snapshots.size();
+  bool same_keyframes =
+      state.animation &&
+      state.animation->timing_custom == gui.animation_timing_custom &&
+      state.animation->thumbnails.size() == gui.keyframe_snapshots.size();
   if (same_keyframes) {
     for (size_t i = 0; i < gui.keyframe_snapshots.size(); ++i) {
       same_keyframes &=
-          state.animation->thumbnails[i].id == gui.keyframe_snapshots[i].id;
+          state.animation->thumbnails[i].id == gui.keyframe_snapshots[i].id &&
+          state.animation->thumbnails[i].frames_to_next ==
+              gui.keyframe_snapshots[i].frames_to_next;
     }
   }
   if (!same_keyframes) {
     auto animation = std::make_shared<PreviewHistoryAnimation>();
     animation->keyframes = display.Keyframes;
+    animation->timing_custom = gui.animation_timing_custom;
     for (const auto& snapshot : gui.keyframe_snapshots) {
       RayrenderGui::KeyframeSnapshot saved;
       saved.id = snapshot.id;
+      saved.frames_to_next = snapshot.frames_to_next;
       saved.camera = snapshot.camera;
       saved.image = snapshot.image;
       animation->thumbnails.push_back(std::move(saved));
@@ -129,7 +149,8 @@ static PreviewHistoryState CaptureHistory(PreviewDisplay& display,
 #ifdef HAS_OIDN
   state.denoise = display.denoise;
 #endif
-  state.fast = display.write_fast_output;
+  state.fast =
+      display.native_drag_fast ? display.native_fast_saved : display.write_fast_output;
   state.blur = display.CameraMotionBlurEnabled();
   state.closed = display.KeyframeMotionClosed();
   state.shutter = display.GetShutterSpeed();
@@ -151,6 +172,16 @@ void PreviewDisplay::FinishNativeHistory(bool edited) {
   auto& gui = *native_gui;
   BeginNativeHistory();
   auto& history = *native_history;
+  // Intermediate transforms are already rendered, but one completed gesture is
+  // one history entry. Cancellation restores the exact pre-gesture scene settings.
+  if (gui.object.transform_active) {
+    return;
+  }
+  if (gui.object.drag_cancelled) {
+    history.scene_revision = scene_editor ? scene_editor->Revision() : 0;
+    gui.object.drag_cancelled = false;
+    edited = false;
+  }
   auto next = CaptureHistory(*this, history, CreateCurrentKeyframe(native_env_angle));
   if (edited && !HistoryEqual(history.current, next)) {
     history.entries.erase(history.entries.begin() + history.cursor,
@@ -185,19 +216,33 @@ static void ClearHistoryRequests(RayrenderGui& gui) {
   gui.fast_pending = gui.denoise_pending = gui.exposure_pending = false;
   gui.sky_model_pending = gui.sun_pending = gui.sun_editing = false;
   gui.location_pending = gui.atmosphere_pending = gui.export_pending = false;
+  gui.atmosphere_parameters_pending = gui.atmosphere_parameters_editing = false;
+  gui.camera.pending = gui.camera.editing = false;
+  gui.depth_pending = false;
   gui.animation_settings_pending = false;
   gui.animation_action = RayrenderGui::AnimationAction::None;
   gui.object.apply_transform = gui.object.apply_material = gui.object.revert = false;
   gui.object.pick_pending = gui.object.select_pending = gui.object.clear_pending =
       false;
   gui.object.cancel_transform = gui.object.transform_active = false;
+  gui.object.begin_transform = gui.object.end_transform = gui.object.drag_cancelled =
+      false;
 }
 
 static void RestoreHistoryInputs(RayrenderGui& gui, const PreviewHistoryState& target) {
   const auto& input = target.inputs;
   gui.exposure = Rcpp::as<double>(input["exposure"]);
   gui.orbit = Rcpp::as<int>(input["orbit"]);
+  gui.free_rotation = Rcpp::as<int>(input["free_rotation"]);
   gui.movement_speed = Rcpp::as<double>(input["speed"]);
+  gui.animation_loop = Rcpp::as<int>(input["animation_loop"]);
+  gui.max_depth = Rcpp::as<int>(input["max_depth"]);
+  gui.camera.model = Rcpp::as<int>(input["camera_model"]);
+  gui.camera.projection = gui.camera.model < 3
+                              ? PreviewCameraInputs::Projection(gui.camera.model)
+                              : PreviewCameraInputs::Realistic;
+  gui.camera.optical_error.clear();
+  gui.camera.Restore(Rcpp::as<Rcpp::NumericMatrix>(input["camera_inputs"]));
   gui.sky_model = Rcpp::as<int>(input["sky_model"]);
   gui.latitude = Rcpp::as<double>(input["latitude"]);
   gui.longitude = Rcpp::as<double>(input["longitude"]);
@@ -207,6 +252,8 @@ static void RestoreHistoryInputs(RayrenderGui& gui, const PreviewHistoryState& t
   gui.manual_sun = Rcpp::as<bool>(input["manual"]);
   gui.haze = Rcpp::as<int>(input["haze"]);
   gui.altitude = Rcpp::as<int>(input["altitude"]);
+  gui.base_altitude = Rcpp::as<double>(input["base_altitude"]);
+  gui.meters_per_unit = Rcpp::as<double>(input["meters_per_unit"]);
   const auto filename = Rcpp::as<std::string>(input["export_file"]);
   std::snprintf(
       gui.export_filename, sizeof(gui.export_filename), "%s", filename.c_str());
@@ -243,6 +290,8 @@ bool PreviewDisplay::ApplyNativeHistory() {
       const bool animation_changed = target.animation != history.current.animation;
       const bool camera_changed = !HistoryEqual(target.camera, history.current.camera);
       std::function<void()> commit_scene, commit_sky;
+      auto commit_camera = camera_rig ? camera_rig->Prepare(target.camera)
+                                      : std::function<RayCamera*()>();
       if (scene_changed && scene_editor) {
         commit_scene = scene_editor->PrepareRestore(*target.scene, target.object.id);
       }
@@ -302,7 +351,12 @@ bool PreviewDisplay::ApplyNativeHistory() {
         PreviewObjectState inspector;
         scene_editor->Describe(target.object.id, inspector);
       }
-      ApplyCameraState(target.camera, &native_env_angle);
+      if (commit_camera) {
+        SetCamera(commit_camera());
+      }
+      ApplyCameraState(target.camera, &native_env_angle, bool(commit_camera));
+      reset = reset || max_depth != target.max_depth;
+      max_depth = target.max_depth;
       if (animation_changed) {
         for (auto& snapshot : gui.keyframe_snapshots) {
           const bool retained =
@@ -315,6 +369,7 @@ bool PreviewDisplay::ApplyNativeHistory() {
         }
         gui.keyframe_snapshots.swap(thumbnails);
         Keyframes.swap(keyframes);
+        gui.animation_timing_custom = target.animation->timing_custom;
       }
       current_keyframe = target.keyframe;
       keyframe_motion_closed = target.closed;
@@ -332,7 +387,14 @@ bool PreviewDisplay::ApplyNativeHistory() {
               write_fast_output != target.fast || history.current.blur != target.blur ||
               history.current.shutter != target.shutter || reset;
       write_fast_output = target.fast;
+      native_drag_fast = false;
+      native_fast_saved = target.fast;
+      native_sun_preview = false;
+      if (scene_editor) {
+        scene_editor->EndTransform();
+      }
       RestoreHistoryInputs(gui, target);
+      cam->set_free_rotation(gui.free_rotation != 0);
       if (sky_changed) {
         sky_model = Rcpp::as<int>(target.sky["model"]);
         sun_elevation = Rcpp::as<double>(target.sky["elevation"]);

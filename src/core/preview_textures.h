@@ -2,6 +2,7 @@
 #define RAYRENDER_PREVIEW_TEXTURES_H
 
 #include "../materials/texturecache.h"
+#include "preview_validation.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -10,6 +11,18 @@
 // Editor texture recipes retain their source so imported/embedded pixels stay
 // alive, and own any replacement files independently of the renderer's cache.
 namespace PreviewTextures {
+// Texture decoders report backend errors; attach the owning field so the
+// inspector can keep its draft red without discarding a working material.
+template <typename Load>
+auto CheckedFile(const char* field, Load load) -> decltype(load()) {
+  try {
+    return load();
+  } catch (const Rcpp::internal::InterruptedException&) {
+    throw;
+  } catch (const std::exception& error) {
+    throw PreviewFieldError({field}, error.what());
+  }
+}
 inline std::string FilePath(const std::string& value) {
   if (value.empty()) {
     return value;
@@ -122,7 +135,9 @@ public:
       if (!path.empty() && path != loaded_path) {
         auto owner = std::make_shared<TextureCache>();
         int width, height, channels;
-        auto pixels = owner->LookupFloat(FilePath(path), width, height, channels, 4);
+        auto pixels = CheckedFile("Color texture file", [&] {
+          return owner->LookupFloat(FilePath(path), width, height, channels, 4);
+        });
         image_source = std::make_shared<image_texture_float>(pixels, width, height, 4);
         file_owner = owner;
         loaded_path = path;
@@ -138,7 +153,8 @@ public:
         copy->repeatv = repeat[1];
         evaluated = copy;
       } else {
-        throw std::runtime_error("Choose an image texture file before applying.");
+        throw PreviewFieldError({"Color texture file"},
+                                "Choose an image texture file.");
       }
       break;
     }
@@ -182,12 +198,15 @@ public:
 
   void Build(bool enabled) {
     if (minimum > maximum) {
-      throw std::runtime_error("Roughness map minimum must not exceed its maximum.");
+      throw PreviewFieldError({"Roughness map range"},
+                              "Roughness map minimum must not exceed its maximum.");
     }
     if (enabled && !path.empty() && path != loaded_path) {
       auto owner = std::make_shared<TextureCache>();
       int width, height, count;
-      auto pixels = owner->LookupChar(FilePath(path), width, height, count, 3);
+      auto pixels = CheckedFile("Roughness map file", [&] {
+        return owner->LookupChar(FilePath(path), width, height, count, 3);
+      });
       data = pixels;
       nx = width;
       ny = height;
@@ -196,7 +215,7 @@ public:
       preview_path = loaded_path = path;
     }
     if (enabled && !data) {
-      throw std::runtime_error("Choose a roughness map file before applying.");
+      throw PreviewFieldError({"Roughness map file"}, "Choose a roughness map file.");
     }
   }
 };

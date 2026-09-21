@@ -312,6 +312,7 @@ prepare_scene_list = function(
   camera_info$light_direction = light_direction
   camera_info$bvh = switch(bvh_type, "sah" = 1, "equal" = 2, 1)
   camera_info$real_camera_info = real_camera_info
+  camera_info$camera_description_file = camera_description_file
   camera_info$film_size = film_size
   camera_info$camera_scale = camera_scale
   camera_info$sample_dist = sample_dist

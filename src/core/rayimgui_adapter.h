@@ -5,6 +5,8 @@
 #define RAYRENDER_RAYIMGUI_ADAPTER_H
 #include "rayimgui/rayimgui_r.h"
 #include "preview_object_state.h"
+#include "preview_validation.h"
+#include "preview_camera_controls.h"
 #include "preview_selection_overlay.h"
 #include "../lights/sun_direction.h"
 #include <algorithm>
@@ -18,6 +20,7 @@
 #include <functional>
 #include <cmath>
 #include <memory>
+#include <limits>
 
 struct RayrenderGui {
   const rayimgui_api_v1* api = nullptr;
@@ -42,7 +45,10 @@ struct RayrenderGui {
   size_t fps_frames = 0;
   std::chrono::steady_clock::time_point fps_window_start{};
   double progress = 0, exposure = 1;
+  PreviewCameraInputs camera;
   int32_t haze = 0, altitude = 0;
+  double base_altitude = 0, meters_per_unit = 1;
+  bool atmosphere_parameters_pending = false, atmosphere_parameters_editing = false;
   bool can_edit = false, has_atmosphere = false, deferred = false;
   bool close_requested = false, request_render = false, request_reset = false;
   bool atmosphere_pending = false, exposure_pending = false;
@@ -56,6 +62,8 @@ struct RayrenderGui {
   int32_t date[3]{2026, 1, 1}, time[3]{0, 0, 0};
   int32_t fast_preview = 0;
   bool fast_pending = false;
+  int32_t max_depth = 50;
+  bool depth_pending = false;
   int32_t denoise_enabled = 0;
   bool denoise_available = false, denoise_pending = false;
   std::string sky_error;
@@ -64,13 +72,26 @@ struct RayrenderGui {
   std::string export_message;
   // These are plain GUI snapshots and queued requests. Renderer/R operations
   // happen only after sampling workers finish, never inside draw callbacks.
-  enum class AnimationAction { None, Save, Previous, Next, Delete, Play, Select };
+  enum class AnimationAction {
+    None,
+    Save,
+    Previous,
+    Next,
+    Delete,
+    Play,
+    Stop,
+    Select,
+    Replace
+  };
   AnimationAction animation_action = AnimationAction::None;
   uint64_t animation_target = 0, next_keyframe_id = 1;
   int animation_current = -1;
-  bool animation_playing = false, animation_settings_pending = false;
+  bool animation_playing = false, animation_paused = false;
+  bool animation_settings_pending = false;
   int32_t animation_blur = 0, animation_closed = 0;
+  int32_t animation_loop = 0; // Repeat playback without changing the path geometry.
   double animation_shutter = 1;
+  bool animation_timing_custom = false, animation_timing_available = true;
   std::string animation_message;
   // History shares immutable thumbnail pixels; it never owns provider handles.
   struct KeyframeImage {
@@ -79,6 +100,8 @@ struct RayrenderGui {
   };
   struct KeyframeSnapshot {
     uint64_t id = 0;
+    // Outgoing duration stays attached to this stable keyframe across deletions.
+    int32_t frames_to_next = 30;
     std::vector<double> camera;
     std::vector<uint8_t> pixels;
     uint32_t width = 0, height = 0;
@@ -87,6 +110,7 @@ struct RayrenderGui {
   };
   // The provider allows 128 live textures; reserve space for viewport/overlays.
   static constexpr size_t MaxKeyframeSnapshots = 120;
+  static constexpr int32_t MaxSegmentFrames = 10000;
   std::vector<KeyframeSnapshot> keyframe_snapshots;
   std::vector<double> snapshot_camera;
 
@@ -101,10 +125,13 @@ struct RayrenderGui {
     const bool editable =
         widget.kind == RAYIMGUI_DOUBLE || widget.kind == RAYIMGUI_INT ||
         widget.kind == RAYIMGUI_COLOR || widget.kind == RAYIMGUI_INPUT_TEXT ||
-        widget.kind == RAYIMGUI_CHECKBOX || widget.kind == RAYIMGUI_COMBO ||
-        widget.kind == RAYIMGUI_ANGLE;
+        widget.kind == RAYIMGUI_FILE_PICKER || widget.kind == RAYIMGUI_CHECKBOX ||
+        widget.kind == RAYIMGUI_COMBO || widget.kind == RAYIMGUI_ANGLE;
     if ((editable || widget.kind == RAYIMGUI_BUTTON) && (item.flags & RAYIMGUI_BEGIN)) {
       ++history_epoch;
+    }
+    if (widget.kind == RAYIMGUI_MENU_ITEM && (item.flags & RAYIMGUI_CHANGED)) {
+      ++history_epoch; // A committed menu command is a separate undo step.
     }
     if (editable && (item.flags & RAYIMGUI_CHANGED)) {
       history_dirty = true;
@@ -112,6 +139,7 @@ struct RayrenderGui {
   }
 
   int32_t orbit = 1;
+  int32_t free_rotation = 0;
   double movement_speed = 1;
   struct Key {
     unsigned code, modifiers, count;
@@ -137,58 +165,62 @@ struct RayrenderGui {
   // A keyframe keeps its first matching completed preview, without the selection
   // outline or gizmo. Camera movement in the same input batch defers capture
   // until that camera has actually rendered, avoiding a thumbnail of the old view.
-  void capture_keyframe_snapshots() {
+  void capture_keyframe_snapshot(KeyframeSnapshot& snapshot) {
     if (!width || !height || pixels.size() != size_t(width) * height * 4) {
       return;
     }
-    for (auto& snapshot : keyframe_snapshots) {
-      if (!snapshot.pixels.empty() || !same_camera(snapshot.camera, snapshot_camera)) {
-        continue;
-      }
-      const double scale = std::min({1.0, 144.0 / width, 90.0 / height});
-      snapshot.width = std::max(1u, uint32_t(width * scale));
-      snapshot.height = std::max(1u, uint32_t(height * scale));
-      snapshot.pixels.resize(size_t(snapshot.width) * snapshot.height * 4);
-      // Box averaging suppresses single-sample noise and thin-edge aliasing.
-      // The small immutable buffers also bound CPU/GPU memory per keyframe.
-      for (uint32_t y = 0; y < snapshot.height; ++y) {
-        const uint32_t y0 = uint64_t(y) * height / snapshot.height;
-        const uint32_t y1 = uint64_t(y + 1) * height / snapshot.height;
-        for (uint32_t x = 0; x < snapshot.width; ++x) {
-          const uint32_t x0 = uint64_t(x) * width / snapshot.width;
-          const uint32_t x1 = uint64_t(x + 1) * width / snapshot.width;
-          uint64_t sum[3]{};
-          for (uint32_t sy = y0; sy < y1; ++sy) {
-            for (uint32_t sx = x0; sx < x1; ++sx) {
-              for (size_t c = 0; c < 3; ++c) {
-                sum[c] += pixels[4 * (size_t(sy) * width + sx) + c];
-              }
+    if (!snapshot.pixels.empty() || !same_camera(snapshot.camera, snapshot_camera)) {
+      return;
+    }
+    const double scale = std::min({1.0, 144.0 / width, 90.0 / height});
+    snapshot.width = std::max(1u, uint32_t(width * scale));
+    snapshot.height = std::max(1u, uint32_t(height * scale));
+    snapshot.pixels.resize(size_t(snapshot.width) * snapshot.height * 4);
+    // Box averaging suppresses single-sample noise and thin-edge aliasing.
+    // The small immutable buffers also bound CPU/GPU memory per keyframe.
+    for (uint32_t y = 0; y < snapshot.height; ++y) {
+      const uint32_t y0 = uint64_t(y) * height / snapshot.height;
+      const uint32_t y1 = uint64_t(y + 1) * height / snapshot.height;
+      for (uint32_t x = 0; x < snapshot.width; ++x) {
+        const uint32_t x0 = uint64_t(x) * width / snapshot.width;
+        const uint32_t x1 = uint64_t(x + 1) * width / snapshot.width;
+        uint64_t sum[3]{};
+        for (uint32_t sy = y0; sy < y1; ++sy) {
+          for (uint32_t sx = x0; sx < x1; ++sx) {
+            for (size_t c = 0; c < 3; ++c) {
+              sum[c] += pixels[4 * (size_t(sy) * width + sx) + c];
             }
           }
-          const size_t offset = 4 * (size_t(y) * snapshot.width + x);
-          for (size_t c = 0; c < 3; ++c) {
-            snapshot.pixels[offset + c] = sum[c] / (uint64_t(x1 - x0) * (y1 - y0));
-          }
-          snapshot.pixels[offset + 3] = 255;
         }
+        const size_t offset = 4 * (size_t(y) * snapshot.width + x);
+        for (size_t c = 0; c < 3; ++c) {
+          snapshot.pixels[offset + c] = sum[c] / (uint64_t(x1 - x0) * (y1 - y0));
+        }
+        snapshot.pixels[offset + 3] = 255;
       }
-      snapshot.image->pixels = snapshot.pixels;
-      snapshot.image->width = snapshot.width;
-      snapshot.image->height = snapshot.height;
-      if (api && session) {
-        rayimgui_image_v1 image{sizeof(image),
-                                snapshot.width,
-                                snapshot.height,
-                                RAYIMGUI_TOP_LEFT,
-                                RAYIMGUI_RGBA,
-                                RAYIMGUI_OPAQUE,
-                                RAYIMGUI_DISPLAY_ENCODED,
-                                uint64_t(snapshot.width) * 4,
-                                uint64_t(snapshot.pixels.size()),
-                                1,
-                                snapshot.pixels.data()};
-        check(api->texture_create(session, &image, &snapshot.texture, &error));
-      }
+    }
+    snapshot.image->pixels = snapshot.pixels;
+    snapshot.image->width = snapshot.width;
+    snapshot.image->height = snapshot.height;
+    if (api && session) {
+      rayimgui_image_v1 image{sizeof(image),
+                              snapshot.width,
+                              snapshot.height,
+                              RAYIMGUI_TOP_LEFT,
+                              RAYIMGUI_RGBA,
+                              RAYIMGUI_OPAQUE,
+                              RAYIMGUI_DISPLAY_ENCODED,
+                              uint64_t(snapshot.width) * 4,
+                              uint64_t(snapshot.pixels.size()),
+                              1,
+                              snapshot.pixels.data()};
+      check(api->texture_create(session, &image, &snapshot.texture, &error));
+    }
+  }
+
+  void capture_keyframe_snapshots() {
+    for (auto& snapshot : keyframe_snapshots) {
+      capture_keyframe_snapshot(snapshot);
     }
   }
 
@@ -200,6 +232,21 @@ struct RayrenderGui {
     capture_keyframe_snapshots();
   }
 
+  void replace_keyframe_snapshot(size_t index, std::vector<double> camera) {
+    auto& previous = keyframe_snapshots.at(index);
+    KeyframeSnapshot replacement;
+    // A new version ID keeps undo snapshots and queued clicks bound to the
+    // correct saved view. Its row and outgoing duration remain unchanged.
+    replacement.id = next_keyframe_id++;
+    replacement.frames_to_next = previous.frames_to_next;
+    replacement.camera = std::move(camera);
+    capture_keyframe_snapshot(replacement);
+    if (previous.texture && api && session) {
+      check(api->texture_destroy(session, &previous.texture, &error));
+    }
+    previous = std::move(replacement);
+  }
+
   void delete_keyframe_snapshot(size_t index) {
     if (index >= keyframe_snapshots.size()) {
       return;
@@ -209,6 +256,9 @@ struct RayrenderGui {
       check(api->texture_destroy(session, &snapshot.texture, &error));
     }
     keyframe_snapshots.erase(keyframe_snapshots.begin() + index);
+    if (keyframe_snapshots.empty()) {
+      animation_timing_custom = false;
+    }
   }
 
   void set_datetime(const std::string& value) {
@@ -259,10 +309,10 @@ struct RayrenderGui {
                                             RAYIMGUI_CAP_RGBA8 | RAYIMGUI_CAP_WIDGETS |
                                                 RAYIMGUI_CAP_INPUT | RAYIMGUI_CAP_GIZMO,
                                             &api);
-    if (status || !api->input || api->header.abi_minor < 8) {
+    if (status || !api->input || !api->window_input || api->header.abi_minor < 12) {
       std::snprintf(message,
                     sizeof(message),
-                    "Editor panels require rayimgui 0.0.12 or later (ABI 1.8).");
+                    "Editor panels require rayimgui 0.0.17 or later (ABI 1.12).");
       return status ? status : RAYIMGUI_ABI;
     }
     if (!(api->header.capabilities & RAYIMGUI_CAP_NATIVE)) {
@@ -437,7 +487,10 @@ struct RayrenderGui {
           RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_LEFT) | RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_RIGHT) |
           RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_1) | RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_2) |
           RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_3) | RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_4);
-      uint64_t pressed = input.keys_pressed | (input.keys_repeated & repeat);
+      // F belongs to the focused panel shortcut handler, including the
+      // viewport. Exclude it here so one press cannot toggle the mode twice.
+      uint64_t pressed = (input.keys_pressed | (input.keys_repeated & repeat)) &
+                         ~RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_F);
       if (can_edit && pressed) {
         if (input.keys_pressed) {
           ++history_epoch;
@@ -458,6 +511,14 @@ struct RayrenderGui {
       }
     } else {
       keys.clear();
+    }
+    if (can_edit && animation_playing && input.mouse_available &&
+        (input.mouse_clicked &
+         (RAYIMGUI_MOUSE_LEFT | RAYIMGUI_MOUSE_RIGHT | RAYIMGUI_MOUSE_MIDDLE))) {
+      // Stop restores another camera view. Consume this click so its old image
+      // coordinates cannot select or focus an unrelated object in that view.
+      animation_action = AnimationAction::Stop;
+      return;
     }
     if (can_edit && input.mouse_available &&
         (input.mouse_clicked & (RAYIMGUI_MOUSE_LEFT | RAYIMGUI_MOUSE_RIGHT))) {
@@ -557,15 +618,22 @@ struct RayrenderGui {
           w.maximum = 10000;
         }
         OBJECT_DRAW();
+        if (item.flags & RAYIMGUI_BEGIN) {
+          o.begin_transform = true;
+        }
+        o.transform_active |= (item.flags & RAYIMGUI_ACTIVE) != 0;
+        if (item.flags & RAYIMGUI_DEACTIVATED) {
+          o.end_transform = true;
+        }
         if (item.flags & RAYIMGUI_CHANGED) {
+          o.apply_transform = true;
           o.transform_pending = true;
           o.numeric_transform = true;
         }
       }
-      OBJECT_SIMPLE(RAYIMGUI_BUTTON, 7006, "Apply transform");
-      o.apply_transform = o.apply_transform || (item.flags & RAYIMGUI_CHANGED);
       if (o.projection_valid) {
-        OBJECT_SIMPLE(RAYIMGUI_TEXT, 0, "Drag a handle; release to apply.");
+        OBJECT_SIMPLE(
+            RAYIMGUI_TEXT, 0, "Drag to preview at Fast quality; release to refine.");
       } else {
         OBJECT_SIMPLE(RAYIMGUI_TEXT, 0, "Use numeric transforms for this camera.");
       }
@@ -604,21 +672,12 @@ struct RayrenderGui {
               "Applies to " + std::to_string(panel.targets.size()) + " instances";
           OBJECT_SIMPLE(RAYIMGUI_TEXT, 0, scope.c_str());
         }
+        PreviewValidateMaterialFields(panel.fields);
         std::string section;
         for (size_t i = 0; i < panel.fields.size(); ++i) {
           auto& field = panel.fields[i];
-          if (!field.condition.empty()) {
-            const auto control = std::find_if(
-                panel.fields.begin(), panel.fields.end(), [&](const auto& value) {
-                  return value.name == field.condition;
-                });
-            if (control == panel.fields.end() ||
-                std::find(field.visible_choices.begin(),
-                          field.visible_choices.end(),
-                          static_cast<int>(control->values[0])) ==
-                    field.visible_choices.end()) {
-              continue;
-            }
+          if (!PreviewFieldVisible(field, panel.fields)) {
+            continue;
           }
           if (field.section != section) {
             section = field.section;
@@ -628,7 +687,7 @@ struct RayrenderGui {
           const std::string label = field.name + (field.mixed ? " (mixed)" : "");
           uint32_t kind = RAYIMGUI_DOUBLE;
           if (field.text_input) {
-            kind = RAYIMGUI_INPUT_TEXT;
+            kind = RAYIMGUI_FILE_PICKER;
           } else if (!field.choices.empty()) {
             kind = RAYIMGUI_COMBO;
           } else if (field.boolean) {
@@ -646,9 +705,13 @@ struct RayrenderGui {
                      100000 + 1000 * uint64_t(o.material_slot) + i,
                      field.boolean ? label.c_str() : "");
           int32_t integer_value = 0;
-          if (field.boolean || field.integer || !field.choices.empty()) {
+          if ((field.boolean || field.integer || !field.choices.empty()) &&
+              std::isfinite(field.values[0])) {
             integer_value = static_cast<int32_t>(
                 std::clamp(field.values[0], double(INT32_MIN), double(INT32_MAX)));
+          }
+          if (!field.choices.empty()) {
+            integer_value = std::clamp(integer_value, 0, int(field.choices.size()) - 1);
           }
           std::array<char, 4096> text{};
           std::snprintf(text.data(), text.size(), "%s", field.text.c_str());
@@ -658,7 +721,18 @@ struct RayrenderGui {
             choices.push_back(choice.c_str());
             lengths.push_back(choice.size());
           }
-          w.numbers = field.values.data();
+          // Invalid numeric drafts stay in the inspector, but the provider must
+          // receive finite values so its protocol guard cannot abort the frame.
+          auto displayed_values = field.values;
+          for (auto& value : displayed_values) {
+            if (!std::isfinite(value)) {
+              value = 0;
+            }
+            if (field.color) {
+              value = std::clamp(value, 0.0, 1.0);
+            }
+          }
+          w.numbers = displayed_values.data();
           w.integers = &integer_value;
           w.text = text.data();
           w.text_capacity = text.size();
@@ -666,6 +740,9 @@ struct RayrenderGui {
           w.choice_lengths = lengths.data();
           w.choice_count = choices.size();
           w.count = field.count;
+          if (kind == RAYIMGUI_DOUBLE || kind == RAYIMGUI_INT) {
+            w.options |= RAYIMGUI_VALIDATE_NUMBER;
+          }
           w.minimum = field.minimum;
           w.maximum = field.maximum;
           w.speed = field.speed;
@@ -674,30 +751,40 @@ struct RayrenderGui {
             w.fraction = 1;
           }
           OBJECT_DRAW();
+          const bool was_invalid = !field.input_error.empty();
+          field.input_error = (item.flags & RAYIMGUI_INPUT_INVALID) ? text.data() : "";
+          if (was_invalid && field.input_error.empty() && panel.changed) {
+            o.apply_material = true;
+          }
           if (item.flags & RAYIMGUI_CHANGED) {
             if (field.text_input) {
               field.text = text.data();
             } else if (field.boolean || field.integer || !field.choices.empty()) {
               field.values[0] = integer_value;
+            } else {
+              field.values = displayed_values;
             }
-            field.changed = true;
-            field.mixed = false;
-            panel.changed = true;
-            o.material_pending = true;
+            PreviewMaterialChanged(o, panel, field);
           }
-          if (field.text_input) {
+          PreviewValidateMaterialFields(panel.fields);
+          if (!field.error.empty()) {
+            w = widget(RAYIMGUI_TOOLTIP, 0, field.error.c_str());
+            w.options = RAYIMGUI_TOOLTIP_ERROR;
+            OBJECT_DRAW();
+          } else if (!field.help.empty()) {
+            OBJECT_SIMPLE(RAYIMGUI_TOOLTIP, 0, field.help.c_str());
+          } else if (field.text_input) {
             OBJECT_SIMPLE(
                 RAYIMGUI_TOOLTIP,
                 0,
-                "Enter a file path. Blank uses the scene's original or embedded map.");
+                "Type a path or Browse. Blank restores an original/embedded map when available.");
           }
         }
         if (panel.fields.empty()) {
           OBJECT_SIMPLE(RAYIMGUI_TEXT, 0, "No editable parameters for this material.");
         }
-        OBJECT_SIMPLE(RAYIMGUI_BUTTON, 7011, "Apply material");
-        o.apply_material =
-            o.apply_material || ((item.flags & RAYIMGUI_CHANGED) && o.material_pending);
+        OBJECT_SIMPLE(
+            RAYIMGUI_TEXT, 0, "Valid material changes update the preview immediately.");
       }
       OBJECT_SIMPLE(RAYIMGUI_BUTTON, 7012, "Reset object edits");
       o.revert = o.revert || (item.flags & RAYIMGUI_CHANGED);
@@ -763,6 +850,36 @@ struct RayrenderGui {
     return draw_children(0);
   }
 
+  // Query after a panel's widgets so active text/numeric inputs keep their keys.
+  // Mode changes use the checkbox's pending value, which survives later viewport
+  // focus checks and is applied only after renderer workers finish their sample.
+  int32_t collect_panel_shortcuts(const rayimgui_api_v1* table,
+                                  rayimgui_session_handle owner, rayimgui_error_v1* err,
+                                  bool animation = false) {
+    if (!table->window_input) {
+      return RAYIMGUI_OK;
+    }
+    rayimgui_input_v1 input{sizeof(input)};
+    const auto status = table->window_input(owner, &input, err);
+    if (status) {
+      return status;
+    }
+    if (!can_edit || !input.keyboard_available ||
+        (input.modifiers & (RAYIMGUI_CTRL | RAYIMGUI_ALT | RAYIMGUI_SUPER))) {
+      return RAYIMGUI_OK;
+    }
+    if (input.keys_pressed & RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_F)) {
+      fast_preview = !fast_preview;
+      fast_pending = true;
+      ++history_epoch;
+      history_dirty = true;
+    }
+    if (animation && (input.keys_pressed & RAYIMGUI_KEY_BIT(RAYIMGUI_KEY_M))) {
+      animation_action = AnimationAction::Play;
+    }
+    return RAYIMGUI_OK;
+  }
+
   int32_t draw_animation(const rayimgui_api_v1* table, rayimgui_session_handle owner,
                          rayimgui_error_v1* err) {
     rayimgui_item_v1 item{sizeof(item), 0};
@@ -803,6 +920,38 @@ struct RayrenderGui {
     if (item.flags & RAYIMGUI_VISIBLE) {
       const bool locked = !can_edit || animation_playing;
       const bool empty = keyframe_snapshots.empty();
+      status =
+          button(45,
+                 animation_playing ? (animation_paused ? "Resume (M)" : "Pause (M)")
+                                   : "Play (M)",
+                 AnimationAction::Play,
+                 !can_edit || (!animation_playing && keyframe_snapshots.size() < 2));
+      if (status) {
+        return status;
+      }
+      ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
+      status =
+          button(50, "Stop", AnimationAction::Stop, !can_edit || !animation_playing);
+      if (status) {
+        return status;
+      }
+      ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
+      // Repetition can be changed during playback, including while paused.
+      w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
+      int32_t playback_disabled = !can_edit;
+      w.integers = &playback_disabled;
+      w.count = 1;
+      ANIMATION_DRAW(w);
+      w = widget(RAYIMGUI_CHECKBOX, 51, "Loop playback");
+      w.integers = &animation_loop;
+      w.count = 1;
+      ANIMATION_DRAW(w);
+      ANIMATION_DRAW(simple(RAYIMGUI_DISABLED_END, 0, ""));
+      ANIMATION_DRAW(simple(
+          RAYIMGUI_TOOLTIP,
+          0,
+          "Repeat from the first frame after the last. Turn off to finish the current pass. Closed loop in Path adds the return transition."));
+      ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
       status = button(41, "Previous", AnimationAction::Previous, locked || empty);
       if (status) {
         return status;
@@ -826,22 +975,14 @@ struct RayrenderGui {
         return status;
       }
       ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
-      status =
-          button(45,
-                 animation_playing ? "Stop" : "Play",
-                 AnimationAction::Play,
-                 !can_edit || (!animation_playing && keyframe_snapshots.size() < 2));
-      if (status) {
-        return status;
-      }
-      ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
       char detail[96];
       std::snprintf(detail,
                     sizeof(detail),
                     "Keyframe %d / %zu%s",
                     animation_current + 1,
                     keyframe_snapshots.size(),
-                    animation_playing ? " | Playing" : "");
+                    animation_playing ? (animation_paused ? " | Paused" : " | Playing")
+                                      : "");
       ANIMATION_DRAW(simple(RAYIMGUI_TEXT, 0, detail));
 
       w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
@@ -903,7 +1044,7 @@ struct RayrenderGui {
           if (i) {
             ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
           }
-          const auto& snapshot = keyframe_snapshots[i];
+          auto& snapshot = keyframe_snapshots[i];
           std::snprintf(detail,
                         sizeof(detail),
                         "Keyframe %zu%s",
@@ -923,13 +1064,433 @@ struct RayrenderGui {
             animation_target = snapshot.id;
             animation_action = AnimationAction::Select;
           }
+          w = widget(RAYIMGUI_CONTEXT_BEGIN, (uint64_t(1) << 61) | snapshot.id, "");
+          ANIMATION_DRAW(w);
+          if (item.flags & RAYIMGUI_VISIBLE) {
+            w = widget(RAYIMGUI_MENU_ITEM,
+                       (uint64_t(1) << 60) | snapshot.id,
+                       "Replace with current view");
+            ANIMATION_DRAW(w);
+            if (item.flags & RAYIMGUI_CHANGED) {
+              animation_target = snapshot.id;
+              animation_action = AnimationAction::Replace;
+            }
+          }
+          ANIMATION_DRAW(simple(RAYIMGUI_CONTEXT_END, 0, ""));
+          // Place each duration between its two snapshots. A closed path also
+          // exposes the final return leg; hiding it never discards its value.
+          const bool closes_loop = i + 1 == keyframe_snapshots.size();
+          if (!closes_loop || (animation_closed && keyframe_snapshots.size() > 1)) {
+            ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
+            int32_t timing_disabled = !animation_timing_available;
+            w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
+            w.integers = &timing_disabled;
+            w.count = 1;
+            ANIMATION_DRAW(w);
+            int32_t frames = snapshot.frames_to_next;
+            char input_error[256]{};
+            w = widget(RAYIMGUI_INT, (uint64_t(1) << 62) | snapshot.id, "##Frames");
+            w.integers = &frames;
+            w.count = 1;
+            w.minimum = 1;
+            w.maximum = MaxSegmentFrames;
+            w.speed = 1;
+            // Room for three digits plus the standard input padding.
+            w.width = 30;
+            w.options = RAYIMGUI_VALIDATE_NUMBER;
+            w.text = input_error;
+            w.text_capacity = sizeof(input_error);
+            ANIMATION_DRAW(w);
+            if (item.flags & RAYIMGUI_CHANGED) {
+              snapshot.frames_to_next =
+                  std::clamp(frames, int32_t(1), MaxSegmentFrames);
+              animation_timing_custom = true;
+            }
+            ANIMATION_DRAW(simple(RAYIMGUI_DISABLED_END, 0, ""));
+            if (input_error[0]) {
+              w = widget(RAYIMGUI_TOOLTIP, 0, input_error);
+              w.options = RAYIMGUI_TOOLTIP_ERROR;
+              ANIMATION_DRAW(w);
+            } else if (animation_timing_available) {
+              char tooltip[192];
+              std::snprintf(
+                  tooltip,
+                  sizeof(tooltip),
+                  "Frames from keyframe %zu to %zu%s. Drag or double-click to type (1–10000).",
+                  i + 1,
+                  closes_loop ? size_t(1) : i + 2,
+                  closes_loop ? " (loop)" : "");
+              ANIMATION_DRAW(simple(RAYIMGUI_TOOLTIP, 0, tooltip));
+            } else {
+              ANIMATION_DRAW(simple(
+                  RAYIMGUI_TOOLTIP,
+                  0,
+                  "Per-keyframe timing requires spline, linear, quad, cubic, or exp interpolation in keyframe_motion_args."));
+            }
+            if (closes_loop) {
+              ANIMATION_DRAW(simple(RAYIMGUI_SAME_LINE, 0, ""));
+              ANIMATION_DRAW(simple(RAYIMGUI_TEXT, 0, "to first"));
+            }
+          }
         }
         ANIMATION_DRAW(simple(RAYIMGUI_DISABLED_END, 0, ""));
       }
       ANIMATION_DRAW(simple(RAYIMGUI_CHILD_END, 0, ""));
+      // The parent query also covers the focused thumbnail child strip.
+      status = collect_panel_shortcuts(table, owner, err, true);
+      if (status) {
+        return status;
+      }
     }
     ANIMATION_DRAW(simple(RAYIMGUI_WINDOW_END, 0, ""));
 #undef ANIMATION_DRAW
+    return RAYIMGUI_OK;
+  }
+
+  int32_t draw_camera_panel(const rayimgui_api_v1* table, rayimgui_session_handle owner,
+                            rayimgui_error_v1* err) {
+    if (!camera.available) {
+      return RAYIMGUI_OK;
+    }
+    rayimgui_item_v1 item{sizeof(item)};
+    auto draw = [&](rayimgui_widget_v1 w) {
+      const auto status = table->widget(owner, &w, &item, err);
+      track_input(w, item);
+      return status;
+    };
+    rayimgui_widget_v1 w{};
+    int32_t status = 0;
+    int32_t disabled = !camera.editable;
+    w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
+    w.integers = &disabled;
+    w.count = 1;
+    if ((status = draw(w))) {
+      return status;
+    }
+    std::vector<const char*> choices;
+    std::vector<uint32_t> lengths;
+    for (const auto& name : camera.models) {
+      choices.push_back(name.c_str());
+      lengths.push_back(uint32_t(name.size()));
+    }
+    int32_t model = camera.model;
+    w = widget(RAYIMGUI_COMBO, 83, "Camera type");
+    w.integers = &model;
+    w.count = 1;
+    w.choices = choices.data();
+    w.choice_lengths = lengths.data();
+    w.choice_count = uint32_t(choices.size());
+    w.width = 200;
+    if ((status = draw(w))) {
+      return status;
+    }
+    if (item.flags & RAYIMGUI_CHANGED) {
+      camera.Select(model);
+    }
+    camera.Validate();
+    for (size_t field = 0; field < PreviewCameraInputs::Count; ++field) {
+      if (!camera.Visible(field)) {
+        continue;
+      }
+      const auto& info = PreviewCameraInputs::fields[field];
+      const char* label = field == PreviewCameraInputs::Aperture &&
+                                  camera.projection == PreviewCameraInputs::Realistic
+                              ? "Aperture diameter (mm)"
+                              : info.label;
+      if ((status = draw(widget(RAYIMGUI_TEXT, 0, label)))) {
+        return status;
+      }
+      char error[256]{};
+      auto numbers = camera.values[field];
+      for (auto& value : numbers) {
+        if (!std::isfinite(value)) {
+          value = 0;
+        }
+      }
+      w = widget(RAYIMGUI_DOUBLE, 61 + field, "");
+      w.width = 248;
+      w.numbers = numbers.data();
+      w.count = info.count;
+      w.minimum = info.minimum;
+      w.maximum = info.maximum;
+      w.speed = info.speed;
+      w.options = RAYIMGUI_VALIDATE_NUMBER;
+      w.text = error;
+      w.text_capacity = sizeof(error);
+      if ((status = draw(w))) {
+        return status;
+      }
+      camera.editing = camera.editing || (item.flags & RAYIMGUI_ACTIVE);
+      camera.input_errors[field] = item.flags & RAYIMGUI_INPUT_INVALID ? error : "";
+      if (item.flags & RAYIMGUI_CHANGED) {
+        camera.optical_error.clear();
+        camera.values[field] = numbers;
+        camera.pending = true;
+      }
+      camera.Validate();
+      if (!camera.errors[field].empty()) {
+        w = widget(RAYIMGUI_TOOLTIP, 0, camera.errors[field].c_str());
+        w.options = RAYIMGUI_TOOLTIP_ERROR;
+        if ((status = draw(w))) {
+          return status;
+        }
+      }
+    }
+    if ((status = draw(widget(RAYIMGUI_DISABLED_END, 0, "")))) {
+      return status;
+    }
+    if (!camera.optical_error.empty()) {
+      if ((status = draw(widget(RAYIMGUI_TEXT, 0, camera.optical_error.c_str())))) {
+        return status;
+      }
+    }
+    // Movement controls apply to every projection.
+    disabled = !can_edit || animation_playing;
+    w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
+    w.integers = &disabled;
+    w.count = 1;
+    if ((status = draw(w))) {
+      return status;
+    }
+    w = widget(RAYIMGUI_CHECKBOX, 11, "Orbit camera");
+    w.integers = &orbit;
+    w.count = 1;
+    if ((status = draw(w))) {
+      return status;
+    }
+    w = widget(RAYIMGUI_CHECKBOX, 86, "Free rotation");
+    w.integers = &free_rotation;
+    w.count = 1;
+    if ((status = draw(w))) {
+      return status;
+    }
+    if ((status =
+             draw(widget(RAYIMGUI_TOOLTIP, 0,
+                         "Pass through the poles using camera-local rotation. Shift-W/S pitch; "
+                         "Shift-A/D roll.\nDisabled: stop short of the current up axis.")))) {
+      return status;
+    }
+    w = widget(RAYIMGUI_DOUBLE, 12, "Movement speed");
+    w.numbers = &movement_speed;
+    w.count = 1;
+    w.width = 110;
+    w.minimum = .001;
+    w.maximum = 128;
+    w.speed = .05;
+    if ((status = draw(w))) {
+      return status;
+    }
+    if ((status = draw(widget(RAYIMGUI_BUTTON, 4, "Reset camera")))) {
+      return status;
+    }
+    request_reset = request_reset || (item.flags & RAYIMGUI_CHANGED);
+    if ((status = draw(widget(RAYIMGUI_DISABLED_END, 0, "")))) {
+      return status;
+    }
+    if (animation_playing) {
+      if ((status =
+               draw(widget(RAYIMGUI_TEXT, 0, "Stop playback to edit the camera.")))) {
+        return status;
+      }
+    }
+    return RAYIMGUI_OK;
+  }
+
+  // Keep sky widgets in their own tab. Hidden tabs leave pending edits intact
+  // while the next frame clears their transient drag/active flags.
+  int32_t draw_sky_panel(const rayimgui_api_v1* table, rayimgui_session_handle owner,
+                         rayimgui_error_v1* err) {
+    rayimgui_widget_v1 w{};
+    rayimgui_item_v1 item{sizeof(item)};
+    int32_t status = 0;
+#define SKY_DRAW()                                                                     \
+  do {                                                                                 \
+    status = table->widget(owner, &w, &item, err);                                     \
+    track_input(w, item);                                                              \
+    if (status)                                                                        \
+      return status;                                                                   \
+  } while (0)
+#define SKY_SIMPLE(kind, id, label)                                                    \
+  do {                                                                                 \
+    w = widget(kind, id, label);                                                       \
+    SKY_DRAW();                                                                        \
+  } while (0)
+    if (!can_edit || !(has_atmosphere || has_sun || has_location || has_sky_model)) {
+      SKY_SIMPLE(RAYIMGUI_TEXT, 0, "Sky controls are unavailable for this view.");
+    } else {
+      if (has_sky_model) {
+        static const char* models[] = {"Hosek", "Prague"};
+        static const uint32_t lengths[] = {5, 6};
+        w = widget(RAYIMGUI_COMBO, 28, "Sky model");
+        w.integers = &sky_model;
+        w.count = 1;
+        w.choices = models;
+        w.choice_lengths = lengths;
+        w.choice_count = 2;
+        SKY_DRAW();
+        sky_model_pending = sky_model_pending || (item.flags & RAYIMGUI_CHANGED);
+      }
+      if (has_sun) {
+        w = widget(RAYIMGUI_ANGLE, 13, "Elevation (deg)");
+        w.options = RAYIMGUI_ANGLE_QUARTER;
+        w.numbers = &sun_elevation;
+        w.count = 1;
+        w.minimum = -90;
+        w.maximum = 90;
+        w.speed = .25;
+        SKY_DRAW();
+        // The provider defines a full quarter arc; rayrender keeps its Sun
+        // just below that endpoint for both drags and typed values.
+        sun_elevation = ClampSunElevation(sun_elevation);
+        sun_pending = sun_pending || (item.flags & RAYIMGUI_CHANGED);
+        sun_editing = sun_editing || (item.flags & RAYIMGUI_ACTIVE);
+        SKY_SIMPLE(
+            RAYIMGUI_TOOLTIP,
+            0,
+            "Drag the handle from horizon (0) toward zenith (maximum 89.9). Type negative degrees for below the horizon.");
+        // Each angle widget groups its label, dial, and numeric input.
+        SKY_SIMPLE(RAYIMGUI_SAME_LINE, 0, "");
+        w = widget(RAYIMGUI_ANGLE, 14, "Azimuth (deg)");
+        w.numbers = &sun_azimuth;
+        w.count = 1;
+        w.minimum = 0;
+        w.maximum = 360;
+        w.speed = .5;
+        SKY_DRAW();
+        sun_pending = sun_pending || (item.flags & RAYIMGUI_CHANGED);
+        sun_editing = sun_editing || (item.flags & RAYIMGUI_ACTIVE);
+        SKY_SIMPLE(
+            RAYIMGUI_TOOLTIP,
+            0,
+            "North 0, east 90. Drag to update the sky and Sun at Fast quality; release to refine.");
+        if (manual_sun) {
+          SKY_SIMPLE(RAYIMGUI_TEXT, 0, "Sun direction manually adjusted");
+        }
+      }
+      if (has_location) {
+        // Keep the sun dials visible while optional ephemeris inputs are folded.
+        SKY_SIMPLE(RAYIMGUI_TREE_BEGIN, 29, "Location and date/time");
+        if (item.flags & RAYIMGUI_VISIBLE) {
+          w = widget(RAYIMGUI_DOUBLE, 16, "Latitude");
+          w.numbers = &latitude;
+          w.count = 1;
+          w.minimum = -90;
+          w.maximum = 90;
+          w.speed = .1;
+          SKY_DRAW();
+          w = widget(RAYIMGUI_DOUBLE, 17, "Longitude");
+          w.numbers = &longitude;
+          w.count = 1;
+          w.minimum = -180;
+          w.maximum = 180;
+          w.speed = .1;
+          SKY_DRAW();
+          SKY_SIMPLE(RAYIMGUI_TEXT, 0, "Date/time (UTC)");
+          const char* labels[] = {"Year", "Month", "Day", "Hour", "Minute", "Second"};
+          const int maximum[] = {9999, 12, 31, 23, 59, 59};
+          for (unsigned component = 0; component < 6; ++component) {
+            w = widget(RAYIMGUI_INT, 20 + component, labels[component]);
+            w.integers = component < 3 ? &date[component] : &time[component - 3];
+            w.count = 1;
+            w.minimum = component < 3 ? 1 : 0;
+            w.maximum = maximum[component];
+            w.speed = .1;
+            SKY_DRAW();
+            if (item.flags & RAYIMGUI_CHANGED) {
+              format_datetime();
+            }
+            SKY_SIMPLE(
+                RAYIMGUI_TOOLTIP,
+                0,
+                "Drag to change; double-click to type. Then Apply location/time.");
+          }
+          SKY_SIMPLE(RAYIMGUI_TEXT, 0, datetime);
+          SKY_SIMPLE(RAYIMGUI_BUTTON, 19, "Apply location/time");
+          location_pending = location_pending || (item.flags & RAYIMGUI_CHANGED);
+        }
+        SKY_SIMPLE(RAYIMGUI_TREE_END, 0, "");
+      }
+      if (!sky_error.empty()) {
+        SKY_SIMPLE(RAYIMGUI_TEXT, 0, sky_error.c_str());
+      }
+      if (has_atmosphere) {
+        // Validate in the numeric widget so incomplete text never replaces
+        // the committed atmosphere. Rebuild once a drag or text edit ends.
+        char scale_error[256]{};
+        w = widget(RAYIMGUI_DOUBLE, 25, "Scale (m/unit)");
+        w.width = 110;
+        w.numbers = &meters_per_unit;
+        w.count = 1;
+        w.minimum = std::numeric_limits<double>::min();
+        w.maximum = 1e12;
+        w.speed = 1;
+        w.options = RAYIMGUI_VALIDATE_NUMBER;
+        w.text = scale_error;
+        w.text_capacity = sizeof(scale_error);
+        SKY_DRAW();
+        atmosphere_parameters_editing = item.flags & RAYIMGUI_ACTIVE;
+        atmosphere_parameters_pending =
+            atmosphere_parameters_pending || (item.flags & RAYIMGUI_CHANGED);
+        if (item.flags & RAYIMGUI_INPUT_INVALID) {
+          w = widget(RAYIMGUI_TOOLTIP, 0, scale_error);
+          w.options = RAYIMGUI_TOOLTIP_ERROR;
+          SKY_DRAW();
+        } else {
+          SKY_SIMPLE(
+              RAYIMGUI_TOOLTIP,
+              0,
+              "Physical meters per scene unit for haze and altitude queries. Scales X, Y and Z.");
+        }
+        char altitude_error[256]{};
+        w = widget(RAYIMGUI_DOUBLE, 24, "Base altitude (m)");
+        w.width = 110;
+        w.numbers = &base_altitude;
+        w.count = 1;
+        w.minimum = 0;
+        w.maximum = 15000;
+        w.speed = 10;
+        w.options = RAYIMGUI_VALIDATE_NUMBER;
+        w.text = altitude_error;
+        w.text_capacity = sizeof(altitude_error);
+        SKY_DRAW();
+        atmosphere_parameters_editing =
+            atmosphere_parameters_editing || (item.flags & RAYIMGUI_ACTIVE);
+        atmosphere_parameters_pending =
+            atmosphere_parameters_pending || (item.flags & RAYIMGUI_CHANGED);
+        if (item.flags & RAYIMGUI_INPUT_INVALID) {
+          w = widget(RAYIMGUI_TOOLTIP, 0, altitude_error);
+          w.options = RAYIMGUI_TOOLTIP_ERROR;
+          SKY_DRAW();
+        } else {
+          SKY_SIMPLE(
+              RAYIMGUI_TOOLTIP,
+              0,
+              "Height above sea level at the atmosphere origin (0 to 15000 meters).");
+        }
+        w = widget(RAYIMGUI_CHECKBOX, 6, "Haze");
+        w.integers = &haze;
+        w.count = 1;
+        SKY_DRAW();
+        if (item.flags & RAYIMGUI_CHANGED) {
+          if (haze) {
+            altitude = 1;
+          }
+          atmosphere_pending = true;
+        }
+        w = widget(RAYIMGUI_CHECKBOX, 7, "Altitude queries");
+        w.integers = &altitude;
+        w.count = 1;
+        SKY_DRAW();
+        if (item.flags & RAYIMGUI_CHANGED) {
+          if (!altitude) {
+            haze = 0;
+          }
+          atmosphere_pending = true;
+        }
+      }
+    }
+#undef SKY_SIMPLE
+#undef SKY_DRAW
     return RAYIMGUI_OK;
   }
 
@@ -937,12 +1498,16 @@ struct RayrenderGui {
                     rayimgui_error_v1* err) {
     rayimgui_widget_v1 w{};
     rayimgui_item_v1 item{sizeof(item), 0};
+    const bool was_transform_active = object.transform_active;
+    object.transform_active = false;
     int32_t status = draw_animation(table, owner, err);
     if (status) {
       return status;
     }
     bool viewport_visible = false;
     sun_editing = false;
+    camera.editing = false;
+    atmosphere_parameters_editing = false;
 #define DRAW()                                                                         \
   do {                                                                                 \
     status = table->widget(owner, &w, &item, err);                                     \
@@ -963,7 +1528,21 @@ struct RayrenderGui {
     w.options = RAYIMGUI_DOCK_LEFT;
     DRAW();
     if (item.flags & RAYIMGUI_VISIBLE) {
-      SIMPLE(RAYIMGUI_TEXT, 0, "CPU progressive render");
+      // Primary actions stay above the history controls in either tab.
+      if (can_edit && deferred) {
+        SIMPLE(RAYIMGUI_BUTTON, 5, "Start final render");
+        request_render = request_render || (item.flags & RAYIMGUI_CHANGED);
+      }
+      if (export_available) {
+        if (can_edit && deferred) {
+          SIMPLE(RAYIMGUI_SAME_LINE, 0, "");
+        }
+        SIMPLE(RAYIMGUI_BUTTON, 31, "Export R code");
+        export_pending = export_pending || (item.flags & RAYIMGUI_CHANGED);
+        SIMPLE(RAYIMGUI_TOOLTIP,
+               0,
+               "Save the committed scene and current view as a runnable R script.");
+      }
       int32_t history_disabled = !can_undo;
       w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
       w.integers = &history_disabled;
@@ -989,6 +1568,7 @@ struct RayrenderGui {
       if (!history_message.empty()) {
         SIMPLE(RAYIMGUI_TEXT, 0, history_message.c_str());
       }
+      SIMPLE(RAYIMGUI_TEXT, 0, "CPU progressive render");
       char detail[128];
       std::snprintf(detail,
                     sizeof(detail),
@@ -1010,6 +1590,29 @@ struct RayrenderGui {
       w.speed = .01;
       DRAW();
       exposure_pending = exposure_pending || (item.flags & RAYIMGUI_CHANGED);
+      char depth_error[256]{};
+      w = widget(RAYIMGUI_INT, 84, "Max depth");
+      w.integers = &max_depth;
+      w.count = 1;
+      w.minimum = 1;
+      w.maximum = 10000;
+      w.speed = 1;
+      w.width = 80;
+      w.options = RAYIMGUI_VALIDATE_NUMBER;
+      w.text = depth_error;
+      w.text_capacity = sizeof(depth_error);
+      DRAW();
+      depth_pending |= (item.flags & RAYIMGUI_CHANGED) != 0;
+      w = widget(
+          RAYIMGUI_TOOLTIP,
+          0,
+          depth_error[0]
+              ? depth_error
+              : "Maximum ray path depth (1–10000). Applies to preview and final rendering.");
+      if (depth_error[0]) {
+        w.options = RAYIMGUI_TOOLTIP_ERROR;
+      }
+      DRAW();
       // Keep the setting visible on builds without denoising support.
       int32_t denoise_disabled = !denoise_available;
       w = widget(RAYIMGUI_DISABLED_BEGIN, 0, "");
@@ -1031,11 +1634,9 @@ struct RayrenderGui {
         w.text = export_filename;
         w.text_capacity = sizeof(export_filename);
         DRAW();
-        SIMPLE(RAYIMGUI_BUTTON, 31, "Export R code");
-        export_pending = export_pending || (item.flags & RAYIMGUI_CHANGED);
-        SIMPLE(RAYIMGUI_TOOLTIP, 0, "Save the committed scene and current view as a runnable R script.");
         if (!export_message.empty()) {
           SIMPLE(RAYIMGUI_TEXT, 0, export_message.c_str());
+          SIMPLE(RAYIMGUI_TOOLTIP, 0, export_message.c_str());
         }
       }
       if (can_edit) {
@@ -1044,163 +1645,51 @@ struct RayrenderGui {
         w.count = 1;
         DRAW();
         fast_pending = fast_pending || (item.flags & RAYIMGUI_CHANGED);
-        w = widget(RAYIMGUI_CHECKBOX, 11, "Orbit camera");
-        w.integers = &orbit;
-        w.count = 1;
-        DRAW();
-        w = widget(RAYIMGUI_DOUBLE, 12, "Movement speed");
-        w.numbers = &movement_speed;
-        w.count = 1;
-        w.minimum = .001;
-        w.maximum = 128;
-        w.speed = .05;
-        DRAW();
-        SIMPLE(RAYIMGUI_BUTTON, 4, "Reset camera");
-        request_reset = request_reset || (item.flags & RAYIMGUI_CHANGED);
-        if (deferred) {
-          SIMPLE(RAYIMGUI_BUTTON, 5, "Start final render");
-          request_render = request_render || (item.flags & RAYIMGUI_CHANGED);
-        }
-        if (has_atmosphere || has_sun || has_location || has_sky_model) {
-          SIMPLE(RAYIMGUI_SEPARATOR, 0, "");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Sky");
-          if (has_sky_model) {
-            static const char* models[] = {"Hosek", "Prague"};
-            static const uint32_t lengths[] = {5, 6};
-            w = widget(RAYIMGUI_COMBO, 28, "Sky model");
-            w.integers = &sky_model;
-            w.count = 1;
-            w.choices = models;
-            w.choice_lengths = lengths;
-            w.choice_count = 2;
-            DRAW();
-            sky_model_pending = sky_model_pending || (item.flags & RAYIMGUI_CHANGED);
+      }
+      SIMPLE(RAYIMGUI_TAB_BAR_BEGIN, 80, "View settings");
+      if (item.flags & RAYIMGUI_VISIBLE) {
+        SIMPLE(RAYIMGUI_TAB_BEGIN, 81, "Camera");
+        if (item.flags & RAYIMGUI_VISIBLE) {
+          status = draw_camera_panel(table, owner, err);
+          if (status) {
+            return status;
           }
-          if (has_sun) {
-            w = widget(RAYIMGUI_ANGLE, 13, "Elevation (deg)");
-            w.options = RAYIMGUI_ANGLE_QUARTER;
-            w.numbers = &sun_elevation;
-            w.count = 1;
-            w.minimum = -90;
-            w.maximum = 90;
-            w.speed = .25;
-            DRAW();
-            // The provider defines a full quarter arc; rayrender keeps its Sun
-            // just below that endpoint for both drags and typed values.
-            sun_elevation = ClampSunElevation(sun_elevation);
-            sun_pending = sun_pending || (item.flags & RAYIMGUI_CHANGED);
-            sun_editing = sun_editing || (item.flags & RAYIMGUI_ACTIVE);
-            SIMPLE(
-                RAYIMGUI_TOOLTIP,
-                0,
-                "Drag the handle from horizon (0) toward zenith (maximum 89.9). Type negative degrees for below the horizon.");
-            // Each angle widget groups its label, dial, and numeric input.
-            SIMPLE(RAYIMGUI_SAME_LINE, 0, "");
-            w = widget(RAYIMGUI_ANGLE, 14, "Azimuth (deg)");
-            w.numbers = &sun_azimuth;
-            w.count = 1;
-            w.minimum = 0;
-            w.maximum = 360;
-            w.speed = .5;
-            DRAW();
-            sun_pending = sun_pending || (item.flags & RAYIMGUI_CHANGED);
-            sun_editing = sun_editing || (item.flags & RAYIMGUI_ACTIVE);
-            SIMPLE(RAYIMGUI_TOOLTIP,
-                   0,
-                   "North 0, east 90. Release to update the sky and Sun.");
-            if (manual_sun) {
-              SIMPLE(RAYIMGUI_TEXT, 0, "Sun direction manually adjusted");
-            }
-          }
-          if (has_location) {
-            // Keep the sun dials visible while optional ephemeris inputs are folded.
-            SIMPLE(RAYIMGUI_TREE_BEGIN, 29, "Location and date/time");
+          if (can_edit) {
+            SIMPLE(RAYIMGUI_TREE_BEGIN, 15, "Movement controls");
             if (item.flags & RAYIMGUI_VISIBLE) {
-              w = widget(RAYIMGUI_DOUBLE, 16, "Latitude");
-              w.numbers = &latitude;
-              w.count = 1;
-              w.minimum = -90;
-              w.maximum = 90;
-              w.speed = .1;
-              DRAW();
-              w = widget(RAYIMGUI_DOUBLE, 17, "Longitude");
-              w.numbers = &longitude;
-              w.count = 1;
-              w.minimum = -180;
-              w.maximum = 180;
-              w.speed = .1;
-              DRAW();
-              SIMPLE(RAYIMGUI_TEXT, 0, "Date/time (UTC)");
-              const char* labels[] = {
-                  "Year", "Month", "Day", "Hour", "Minute", "Second"};
-              const int maximum[] = {9999, 12, 31, 23, 59, 59};
-              for (unsigned component = 0; component < 6; ++component) {
-                w = widget(RAYIMGUI_INT, 20 + component, labels[component]);
-                w.integers = component < 3 ? &date[component] : &time[component - 3];
-                w.count = 1;
-                w.minimum = component < 3 ? 1 : 0;
-                w.maximum = maximum[component];
-                w.speed = .1;
-                DRAW();
-                if (item.flags & RAYIMGUI_CHANGED) {
-                  format_datetime();
-                }
-                SIMPLE(
-                    RAYIMGUI_TOOLTIP,
-                    0,
-                    "Drag to change; double-click to type. Then Apply location/time.");
-              }
-              SIMPLE(RAYIMGUI_TEXT, 0, datetime);
-              SIMPLE(RAYIMGUI_BUTTON, 19, "Apply location/time");
-              location_pending = location_pending || (item.flags & RAYIMGUI_CHANGED);
+              SIMPLE(RAYIMGUI_TEXT, 0, "Click the image to focus controls.");
+              SIMPLE(RAYIMGUI_TEXT, 0, "W/A/S/D move | Q/Z up/down");
+              SIMPLE(RAYIMGUI_TEXT, 0, "Shift-W/S pitch | Shift-A/D roll");
+              SIMPLE(RAYIMGUI_TEXT, 0, "Tab orbit | E/C speed | F fast preview");
+              SIMPLE(RAYIMGUI_TEXT, 0, "Arrows lens | 1/2 focus | 3/4 environment");
+              SIMPLE(RAYIMGUI_TEXT, 0, "Shift-click select / drill down");
+              SIMPLE(RAYIMGUI_TEXT, 0, "Click target + focus | Right-click target");
+              SIMPLE(RAYIMGUI_TEXT, 0, "R reset | [/] exposure | Enter render");
             }
             SIMPLE(RAYIMGUI_TREE_END, 0, "");
           }
-          if (!sky_error.empty()) {
-            SIMPLE(RAYIMGUI_TEXT, 0, sky_error.c_str());
-          }
-          if (has_atmosphere) {
-            w = widget(RAYIMGUI_CHECKBOX, 6, "Haze");
-            w.integers = &haze;
-            w.count = 1;
-            DRAW();
-            if (item.flags & RAYIMGUI_CHANGED) {
-              if (haze) {
-                altitude = 1;
-              }
-              atmosphere_pending = true;
-            }
-            w = widget(RAYIMGUI_CHECKBOX, 7, "Altitude queries");
-            w.integers = &altitude;
-            w.count = 1;
-            DRAW();
-            if (item.flags & RAYIMGUI_CHANGED) {
-              if (!altitude) {
-                haze = 0;
-              }
-              atmosphere_pending = true;
-            }
-          }
         }
-        SIMPLE(RAYIMGUI_TREE_BEGIN, 15, "Movement controls");
+        SIMPLE(RAYIMGUI_TAB_END, 0, "");
+        SIMPLE(RAYIMGUI_TAB_BEGIN, 82, "Sky");
         if (item.flags & RAYIMGUI_VISIBLE) {
-          SIMPLE(RAYIMGUI_TEXT, 0, "Click the image to focus controls.");
-          SIMPLE(RAYIMGUI_TEXT, 0, "W/A/S/D move | Q/Z up/down");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Shift-W/S pitch | Shift-A/D roll");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Tab orbit | E/C speed | F fast preview");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Arrows lens | 1/2 focus | 3/4 environment");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Shift-click select / drill down");
-          SIMPLE(RAYIMGUI_TEXT, 0, "Click target + focus | Right-click target");
-          SIMPLE(RAYIMGUI_TEXT, 0, "R reset | [/] exposure | Enter render");
+          status = draw_sky_panel(table, owner, err);
+          if (status) {
+            return status;
+          }
         }
-        SIMPLE(RAYIMGUI_TREE_END, 0, "");
+        SIMPLE(RAYIMGUI_TAB_END, 0, "");
       }
+      SIMPLE(RAYIMGUI_TAB_BAR_END, 0, "");
       SIMPLE(RAYIMGUI_BUTTON, 8, "Cancel render");
       if (item.flags & RAYIMGUI_CHANGED) {
         status = table->request_close(owner, err);
         if (status) {
           return status;
         }
+      }
+      status = collect_panel_shortcuts(table, owner, err);
+      if (status) {
+        return status;
       }
     }
     SIMPLE(RAYIMGUI_WINDOW_END, 0, "");
@@ -1209,6 +1698,10 @@ struct RayrenderGui {
     DRAW();
     if (item.flags & RAYIMGUI_VISIBLE) {
       status = draw_hierarchy(table, owner, err);
+      if (status) {
+        return status;
+      }
+      status = collect_panel_shortcuts(table, owner, err);
       if (status) {
         return status;
       }
@@ -1225,6 +1718,10 @@ struct RayrenderGui {
         }
       } else {
         SIMPLE(RAYIMGUI_TEXT, 0, "Enable interactive rendering to edit objects.");
+      }
+      status = collect_panel_shortcuts(table, owner, err);
+      if (status) {
+        return status;
       }
     }
     SIMPLE(RAYIMGUI_WINDOW_END, 0, "");
@@ -1266,7 +1763,7 @@ struct RayrenderGui {
           }
           const bool selecting = (input.modifiers & RAYIMGUI_SHIFT) &&
                                  !(input.modifiers & RAYIMGUI_ALT) &&
-                                 !object.transform_active;
+                                 !was_transform_active && !object.transform_active;
           if (object.selected && object.projection_valid && !object.clear_pending &&
               !object.select_pending && !selecting) {
             rayimgui_gizmo_v1 gizmo{sizeof(gizmo)};
@@ -1283,17 +1780,20 @@ struct RayrenderGui {
               return status;
             }
             if (item.flags & RAYIMGUI_BEGIN) {
+              object.begin_transform = true;
               ++history_epoch;
             }
             if (item.flags & (RAYIMGUI_CHANGED | RAYIMGUI_COMMIT)) {
               history_dirty = true;
             }
-            object.transform_active = (item.flags & RAYIMGUI_ACTIVE) != 0;
+            object.transform_active |= (item.flags & RAYIMGUI_ACTIVE) != 0;
             if (item.flags & RAYIMGUI_CHANGED) {
+              object.apply_transform = true;
               object.transform_pending = true;
               object.numeric_transform = false;
             }
             if (item.flags & RAYIMGUI_COMMIT) {
+              object.end_transform = true;
               object.apply_transform = object.transform_pending;
             }
             if (item.flags & RAYIMGUI_CANCEL) {
@@ -1309,6 +1809,10 @@ struct RayrenderGui {
       } else {
         SIMPLE(RAYIMGUI_TEXT, 0, "Waiting for the first completed sample");
       }
+      status = collect_panel_shortcuts(table, owner, err);
+      if (status) {
+        return status;
+      }
     }
     SIMPLE(RAYIMGUI_WINDOW_END, 0, "");
     // Hidden images cannot own movement or picking. Cancel an in-progress gizmo
@@ -1317,7 +1821,7 @@ struct RayrenderGui {
       keys.clear();
       pick_pending = false;
       object.pick_pending = false;
-      if (object.transform_active) {
+      if (was_transform_active) {
         object.cancel_transform = true;
       }
       object.transform_active = false;

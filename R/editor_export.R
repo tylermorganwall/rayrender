@@ -32,7 +32,26 @@ native_export_render_args = function(args, state) {
   args$lookfrom = unname(unlist(camera[c("x", "y", "z")]))
   args$lookat = unname(unlist(camera[c("dx", "dy", "dz")]))
   args$camera_up = unname(unlist(camera[c("upx", "upy", "upz")]))
+  if (!is.null(state$camera_rotation)) {
+    args$camera_rotation = state$camera_rotation
+  }
   args$fov = camera$fov
+  if (!is.null(state$camera_description_file)) {
+    args$camera_description_file = if (nzchar(state$camera_description_file)) {
+      state$camera_description_file
+    } else {
+      NA_character_
+    }
+  }
+  if (!is.null(camera$film_size)) {
+    args$film_size = camera$film_size
+  }
+  if (!is.null(camera$camera_scale)) {
+    args$camera_scale = camera$camera_scale
+  }
+  if (!is.null(state$max_depth)) {
+    args$max_depth = state$max_depth
+  }
   args$aperture = camera$aperture
   args$focal_distance = camera$focal
   args$ortho_dimensions = unname(unlist(camera[c("orthox", "orthoy")]))

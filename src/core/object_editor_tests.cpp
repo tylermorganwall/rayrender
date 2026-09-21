@@ -100,6 +100,637 @@ PreviewField& EditorField(PreviewObjectState& ui, const std::string& name) {
   throw std::runtime_error("Missing material field: " + name);
 }
 context("Native object editor") {
+
+  test_that(
+      "volume inputs rebuild independently and round trip through export and restore") {
+    auto input = EditorFixture(R"(
+      fog = grid_medium(array(.5, c(2,2,2)), sigma_s=c(.2,.4,.6), sigma_a=.1)
+      scene = rbind(set_medium(cube(x=-2), fog), set_medium(cube(x=2), fog))
+      native_editor_scene(process_scene(scene)$scene)
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    const auto selection = editor.roots[0].id;
+    const auto original = editor.settings;
+    auto medium = [&](size_t row) {
+      return PreviewMaterialSlots(editor.roots[row].object.get()).at(0).volume->medium;
+    };
+    const auto shared = medium(0);
+    expect_true((shared == medium(1)));
+    PreviewObjectState ui;
+    editor.Describe(selection, ui);
+    expect_true((ui.materials.size() == 1 && ui.materials[0].type == "Volume (grid)"));
+    auto edit = [&](const char* name, std::array<double, 3> value) {
+      auto& field = EditorField(ui, name);
+      field.values = value;
+      PreviewMaterialChanged(ui, ui.materials.at(ui.material_slot), field);
+      return editor.Apply(ui);
+    };
+    expect_true(edit("Density multiplier", {0, 0, 0}));
+    expect_true(
+        (medium(0)->sigma_s.length() == 0 && medium(0)->Density(point3f(0)) == .5f));
+    expect_true(edit("Scattering RGB (1/unit)", {.3, .5, .7}));
+    expect_true(edit("Density multiplier", {2, 0, 0}));
+    expect_true(
+        ((medium(0)->SamplePoint(point3f(0)).sigma_s - point3f(.3, .5, .7)).length() <
+         1e-6));
+    expect_true(((medium(1)->sigma_s - shared->sigma_s).length() < 1e-6 &&
+                 (shared->sigma_s - point3f(.2, .4, .6)).length() < 1e-6));
+    expect_true(edit("Anisotropy (g)", {.6, 0, 0}));
+    expect_true(edit("Atmospheric haze", {0, 0, 0}));
+    auto rays =
+        medium(0)->SampleRay(Ray(point3f(0, 0, -1), vec3f(0, 0, 1), Float(0)), 3);
+    const auto segment = rays.Next();
+    expect_true(
+        (segment && (segment->sigma_maj - point3f(.4, .6, .8)).length() < 1e-5));
+    const auto valid = medium(0);
+    expect_false(edit("Anisotropy (g)", {1, 0, 0}));
+    expect_true(
+        (medium(0) == valid && !EditorField(ui, "Anisotropy (g)").error.empty()));
+    editor.Describe(selection, ui);
+    expect_false(edit("Density multiplier", {-1, 0, 0}));
+    expect_true((medium(0) == valid));
+
+    // The same saved settings used by undo/redo and R exports rebuild real media.
+    const auto changed = editor.settings;
+    const auto exported = editor.ExportEdits();
+    PreviewScene restored(input);
+    restored.ImportEdits(input, exported);
+    EditorBuild rebuilt(input, restored);
+    const auto round_trip =
+        PreviewMaterialSlots(restored.roots[0].object.get())[0].volume->medium;
+    expect_true(((round_trip->sigma_s - valid->sigma_s).length() < 1e-6 &&
+                 round_trip->g == valid->g && !round_trip->haze));
+    auto undo = editor.PrepareRestore(original, selection);
+    undo();
+    expect_true(((medium(0)->sigma_s - point3f(.2, .4, .6)).length() < 1e-6));
+    auto redo = editor.PrepareRestore(changed, selection);
+    redo();
+    expect_true(((medium(0)->sigma_s - valid->sigma_s).length() < 1e-6));
+  }
+
+  test_that(
+      "instance volume edits preserve siblings and parent edits reach every placement") {
+    auto input = EditorFixture(R"(
+      source = set_medium(cube(), homogeneous_medium(sigma_s=.2))
+      native_editor_scene(process_scene(create_instances(source, x=c(-2,2)))$scene)
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    auto value = [&](size_t row) {
+      return PreviewMaterialSlots(editor.roots[row].object.get())[0]
+          .volume->medium->density_scale;
+    };
+    PreviewObjectState ui;
+    editor.Describe(editor.roots[0].id, ui);
+    auto& field = EditorField(ui, "Density multiplier");
+    field.values[0] = 3;
+    PreviewMaterialChanged(ui, ui.materials[0], field);
+    expect_true(editor.Apply(ui));
+    expect_true((value(0) == 3 && value(1) == 1));
+    editor.Describe(editor.Hierarchy()[0].id, ui);
+    expect_true((ui.materials.size() == 1 && ui.materials[0].targets.size() == 2));
+    auto& grouped = EditorField(ui, "Density multiplier");
+    expect_true(grouped.mixed);
+    grouped.values[0] = 2;
+    PreviewMaterialChanged(ui, ui.materials[0], grouped);
+    expect_true(editor.Apply(ui));
+    expect_true((value(0) == 2 && value(1) == 2));
+  }
+
+  test_that(
+      "glass retains its surface slot alongside editable emission and legacy fog") {
+    auto input = EditorFixture(R"(
+      scene = rbind(
+        set_medium(sphere(material=dielectric()), homogeneous_medium(sigma_a=.1), keep_surface=TRUE),
+        sphere(x=3, material=diffuse(fog=TRUE, fogdensity=.2)))
+      native_editor_scene(process_scene(scene)$scene)
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    PreviewObjectState ui;
+    editor.Describe(editor.roots[0].id, ui);
+    expect_true((ui.materials.size() == 2 && ui.materials[0].type == "dielectric"));
+    ui.material_slot = 1;
+    auto& emission = EditorField(ui, "Emitted radiance RGB");
+    emission.values = {2, 3, 4};
+    PreviewMaterialChanged(ui, ui.materials[1], emission);
+    expect_true(editor.Apply(ui));
+    const auto slots = PreviewMaterialSlots(editor.roots[0].object.get());
+    expect_true((slots[0].surface && slots[1].volume->medium->IsEmissive() &&
+                 live->lights.volume_scene->has_emission));
+    expect_true(
+        ((slots[1].volume->medium->Emission(point3f(0)) - point3f(2, 3, 4)).length() <
+         1e-6));
+    editor.Describe(editor.roots[1].id, ui);
+    auto& density = EditorField(ui, "Density multiplier");
+    density.values[0] = 2;
+    PreviewMaterialChanged(ui, ui.materials[0], density);
+    expect_true(editor.Apply(ui));
+    expect_true((std::abs(PreviewMaterialSlots(editor.roots[1].object.get())[0]
+                              .volume->medium->sigma_s[0] -
+                          .4) < 1e-6));
+    auto& absorption = EditorField(ui, "Absorption RGB (1/unit)");
+    absorption.values = {.1, .1, .1};
+    PreviewMaterialChanged(ui, ui.materials[0], absorption);
+    expect_true(editor.Apply(ui));
+    const auto fog =
+        PreviewMaterialSlots(editor.roots[1].object.get())[0].volume->medium;
+    expect_true((std::abs(fog->SamplePoint(point3f(0)).sigma_a[0] - .2) < 1e-6));
+  }
+
+  test_that("saved affine roundoff is repaired without accepting projective edits") {
+    // The matrix from a failed editor session had accumulated perspective terms.
+    // Reloading it must normalize the affine row and rebuild a consistent inverse.
+    std::array<float, 16> saved = {1.583781f,
+                                   6.80994e-7f,
+                                   .9143984f,
+                                   -6.379552e-7f,
+                                   6.688252e-7f,
+                                   1.3928479f,
+                                   5.946425e-9f,
+                                   4.962448e-8f,
+                                   -.91440225f,
+                                   -1.76495e-6f,
+                                   1.5837853f,
+                                   2.233796e-7f,
+                                   .7386962f,
+                                   .8322671f,
+                                   -7.5821228f,
+                                   .999999106f};
+    const auto repaired = PreviewMatrix(saved);
+    for (int col = 0; col < 4; ++col) {
+      expect_true(repaired.GetMatrix().m[3][col] == (col == 3 ? 1 : 0));
+      expect_true(repaired.GetInverseMatrix().m[3][col] == (col == 3 ? 1 : 0));
+    }
+    const auto identity =
+        Matrix4x4::Mul(repaired.GetMatrix(), repaired.GetInverseMatrix());
+    for (int row = 0; row < 4; ++row) {
+      for (int col = 0; col < 4; ++col) {
+        expect_true(std::abs(identity.m[row][col] - (row == col ? 1 : 0)) < 2e-6);
+      }
+    }
+    saved[3] = .001f;
+    expect_error_as(PreviewMatrix(saved), std::runtime_error);
+  }
+
+  test_that("long instance drags keep materials and ray intersections consistent") {
+    auto input = EditorFixture(R"(
+      source = add_object(cube(y=-.75, xwidth=2, ywidth=.5, zwidth=2,
+                               material=diffuse(color='white')),
+                          sphere(y=.5, radius=.5, material=glossy(color='red')))
+      native_editor_scene(process_scene(create_instances(source, x=c(.7387, 5),
+        y=.8323, z=-7.5821, angle_y=c(-30,0), scale_x=c(1.8288,1),
+        scale_y=c(1.3928,1), scale_z=c(1.8288,1)))$scene)
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    PreviewObjectState ui;
+    const auto selection = editor.roots[0].id;
+    editor.Describe(selection, ui);
+    editor.BeginTransform();
+    const double start_x = ui.translation[0];
+    bool applied = true;
+    // Exercise hundreds of render/rebuild checkpoints in one gesture, including
+    // a material rebuild. Only the glossy child should change color.
+    for (int frame = 1; frame <= 300; ++frame) {
+      ui.translation[0] = start_x + .005 * frame;
+      ui.numeric_transform = ui.apply_transform = true;
+      if (frame == 150) {
+        for (auto& panel : ui.materials) {
+          if (panel.type == "glossy") {
+            panel.fields[0].values = {.2, .4, .6};
+            panel.fields[0].changed = panel.changed = ui.apply_material = true;
+          }
+        }
+      }
+      applied = editor.Apply(ui) && applied;
+    }
+    editor.EndTransform();
+    expect_true(applied);
+    const auto saved = editor.ObjectTransform(0, 0);
+    for (int col = 0; col < 4; ++col) {
+      expect_true(saved.GetMatrix().m[3][col] == (col == 3 ? 1 : 0));
+      expect_true(saved.GetInverseMatrix().m[3][col] == (col == 3 ? 1 : 0));
+    }
+    // Re-selecting used to expose the accumulated non-affine row and reject
+    // further movement, even though every requested edit was just translation.
+    editor.Describe(selection, ui);
+    ui.model[12] += .25f;
+    ui.apply_transform = true;
+    expect_true(editor.Apply(ui));
+    expect_true(ui.error.empty());
+    expect_true((EditorColor(*editor.roots[0].contents, 0) - point3f(1)).length() <
+                1e-6);
+    expect_true(
+        (EditorColor(*editor.roots[0].contents, 1) - point3f(.2, .4, .6)).length() <
+        1e-6);
+    expect_true(
+        (EditorColor(*editor.roots[1].contents, 1) - point3f(1, 0, 0)).length() < 1e-6);
+
+    // A ray departing the exposed face of the base must never hit that same
+    // instance again. Inconsistent cached inverses turn these into black patches.
+    const auto& root = editor.roots[0];
+    random_gen rng(1);
+    int hits = 0, false_shadows = 0;
+    for (int x = 0; x < 5; ++x) {
+      for (int y = 0; y < 5; ++y) {
+        const Ray ray(root.frame(point3f(-.8 + .4 * x, -.95 + .1 * y, -5)),
+                      root.frame(vec3f(0, 0, 1)),
+                      .5);
+        hit_record hit, shadow;
+        if (root.object->hit(ray, 0, FLT_MAX, hit, rng)) {
+          ++hits;
+          const vec3f outgoing(hit.normal[0], hit.normal[1], hit.normal[2]);
+          const Ray leaving(
+              OffsetRayOrigin(hit.p, hit.pError, hit.normal, outgoing), outgoing, .5);
+          false_shadows += root.object->hit(leaving, 0, FLT_MAX, shadow, rng);
+        }
+      }
+    }
+    expect_true(hits == 25);
+    expect_true(false_shadows == 0);
+
+    // Live and exported/reloaded states must reconstruct the same inverse.
+    PreviewScene restored(input);
+    restored.ImportEdits(input, editor.ExportEdits());
+    EditorBuild replay(input, restored);
+    const auto& expected = restored.roots[0].frame.GetInverseMatrix();
+    const auto& actual = editor.roots[0].frame.GetInverseMatrix();
+    for (int row = 0; row < 4; ++row) {
+      for (int col = 0; col < 4; ++col) {
+        expect_true(std::abs(actual.m[row][col] - expected.m[row][col]) < 2e-6);
+      }
+    }
+  }
+
+  test_that("nested group drags retain each gesture's starting child edits") {
+    auto input = EditorFixture(R"(
+      source = group_objects(add_object(sphere(x=-1), sphere(x=1)))
+      native_editor_scene(process_scene(create_instances(source, x=c(-4,4),
+        angle_y=35, scale_x=2, scale_y=1.5, scale_z=.75))$scene)
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    const auto selection = EditorChild(editor, editor.roots[0].id);
+    const auto placed_origin = [&] {
+      return (editor.roots[0].frame *
+              editor.roots[0].contents->roots[0].frame)(point3f(0));
+    };
+    const auto original = placed_origin();
+    PreviewObjectState ui;
+    for (int gesture = 1; gesture <= 2; ++gesture) {
+      editor.Describe(selection, ui);
+      editor.BeginTransform();
+      const double start = ui.translation[0];
+      for (int frame = 1; frame <= 10; ++frame) {
+        ui.translation[0] = start + .02 * frame;
+        ui.numeric_transform = ui.apply_transform = true;
+        expect_true(editor.Apply(ui));
+      }
+      editor.EndTransform();
+      expect_true((placed_origin() - original - vec3f(.2 * gesture, 0, 0)).length() <
+                  1e-5);
+      expect_true(editor.roots[1].contents->settings.Empty());
+    }
+  }
+
+  test_that("live transforms use Fast temporarily and undo a complete gesture") {
+    auto input = EditorFixture("native_editor_scene(process_scene(sphere())$scene)");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    Transform object, world;
+    camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, 0, 5, 0, 1, 1);
+#ifdef HAS_OIDN
+    PreviewDisplay display(4,
+                           4,
+                           false,
+                           true,
+                           false,
+                           10,
+                           &cam,
+                           &object,
+                           &world,
+                           nullptr,
+                           nullptr,
+                           nullptr,
+                           false,
+                           false);
+#else
+    PreviewDisplay display(4, 4, false, true, false, 10, &cam, &object, &world, false);
+#endif
+    RayrenderGui gui;
+    display.AttachNativeGui(&gui, true, false);
+    display.scene_editor = &editor;
+    editor.Describe(editor.roots[0].id, gui.object);
+    display.BeginNativeHistory();
+    ++gui.history_epoch;
+    gui.object.begin_transform = gui.object.transform_active = true;
+    for (int i = 1; i <= 3; ++i) {
+      gui.object.translation[0] = i;
+      gui.object.rotation[1] = 15 * i;
+      gui.object.scale[0] = 1 + i;
+      gui.object.numeric_transform = gui.object.apply_transform = true;
+      gui.history_dirty = true;
+      expect_true(display.CommitNativeEdits(nullptr));
+      expect_true(display.write_fast_output);
+      expect_false(bool(gui.fast_preview));
+      expect_false(gui.can_undo);
+      const auto matrix = editor.ObjectTransform(0, 0).GetMatrix();
+      expect_true(std::abs(matrix.m[0][3] - i) < 1e-6);
+      expect_true(std::abs(matrix.m[0][0] - (1 + i) * std::cos(i * 15 * M_PI / 180)) <
+                  1e-5);
+    }
+    gui.object.transform_active = false;
+    gui.object.end_transform = true;
+    expect_true(display.CommitNativeEdits(nullptr));
+    expect_false(display.write_fast_output);
+    expect_true(gui.can_undo);
+    gui.history_requests.push_back(-1);
+    expect_true(display.CommitNativeEdits(nullptr));
+    expect_true(editor.settings.Empty());
+    expect_false(gui.can_undo);
+    gui.history_requests.push_back(1);
+    display.CommitNativeEdits(nullptr);
+    expect_true(std::abs(gui.object.translation[0] - 3) < 1e-6);
+    // A cancelled second gesture restores its baseline and adds no history step.
+    gui.object.begin_transform = gui.object.transform_active = true;
+    gui.object.translation[0] = 9;
+    gui.object.numeric_transform = gui.object.apply_transform = true;
+    gui.history_dirty = true;
+    ++gui.history_epoch;
+    display.CommitNativeEdits(nullptr);
+    gui.object.cancel_transform = true;
+    display.CommitNativeEdits(nullptr);
+    expect_false(display.write_fast_output);
+    expect_true(std::abs(gui.object.translation[0] - 3) < 1e-6);
+    gui.history_requests.push_back(-1);
+    display.CommitNativeEdits(nullptr);
+    expect_true(editor.settings.Empty());
+    expect_false(gui.can_undo);
+    // An explicitly selected Fast setting survives both start and release.
+    gui.fast_preview = 1;
+    gui.fast_pending = true;
+    display.CommitNativeEdits(nullptr);
+    gui.object.begin_transform = gui.object.transform_active = true;
+    display.CommitNativeEdits(nullptr);
+    gui.object.transform_active = false;
+    gui.object.end_transform = true;
+    display.CommitNativeEdits(nullptr);
+    expect_true(display.write_fast_output);
+  }
+
+  test_that("dragging keeps each published image paired with its selection outline") {
+    auto input = EditorFixture("native_editor_scene(process_scene(sphere())$scene)");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    const size_t size = 64;
+    Transform object, world;
+    EditorCountingCamera cam(
+        point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, 0, 5, 0, 1, 1);
+#ifdef HAS_OIDN
+    PreviewDisplay display(size,
+                           size,
+                           false,
+                           true,
+                           false,
+                           10,
+                           &cam,
+                           &object,
+                           &world,
+                           nullptr,
+                           nullptr,
+                           nullptr,
+                           false,
+                           false);
+#else
+    PreviewDisplay display(
+        size, size, false, true, false, 10, &cam, &object, &world, false);
+#endif
+    RayrenderGui gui;
+    gui.width = gui.height = size;
+    display.AttachNativeGui(&gui, true, false);
+    display.scene_editor = &editor;
+    editor.Describe(editor.roots[0].id, gui.object);
+
+    // Observe every GUI poll, including those between completed render samples.
+    // Texture publication identifies which committed geometry the image depicts.
+    struct Frames {
+      RayrenderGui* gui;
+      PreviewScene* scene;
+      uint64_t image_revision = 0;
+      size_t count = 0;
+      bool outlined = true, synchronized = true;
+    } frames{&gui, &editor};
+    rayimgui_api_v1 api{};
+    api.texture_create = [](uint64_t owner,
+                            const rayimgui_image_v1* image,
+                            uint64_t* handle,
+                            rayimgui_error_v1*) -> int32_t {
+      auto& frames = *reinterpret_cast<Frames*>(uintptr_t(owner));
+      *handle = image->alpha == RAYIMGUI_OPAQUE ? 1 : 2;
+      if (*handle == 1) {
+        frames.image_revision = frames.scene->Revision();
+      }
+      return 0;
+    };
+    api.texture_update = [](uint64_t owner,
+                            uint64_t handle,
+                            const rayimgui_image_v1*,
+                            rayimgui_error_v1*) -> int32_t {
+      auto& frames = *reinterpret_cast<Frames*>(uintptr_t(owner));
+      if (handle == 1) {
+        frames.image_revision = frames.scene->Revision();
+      }
+      return 0;
+    };
+    api.step = [](uint64_t owner, rayimgui_step_v1*, rayimgui_error_v1*) -> int32_t {
+      auto& frames = *reinterpret_cast<Frames*>(uintptr_t(owner));
+      const auto& gui = *frames.gui;
+      if (gui.texture) {
+        ++frames.count;
+        frames.outlined =
+            frames.outlined && gui.selection_visible && gui.selection_texture;
+        frames.synchronized =
+            frames.synchronized && gui.selection_revision == frames.image_revision;
+      }
+      return 0;
+    };
+    gui.api = &api;
+    gui.session = uint64_t(reinterpret_cast<uintptr_t>(&frames));
+    RayMatrix rgb(size, size, 3), rgb2(size, size, 3), normal(size, size, 3);
+    RayMatrix albedo(size, size, 3), alpha(size, size, 1), filtered(size, size, 3);
+    adaptive_sampler sampler(
+        1, size, size, 10, 0, 0, 1, rgb, rgb2, normal, albedo, alpha, filtered, false);
+    random_gen rng(1);
+    auto completed_sample = [&] {
+      return display.DrawNativeGui(sampler, 0, 0, live->root.get(), rng);
+    };
+    expect_false(completed_sample());
+    expect_true(gui.selection_visible);
+    expect_true(std::count(gui.selection_mask.begin(), gui.selection_mask.end(), 1) >
+                0);
+
+    ++gui.history_epoch;
+    gui.object.begin_transform = true;
+    gui.object.transform_active = true;
+    for (int frame = 1; frame <= 3; ++frame) {
+      const auto previous_outline = gui.selection_pixels;
+      const auto previous_mask = gui.selection_mask;
+      const auto previous_revision = frames.image_revision;
+      const size_t previous_rays = cam.visibility_rays;
+      gui.object.translation[0] = .5 * frame;
+      gui.object.numeric_transform = gui.object.apply_transform = true;
+      gui.history_dirty = true;
+      expect_true(completed_sample());
+      expect_true(display.write_fast_output);
+      expect_true(gui.selection_visible);
+      expect_true(gui.selection_revision == previous_revision);
+      expect_true(gui.selection_pixels == previous_outline);
+      expect_true(editor.Revision() != previous_revision);
+
+      // Sampling the moved scene takes time. GUI-only frames must retain the
+      // complete last snapshot instead of blinking or tracing queued transforms.
+      for (int poll = 0; poll < 3; ++poll) {
+        expect_false(gui.poll(true));
+      }
+      expect_true(frames.outlined);
+      expect_true(frames.synchronized);
+      expect_true(cam.visibility_rays == previous_rays);
+
+      expect_false(completed_sample());
+      expect_true(gui.selection_visible);
+      expect_true(gui.selection_revision == editor.Revision());
+      expect_true(gui.selection_mask != previous_mask);
+      expect_true(cam.visibility_rays == previous_rays + size * size);
+    }
+    // Restoring normal quality on release is also a render restart; it must not
+    // hide the last outline while the higher-quality image is being sampled.
+    gui.object.transform_active = false;
+    gui.object.end_transform = true;
+    expect_true(display.CommitNativeEdits(nullptr));
+    expect_false(display.write_fast_output);
+    expect_true(gui.selection_visible);
+    expect_false(gui.poll(true));
+    expect_false(completed_sample());
+    expect_true(frames.count >= 17);
+    expect_true(frames.outlined);
+    expect_true(frames.synchronized);
+  }
+
+  test_that("material changes commit automatically and report field violations") {
+    auto input = EditorFixture(R"(
+      asset=tempfile(fileext='.png'); png::writePNG(matrix(1,4,4),asset)
+      broken=tempfile(fileext='.png'); writeLines('not an image',broken)
+      scene=native_editor_scene(process_scene(sphere(material=microfacet(roughness=.2)))$scene)
+      attr(scene,'asset')=asset; attr(scene,'broken')=broken; scene
+    )");
+    PreviewScene editor(input);
+    auto live = std::make_shared<EditorBuild>(input, editor);
+    editor.prepare_rebuild = [&](PreviewScene& next) {
+      auto staged = std::make_shared<EditorBuild>(input, next);
+      return [&, staged] {
+        live = staged;
+      };
+    };
+    PreviewObjectState ui;
+    editor.Describe(editor.roots[0].id, ui);
+    auto edit = [&](const char* name, double value) {
+      auto& field = EditorField(ui, name);
+      field.values[0] = value;
+      PreviewMaterialChanged(ui, ui.materials[0], field);
+    };
+    edit("Roughness X/Y", .6);
+    expect_true(ui.apply_material);
+    expect_true(editor.Apply(ui));
+    expect_true(std::abs(EditorField(ui, "Roughness X/Y").values[0] - .6) < 1e-6);
+    const auto before = live;
+    edit("Roughness X/Y", 2);
+    expect_false(EditorField(ui, "Roughness X/Y").error.empty());
+    expect_false(editor.Apply(ui));
+    expect_true(live == before);
+    expect_true(EditorField(ui, "Roughness X/Y").values[0] == 2);
+    edit("Roughness X/Y", .3);
+    expect_true(editor.Apply(ui));
+    expect_true(EditorField(ui, "Roughness X/Y").error.empty());
+    edit("Texture mode", 5);
+    expect_false(editor.Apply(ui));
+    expect_false(EditorField(ui, "Color texture file").error.empty());
+    auto file = [&](const std::string& path) {
+      auto& field = EditorField(ui, "Color texture file");
+      field.text = path;
+      PreviewMaterialChanged(ui, ui.materials[0], field);
+    };
+    const auto texture_before = live;
+    file(Rcpp::as<std::string>(input.attr("asset")) + ".missing");
+    expect_false(editor.Apply(ui));
+    expect_false(EditorField(ui, "Color texture file").error.empty());
+    expect_true(live == texture_before);
+    file(Rcpp::as<std::string>(input.attr("broken")));
+    expect_false(editor.Apply(ui));
+    expect_false(EditorField(ui, "Color texture file").error.empty());
+    expect_true(live == texture_before);
+    file(Rcpp::as<std::string>(input.attr("asset")));
+    expect_true(editor.Apply(ui));
+    expect_true(EditorField(ui, "Color texture file").error.empty());
+    expect_true(EditorField(ui, "Texture mode").values[0] == 5);
+    edit("Use roughness map", 1);
+    expect_false(editor.Apply(ui));
+    auto& map = EditorField(ui, "Roughness map file");
+    map.text = Rcpp::as<std::string>(input.attr("asset"));
+    PreviewMaterialChanged(ui, ui.materials[0], map);
+    auto& range = EditorField(ui, "Roughness map range");
+    range.values = {.8, .2, 0};
+    PreviewMaterialChanged(ui, ui.materials[0], range);
+    expect_false(editor.Apply(ui));
+    expect_false(EditorField(ui, "Roughness map range").error.empty());
+    EditorField(ui, "Roughness map range").values = {.1, .8, 0};
+    PreviewMaterialChanged(ui, ui.materials[0], EditorField(ui, "Roughness map range"));
+    expect_true(editor.Apply(ui));
+  }
+
   test_that("history rebuilds transforms and materials and keeps failed undo atomic") {
     auto input = EditorFixture(
         "native_editor_scene(process_scene(rbind(sphere(material=glossy()), sphere(x=5)))$scene)");
@@ -545,7 +1176,7 @@ context("Native object editor") {
     expect_true(
         (rayimgui_api_from_R_v1(
              handle, sizeof(rayimgui_api_v1), RAYIMGUI_CAP_HEADLESS, &gui.api) == 0));
-    if (gui.api->header.abi_minor < 8) {
+    if (gui.api->header.abi_minor < 9) {
       return;
     }
     rayimgui_session_desc_v1 desc{
@@ -559,7 +1190,7 @@ context("Native object editor") {
     gui.pixels.assign(80 * 60 * 4, 128);
     gui.publish();
     auto input = EditorFixture(
-        "native_editor_scene(process_scene(sphere(material=glossy()))$scene)");
+        "native_editor_scene(process_scene(rbind(sphere(material=glossy()), set_medium(cube(x=5), homogeneous_medium(sigma_s=.2))))$scene)");
     PreviewScene editor(input);
     auto live = std::make_shared<EditorBuild>(input, editor);
     Transform object, world;
@@ -647,6 +1278,8 @@ context("Native object editor") {
     expect_true(display.UpdateNativeSelectionMask());
     expect_true((gui.selection_id == 0 && !gui.selection_visible));
     expect_true((cam.visibility_rays == 2 * first_trace));
+    editor.Describe(editor.roots[1].id, gui.object);
+    expect_true((gui.api->step(gui.session, &step, &gui.error) == 0));
     gui.close();
   }
   test_that(

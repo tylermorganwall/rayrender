@@ -24,7 +24,7 @@
 #' @param stars_exposure Default `0`. Artistic exposure adjustment for stars, in stops.
 #' @param planets Default `FALSE`. Composite bright planets into the sky image.
 #' @param sun Default `TRUE`. Include the solar disk when selected by `render_mode`.
-#'   Set `FALSE` to omit it from the image.
+#'   Set `FALSE` to omit it. Hosek uses a separately sampled celestial disk.
 #' @param moon Default `TRUE`. Composite a Moon image into the sky.
 #'   Set `FALSE` when adding a separate [moon_light()].
 #' @param moon_atmosphere Default `FALSE`. Include atmospheric scattering of moonlight.
@@ -62,7 +62,10 @@
 #' same integrators as [infinite_light()] and adds no finite atmospheric haze.
 #' Use [render_scene()]'s `iso` to adjust exposure.
 #'
-#' For a separately sampled Sun, set `render_mode = "atmosphere"` and add
+#' Hosek skies automatically use a separately sampled Sun with matching turbidity,
+#' intensity, rotation, and white adaptation. This keeps direct light independent
+#' of image resolution. An explicit [sun_light()] replaces that automatic disk.
+#' For a separately sampled Sun with a Prague image, set `render_mode = "atmosphere"` and add
 #' [sun_light()] with matching location, time, and atmospheric settings. This
 #' avoids relying on the environment image to resolve the small solar disk.
 #'
@@ -244,6 +247,10 @@ sky_light_image = function(
 
 #' @keywords internal
 prepare_sky_light_image = function(light) {
+  if (isTRUE(light$separate_sun)) {
+    position = native_sky_position(light)
+    return(native_sky_manual_image(light, position$elevation, position$azimuth))
+  }
   if (!requireNamespace("skymodelr", quietly = TRUE)) {
     stop(
       "sky_light_image() requires skymodelr. Install it with install.packages('skymodelr').",

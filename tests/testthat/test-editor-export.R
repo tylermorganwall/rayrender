@@ -253,3 +253,25 @@ test_that("temporary OBJ exports preserve material and texture dependencies", {
   copied_texture = sub("^map_Kd -s 1 1 1 ", "", lines[2L])
   expect_true(file.exists(file.path(destination, copied_texture)))
 })
+
+test_that("exports retain selected optics and depth and clear an inactive lens", {
+  state = export_test_state()
+  state$max_depth = 7L
+  state$camera_rotation = "free"
+  state$camera$fov = -1
+  state$camera$film_size = 35
+  state$camera$camera_scale = 2
+  state$camera_description_file = "wide"
+  args = native_export_render_args(export_test_args(), state)
+  expect_identical(args$camera_description_file, "wide")
+  expect_identical(args$camera_rotation, "free")
+  expect_equal(
+    c(args$max_depth, args$film_size, args$camera_scale),
+    c(7, 35, 2)
+  )
+  state$camera$fov = 0
+  state$camera_description_file = ""
+  args = native_export_render_args(args, state)
+  expect_identical(args$camera_description_file, NA_character_)
+  expect_equal(args$fov, 0)
+})

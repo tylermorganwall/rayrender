@@ -18,7 +18,11 @@ test_that("celestial descriptions validate and preserve observation settings", {
   for (bad in list(0, -1, NA_real_, Inf, 15, 32.5, c(32, 32), "32")) {
     expect_error(sun_light(0, 0, time, resolution = bad), "resolution")
   }
-  expect_error(sun_light(0, 0, time, sky_args = list(hosek = TRUE)), "Prague")
+  expect_s3_class(
+    sun_light(0, 0, time, sky_args = list(hosek = TRUE)),
+    "ray_infinite_light"
+  )
+  expect_error(moon_light(0, 0, time, sky_args = list(hosek = TRUE)), "Prague")
   expect_error(
     sun_light(0, 0, time, sky_args = list(render_mode = "all")),
     "Unsupported"

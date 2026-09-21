@@ -192,6 +192,9 @@ Transform LookAt(const point3f &pos, const point3f &look, const vec3f &up) {
     throw std::runtime_error("\"up\" vector and viewing direction passed to LookAt are pointing in the same direction.  Using the identity transformation.");
     return Transform();
   }
+  // Keep camera axes orthonormal even near an up-axis pole. Otherwise the
+  // optical frame shrinks with pitch, changing both field of view and movement.
+  right = unit_vector(right);
   vec3f newUp = cross(dir, right);
   cameraToWorld.m[0][0] = right.xyz.x;
   cameraToWorld.m[1][0] = right.xyz.y;

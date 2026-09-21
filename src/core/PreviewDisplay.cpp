@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <sstream>
 #include <stdexcept>
+#include <limits>
 
 #ifdef NOT_CRAN
 #include "../hitables/infinite_area_light.h"
@@ -17,6 +18,12 @@
 #include "../materials/material.h"
 #include <testthat.h>
 #endif
+
+// DrawImage runs after a sample. Its caller increments the zero-based sample
+// index on return, so resetting to zero would skip sample zero in the new image.
+// Unsigned wraparound makes that next increment restart at zero, as in the
+// integrator's atmosphere-restart path. This is never used as a sample count.
+static constexpr size_t PREVIEW_RESTART_SAMPLE = std::numeric_limits<size_t>::max();
 
 static const unsigned int PREVIEW_STATUS_MIN_WIDTH = 640;
 static const unsigned int PREVIEW_STATUS_ROW_HEIGHT = 24;
@@ -471,25 +478,30 @@ Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
   vec3f cam_up = cam->get_up();
   point2f ortho = cam->get_ortho();
   point3f key_lookat = PreviewCameraLookat(cam);
-  Float key_aperture = fov > 0 ? cam_aperture : 0;
-  Float key_fov = fov > 0 ? fov : 0;
+  Float key_aperture = cam_aperture;
+  Float key_fov = fov;
 
-  return Rcpp::List::create(Named("x") = origin.xyz.x,
-                            Named("y") = origin.xyz.y,
-                            Named("z") = origin.xyz.z,
-                            Named("dx") = key_lookat.xyz.x,
-                            Named("dy") = key_lookat.xyz.y,
-                            Named("dz") = key_lookat.xyz.z,
-                            Named("aperture") = key_aperture,
-                            Named("fov") = key_fov,
-                            Named("focal") = fd,
-                            Named("exposure") = preview_exposure_adjustment,
-                            Named("env_rotation") = env_rotation,
-                            Named("orthox") = ortho.xy.x,
-                            Named("orthoy") = ortho.xy.y,
-                            Named("upx") = cam_up.xyz.x,
-                            Named("upy") = cam_up.xyz.y,
-                            Named("upz") = cam_up.xyz.z);
+  return Rcpp::List::create(
+      Named("x") = origin.xyz.x,
+      Named("y") = origin.xyz.y,
+      Named("z") = origin.xyz.z,
+      Named("dx") = key_lookat.xyz.x,
+      Named("dy") = key_lookat.xyz.y,
+      Named("dz") = key_lookat.xyz.z,
+      Named("aperture") = key_aperture,
+      Named("fov") = key_fov,
+      Named("focal") = fd,
+      Named("exposure") = preview_exposure_adjustment,
+      Named("env_rotation") = env_rotation,
+      Named("orthox") = ortho.xy.x,
+      Named("orthoy") = ortho.xy.y,
+      Named("upx") = cam_up.xyz.x,
+      Named("upy") = cam_up.xyz.y,
+      Named("upz") = cam_up.xyz.z,
+      Named("camera_model") =
+          camera_rig ? camera_rig->model : PreviewCameraRig::ModelForFov(fov),
+      Named("film_size") = camera_rig ? camera_rig->film_size : 22,
+      Named("camera_scale") = camera_rig ? camera_rig->camera_scale : 1);
 }
 
 // Preserve the same field ordering as CreateCurrentKeyframe for cheap comparisons
@@ -519,7 +531,11 @@ void PreviewDisplay::SaveCurrentKeyframe(Float env_rotation) {
   }
 }
 
-bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state, Float* env_rotation) {
+bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state, Float* env_rotation,
+                                      bool prepared) {
+  if (camera_rig && !prepared) {
+    SetCamera(camera_rig->Prepare(state)());
+  }
   point3f key_pos = point3f(Rcpp::as<Float>(state["x"]),
                             Rcpp::as<Float>(state["y"]),
                             Rcpp::as<Float>(state["z"]));
@@ -547,13 +563,13 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state, Float* env_rotati
   }
   vec2f key_ortho = vec2f(Rcpp::as<Float>(state["orthox"]),
                           Rcpp::as<Float>(state["orthoy"]));
-  cam->update_focal_absolute(key_focal);
-  cam->update_position_absolute(key_pos);
-  cam->update_lookat(key_lookat);
-  cam->update_up(key_up);
-  cam->update_aperture_absolute(key_aperture);
-  cam->update_fov_absolute(key_fov);
-  cam->update_ortho_absolute(key_ortho);
+  if (!camera_rig) {
+    cam->update_focal_absolute(key_focal);
+    cam->update_pose_absolute(key_pos, key_lookat, key_up);
+    cam->update_aperture_absolute(key_aperture);
+    cam->update_fov_absolute(key_fov);
+    cam->update_ortho_absolute(key_ortho);
+  }
   return true;
 }
 
@@ -703,6 +719,8 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
   }
 
   try {
+    // Use the displayed transition durations even before any field is edited.
+    SyncNativeAnimationState();
     Rcpp::DataFrame keyframes = KeyframesDataFrame();
     Rcpp::List call_args;
     call_args.push_back(keyframes, "positions");
@@ -723,6 +741,21 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     }
     if(!frames_supplied) {
       call_args.push_back(static_cast<int>(Keyframes.size() * 30), "frames");
+    }
+    if (native_gui && native_gui->animation_timing_available &&
+        native_gui->keyframe_snapshots.size() == Keyframes.size()) {
+      const size_t segments = Keyframes.size() - (keyframe_motion_closed ? 0 : 1);
+      Rcpp::IntegerVector durations(segments);
+      for (size_t i = 0; i < segments; ++i) {
+        durations[i] = native_gui->keyframe_snapshots[i].frames_to_next;
+      }
+      // The generator shares these knots across position, lens and orientation.
+      // Replace a supplied vector instead of passing duplicate named arguments.
+      if (call_args.containsElementNamed("segment_frames")) {
+        call_args["segment_frames"] = durations;
+      } else {
+        call_args.push_back(durations, "segment_frames");
+      }
     }
     call_args.push_back(keyframe_motion_closed, "closed");
 
@@ -748,8 +781,10 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
   preview_motion_frame = 0;
   current_keyframe = 0;
   preview_motion_active = true;
-  Rprintf("Previewing keyframe motion (%d frames). Press M to cancel.\n",
-          static_cast<int>(preview_motion.nrows()));
+  Rprintf("Previewing keyframe motion (%d frames). %s\n",
+          static_cast<int>(preview_motion.nrows()),
+          native_gui ? "Press M to pause/resume; Stop restores the camera."
+                     : "Press M to cancel.");
   return true;
 }
 
@@ -771,14 +806,21 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     return false;
   }
 
-  if(preview_motion_frame >= preview_motion.nrows()) {
-    ApplyCameraState(preview_motion_restore_state, env_rotation);
-    current_keyframe = preview_motion_restore_keyframe;
-    preview_motion_active = false;
-    preview_motion_frame = 0;
-    ApplyStaticPreviewCameraMotionRange(cam);
-    Rprintf("Finished keyframe motion preview. Restored original camera.\n");
-    return true;
+  bool wrapped = false;
+  if (preview_motion_frame >= preview_motion.nrows()) {
+    if (native_gui && native_gui->animation_loop) {
+      // Reuse the generated frames and keep the original Stop/restore camera.
+      preview_motion_frame = 0;
+      wrapped = true;
+    } else {
+      ApplyCameraState(preview_motion_restore_state, env_rotation);
+      current_keyframe = preview_motion_restore_keyframe;
+      preview_motion_active = false;
+      preview_motion_frame = 0;
+      ApplyStaticPreviewCameraMotionRange(cam);
+      Rprintf("Finished keyframe motion preview. Restored original camera.\n");
+      return true;
+    }
   }
 
   PreviewCameraState camera_state_before = CapturePreviewCameraState(cam);
@@ -797,7 +839,21 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
   Rcpp::NumericVector upy = preview_motion["upy"];
   Rcpp::NumericVector upz = preview_motion["upz"];
   int keyframe_count = static_cast<int>(Keyframes.size());
-  if(keyframe_count > 0) {
+  if (native_gui && native_gui->animation_timing_available &&
+      native_gui->keyframe_snapshots.size() == Keyframes.size()) {
+    // Highlight the view at the start of the current transition. The final
+    // repeated endpoint of a closed path belongs to the first keyframe.
+    const size_t segments = Keyframes.size() - (keyframe_motion_closed ? 0 : 1);
+    int boundary = 0;
+    current_keyframe = 0;
+    for (size_t i = 0; i < segments; ++i) {
+      boundary += native_gui->keyframe_snapshots[i].frames_to_next;
+      if (preview_motion_frame < boundary) {
+        break;
+      }
+      current_keyframe = int((i + 1) % Keyframes.size());
+    }
+  } else if (keyframe_count > 0) {
     double frames_per_keyframe =
       static_cast<double>(preview_motion.nrows()) / static_cast<double>(keyframe_count);
     int playback_keyframe = frames_per_keyframe > 0 ?
@@ -821,10 +877,49 @@ bool PreviewDisplay::AdvancePreviewMotion(Float* env_rotation) {
     Named("upy") = upy[preview_motion_frame],
     Named("upz") = upz[preview_motion_frame]
   );
-  ApplyCameraState(state, env_rotation);
-  ApplyPreviewCameraMotionRange(cam,
-                                camera_state_before,
-                                CapturePreviewCameraState(cam));
+  if (camera_rig && current_keyframe >= 0) {
+    const auto& key = Keyframes[size_t(current_keyframe)];
+    const auto& next = Keyframes[(size_t(current_keyframe) + 1) % Keyframes.size()];
+    const double key_fov = Rcpp::as<double>(key["fov"]);
+    if (PreviewCameraRig::ModelForFov(key_fov) != 0 ||
+        PreviewCameraRig::ModelForFov(Rcpp::as<double>(next["fov"])) != 0) {
+      state["fov"] = key_fov;
+    }
+    for (const char* name : {"camera_model", "film_size", "camera_scale"}) {
+      if (key.containsElementNamed(name)) {
+        state[name] = key[name];
+      }
+    }
+    // Aperture units differ between thin-lens and physical-lens cameras.
+    // Keep optics fixed until a projection/lens cut; interpolate same-lens edits.
+    const int key_model = key.containsElementNamed("camera_model")
+                              ? Rcpp::as<int>(key["camera_model"])
+                              : 0;
+    const int next_model = next.containsElementNamed("camera_model")
+                               ? Rcpp::as<int>(next["camera_model"])
+                               : 0;
+    if (key_model != next_model) {
+      state["aperture"] = key["aperture"];
+      state["focal"] = key["focal"];
+    }
+  }
+  try {
+    ApplyCameraState(state, env_rotation);
+  } catch (const std::exception& error) {
+    CancelPreviewMotion(env_rotation);
+    if (native_gui) {
+      native_gui->animation_message = std::string("Playback stopped: ") + error.what();
+    }
+    return true;
+  }
+  if (wrapped) {
+    // An open path jumps back to its first view. Do not blur that discontinuity
+    // across the scene; subsequent frames retain their normal shutter interval.
+    ApplyStaticPreviewCameraMotionRange(cam);
+  } else {
+    ApplyPreviewCameraMotionRange(
+        cam, camera_state_before, CapturePreviewCameraState(cam));
+  }
   preview_motion_frame++;
   return true;
 }
@@ -1634,7 +1729,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   SCOPED_CONTEXT("Overall");
   SCOPED_TIMER_COUNTER("Draw Image");
   auto reset_preview_render = [&]() {
-    ns = 0;
+    ns = PREVIEW_RESTART_SAMPLE;
     adaptive_pixel_sampler.reset();
     adaptive_pixel_sampler_small.reset();
     ResetPreviewExposure();
@@ -2002,7 +2097,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
               ApplyStaticPreviewCameraMotionRange(cam);
               blanked = true;
-              ns = 0;
+              ns = PREVIEW_RESTART_SAMPLE;
               adaptive_pixel_sampler.reset();
               adaptive_pixel_sampler_small.reset();
               ResetPreviewExposure();
@@ -2218,7 +2313,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               if(!blanked && !terminate && IsX11RenderInvalidatingKey(d, e.xkey.keycode)) {
                 ApplyStaticPreviewCameraMotionRange(cam);
                 blanked = true;
-                ns = 0;
+                ns = PREVIEW_RESTART_SAMPLE;
                 adaptive_pixel_sampler.reset();
                 adaptive_pixel_sampler_small.reset();
                 ResetPreviewExposure();
@@ -2249,7 +2344,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           if(!PickCameraTarget(u, v, left, world)) {
             continue;
           }
-          ns = 0;
+          ns = PREVIEW_RESTART_SAMPLE;
           adaptive_pixel_sampler.reset();
           adaptive_pixel_sampler_small.reset();
           ResetPreviewExposure();
@@ -2830,7 +2925,7 @@ static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = tru
     }
     blanked = true;
     if(ns_w != nullptr) {
-      *ns_w = 0;
+      *ns_w = PREVIEW_RESTART_SAMPLE;
     }
     if(aps != nullptr) {
       aps->reset();

@@ -23,6 +23,10 @@
 #' a corner because the keyed path is preserved. `manual` just returns the values passed in,
 #' properly formatted to be passed to `render_animation()`.
 #' @param frames Default `30`. Total number of frames.
+#' @param segment_frames Default `NULL`. Positive integer frame intervals between
+#' successive keyframes, for `spline`, `linear`, `quad`, `cubic`, and `exp` motion.
+#' Include the last-to-first transition when `closed = TRUE`. Overrides `frames`;
+#' the resulting path has `sum(segment_frames) + 1` frames, including both endpoints.
 #' @param closed Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.
 #' @param constant_step Default `TRUE`. Whether to make the camera travel at a constant speed
 #' when `type = "bezier"`.
@@ -139,7 +143,8 @@ generate_camera_motion = function(
   damp_motion = FALSE,
   damp_magnitude = 0.1,
   progress = TRUE,
-  smooth_orientation = TRUE
+  smooth_orientation = TRUE,
+  segment_frames = NULL
 ) {
   damp_magnitude = 1 - damp_magnitude
   stopifnot(damp_magnitude >= 0 && damp_magnitude < 1)
@@ -187,6 +192,25 @@ generate_camera_motion = function(
     focal_distances = temp[, "focal"]
     ortho_dims = temp[, c("orthox", "orthoy")]
     camera_ups = temp[, c("upx", "upy", "upz")]
+  }
+  if (!is.null(segment_frames)) {
+    if (!type %in% c("spline", "linear", "quad", "cubic", "exp")) {
+      stop(
+        "`segment_frames` requires spline, linear, quad, cubic, or exp motion.",
+        call. = FALSE
+      )
+    }
+    count = if (is.list(positions) && is.null(dim(positions))) {
+      length(positions)
+    } else {
+      nrow(positions)
+    }
+    segment_frames = camera_segment_frames(
+      frames,
+      count + as.integer(closed),
+      segment_frames
+    )
+    frames = sum(segment_frames) + 1L
   }
   if (type == "bezier") {
     position_control_points = process_point_series(
@@ -452,7 +476,7 @@ generate_camera_motion = function(
     if (length(apertures) == 1) {
       apertures = rep(apertures, length(positions$x))
     }
-    if (length(apertures) == 1) {
+    if (length(fovs) == 1) {
       fovs = rep(fovs, length(positions$x))
     }
     tween_df = data.frame(
@@ -497,7 +521,8 @@ generate_camera_motion = function(
             tween_spline_path(
               tween_df[, columns, drop = FALSE],
               n = frames,
-              closed = closed
+              closed = closed,
+              segment_frames = segment_frames
             )
           }
         )
@@ -511,22 +536,48 @@ generate_camera_motion = function(
         tween,
         n = frames,
         ease = type,
-        closed = closed
+        closed = closed,
+        segment_frames = segment_frames
       ))
     }
     rownames(final_motion) = NULL
     if (aperture_linear) {
-      final_motion$aperture = tween(apertures, n = frames, ease = "linear")
+      final_motion$aperture = tween(
+        apertures,
+        n = frames,
+        ease = "linear",
+        segment_frames = segment_frames
+      )
     }
     if (fov_linear) {
-      final_motion$fov = tween(fovs, n = frames, ease = "linear")
+      final_motion$fov = tween(
+        fovs,
+        n = frames,
+        ease = "linear",
+        segment_frames = segment_frames
+      )
     }
     if (focal_linear) {
-      final_motion$focal = tween(focal_distances, n = frames, ease = "linear")
+      final_motion$focal = tween(
+        focal_distances,
+        n = frames,
+        ease = "linear",
+        segment_frames = segment_frames
+      )
     }
     if (ortho_linear) {
-      final_motion$orthox = tween(ortho$x, n = frames, ease = "linear")
-      final_motion$orthoy = tween(ortho$y, n = frames, ease = "linear")
+      final_motion$orthox = tween(
+        ortho$x,
+        n = frames,
+        ease = "linear",
+        segment_frames = segment_frames
+      )
+      final_motion$orthoy = tween(
+        ortho$y,
+        n = frames,
+        ease = "linear",
+        segment_frames = segment_frames
+      )
     }
     if (smooth_orientation) {
       orientation_motion = tween_camera_orientation(
@@ -534,7 +585,8 @@ generate_camera_motion = function(
         lookats = as.matrix(tween_df[, c("dx", "dy", "dz")]),
         camera_ups = as.matrix(tween_df[, c("upx", "upy", "upz")]),
         output_positions = as.matrix(final_motion[, c("x", "y", "z")]),
-        closed = closed
+        closed = closed,
+        segment_frames = segment_frames
       )
       final_motion[, c("dx", "dy", "dz")] = orientation_motion$lookats
       final_motion[, c("upx", "upy", "upz")] = orientation_motion$camera_ups

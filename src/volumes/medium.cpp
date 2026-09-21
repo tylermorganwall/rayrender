@@ -162,8 +162,8 @@ Float SampledField::Lookup(const point3f &p, int channel) const {
   return result;
 }
 
-Medium::Medium(const Rcpp::List &d)
-    : sigma_a(rgb(d, "sigma_a") * Rcpp::as<Float>(d["density_scale"])),
+Medium::Medium(const Rcpp::List& d)
+    : description(d), sigma_a(rgb(d, "sigma_a") * Rcpp::as<Float>(d["density_scale"])),
       sigma_s(rgb(d, "sigma_s") * Rcpp::as<Float>(d["density_scale"])),
       emission(rgb(d, "emission")), g(Rcpp::as<Float>(d["g"])),
       emission_scale(Rcpp::as<Float>(d["emission_scale"])),
@@ -225,7 +225,9 @@ MediumProperties Medium::Properties(Float density, const point3f &le, const poin
   if (legacy_albedo) {
     point3f a = legacy_albedo->value(0, 0, p);
     out.sigma_s = sigma_s * a;
-    out.sigma_a = sigma_s * (point3f(1) - a);
+    // Legacy fog colors absorb the complement of their scattering tint.
+    // Inspector absorption adds to that loss while preserving the color texture.
+    out.sigma_a += sigma_s * (point3f(1) - a);
   }
   out.Le = le;
   out.phase = HGPhaseFunction(g);

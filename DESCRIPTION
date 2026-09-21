@@ -26,9 +26,9 @@ Imports:
     vctrs,
     cli,
     pillar,
-    skymodelr (>= 0.6.3),
+    skymodelr (>= 0.6.5),
 Suggests:
-    rayimgui (>= 0.0.12),
+    rayimgui (>= 0.0.17),
     ambient,
     knitr,
     rmarkdown,
@@ -42,7 +42,7 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.3)
+LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.5)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
 SystemRequirements: C++20
 Biarch: true

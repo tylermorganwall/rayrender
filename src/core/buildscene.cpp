@@ -1008,6 +1008,18 @@ std::shared_ptr<hitable> build_scene(List& scene,
         imp_sample_objects.add(entry);
       }
   }
+  // Editor overrides can enable or disable volume emission after construction.
+  // Refresh this summary from the committed candidate slots, including instances.
+  if (auto volume_scene = preview_scene ? imp_sample_objects.volume_scene : nullptr) {
+    volume_scene->has_emission = false;
+    for (const auto& root : preview_scene->roots) {
+      for (const auto& slot : PreviewMaterialSlots(root.object.get())) {
+        if (slot.volume && slot.volume->medium->IsEmissive()) {
+          volume_scene->has_emission = true;
+        }
+      }
+    }
+  }
   std::shared_ptr<BVHAggregate> world_bvh = std::make_shared<BVHAggregate>(
       list.objects, shutteropen, shutterclose, 1, true, Iden, Iden, false);
 

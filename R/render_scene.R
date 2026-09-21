@@ -55,6 +55,11 @@
 #' Right clicking preserves the focal distance.
 #' Some options aren't available for all cameras. When using a realistic camera,
 #' the aperture and field of view cannot be changed from their initial settings.
+#' @param camera_rotation Default `"clamped"`. Interactive camera rotation mode.
+#' `"clamped"` stops orbit and pitch movement 0.1 degrees short of the current
+#' camera up axis (Y by default). `"free"` carries the camera orientation through
+#' the poles using quaternions. Shift-W/S pitch and Shift-A/D roll use the camera's
+#' local axes. The native Camera pane can toggle free rotation during preview.
 #' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 #' updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
 #' same window; pressing Return again returns to deferred mode.
@@ -313,7 +318,8 @@ render_scene = function(
   end_frame = NA,
   mode = c("auto", "image", "animation", "preview"),
   gui = c("auto", "imgui", "legacy", "none"),
-  exposure = 1
+  exposure = 1,
+  camera_rotation = "clamped"
 ) {
   if (
     !is.numeric(exposure) ||
@@ -325,6 +331,7 @@ render_scene = function(
   }
   mode = match.arg(mode)
   gui = match.arg(gui)
+  camera_rotation = match.arg(camera_rotation, c("clamped", "free"))
   if (gui == "none") {
     preview = FALSE
     interactive = FALSE
@@ -559,7 +566,8 @@ render_scene = function(
         start_frame = start_frame,
         end_frame = end_frame,
         mode = mode,
-        gui = gui
+        gui = gui,
+        camera_rotation = camera_rotation
       )
     })
     names(output) = vapply(cameras, function(cam) cam$name, character(1))
@@ -811,6 +819,7 @@ HAS_OIDN: %s
 
   camera_info$preview = preview
   camera_info$interactive = interactive
+  camera_info$free_rotation = camera_rotation == "free"
   camera_info$auto_exposure = auto_exposure
   camera_info$exposure = exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
@@ -846,6 +855,41 @@ HAS_OIDN: %s
     render_info$scene_edits = saved_edits
   }
   if (identical(native_gui$mode, "imgui")) {
+    # Resolve bundled lens files once, on the R thread. The C++ editor owns the
+    # resulting camera objects and never reads package files from render workers.
+    lens_files = c(
+      "dgauss.50mm.txt",
+      "wide.22mm.txt",
+      "fisheye.10mm.txt",
+      "telephoto.250mm.txt"
+    )
+    lens_names = c(
+      "Realistic: 50 mm",
+      "Realistic: Wide (22 mm)",
+      "Realistic: Fisheye (10 mm)",
+      "Realistic: Telephoto (250 mm)"
+    )
+    camera_info$preview_lenses = Map(
+      function(file, name) {
+        path = system.file(
+          "extdata",
+          file,
+          package = "rayrender",
+          mustWork = TRUE
+        )
+        list(
+          name = name,
+          source = path,
+          data = as.matrix(utils::read.delim(
+            path,
+            header = FALSE,
+            comment.char = "#"
+          ))
+        )
+      },
+      lens_files,
+      lens_names
+    )
     # Capture resolved values rather than promises or expressions from the caller.
     export_names = setdiff(
       names(formals(render_scene)),

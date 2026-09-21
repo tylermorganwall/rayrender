@@ -166,6 +166,47 @@ slerp = function(vec1, vec2, n) {
   return(return_vecs)
 }
 
+
+#' Allocate Frame Intervals Between Camera Keyframes
+#'
+#' @param n Total number of frames.
+#' @param keyframes Number of keyframes, including a repeated closing endpoint.
+#' @param segment_frames Default `NULL`. Explicit frame intervals per segment.
+#' @return Integer vector of segment durations.
+#' @keywords internal
+camera_segment_frames = function(n, keyframes, segment_frames = NULL) {
+  segments = keyframes - 1L
+  if (!is.null(segment_frames)) {
+    if (
+      !is.numeric(segment_frames) ||
+        length(segment_frames) != segments ||
+        any(!is.finite(segment_frames)) ||
+        any(segment_frames < 1) ||
+        any(segment_frames != floor(segment_frames)) ||
+        sum(segment_frames) >= .Machine$integer.max
+    ) {
+      stop(
+        '`segment_frames` must contain one positive whole number per transition.',
+        call. = FALSE
+      )
+    }
+    return(as.integer(segment_frames))
+  }
+  if (length(n) != 1L || !is.finite(n) || n != floor(n) || n < keyframes) {
+    stop(
+      '`frames` must be at least the number of camera keyframes.',
+      call. = FALSE
+    )
+  }
+  if (segments < 1L) {
+    return(integer())
+  }
+  intervals = n - 1L
+  as.integer(
+    intervals %/% segments + (seq_len(segments) <= intervals %% segments)
+  )
+}
+
 #' Tween
 #'
 #' @param vals Numeric values.
@@ -173,26 +214,24 @@ slerp = function(vec1, vec2, n) {
 #' @param ease Default `"cubic"`. Interpolation type.
 #' @param closed Default `FALSE`. Whether spline interpolation should match speed
 #' at the path boundaries.
+#' @param segment_frames Default `NULL`. Explicit frame intervals per segment.
 #' @return number
 #'
 #' @keywords internal
-tween = function(vals, n, ease = "cubic", closed = FALSE) {
+tween = function(
+  vals,
+  n,
+  ease = "cubic",
+  closed = FALSE,
+  segment_frames = NULL
+) {
   if (length(vals) == 1) {
     return(rep(vals, n))
   }
   if (ease == "spline") {
-    return(tween_spline(vals, n, closed))
+    return(tween_spline(vals, n, closed, segment_frames))
   }
-  len_vals = rep(0, length(vals) - 1)
-  free_vals = n - length(vals)
-  counter = 1
-  for (i in seq_len(free_vals)) {
-    len_vals[counter] = len_vals[counter] + 1
-    counter = counter + 1
-    if (counter > (length(vals) - 1)) {
-      counter = 1
-    }
-  }
+  len_vals = camera_segment_frames(n, length(vals), segment_frames) - 1L
   tlist = list()
   for (i in seq_len((length(vals) - 1))) {
     if (ease == "cubic") {
@@ -238,14 +277,16 @@ tween = function(vals, n, ease = "cubic", closed = FALSE) {
 #' @param vals Numeric values.
 #' @param n Number of frames.
 #' @param closed Default `FALSE`. Whether to match speed at the path boundaries.
+#' @param segment_frames Default `NULL`. Explicit frame intervals per segment.
 #' @return Numeric vector of interpolated values.
 #'
 #' @keywords internal
-tween_spline = function(vals, n, closed = FALSE) {
+tween_spline = function(vals, n, closed = FALSE, segment_frames = NULL) {
   interpolated = tween_spline_path(
     matrix(vals, ncol = 1),
     n = n,
-    closed = closed
+    closed = closed,
+    segment_frames = segment_frames
   )
   return(as.numeric(interpolated[, 1]))
 }
@@ -255,10 +296,11 @@ tween_spline = function(vals, n, closed = FALSE) {
 #' @param points Matrix of path points.
 #' @param n Number of frames.
 #' @param closed Default `FALSE`. Whether to match speed at the path boundaries.
+#' @param segment_frames Default `NULL`. Explicit frame intervals per segment.
 #' @return Matrix of interpolated points.
 #'
 #' @keywords internal
-tween_spline_path = function(points, n, closed = FALSE) {
+tween_spline_path = function(points, n, closed = FALSE, segment_frames = NULL) {
   points = as.matrix(points)
   if (nrow(points) == 1) {
     return(matrix(
@@ -270,18 +312,7 @@ tween_spline_path = function(points, n, closed = FALSE) {
     ))
   }
 
-  len_vals = rep(0, nrow(points) - 1)
-  free_vals = n - nrow(points)
-  counter = 1
-  for (i in seq_len(free_vals)) {
-    len_vals[counter] = len_vals[counter] + 1
-    counter = counter + 1
-    if (counter > (nrow(points) - 1)) {
-      counter = 1
-    }
-  }
-
-  segment_frames = len_vals + 1
+  segment_frames = camera_segment_frames(n, nrow(points), segment_frames)
   keyframe_frames = c(1, 1 + cumsum(segment_frames))
   segment_delta = points[-1, , drop = FALSE] -
     points[-nrow(points), , drop = FALSE]
@@ -401,6 +432,7 @@ tween_spline_path = function(points, n, closed = FALSE) {
 #' @param camera_ups Keyframe camera up vectors.
 #' @param output_positions Interpolated camera positions.
 #' @param closed Default `FALSE`. Whether to use periodic orientation tangents.
+#' @param segment_frames Default `NULL`. Explicit frame intervals per segment.
 #' @return List containing interpolated lookat positions and camera up vectors.
 #'
 #' @keywords internal
@@ -409,7 +441,8 @@ tween_camera_orientation = function(
   lookats,
   camera_ups,
   output_positions,
-  closed = FALSE
+  closed = FALSE,
+  segment_frames = NULL
 ) {
   positions = as.matrix(positions)
   lookats = as.matrix(lookats)
@@ -597,15 +630,11 @@ tween_camera_orientation = function(
     stop("`frames` must be at least the number of camera keyframes.")
   }
 
-  extra_frames = number_frames - number_keyframes
-  segment_frames = rep(1, number_segments)
-  if (extra_frames > 0) {
-    segment_frames = segment_frames +
-      tabulate(
-        rep(seq_len(number_segments), length.out = extra_frames),
-        nbins = number_segments
-      )
-  }
+  segment_frames = camera_segment_frames(
+    number_frames,
+    number_keyframes,
+    segment_frames
+  )
   keyframe_frames = c(1, 1 + cumsum(segment_frames))
 
   quaternions = matrix(0, nrow = number_keyframes, ncol = 4)
@@ -669,7 +698,8 @@ tween_camera_orientation = function(
   output_lookat_distance = tween_spline(
     lookat_distance,
     n = number_frames,
-    closed = closed
+    closed = closed,
+    segment_frames = segment_frames
   )
   output_lookats = matrix(0, nrow = number_frames, ncol = 3)
   output_camera_ups = matrix(0, nrow = number_frames, ncol = 3)

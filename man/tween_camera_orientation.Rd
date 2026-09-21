@@ -9,7 +9,8 @@ tween_camera_orientation(
   lookats,
   camera_ups,
   output_positions,
-  closed = FALSE
+  closed = FALSE,
+  segment_frames = NULL
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ tween_camera_orientation(
 \item{output_positions}{Interpolated camera positions.}
 
 \item{closed}{Default `FALSE`. Whether to use periodic orientation tangents.}
+
+\item{segment_frames}{Default `NULL`. Explicit frame intervals per segment.}
 }
 \value{
 List containing interpolated lookat positions and camera up vectors.

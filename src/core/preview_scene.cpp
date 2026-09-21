@@ -1,4 +1,5 @@
 #include "preview_scene.h"
+#include "preview_validation.h"
 #include "bvh.h"
 #include "../hitables/instance.h"
 #include "../materials/material.h"
@@ -6,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <filesystem>
 
 // The GUI uses column-major matrices. Validate before constructing Transform,
 // whose inverse must exist for ray intersections and object-space shading.
@@ -36,6 +38,11 @@ Transform PreviewMatrix(const std::array<float, 16>& values) {
         "Scale must stay nonzero; singular transforms cannot be applied.");
   }
 
+  // Accept roundoff from earlier exports/gizmos, but never retain perspective
+  // terms in an object transform. Both ray positions and error bounds assume
+  // this exact affine row, including after the inverse is constructed.
+  m[3][0] = m[3][1] = m[3][2] = 0;
+  m[3][3] = 1;
   return Transform(Matrix4x4(m));
 }
 
@@ -137,15 +144,15 @@ uint64_t ObjectId(const PreviewObjectKey& key) {
 
 // Source-row order is stable when a moved child changes BVH traversal order.
 // Keep mesh slots intact and deduplicate genuinely shared instance materials.
-std::vector<material*> RootMaterials(const PreviewObjectRoot& root) {
+std::vector<PreviewMaterialSlot> RootMaterials(const PreviewObjectRoot& root) {
   if (!root.contents) {
-    return PreviewMaterials(root.object.get());
+    return PreviewMaterialSlots(root.object.get());
   }
-  std::vector<material*> result;
-  std::set<material*> seen;
+  std::vector<PreviewMaterialSlot> result;
+  std::set<const void*> seen;
   for (const auto& child : root.contents->roots) {
-    for (auto* value : RootMaterials(child)) {
-      if (seen.insert(value).second) {
+    for (const auto& value : RootMaterials(child)) {
+      if (seen.insert(value.Identity()).second) {
         result.push_back(value);
       }
     }
@@ -312,7 +319,8 @@ void PreviewScene::ReplayMaterials() {
 // A later parent edit must also update existing, narrower overrides for the same
 // material. Leave unrelated child materials and properties at their current values.
 void PreviewScene::ForwardMaterial(const PreviewObjectRoot& root,
-                                   PreviewSceneSettings& next, material* target,
+                                   PreviewSceneSettings& next,
+                                   const PreviewMaterialSlot& target,
                                    const PreviewMaterialEdit& edit) const {
   auto settings = next.children.find(root.key);
   if (!root.contents || settings == next.children.end()) {
@@ -383,7 +391,7 @@ void PreviewScene::DescribeMaterials(uint64_t id, PreviewObjectState& ui,
         panel.placement = root.key.placement;
         panel.slot = slot;
         panel.targets.push_back({panel.row, panel.placement, panel.slot});
-        panel.type = materials[slot]->GetName();
+        panel.type = materials[slot].Name();
         panel.label = std::to_string(root.key.row + 1) + ":" +
                       std::to_string(root.key.placement + 1) + " / " + panel.type +
                       " " + std::to_string(slot + 1);
@@ -432,7 +440,7 @@ void PreviewScene::DescribeMaterials(uint64_t id, PreviewObjectState& ui,
             field.color = field.color && value.color;
           }
         }
-        if (materials[slot] == picked) {
+        if (picked && materials[slot].surface == picked) {
           ui.material_slot = static_cast<int32_t>(panel_index);
         }
       }
@@ -745,6 +753,40 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
              revert = ui.revert;
   ui.apply_transform = ui.apply_material = ui.revert = false;
   try {
+    if (material_edit) {
+      bool valid = true;
+      for (auto& panel : ui.materials) {
+        if (!panel.changed) {
+          continue;
+        }
+        for (auto& field : panel.fields) {
+          field.load_error.clear();
+        }
+        valid = PreviewValidateMaterialFields(panel.fields) && valid;
+        for (auto& field : panel.fields) {
+          // Reject incomplete/missing paths before rebuilding any geometry. A
+          // retained embedded/cached texture needs no filesystem revalidation.
+          if (field.text_input && PreviewFieldVisible(field, panel.fields) &&
+              field.error.empty() && !field.text.empty() &&
+              (field.changed || !field.texture_available)) {
+            std::error_code error;
+            const auto path =
+                std::filesystem::u8path(R_ExpandFileName(field.text.c_str()));
+            if (!std::filesystem::is_regular_file(path, error)) {
+              field.error = field.load_error =
+                  "Texture file does not exist or is not a regular file: " + field.text;
+              valid = false;
+            }
+          }
+          if (!field.error.empty()) {
+            ui.error = field.name + ": " + field.error;
+          }
+        }
+      }
+      if (!valid) {
+        return false;
+      }
+    }
     const auto selection = Resolve(ui.id);
     const auto& source = *selection.scene;
     PreviewScene next = *this;
@@ -757,14 +799,35 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
     if (transform) {
       model =
           ui.numeric_transform ? PreviewNumericTransform(ui) : PreviewMatrix(ui.model);
-      // Convert movement of the selection pivot into a world-space delta. Apply
-      // the same delta to every group member on top of its previously saved edits.
-      const auto world_delta = model * Inverse(selected_model);
+      // Measure the whole gesture from its starting pivot/settings. Multiplying
+      // an incremental delta into every preceding frame accumulates rounding in
+      // both the transform and its cached inverse, producing false self-shadows.
+      const PreviewSceneSettings* baseline =
+          drag_settings ? drag_settings.get() : &settings;
+      for (const auto* placement : selection.placements) {
+        if (baseline) {
+          const auto child = baseline->children.find(placement->key);
+          baseline = child == baseline->children.end() ? nullptr : &child->second;
+        }
+      }
+      const auto world_delta =
+          model * Inverse(drag_settings ? drag_model : selected_model);
       const auto delta = Inverse(selection.to_world) * world_delta * selection.to_world;
       for (const auto& root : source.roots) {
         if (source.Contains(root, selection.id)) {
-          target_settings->transforms[root.key] =
-              delta * source.ObjectTransform(root.key.row, root.key.placement);
+          Transform starting;
+          if (baseline) {
+            const auto saved = baseline->transforms.find(root.key);
+            if (saved != baseline->transforms.end()) {
+              starting = saved->second;
+            }
+          }
+          // Recompute the inverse from the committed forward matrix. Keeping a
+          // separately multiplied inverse lets live shading diverge from exports,
+          // which necessarily reconstruct their inverse from the forward matrix.
+          std::array<float, 16> values;
+          PreviewMatrix(delta * starting, values);
+          target_settings->transforms[root.key] = PreviewMatrix(values);
         }
       }
     }
@@ -799,7 +862,8 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
             }
             for (size_t i = 0; i < bindings.size(); ++i) {
               auto field = bindings[i].field;
-              if (panel.fields[i].changed || !has_field_edits) {
+              if ((panel.fields[i].changed || !has_field_edits) &&
+                  PreviewFieldVisible(panel.fields[i], panel.fields)) {
                 field = panel.fields[i];
               }
               field.changed = field.mixed = false;
@@ -834,7 +898,9 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
       next.Describe(ui.id, updated);
     } else {
       const int slot = updated.material_slot;
-      next.DescribeMaterials(ui.id, updated, nullptr);
+      if (material_edit) {
+        next.DescribeMaterials(ui.id, updated, nullptr);
+      }
       updated.material_slot =
           std::min(slot, static_cast<int>(updated.materials.size()) - 1);
       PreviewMatrix(model, updated.model);
@@ -852,7 +918,12 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
     selected_model = revert ? next.selected_model : model;
     ui = std::move(updated);
     ui.error.clear();
-    ui.transform_pending = ui.material_pending = ui.numeric_transform = false;
+    if (transform || revert) {
+      ui.transform_pending = ui.numeric_transform = false;
+    }
+    if (material_edit || revert) {
+      ui.material_pending = false;
+    }
     return true;
   } catch (const Rcpp::internal::InterruptedException&) {
     // Let R interrupts unwind through renderer cleanup.
@@ -861,6 +932,24 @@ bool PreviewScene::Apply(PreviewObjectState& ui) {
     // Ordinary edit failures stay in the panel; restore the gizmo to the last
     // committed transform while leaving the live scene unchanged.
     ui.error = error.what();
+    if (material_edit) {
+      const auto* validation = dynamic_cast<const PreviewFieldError*>(&error);
+      for (auto& panel : ui.materials) {
+        if (!panel.changed) {
+          continue;
+        }
+        for (auto& field : panel.fields) {
+          const bool offending = validation
+                                     ? std::find(validation->fields.begin(),
+                                                 validation->fields.end(),
+                                                 field.name) != validation->fields.end()
+                                     : field.changed;
+          if (offending) {
+            field.error = field.load_error = error.what();
+          }
+        }
+      }
+    }
     PreviewMatrix(selected_model, ui.model);
     PreviewDecompose(ui);
     ui.transform_pending = ui.numeric_transform = false;
@@ -920,12 +1009,37 @@ Rcpp::List PreviewScene::ExportEdits() const {
   return result;
 }
 
-// Dragging only stages a UI matrix, so cancellation needs no geometry rebuild.
-void PreviewScene::CancelTransform(PreviewObjectState& ui) {
+// Live drag updates use the ordinary atomic rebuild path. Retain the starting
+// settings and pivot once so focus loss/cancellation restores the whole gesture.
+void PreviewScene::BeginTransform() {
+  if (!drag_settings) {
+    drag_settings = std::make_shared<PreviewSceneSettings>(settings);
+    drag_model = selected_model;
+    drag_revision = revision;
+  }
+}
+
+void PreviewScene::EndTransform() {
+  drag_settings.reset();
+}
+
+bool PreviewScene::CancelTransform(PreviewObjectState& ui) {
+  const bool changed = drag_settings && revision != drag_revision;
+  if (changed) {
+    auto restore = PrepareRestore(*drag_settings, ui.id);
+    restore();
+  }
+  if (drag_settings) {
+    selected_model = drag_model;
+  }
+  EndTransform();
   PreviewMatrix(selected_model, ui.model);
   PreviewDecompose(ui);
   ui.cancel_transform = ui.transform_pending = ui.transform_active =
-      ui.numeric_transform = ui.apply_transform = false;
+      ui.numeric_transform = ui.apply_transform = ui.begin_transform =
+          ui.end_transform = false;
+  ui.drag_cancelled = true;
+  return changed;
 }
 
 namespace {

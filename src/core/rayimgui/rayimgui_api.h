@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 #define RAYIMGUI_ABI_MAJOR 1u
-#define RAYIMGUI_ABI_MINOR 8u
+#define RAYIMGUI_ABI_MINOR 12u
 #define RAYIMGUI_CAP_HEADLESS UINT64_C(1)
 #define RAYIMGUI_CAP_NATIVE UINT64_C(2)
 #define RAYIMGUI_CAP_DOCKING UINT64_C(4)
@@ -60,7 +60,8 @@ enum rayimgui_item_flags {
   RAYIMGUI_COMMIT = 32,
   RAYIMGUI_CANCEL = 64,
   RAYIMGUI_VISIBLE = 128,
-  RAYIMGUI_DEACTIVATED = 256
+  RAYIMGUI_DEACTIVATED = 256,
+  RAYIMGUI_INPUT_INVALID = 512 /* ABI 1.9: typed numeric draft is incomplete/invalid. */
 };
 enum rayimgui_widget_kind {
   RAYIMGUI_WINDOW_BEGIN = 1,
@@ -98,7 +99,19 @@ enum rayimgui_widget_kind {
   RAYIMGUI_ANGLE = 30,
   /* ABI 1.6: clickable aspect-fitted texture with a caption; does not register
    * a viewport. Positive width/height describe the image box, excluding caption. */
-  RAYIMGUI_IMAGE_BUTTON = 31
+  RAYIMGUI_IMAGE_BUTTON = 31,
+  /* ABI 1.9: editable UTF-8 path with Browse dialog; uses text/text_capacity. */
+  RAYIMGUI_FILE_PICKER = 32,
+  /* ABI 1.11: right-click menu attached to the preceding item. Always pair
+   * BEGIN/END; submit menu contents only when BEGIN returns VISIBLE. */
+  RAYIMGUI_CONTEXT_BEGIN = 33,
+  RAYIMGUI_CONTEXT_END = 34,
+  /* ABI 1.12: always pair each BEGIN/END, including hidden scopes. Only
+   * submit bar contents or selected-tab contents when BEGIN returns VISIBLE. */
+  RAYIMGUI_TAB_BAR_BEGIN = 35,
+  RAYIMGUI_TAB_BAR_END = 36,
+  RAYIMGUI_TAB_BEGIN = 37,
+  RAYIMGUI_TAB_END = 38
 };
 enum rayimgui_widget_options {
   RAYIMGUI_WINDOW_MENU_BAR = 1,
@@ -121,7 +134,11 @@ enum rayimgui_widget_options {
   /* ABI 1.6: optional full-width bottom workspace panel. */
   RAYIMGUI_DOCK_BOTTOM = 4096,
   RAYIMGUI_CHILD_HORIZONTAL_SCROLL = 8192,
-  RAYIMGUI_IMAGE_SELECTED = 16384
+  RAYIMGUI_IMAGE_SELECTED = 16384,
+  /* ABI 1.9: TOOLTIP also marks the previous input red when label is nonempty. */
+  RAYIMGUI_TOOLTIP_ERROR = 32768,
+  /* ABI 1.9: INT/DOUBLE validate complete numeric text; text receives diagnostics. */
+  RAYIMGUI_VALIDATE_NUMBER = 65536
 };
 enum rayimgui_key {
   RAYIMGUI_KEY_A,
@@ -356,6 +373,10 @@ typedef struct rayimgui_api_v1 {
   int32_t (*event_poll)(rayimgui_session_handle, rayimgui_event_v1*,
                         rayimgui_error_v1*);
   int32_t (*input)(rayimgui_session_handle, rayimgui_input_v1*, rayimgui_error_v1*);
+  /* ABI 1.10: keyboard-only input in the current visible window, including
+   * focused child windows. Active widgets/text/popups retain input ownership. */
+  int32_t (*window_input)(rayimgui_session_handle, rayimgui_input_v1*,
+                          rayimgui_error_v1*);
 } rayimgui_api_v1;
 
 typedef const rayimgui_api_v1* (*rayimgui_get_api_v1_fn)(uint32_t major);

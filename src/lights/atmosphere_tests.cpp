@@ -536,3 +536,157 @@ context("Filtered finite atmospheric paths") {
   }
 }
 #endif
+
+#ifdef NOT_CRAN
+context("Prague geometry above the fitted altitude range") {
+  test_that("ground haze remains lit as the editor camera crosses 15 km") {
+    const char* filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) {
+      return;
+    }
+    auto description = PragueTestDescription(filename);
+    description["meters_per_unit"] = 1000.;
+    description["elevation"] = 5.7;
+    description["azimuth"] = 262.4;
+    PragueInfiniteLight light(description, false);
+
+    // The reported camera and nearby oblique rays all end on the plaza, above
+    // the spherical Earth. Moving only the query origin down to 15 km made
+    // their unchanged path lengths appear to enter the planet.
+    for (double height : {14.9, 15., 15.1, 16., 20.}) {
+      point3f origin(6.79, height, -14.64);
+      for (double offset : {0., 2., 4., 8.}) {
+        point3f target(6.79 + offset, 0, -14.64);
+        vec3f delta = target - origin;
+        auto segment = light.Segment(origin, unit_vector(delta), delta.length());
+        for (int c = 0; c < 3; ++c) {
+          expect_true(std::isfinite(segment.radiance[c]));
+          expect_true(segment.radiance[c] > 0);
+          expect_true((segment.transmission[c] > 0 && segment.transmission[c] <= 1));
+        }
+      }
+    }
+
+    // A fine height sweep catches a residual hard edge, even if every sample
+    // happens to retain a small nonzero contribution after filtering.
+    point3f previous(0);
+    for (int i = 0; i <= 20; ++i) {
+      double height = 14.99 + i * .01;
+      auto segment =
+          light.Segment(point3f(6.79, height, -14.64), vec3f(0, -1, 0), height);
+      for (int c = 0; c < 3; ++c) {
+        if (i > 0) {
+          expect_true(std::abs(segment.radiance[c] - previous[c]) < .02 * previous[c]);
+        }
+      }
+      previous = segment.radiance;
+    }
+  }
+
+  test_that("celestial support and Earth blocking use the actual elevated observer") {
+    const char* filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) {
+      return;
+    }
+    auto description = PragueTestDescription(filename);
+    description["elevation"] = 5.7;
+    PragueInfiniteLight light(description, false);
+    constexpr double earth_radius = 6378000.;
+    for (double height : {14900., 15000., 15100., 16000., 20000.}) {
+      point3f origin(0, height, 0);
+      double horizon = -std::acos(earth_radius / (earth_radius + height));
+      double above = horizon + .02 * M_PI / 180;
+      double below = horizon - .02 * M_PI / 180;
+      vec3f visible(std::cos(above), std::sin(above), 0);
+      vec3f hidden(std::cos(below), std::sin(below), 0);
+      expect_true(light.MaySeeDisk(origin, visible, 0));
+      expect_true(!light.MaySeeDisk(origin, hidden, 0));
+      auto transmission = light.Transmission(origin, visible, INFINITY);
+      auto blocked = light.Transmission(origin, hidden, INFINITY);
+      for (int c = 0; c < 3; ++c) {
+        expect_true((transmission[c] > 0 && transmission[c] <= 1));
+        expect_true(blocked[c] == 0);
+      }
+      // Removing a model-domain clamp must not allow haze paths through Earth.
+      auto underground = light.Segment(origin, vec3f(0, -1, 0), height + 1000);
+      for (int c = 0; c < 3; ++c) {
+        expect_true(underground.radiance[c] == 0);
+      }
+    }
+  }
+}
+#endif
+
+#ifdef NOT_CRAN
+context("Prague outer atmosphere boundary") {
+  test_that(
+      "vacuum paths stay clear and atmosphere entry preserves physical distance") {
+    const char* filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) {
+      return;
+    }
+    auto description = PragueTestDescription(filename);
+    description["elevation"] = 5.7;
+    // Compare the same exact ray from outside and from its atmospheric entry.
+    // Filtering intentionally perturbs complete paths around their own origin.
+    description["haze_filter"] = false;
+    PragueInfiniteLight light(description, false);
+    vec3f down(0, -1, 0), up(0, 1, 0);
+    point3f outside(0, 150000, 0);
+    auto short_path = light.Segment(outside, down, 10000);
+    auto outward = light.Segment(outside, up, 1000000);
+    auto through_air = light.Segment(outside, down, 149000);
+    constexpr double entry_height = 100000 - 50 - .01;
+    auto from_entry =
+        light.Segment(point3f(0, entry_height, 0), down, entry_height - 1000);
+    auto celestial =
+        light.CelestialTransmission(outside, up, InfiniteLightSpectrum::Sun);
+    auto empty_sky = light.SkyRadiance(outside, up);
+    auto blocked = light.Transmission(outside, down, INFINITY);
+    for (int c = 0; c < 3; ++c) {
+      expect_true(short_path.transmission[c] == 1);
+      expect_true(short_path.radiance[c] == 0);
+      expect_true(outward.transmission[c] == 1);
+      expect_true(outward.radiance[c] == 0);
+      expect_true(celestial[c] == 1);
+      expect_true(empty_sky[c] == 0);
+      expect_true(blocked[c] == 0);
+      expect_true(std::isfinite(through_air.radiance[c]));
+      expect_true(through_air.radiance[c] > 0);
+      expect_true(std::abs(through_air.radiance[c] - from_entry.radiance[c]) < 1e-5);
+      expect_true(std::abs(through_air.transmission[c] - from_entry.transmission[c]) <
+                  1e-6);
+    }
+  }
+
+  test_that("remote endpoints retain the same atmospheric contribution after exiting") {
+    const char* filename = std::getenv("RAYRENDER_PRAGUE_TEST_FILE");
+    if (!filename) {
+      return;
+    }
+    auto description = PragueTestDescription(filename);
+    description["elevation"] = 5.7;
+    for (bool filtered : {false, true}) {
+      description["haze_filter"] = filtered;
+      PragueInfiniteLight light(description, false);
+      auto first = light.Segment(point3f(0, 15100, 0), vec3f(0, 1, 0), 150000);
+      auto farther = light.Segment(point3f(0, 15100, 0), vec3f(0, 1, 0), 1500000);
+      for (int c = 0; c < 3; ++c) {
+        expect_true(std::isfinite(first.radiance[c]));
+        expect_true(first.radiance[c] > 0);
+        expect_true(first.radiance[c] == farther.radiance[c]);
+        expect_true(first.transmission[c] == farther.transmission[c]);
+      }
+      // Outward solar rays in vacuum retain the intrinsic Sun instead of air tint.
+      double azimuth = 250 * M_PI / 180, elevation = 5.7 * M_PI / 180;
+      vec3f sun(-std::sin(azimuth) * std::cos(elevation),
+                std::sin(elevation),
+                std::cos(azimuth) * std::cos(elevation));
+      auto radiance = light.Radiance(point3f(0, 150000, 0), sun, 0);
+      for (int c = 0; c < 3; ++c) {
+        expect_true((std::isfinite(radiance[c]) && radiance[c] > 0));
+      }
+    }
+  }
+}
+#endif
