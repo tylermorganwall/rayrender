@@ -32,7 +32,10 @@ extruded_path(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  initial_normal = NULL,
+  smooth_angle = 180,
+  arc_tolerance = 1e-05
 )
 }
 \arguments{
@@ -45,20 +48,22 @@ the x/y/z points that the path should go through.}
 
 \item{z}{Default `0`. z-coordinate offset for the path.}
 
-\item{polygon}{Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
+\item{polygon}{Default `NA`, which generates a 30-sided circle of diameter 1. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
 are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
-\item{polygon_end}{Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices
+\item{polygon_end}{Default `NA`, which uses `polygon`. If specified, the number of vertices should equal the number of distinct vertices
 of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
-\item{breaks}{Defaults to `20` times the number of control points in the bezier curve.}
+\item{breaks}{Default `NA`, which uses 20 times the number of Bezier segments.
+Number of samples along the full path, including endpoints; at least 2. Exact
+trim endpoints and polyline corners are inserted when needed.}
 
 \item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.}
 
 \item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
-continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
-continuity between the ends.}
+continuity between the ends. With `closed_smooth = FALSE`, the closing Bezier
+segment has C1 continuity. Ignored for straight paths and precomputed controls.}
 
 \item{polygon_add_points}{Default `0`. Positive integer specifying the number of points to fill in between polygon
 vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.}
@@ -73,7 +78,7 @@ of bezier curves.}
 \item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
 a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
 
-\item{width}{Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by
+\item{width}{Default `1`. Nonnegative scale of the profile (diameter for the default circle). If `width_ease == "spline"`, `width` is specified in a format that can be read by
 `xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact
 positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
 If not a single value, `width_end` will be ignored.}
@@ -81,9 +86,10 @@ If not a single value, `width_end` will be ignored.}
 \item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values
 specified in `width`.}
 
-\item{width_ease}{Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.}
+\item{width_ease}{Default `"spline"`. Shape-preserving cubic interpolation between width values. Other options: `linear`, `quad`, `cubic`, `exp`.}
 
-\item{smooth_normals}{Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.}
+\item{smooth_normals}{Default `FALSE`. Whether to use surface normals that account
+for taper, twist, and profile morphing. See `smooth_angle` for preserving corners.}
 
 \item{u_min}{Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
@@ -91,15 +97,15 @@ of the loop (but the path will be generated as two objects).}
 \item{u_max}{Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
 
-\item{linear_step}{Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
-rather than intervals based on the underlying bezier curve parameterization.}
+\item{linear_step}{Default `FALSE`. Whether `u` measures normalized arc length
+using adaptive sampling and monotone interpolation, rather than Bezier parameter distance.}
 
 \item{end_caps}{Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.}
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material
 functions.}
 
-\item{material_caps}{Defaults to the same material set in `material`.
+\item{material_caps}{Default `NA`, which uses the same material set in `material`.
 Note: emissive objects may not currently function correctly when scaled.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
@@ -110,13 +116,40 @@ Note: emissive objects may not currently function correctly when scaled.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.}
+
+\item{initial_normal}{Default `NULL`. Initial world-space direction of the profile's
+positive X axis, projected perpendicular to the initial path tangent. Must not be
+parallel to the tangent. By default, a direction is chosen from curvature with
+a stable axis fallback for straight or collinear paths.}
+
+\item{smooth_angle}{Default `180`. Maximum profile turning angle in degrees to
+smooth when `smooth_normals = TRUE`. Smaller values preserve sharp corners.}
+
+\item{arc_tolerance}{Default `1e-5`. Relative tolerance for adaptive Bezier
+sampling, measured against the total control-polygon length.}
 }
 \value{
-Single row of a tibble describing the cube in the scene.
+Scene rows containing indexed raymesh surfaces and optional caps, or
+`NULL` for an empty interval or an entirely zero-width sweep.
 }
 \description{
-Note: Bump mapping with non-diffuse materials does not work correctly, and smoothed normals will be flat when
-using a bump map.
+Sweep a polygon along a Bezier curve or polyline using transported frames.
+}
+\details{
+Closed sweeps correct accumulated frame rotation. A full loop or an interval
+crossing its seam requires matching endpoint profiles and widths; the requested
+twist must map the profile onto itself (for example, quarter-turns for a square).
+Incompatible seams raise an error. Profile vertices correspond by row, with the
+first vertex retained when winding is normalized. Profiles must be simple
+polygons without holes and remain nondegenerate during morphing.
+
+Negative widths are rejected. Zero-width rings use a single geometric vertex
+and triangle fans. Arc-length UVs along the path are obtained with
+`linear_step = TRUE`; perimeter UVs follow distance around each profile.
+Geometry, normal, and texture indices are independent, so texture seams and
+sharp shading edges do not split the underlying surface. Caps retain hard
+normals. Pieces with the same material are combined into one raymesh boundary,
+including across wrapped intervals; a different cap material uses a separate row.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
@@ -142,7 +175,7 @@ generate_studio(depth=-0.4,material=ground_mat) |>
 #Change the width along the full length of the tube
 generate_studio(depth=-0.4,material=ground_mat) |>
   add_object(extruded_path(points = points,
-                           width=0.25*sinpi(0:72*20/180),
+                           width=0.25*abs(sinpi(0:72*20/180)),
                            material=diffuse(color="red"))) |>
   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,

@@ -88,6 +88,10 @@ public:
   Float g, emission_scale, temperature_scale, temperature_offset;
   bool has_temperature = false, has_rgb_emission = false;
   bool haze = true;
+  bool subsurface = false, subsurface_guided = false;
+  bool subsurface_guide_eligible = false;
+  double subsurface_ior = 1, subsurface_roughness = 0;
+  std::array<double, 3> subsurface_pole{};
   double density_scale = 1, haze_density_threshold = 0;
   Float temperature = 0;
   Transform medium_to_object;

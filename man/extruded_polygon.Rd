@@ -26,11 +26,15 @@ extruded_polygon(
 )
 }
 \arguments{
-\item{polygon}{`sf` object, "SpatialPolygon" `sp` object,  or xy coordinates
+\item{polygon}{Default `NULL`. An `sf` object, `SpatialPolygons` or
+`SpatialPolygonsDataFrame` object, or xy coordinates
 of polygon represented in a way that can be processed by `xy.coords()`.  If
 xy-coordinate based polygons are open, they will be closed by adding an
-edge from the last point to the first. If the `sf` object contains MULTIPOLYGONZ data, it will
-flattened.}
+edge from the last point to the first. Consecutive duplicate and redundant
+collinear vertices are removed. Rings must be simple, with nonzero area;
+holes must be strictly inside their exterior and must not touch or overlap.
+POLYGON and MULTIPOLYGON `sf` geometries retain their component and hole
+relationships; any Z or M coordinates are ignored.}
 
 \item{x}{Default `0`. x-coordinate to offset the extruded model.}
 
@@ -38,17 +42,21 @@ flattened.}
 
 \item{z}{Default `0`. z-coordinate to offset the extruded model.}
 
-\item{plane}{Default `xz`. The plane the polygon is drawn in. All possibile orientations
-are `xz`, `zx`, `xy`, `yx`, `yz`, and `zy`.}
+\item{plane}{Default `"xz"`. The plane the polygon is drawn in. All possible orientations
+are `xz`, `zx`, `xy`, `yx`, `yz`, and `zy`, matched without regard to case.}
 
 \item{top}{Default `1`. Extruded top distance. If this equals `bottom`, the polygon will not be
-extruded and just the one side will be rendered.}
+extruded and just the one side will be rendered. Values must be finite scalars;
+either height order is supported with outward-facing triangles. When using
+height columns, extrusion is decided separately for each feature.}
 
 \item{bottom}{Default `0`. Extruded bottom distance. If this equals `top`, the polygon will not be
 extruded and just the one side will be rendered.}
 
-\item{holes}{Default `0`. If passing in a polygon directly, this specifies which index represents
-the holes in the polygon. See the `earcut` function in the `decido` package for more information.}
+\item{holes}{Default `NULL`. For direct xy input, the one-based starting index
+of each hole, in strictly increasing order. Indices refer to the original
+input, before closing rings or removing redundant vertices. `NULL` or `0`
+means no holes. Each ring needs at least three distinct vertices.}
 
 \item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
 
@@ -74,10 +82,14 @@ much to scale that value when rendering.}
 
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
+Values must be finite and nonzero. Negative scales reflect the geometry
+while preserving outward triangle winding.
 Note: emissive objects may not currently function correctly when scaled.}
 }
 \value{
-Multiple row tibble describing the extruded polygon in the scene.
+Single row tibble containing a shared-vertex triangle mesh for all
+polygon components. Features with equal heights contribute one flat surface;
+such surfaces do not form closed boundaries for subsurface materials.
 }
 \description{
 Extruded Polygon Object

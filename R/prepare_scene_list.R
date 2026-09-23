@@ -55,6 +55,7 @@ prepare_scene_list = function(
     scene = raymesh_model(scene)
   }
   validate_shutter_speed(shutter_speed)
+  scene = prepare_subsurface(scene)
   #Process images, convert shapes and materials to enums, extract positions, and
   medium_features = scene_medium_features(scene)
   atmospheric_lights = vapply(

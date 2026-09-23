@@ -54,3 +54,4 @@
 ^Rplots\.pdf$
 ^revdep($|/)
 ^tools/benchmarks($|/)
+^tools/subsurface($|/)

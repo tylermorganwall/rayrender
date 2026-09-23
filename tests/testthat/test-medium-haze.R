@@ -103,6 +103,11 @@ test_that("per-medium haze controls compose camera radiance, alpha, and nested i
   outside_sky$haze_in_volumes = FALSE
   reference = render(add_object(panel, enabled), outside_sky)
   expect_equal(render(add_object(panel, excluded)), reference, tolerance = 1e-5)
+  solid = set_scene_material(
+    shell,
+    subsurface(sigma_a = 0, sigma_s = 0, refraction = 1)
+  )
+  expect_equal(render(add_object(panel, solid)), reference, tolerance = 1e-5)
   expect_equal(
     render(add_object(panel, create_instances(excluded, x = 0))),
     reference,

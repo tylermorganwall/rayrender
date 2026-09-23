@@ -1136,22 +1136,30 @@ ellipsoid = function(
 
 #' Extruded Polygon Object
 #'
-#' @param polygon `sf` object, "SpatialPolygon" `sp` object,  or xy coordinates
+#' @param polygon Default `NULL`. An `sf` object, `SpatialPolygons` or
+#'   `SpatialPolygonsDataFrame` object, or xy coordinates
 #'   of polygon represented in a way that can be processed by `xy.coords()`.  If
 #'   xy-coordinate based polygons are open, they will be closed by adding an
-#'   edge from the last point to the first. If the `sf` object contains MULTIPOLYGONZ data, it will
-#'   flattened.
+#'   edge from the last point to the first. Consecutive duplicate and redundant
+#'   collinear vertices are removed. Rings must be simple, with nonzero area;
+#'   holes must be strictly inside their exterior and must not touch or overlap.
+#'   POLYGON and MULTIPOLYGON `sf` geometries retain their component and hole
+#'   relationships; any Z or M coordinates are ignored.
 #' @param x Default `0`. x-coordinate to offset the extruded model.
 #' @param y Default `0`. y-coordinate to offset the extruded model.
 #' @param z Default `0`. z-coordinate to offset the extruded model.
-#' @param plane Default `xz`. The plane the polygon is drawn in. All possibile orientations
-#'  are `xz`, `zx`, `xy`, `yx`, `yz`, and `zy`.
+#' @param plane Default `"xz"`. The plane the polygon is drawn in. All possible orientations
+#'  are `xz`, `zx`, `xy`, `yx`, `yz`, and `zy`, matched without regard to case.
 #' @param top Default `1`. Extruded top distance. If this equals `bottom`, the polygon will not be
-#' extruded and just the one side will be rendered.
+#' extruded and just the one side will be rendered. Values must be finite scalars;
+#' either height order is supported with outward-facing triangles. When using
+#' height columns, extrusion is decided separately for each feature.
 #' @param bottom Default `0`. Extruded bottom distance. If this equals `top`, the polygon will not be
 #' extruded and just the one side will be rendered.
-#' @param holes Default `0`. If passing in a polygon directly, this specifies which index represents
-#' the holes in the polygon. See the `earcut` function in the `decido` package for more information.
+#' @param holes Default `NULL`. For direct xy input, the one-based starting index
+#' of each hole, in strictly increasing order. Indices refer to the original
+#' input, before closing rings or removing redundant vertices. `NULL` or `0`
+#' means no holes. Each ring needs at least three distinct vertices.
 #' @param material Default  \code{\link{diffuse}}.The material, called from one of the material
 #' functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.
 #' @param center Default `FALSE`. Whether to center the polygon at the origin.
@@ -1167,9 +1175,13 @@ ellipsoid = function(
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
+#' Values must be finite and nonzero. Negative scales reflect the geometry
+#' while preserving outward triangle winding.
 #' Note: emissive objects may not currently function correctly when scaled.
 #'
-#' @return Multiple row tibble describing the extruded polygon in the scene.
+#' @return Single row tibble containing a shared-vertex triangle mesh for all
+#' polygon components. Features with equal heights contribute one flat surface;
+#' such surfaces do not form closed boundaries for subsurface materials.
 #' @export
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
@@ -1426,418 +1438,37 @@ extruded_polygon = function(
   scale_data = 1,
   scale = c(1, 1, 1)
 ) {
-  if (length(scale) == 1) {
-    scale = c(scale, scale, scale)
+  for (name in c("x", "y", "z")) {
+    sweep_scalar(get(name), name)
   }
-  reversed = FALSE
-  if (!is.character(plane) || length(plane) != 1L || is.na(plane)) {
-    stop("plane must be scalar character and not NA")
-  }
-  if (tolower(plane) %in% c("xy", "yx", "xz", "zx", "zy", "yz")) {
-    if (plane == "xz") {
-      planeval = 1
-      reversed = TRUE
-    } else if (plane == "zx") {
-      planeval = 2
-    } else if (plane == "xy") {
-      planeval = 3
-      reversed = TRUE
-    } else if (plane == "yx") {
-      planeval = 4
-    } else if (plane == "zy") {
-      planeval = 5
-      reversed = TRUE
-    } else if (plane == "yz") {
-      planeval = 6
-    }
-  } else {
-    stop("Plane ", plane, " not recognized.")
-  }
-  permute_axes = function(x, plane_val) {
-    if (plane_val == 1) {
-      return(x)
-    }
-    if (plane_val == 2) {
-      return(x[c(3, 2, 1)])
-    }
-    if (plane_val == 3) {
-      return(x[c(3, 1, 2)])
-    }
-    if (plane_val == 4) {
-      return(x[c(1, 3, 2)])
-    }
-    if (plane_val == 5) {
-      return(x[c(2, 3, 1)])
-    }
-    if (plane_val == 6) {
-      return(x[c(2, 1, 3)])
-    }
-  }
-
-  if (top == bottom) {
-    extruded = FALSE
-  } else {
-    extruded = TRUE
-  }
-  x_off = -x
-  y_off = y
-  z_off = z
-  poly_list = list()
-  vertex_list = list()
-  height_list = list()
-  bottom_list = list()
-  holes_start_i_list = list()
-  base_poly = FALSE
-  counter = 1
-  if (inherits(polygon, "sf")) {
-    if (length(find.package("sf", quiet = TRUE)) == 0) {
-      stop("sf package required when handling sf objects")
-    }
-    poly_info = sf::st_drop_geometry(polygon)
-    #Remove z dimension from multipolygon z geometry
-    if (ncol(as.matrix(sf::st_geometry(polygon)[[1]])) == 3) {
-      polygon = sf::as_Spatial(sf::st_zm(polygon))
-    } else {
-      polygon = sf::as_Spatial(polygon)
-    }
-    if (!is.null(data_column_top)) {
-      if (data_column_top %in% colnames(poly_info)) {
-        data_vals_top = poly_info[[data_column_top]] * scale_data
-      } else {
-        warning(
-          "Was not able to find data_column_top `",
-          data_column_top,
-          "` in sf object."
-        )
-        data_vals_top = rep(top, nrow(poly_info))
-      }
-    } else {
-      data_vals_top = rep(top, nrow(poly_info))
-    }
-    if (!is.null(data_column_bottom)) {
-      if (data_column_bottom %in% colnames(poly_info)) {
-        data_vals_bottom = poly_info[[data_column_bottom]] * scale_data
-      } else {
-        warning(
-          "Was not able to find data_column_top `",
-          data_column_bottom,
-          "` in sf object."
-        )
-        data_vals_bottom = rep(bottom, nrow(poly_info))
-      }
-    } else {
-      data_vals_bottom = rep(bottom, nrow(poly_info))
-    }
-  } else if (
-    inherits(polygon, "SpatialPolygonsDataFrame") ||
-      inherits(polygon, "SpatialPolygons")
-  ) {
-    data_vals_top = rep(top, nrow(polygon))
-    data_vals_bottom = rep(bottom, nrow(polygon))
-  } else {
-    xylist = grDevices::xy.coords(polygon)
-    data_vals_top = top[1]
-    data_vals_bottom = bottom[1]
-  }
-  if (
-    inherits(polygon, "SpatialPolygonsDataFrame") ||
-      inherits(polygon, "SpatialPolygons")
-  ) {
-    if (!is.null(holes)) {
-      warning("holes is not NULL, but is unused when input is sf or Spatial")
-    }
-    coord_data = raster::geom(polygon) # See ?raster::geom for col meaning
-    coord_data = coord_data[order(coord_data[, 1], coord_data[, 2]), ] # just in case
-
-    # Holes are only holes if every hole value of `part` column (col 2) is a
-    # hole to match original code (seems like it should always be true?).
-
-    opart = interaction(coord_data[, 1], coord_data[, 2], drop = TRUE)
-    coord_data[, 4] = stats::ave(coord_data[, 4], opart, FUN = min)
-
-    # Every `part` is considered a polygon, unless it is a hole, in which case
-    # it is assumed to be a hole in the nearest preceding non-hole polygon.
-
-    object = coord_data[, 1]
-    object_new = coord_data[, 3]
-    object_new[coord_data[, 4] == 1] = min(coord_data[, 3]) - 1L
-    object_new = cummax(object_new)
-    coord_data[, 1] = object_new
-
-    # give distinct hole ids instead of just 0,1 flag
-
-    coord_data[, 4] = coord_data[, 4] * coord_data[, 3]
-
-    # remap the new object id to old to get height data
-
-    obj_new_len = rle(object_new)[['lengths']]
-    obj_map_id = object[c(1L, cumsum(obj_new_len)[-length(obj_new_len)] + 1L)]
-
-    height_list = as.list(data_vals_top[obj_map_id]) # list for compatibility
-    bottom_list = as.list(data_vals_bottom[obj_map_id])
-    poly_list = unname(split.data.frame(
-      coord_data[, c(5, 6, 4, 2)],
-      coord_data[, 1]
-    ))
-
-    # assume that all holes are after all outer polygons
-
-    holes_start_i_list = lapply(
-      poly_list,
-      function(x) {
-        if (!any(x[, 3] > 0)) {
-          # no hole
-          0
-        } else {
-          which(
-            c(TRUE, diff(x[, 4]) > 0) & # start position of each "part"
-              x[, 3] > 0 # that correspond to holes
-          )
-        }
-      }
-    )
-  } else {
-    base_poly = TRUE
-    xylist = grDevices::xy.coords(polygon)
-    x = xylist$x
-    y = xylist$y
-    if (is.null(holes) || holes == 0) {
-      holes = 0
-    } else if (!is.numeric(holes) || anyNA(as.integer(holes))) {
-      stop("holes must be integer")
-    } else if (
-      any(holes < 0L) ||
-        any(holes > length(x)) ||
-        (any(holes == 0L) && length(holes) != 1L)
-    ) {
-      stop("holes must be zero, or contain indices to polygon vertices")
-    } else if (any(holes < 4)) {
-      stop(
-        "holes cannot begin before vertex 4. Hole index here starts at: ",
-        min(holes)
-      )
-    }
-    holes = as.integer(holes)
-    # label each vertex with a hole id
-
-    if (isTRUE(holes == 0)) {
-      xy_dat = data.frame(x, y, holes = 0L)
-    } else {
-      xy_dat = data.frame(x, y, holes = cumsum(seq_along(x) %in% holes))
-    }
-    # close polygons if not closed, must do so for outer and each hole;
-    # sf and Spatial polygons should be closed
-
-    xy_dat_split = split(xy_dat, xy_dat[['holes']])
-    close_poly = function(dat) {
-      if (!all(dat[1L, ] == dat[nrow(dat), ])) {
-        dat[c(seq_len(nrow(dat)), 1L), ]
-      } else {
-        dat
-      }
-    }
-    xy_dat_closed = lapply(xy_dat_split, close_poly)
-    xy_dat_len = vapply(xy_dat_closed, nrow, 0)
-    holes = if (length(xy_dat_closed) > 1) {
-      cumsum(xy_dat_len[-length(xy_dat_closed)]) + 1L
-    } else {
-      0L
-    }
-    xy_dat_fin = do.call(rbind, xy_dat_closed)
-    rownames(xy_dat_fin) = NULL
-
-    holes_start_i_list[[1]] = holes # hole indices for decido::earcut
-    poly_list[[1]] = as.matrix(xy_dat_fin)
-    height_list[[1]] = data_vals_top
-    bottom_list[[1]] = data_vals_bottom
-  }
-  # Processing common to base and SF: flip/earcut/center
-
-  for (i in seq_along(poly_list)) {
-    poly_list[[i]][, 1] = -poly_list[[i]][, 1]
-    if (flip_horizontal) {
-      poly_list[[i]][, 1] = -poly_list[[i]][, 1]
-    }
-    if (flip_vertical) {
-      poly_list[[i]][, 2] = -poly_list[[i]][, 2]
-    }
-    vertex_list[[i]] = matrix(
-      decido::earcut(poly_list[[i]][, 1:2], holes = holes_start_i_list[[i]]),
-      ncol = 3,
-      byrow = TRUE
-    )
-  }
-  if (center) {
-    all_vertices = do.call(rbind, poly_list)
-    middle_x = (max(all_vertices[, 1]) + min(all_vertices[, 1])) / 2
-    middle_y = (max(all_vertices[, 2]) + min(all_vertices[, 2])) / 2
-    for (i in seq_along(poly_list)) {
-      poly_list[[i]][, 1] = poly_list[[i]][, 1] - middle_x
-      poly_list[[i]][, 2] = poly_list[[i]][, 2] - middle_y
-    }
-  }
-  counter = 1
-
-  vert_list = list()
-  idx_list = list()
-  idx_counter = rev(c(1, 2, 3))
-
-  for (poly in 1:length(poly_list)) {
-    x = poly_list[[poly]][, 1]
-    y = poly_list[[poly]][, 2]
-    vertices = vertex_list[[poly]]
-    height_poly = height_list[[poly]]
-    bottom_poly = bottom_list[[poly]]
-
-    for (i in 1:nrow(vertices)) {
-      vert_list[[counter]] = matrix(
-        c(
-          scale *
-            permute_axes(
-              c(x[vertices[i, 3]], bottom_poly, y[vertices[i, 3]]),
-              planeval
-            ),
-          scale *
-            permute_axes(
-              c(x[vertices[i, 2]], bottom_poly, y[vertices[i, 2]]),
-              planeval
-            ),
-          scale *
-            permute_axes(
-              c(x[vertices[i, 1]], bottom_poly, y[vertices[i, 1]]),
-              planeval
-            )
-        ),
-        ncol = 3,
-        nrow = 3,
-        byrow = TRUE
-      )
-      idx_list[[counter]] = matrix(idx_counter, nrow = 1, ncol = 3)
-      idx_counter = idx_counter + 3
-      counter = counter + 1
-      if (extruded) {
-        vert_list[[counter]] = matrix(
-          c(
-            scale *
-              permute_axes(
-                c(x[vertices[i, 1]], height_poly, y[vertices[i, 1]]),
-                planeval
-              ),
-            scale *
-              permute_axes(
-                c(x[vertices[i, 2]], height_poly, y[vertices[i, 2]]),
-                planeval
-              ),
-            scale *
-              permute_axes(
-                c(x[vertices[i, 3]], height_poly, y[vertices[i, 3]]),
-                planeval
-              )
-          ),
-          ncol = 3,
-          nrow = 3,
-          byrow = TRUE
-        )
-        idx_list[[counter]] = matrix(idx_counter, nrow = 1, ncol = 3)
-        idx_counter = idx_counter + 3
-        counter = counter + 1
-      }
-    }
-    holes = poly_list[[poly]][, 3]
-    hole_n = table(holes)
-    if (hole_n[1L] < 4L) {
-      stop(
-        "outer polygon for polygon ",
-        poly,
-        " only has ",
-        hole_n[1L],
-        " vertices including the closing vertex; needs at least 4."
-      )
-    } else if (any(hole_n[-1L] < 4L)) {
-      stop(
-        "hole polygon(s) ",
-        paste0(names(hole_n[-1L])[hole_n[-1L] < 4L], collapse = ", "),
-        " for poly ",
-        poly,
-        " do not have at least 4 vertices ",
-        "including the closing vertex."
-      )
-    }
-
-    if (extruded) {
-      for (polyv in split(seq_along(x), holes)) {
-        # Find which direction polygon is wound by computing signed area,
-        # assumes non-intersecting polygon (side is a closed polygon).  CW
-        # outer polygon need to flip sides, as do CCW holes
-
-        i = polyv[seq_len(length(polyv) - 1L)]
-        ii = polyv[seq_len(length(polyv) - 1L) + 1L] # i + 1
-        area_s = sum(x[i] * y[ii] - x[ii] * y[i]) / 2
-
-        ccw = area_s >= 0 # treat degenerates as counter-clockwise
-        side_rev = ((holes[polyv[1L]] == 0L && !ccw) ||
-          (holes[polyv[1L]] != 0L && ccw))
-        for (i in seq_len(length(polyv) - 1L)) {
-          # polygons are closed
-          xi = x[polyv[i]] # vertex i
-          yi = y[polyv[i]]
-          xii = x[polyv[i + 1L]] # vertex i + 1
-          yii = y[polyv[i + 1L]]
-          vert_list[[counter]] = matrix(
-            c(
-              scale * permute_axes(c(xi, height_poly, yi), planeval),
-              scale * permute_axes(c(xi, bottom_poly, yi), planeval),
-              scale * permute_axes(c(xii, bottom_poly, yii), planeval)
-            ),
-            ncol = 3,
-            nrow = 3,
-            byrow = TRUE
-          )
-          if (!xor(reversed, side_rev)) {
-            idx_list[[counter]] = matrix(rev(idx_counter), nrow = 1, ncol = 3)
-          } else {
-            idx_list[[counter]] = matrix(idx_counter, nrow = 1, ncol = 3)
-          }
-          idx_counter = idx_counter + 3
-          counter = counter + 1
-          vert_list[[counter]] = matrix(
-            c(
-              scale * permute_axes(c(xi, height_poly, yi), planeval),
-              scale * permute_axes(c(xii, bottom_poly, yii), planeval),
-              scale * permute_axes(c(xii, height_poly, yii), planeval)
-            ),
-            ncol = 3,
-            nrow = 3,
-            byrow = TRUE
-          )
-          if (!xor(reversed, side_rev)) {
-            idx_list[[counter]] = matrix(rev(idx_counter), nrow = 1, ncol = 3)
-          } else {
-            idx_list[[counter]] = matrix(idx_counter, nrow = 1, ncol = 3)
-          }
-          idx_counter = idx_counter + 3
-          counter = counter + 1
-        }
-      }
-    }
-  }
-
-  v_mat = do.call(rbind, vert_list)
-  i_mat = do.call(rbind, idx_list)
-  mesh = list()
-  mesh$vb = t(v_mat)
-  mesh$it = t(i_mat)
-  class(mesh) = "mesh3d"
-  return(mesh3d_model(
+  data = polygon_mesh_data(
+    polygon,
+    plane,
+    top,
+    bottom,
+    holes,
+    center,
+    flip_horizontal,
+    flip_vertical,
+    data_column_top,
+    data_column_bottom,
+    scale_data,
+    scale
+  )
+  mesh = structure(
+    list(vb = t(data$vertices), it = t(data$indices + 1L)),
+    class = "mesh3d"
+  )
+  mesh3d_model(
     mesh,
-    x = x_off,
-    y = y_off,
-    z = z_off,
+    x = x,
+    y = y,
+    z = z,
     angle = angle,
     order_rotation = order_rotation,
     override_material = TRUE,
     material = material
-  ))
+  )
 }
 
 #' Cone Object
@@ -2642,16 +2273,16 @@ text3d = function(
 ) {
   labelfile = tempfile(fileext = ".png")
   text_image = rayimage::render_text_image(
-			label,
-			font = font,
-			size = font_size,
-			color = font_color,
-			just = "left",
-			lineheight = font_lineheight,
-			background_color = background_color,
-			background_alpha = background_alpha,
-		) |>
-			rayimage::render_reorient(flipx = TRUE, filename = labelfile)
+    label,
+    font = font,
+    size = font_size,
+    color = font_color,
+    just = "left",
+    lineheight = font_lineheight,
+    background_color = background_color,
+    background_alpha = background_alpha,
+  ) |>
+    rayimage::render_reorient(flipx = TRUE, filename = labelfile)
   height_val_raw = nrow(text_image)
   width_val_raw = ncol(text_image)
   ratio = text_height / height_val_raw
@@ -3078,24 +2709,25 @@ mesh3d_model = function(
 
 #' Extruded Path Object
 #'
-#' Note: Bump mapping with non-diffuse materials does not work correctly, and smoothed normals will be flat when
-#' using a bump map.
+#' Sweep a polygon along a Bezier curve or polyline using transported frames.
 #'
 #' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 #' the x/y/z points that the path should go through.
 #' @param x Default `0`. x-coordinate offset for the path.
 #' @param y Default `0`. y-coordinate offset for the path.
 #' @param z Default `0`. z-coordinate offset for the path.
-#' @param polygon Defaults to a circle. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
+#' @param polygon Default `NA`, which generates a 30-sided circle of diameter 1. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
 #' are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.
-#' @param polygon_end Defaults to `polygon`. If specified, the number of vertices should equal the to the number of vertices
+#' @param polygon_end Default `NA`, which uses `polygon`. If specified, the number of vertices should equal the number of distinct vertices
 #' of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.
-#' @param breaks Defaults to `20` times the number of control points in the bezier curve.
+#' @param breaks Default `NA`, which uses 20 times the number of Bezier segments.
+#' Number of samples along the full path, including endpoints; at least 2. Exact
+#' trim endpoints and polyline corners are inserted when needed.
 #' @param closed Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
 #' and last points, also ensuring the final polygon is aligned to the first.
 #' @param closed_smooth Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
-#' continuity between the ends. If `closed = FALSE`, the curve will only have C1 (first derivative)
-#' continuity between the ends.
+#' continuity between the ends. With `closed_smooth = FALSE`, the closing Bezier
+#' segment has C1 continuity. Ignored for straight paths and precomputed controls.
 #' @param polygon_add_points Default `0`. Positive integer specifying the number of points to fill in between polygon
 #' vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.
 #' @param twists Default `0`. Number of twists in the polygon from one end to another.
@@ -3103,25 +2735,26 @@ mesh3d_model = function(
 #' of bezier curves.
 #' @param precomputed_control_points Default `FALSE`. If `TRUE`, `points` argument will expect
 #' a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.
-#' @param width Default `0.1`. Curve width. If `width_ease == "spline"`, `width` is specified in a format that can be read by
+#' @param width Default `1`. Nonnegative scale of the profile (diameter for the default circle). If `width_ease == "spline"`, `width` is specified in a format that can be read by
 #' `xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact
 #' positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
 #' If not a single value, `width_end` will be ignored.
 #' @param width_end Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values
 #' specified in `width`.
-#' @param width_ease Default `spline`. Ease function between width values. Other options: `linear`, `quad`, `cubic`, `exp`.
+#' @param width_ease Default `"spline"`. Shape-preserving cubic interpolation between width values. Other options: `linear`, `quad`, `cubic`, `exp`.
 #' @param u_min Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 #' of the loop (but the path will be generated as two objects).
 #' @param u_max Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
 #' of the loop (but the path will be generated as two objects).
 #' @param texture_repeats Default `1`. Number of times to repeat the texture along the length of the path.
-#' @param smooth_normals Default `FALSE`. Whether to smooth the normals of the polygon to remove sharp angles.
-#' @param linear_step Default `FALSE`. Whether the polygon intervals should be set at linear intervals,
-#' rather than intervals based on the underlying bezier curve parameterization.
+#' @param smooth_normals Default `FALSE`. Whether to use surface normals that account
+#' for taper, twist, and profile morphing. See `smooth_angle` for preserving corners.
+#' @param linear_step Default `FALSE`. Whether `u` measures normalized arc length
+#' using adaptive sampling and monotone interpolation, rather than Bezier parameter distance.
 #' @param end_caps Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.
 #' @param material Default  \code{\link{diffuse}}. The material, called from one of the material
 #' functions.
-#' @param material_caps Defaults to the same material set in `material`.
+#' @param material_caps Default `NA`, which uses the same material set in `material`.
 #' Note: emissive objects may not currently function correctly when scaled.
 #' @param angle Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.
 #' @param order_rotation Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".
@@ -3130,7 +2763,33 @@ mesh3d_model = function(
 #' number, the object will be scaled uniformly.
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the cube in the scene.
+#' @param initial_normal Default `NULL`. Initial world-space direction of the profile's
+#' positive X axis, projected perpendicular to the initial path tangent. Must not be
+#' parallel to the tangent. By default, a direction is chosen from curvature with
+#' a stable axis fallback for straight or collinear paths.
+#' @param smooth_angle Default `180`. Maximum profile turning angle in degrees to
+#' smooth when `smooth_normals = TRUE`. Smaller values preserve sharp corners.
+#' @param arc_tolerance Default `1e-5`. Relative tolerance for adaptive Bezier
+#' sampling, measured against the total control-polygon length.
+#'
+#' @details
+#' Closed sweeps correct accumulated frame rotation. A full loop or an interval
+#' crossing its seam requires matching endpoint profiles and widths; the requested
+#' twist must map the profile onto itself (for example, quarter-turns for a square).
+#' Incompatible seams raise an error. Profile vertices correspond by row, with the
+#' first vertex retained when winding is normalized. Profiles must be simple
+#' polygons without holes and remain nondegenerate during morphing.
+#'
+#' Negative widths are rejected. Zero-width rings use a single geometric vertex
+#' and triangle fans. Arc-length UVs along the path are obtained with
+#' `linear_step = TRUE`; perimeter UVs follow distance around each profile.
+#' Geometry, normal, and texture indices are independent, so texture seams and
+#' sharp shading edges do not split the underlying surface. Caps retain hard
+#' normals. Pieces with the same material are combined into one raymesh boundary,
+#' including across wrapped intervals; a different cap material uses a separate row.
+#'
+#' @return Scene rows containing indexed raymesh surfaces and optional caps, or
+#' `NULL` for an empty interval or an entirely zero-width sweep.
 #' @export
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
@@ -3156,7 +2815,7 @@ mesh3d_model = function(
 #' #Change the width along the full length of the tube
 #' generate_studio(depth=-0.4,material=ground_mat) |>
 #'   add_object(extruded_path(points = points,
-#'                            width=0.25*sinpi(0:72*20/180),
+#'                            width=0.25*abs(sinpi(0:72*20/180)),
 #'                            material=diffuse(color="red"))) |>
 #'   add_object(sphere(y=3,z=-5,x=2,material=light(intensity=15))) |>
 #'   render_scene(lookat=c(0.3,0.5,0.5),fov=12, width=800,height=800, clamp_value = 10,
@@ -3295,761 +2954,83 @@ extruded_path = function(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  initial_normal = NULL,
+  smooth_angle = 180,
+  arc_tolerance = 1e-5
 ) {
-  if (closed) {
-    if ((u_max - u_min) >= 1) {
-      u_min = 0
-      u_max = 1
-      end_caps = c(FALSE, FALSE)
-    } else {
-      while (u_min >= 1) {
-        u_min = u_min - 1
-      }
-      while (u_max > 1) {
-        u_max = u_max - 1
-      }
-      if (u_max == 0 && u_min > 0) {
-        u_max = 1
-      }
-    }
-    if (u_max < u_min) {
-      combined_return = add_object(
-        extruded_path(
-          points = points,
-          x = x,
-          y = y,
-          z = z,
-          polygon = polygon,
-          polygon_end = polygon_end,
-          breaks = breaks,
-          closed = closed,
-          closed_smooth = closed_smooth,
-          polygon_add_points = polygon_add_points,
-          twists = twists,
-          texture_repeats = texture_repeats,
-          straight = straight,
-          precomputed_control_points = precomputed_control_points,
-          width = width,
-          width_end = width_end,
-          width_ease = width_ease,
-          smooth_normals = smooth_normals,
-          u_min = 0,
-          u_max = u_max,
-          linear_step = linear_step,
-          end_caps = c(FALSE, TRUE),
-          material = material,
-          material_caps = material_caps,
-          angle = angle,
-          order_rotation = order_rotation,
-          flipped = flipped,
-          scale = scale
-        ),
-        extruded_path(
-          points = points,
-          x = x,
-          y = y,
-          z = z,
-          polygon = polygon,
-          polygon_end = polygon_end,
-          breaks = breaks,
-          closed = closed,
-          closed_smooth = closed_smooth,
-          polygon_add_points = polygon_add_points,
-          twists = twists,
-          texture_repeats = texture_repeats,
-          straight = straight,
-          precomputed_control_points = precomputed_control_points,
-          width = width,
-          width_end = width_end,
-          width_ease = width_ease,
-          smooth_normals = smooth_normals,
-          u_min = u_min,
-          u_max = 1,
-          linear_step = linear_step,
-          end_caps = c(TRUE, FALSE),
-          material = material,
-          material_caps = material_caps,
-          angle = angle,
-          order_rotation = order_rotation,
-          flipped = flipped,
-          scale = scale
-        )
-      )
-      material_id_old = get("max_material_id", envir = ray_environment)
-      material_id_new = material_id_old + 1L
-      assign("max_material_id", material_id_new, envir = ray_environment)
-      combined_return$shape_info[[1]]$material_id = material_id_new
-      combined_return$shape_info[[2]]$material_id = material_id_new
-
-      return(combined_return)
-    }
-  }
-  if (is.null(dim(polygon))) {
-    angles = seq(0, 360, length.out = 31)
-    xx = 1 / 2 * sinpi(angles / 180)
-    yy = 1 / 2 * cospi(angles / 180)
-    polygon = as.matrix(data.frame(x = xx, y = yy, z = 0))
-  } else {
-    polygon = grDevices::xy.coords(polygon)
-    polygon = data.frame(x = polygon$x, y = polygon$y, z = 0)
-  }
-  same_polygon = TRUE
-  if (is.null(dim(polygon_end))) {
-    polygon_end = polygon
-  } else {
-    if (nrow(polygon_end) != nrow(polygon)) {
-      stop("`polygon` and `polygon_end` must have same number of vertices")
-    }
-    same_polygon = FALSE
-    polygon_end = grDevices::xy.coords(polygon_end)
-    polygon_end = data.frame(x = polygon_end$x, y = polygon_end$y, z = 0)
-  }
-  if (ncol(polygon) == 2) {
-    polygon = cbind(polygon, rep(0, nrow(polygon)))
-  }
-  if (ncol(polygon_end) == 2) {
-    polygon_end = cbind(polygon_end, rep(0, nrow(polygon_end)))
-  }
-  #Process polygon orientation
-  i = seq_len(nrow(polygon) - 1)
-  reverse_poly = sum(
-    polygon[i, 1] * polygon[i + 1, 2] - polygon[i + 1, 1] * polygon[i, 2]
-  ) >
-    0
-  if (reverse_poly) {
-    polygon = polygon[nrow(polygon):1, ]
-  }
-  i = seq_len(nrow(polygon_end) - 1)
-  reverse_poly = sum(
-    polygon_end[i, 1] *
-      polygon_end[i + 1, 2] -
-      polygon_end[i + 1, 1] * polygon_end[i, 2]
-  ) >
-    0
-  if (reverse_poly) {
-    polygon_end = polygon_end[nrow(polygon_end):1, ]
-  }
-  if (any(polygon[1, ] != polygon[nrow(polygon), ])) {
-    polygon = rbind(polygon, polygon[1, ])
-  }
-  if (any(polygon_end[1, ] != polygon_end[nrow(polygon_end), ])) {
-    polygon_end = rbind(polygon_end, polygon_end[1, ])
-  }
-  if (polygon_add_points > 0) {
-    polygon = add_points_polygon(polygon, polygon_add_points)
-    polygon_end = add_points_polygon(polygon_end, polygon_add_points)
-  }
-  normal_poly = list()
-  normal_poly_end = list()
-  if (smooth_normals) {
-    revisit = rep(FALSE, nrow(polygon))
-    for (i in seq_len(nrow(polygon))) {
-      if (i == 1 || i == nrow(polygon)) {
-        vert1 = nrow(polygon) - 1
-        vert2 = 1
-        vert3 = 2
-      } else if (i < nrow(polygon)) {
-        vert1 = i - 1
-        vert2 = i
-        vert3 = i + 1
-      }
-      edge1 = polygon[vert1, ] - polygon[vert2, ]
-      edge2 = polygon[vert3, ] - polygon[vert2, ]
-      edge1 = edge1 / sqrt(sum(edge1^2))
-      edge2 = edge2 / sqrt(sum(edge2^2))
-
-      if (abs(abs(sum(edge1 * edge2)) - 1) < 1e-8) {
-        temp_norm = NA
-        revisit[i] = TRUE
-      } else {
-        temp_norm = as.numeric(edge1 + edge2)
-      }
-      if (!revisit[i] && cross_prod(edge1, temp_norm)[3] > 0) {
-        temp_norm = -temp_norm
-      }
-      normal_poly[[i]] = matrix(temp_norm, nrow = 1, ncol = 3)
-      if (!revisit[i]) {
-        normal_poly[[i]] = normal_poly[[i]] / sqrt(sum(normal_poly[[i]]^2))
-        if (any(is.nan(normal_poly[[i]]))) {
-          stop("NaN coordinates found in smoothed normals--is polygon correct?")
-        }
-      }
-    }
-    if (any(revisit)) {
-      for (i in seq_len(nrow(polygon))) {
-        if (revisit[i]) {
-          idx1 = i
-          idx2 = i
-          n = 0L
-
-          inds = c(i)
-          while (revisit[idx1]) {
-            idx1 = idx1 - 1L
-            if (idx1 == 0L) {
-              idx1 = nrow(polygon)
-            }
-            inds = c(idx1, inds)
-            n = n + 1L
-          }
-          while (revisit[idx2]) {
-            idx2 = idx2 + 1L
-            if (idx2 == nrow(polygon) + 1L) {
-              idx2 = 1L
-            }
-            inds = c(inds, idx2)
-            n = n + 1L
-          }
-          norm_prev = normal_poly[[idx1]]
-          norm_next = normal_poly[[idx2]]
-          tween_norms = slerp(norm_prev, norm_next, n = n + 1)
-          for (idx in seq_len(length(inds) - 1)[-1]) {
-            normal_poly[[inds[idx]]] = tween_norms[[idx]]
-            revisit[inds[idx]] = FALSE
-          }
-        }
-      }
-    }
-    revisit = rep(FALSE, nrow(polygon_end))
-    for (i in seq_len(nrow(polygon_end))) {
-      if (i == 1 || i == nrow(polygon_end)) {
-        vert1 = nrow(polygon_end) - 1
-        vert2 = 1
-        vert3 = 2
-      } else if (i < nrow(polygon_end)) {
-        vert1 = i - 1
-        vert2 = i
-        vert3 = i + 1
-      }
-      edge1 = polygon_end[vert1, ] - polygon_end[vert2, ]
-      edge2 = polygon_end[vert3, ] - polygon_end[vert2, ]
-      edge1 = edge1 / sqrt(sum(edge1^2))
-      edge2 = edge2 / sqrt(sum(edge2^2))
-
-      if (abs(abs(sum(edge1 * edge2)) - 1) < 1e-8) {
-        temp_norm = NA
-        revisit[i] = TRUE
-      } else {
-        temp_norm = as.numeric(edge1 + edge2)
-      }
-      if (!revisit[i] && cross_prod(edge1, temp_norm)[3] > 0) {
-        temp_norm = -temp_norm
-      }
-      normal_poly_end[[i]] = matrix(temp_norm, nrow = 1, ncol = 3)
-      if (!revisit[i]) {
-        normal_poly_end[[i]] = normal_poly_end[[i]] /
-          sqrt(sum(normal_poly_end[[i]]^2))
-        if (any(is.nan(normal_poly_end[[i]]))) {
-          stop(
-            "NaN coordinates found in smoothed normals--is polygon_end correct?"
-          )
-        }
-      }
-    }
-    if (any(revisit)) {
-      for (i in seq_len(nrow(polygon_end))) {
-        if (revisit[i]) {
-          idx1 = i
-          idx2 = i
-          n = 0L
-
-          inds = c(i)
-          while (revisit[idx1]) {
-            idx1 = idx1 - 1L
-            if (idx1 == 0L) {
-              idx1 = nrow(polygon_end)
-            }
-            inds = c(idx1, inds)
-            n = n + 1L
-          }
-          while (revisit[idx2]) {
-            idx2 = idx2 + 1L
-            if (idx2 == nrow(polygon_end) + 1L) {
-              idx2 = 1L
-            }
-            inds = c(inds, idx2)
-            n = n + 1L
-          }
-          norm_prev = normal_poly_end[[idx1]]
-          norm_next = normal_poly_end[[idx2]]
-          tween_norms = slerp(norm_prev, norm_next, n = n + 1)
-          for (idx in seq_len(length(inds) - 1)[-1]) {
-            normal_poly_end[[inds[idx]]] = tween_norms[[idx]]
-            revisit[inds[idx]] = FALSE
-          }
-        }
-      }
-    }
-    normal_polys = do.call(rbind, normal_poly)
-    normal_polys_end = do.call(rbind, normal_poly_end)
-  }
-  if (u_min == u_max) {
-    return()
-  }
-
-  if (inherits(points, "numeric")) {
-    stop("Input must either be list, matrix, or data.frame, not numeric.")
-  }
-  if (inherits(points, "list") && !precomputed_control_points) {
-    if (any(unlist(lapply(points, (function(x) length(x) != 3))))) {
-      stop("If `points` is a list, each entry must be a length-3 vector")
-    }
-    points = do.call(rbind, points)
-  }
-  if (inherits(points, "data.frame")) {
-    points = as.matrix(points)
-  }
-  if (is.array(points)) {
-    if (nrow(points) == 1) {
-      stop("Only one point passed, no path specified.")
-    }
-    if (nrow(points) == 2 && closed) {
-      closed = FALSE
-    }
-  }
-  if (!precomputed_control_points) {
-    if (inherits(points, "matrix")) {
-      if (ncol(points) == 3) {
-        if (closed && closed_smooth) {
-          points = rbind(
-            points[c(nrow(points) - 2, nrow(points) - 1, nrow(points)), ],
-            points,
-            points[1:3, ]
-          )
-        }
-        if (!straight) {
-          full_control_points = calculate_control_points(points)
-        } else {
-          full_control_points = calculate_control_points_straight(points)
-        }
-        if (closed && closed_smooth) {
-          full_control_points[[length(full_control_points)]] = NULL
-          full_control_points[[length(full_control_points)]] = NULL
-          full_control_points[[1]] = NULL
-          full_control_points[[1]] = NULL
-          full_control_points[[1]] = NULL
-        }
-      } else {
-        stop("If points a matrix or data.frame, must have 3 columns")
-      }
-    } else {
-      stop(
-        "points not of supported type (function expects matrix/data.frame/list, got ",
-        class(points),
-        ")"
-      )
-    }
-  } else {
-    full_control_points = points
-  }
-  if (closed && !closed_smooth) {
-    first_point = full_control_points[[1]]
-    last_point = full_control_points[[length(full_control_points)]]
-    full_control_points[[length(full_control_points) + 1]] = last_point
-    full_control_points[[length(full_control_points)]][4, ] = first_point[1, ]
-    full_control_points[[length(full_control_points)]][3, ] = 2 *
-      first_point[1, ] -
-      first_point[2, ]
-    full_control_points[[length(full_control_points)]][2, ] = 2 *
-      last_point[4, ] -
-      last_point[3, ]
-    full_control_points[[length(full_control_points)]][1, ] = last_point[4, ]
-  }
-  if (any(unlist(lapply(full_control_points, is.na)))) {
-    stop("`points` should not contain NA/NaN values.")
-  }
-  if (is.na(breaks)) {
-    breaks = length(full_control_points) * 20
-  }
-  u_min_segment = floor(breaks * u_min)
-  u_max_segment = floor(breaks * u_max)
-
-  seg_begin = u_min_segment + 1
-  seg_end = u_max_segment + 1
-  if (seg_end > breaks - 1) {
-    seg_end = breaks - 1
-  }
-
-  if (is.na(width_end) && is.numeric(width)) {
-    width_end = width[1]
-  }
-  if (length(width) == 1 && is.numeric(width)) {
-    width = c(width, width_end)
-  }
-  if (is.null(dim(width))) {
-    width = data.frame(x = seq(0, 1, length.out = length(width)), y = width)
-  }
-  width = grDevices::xy.coords(width)
-
-  if (linear_step) {
-    dist_df = calculate_distance_along_bezier_curve(full_control_points, 20)
-    t_vals = stats::predict(
-      stats::smooth.spline(dist_df$total_dist, dist_df$t),
-      seq(0, max(dist_df$total_dist), length.out = breaks)
-    )$y *
-      length(full_control_points)
-    #Numerical precision fix
-    t_vals[length(t_vals)] = length(full_control_points)
-  } else {
-    t_vals = seq(0, length(full_control_points), length.out = breaks)
-    #Numerical precision fix
-    t_vals[length(t_vals)] = length(full_control_points)
-  }
-  if (width_ease != "spline") {
-    width_vals = tween(width$y, n = breaks, ease = width_ease)
-  } else {
-    width_vals = stats::spline(width, n = breaks)$y
-  }
-  width_vals = abs(width_vals)
-  morph_vals = seq(0, 1, length.out = breaks)
-  t_init = t_vals[seg_begin]
-  if (t_init < 0 || closed) {
-    t_init = 0
-  }
-  initial_deriv = eval_bezier_deriv(full_control_points[[1]], t_init)
-  initial_2nd_deriv = eval_bezier_2nd_deriv(full_control_points[[1]], t_init)
-  if (all(abs(initial_2nd_deriv) < 1e-6)) {
-    if (any(cross_prod(c(1, 0, 0), initial_deriv) != 0)) {
-      initial_2nd_deriv = cross_prod(c(1, 0, 0), initial_deriv)
-    } else {
-      initial_2nd_deriv = cross_prod(c(0, 1, 0), initial_deriv)
-    }
-  }
-  t_vec = initial_deriv / sqrt(sum(initial_deriv * initial_deriv))
-  s_vec = cross_prod(initial_deriv, initial_2nd_deriv)
-  s_vec = s_vec / sqrt(sum(s_vec * s_vec))
-  r_vec = cross_prod(s_vec, t_vec)
-  t_vec0 = t_vec
-  s_vec0 = s_vec
-  r_vec0 = r_vec
-
-  vertices = list()
-  texcoords = list()
-  normals = list()
-  poly_tex = seq(0, 1, length.out = nrow(polygon))
-  counter = 1
-  if (closed && !closed_smooth) {
-    twist_amount = calculate_final_twist(
-      full_control_points,
-      breaks,
-      t_vals,
-      t_vec,
-      s_vec,
-      r_vec
-    )
-    end_angle_r = twists * 2 * pi + twist_amount[1]
-    # end_angle_s = twist_amount[2]
-    # end_angle_t = twist_amount[3]
-    end_angle_s = 0
-    end_angle_t = 0
-  } else {
-    end_angle_r = twists * 2 * pi
-    end_angle_s = 0
-    end_angle_t = 0
-  }
-
-  for (i in seq(1, seg_end, by = 1)) {
-    t_val0 = t_vals[i]
-    if (t_val0 < 0) {
-      t_val0 = 0
-    }
-    t_val1 = t_vals[i + 1]
-    if (t_val1 < 0) {
-      t_val1 = 0
-    }
-    width_temp = width_vals[i]
-
-    temp_poly = morph_vals[i] * polygon_end + (1 - morph_vals[i]) * polygon
-    temp_angle_r = morph_vals[i] * end_angle_r
-    temp_angle_s = morph_vals[i] * end_angle_s
-    temp_angle_t = morph_vals[i] * end_angle_t
-
-    ca = cos(temp_angle_t)
-    sa = sin(temp_angle_t)
-    cb = cos(temp_angle_s)
-    sb = sin(temp_angle_s)
-    cc = cos(temp_angle_r)
-    sc = sin(temp_angle_r)
-
-    twist_mat = matrix(
-      c(
-        cb * cc,
-        sa * sb * cc - ca * sc,
-        ca * sb * cc + sa * sc,
-        cb * sc,
-        sa * sb * sc + ca * cc,
-        ca * sb * sc - sa * cc,
-        -sb,
-        sa * cb,
-        ca * cb
-      ),
-      nrow = 3,
-      ncol = 3,
-      byrow = TRUE
-    )
-
-    rot_mat = matrix(c(s_vec, r_vec, t_vec), 3, 3)
-    t_temp0 = t_val0 - floor(t_val0)
-    if (i != breaks - 1) {
-      t_temp1 = t_val1 - floor(t_val1)
-    } else {
-      t_temp1 = 1
-    }
-
-    i0 = floor(t_val0) + 1
-    if (i != breaks - 1) {
-      i1 = floor(t_val1) + 1
-    } else {
-      i1 = max(c(1, floor(t_val1 + 1e-8)))
-    }
-
-    cp0 = full_control_points[[i0]]
-    if (i1 <= length(full_control_points)) {
-      cp1 = full_control_points[[i1]]
-    } else {
-      cp1 = cp0
-    }
-
-    x0 = eval_bezier(cp0, t_temp0)
-    x1 = eval_bezier(cp1, t_temp1)
-
-    if (i < length(width_vals)) {
-      width_norm = -(width_vals[i + 1] - width_vals[i]) / sqrt(sum((x1 - x0)^2))
-    } else if (i == length(width_vals)) {
-      width_norm = -(width_vals[i] - width_vals[i - 1]) / sqrt(sum((x1 - x0)^2))
-    }
-    if (i >= seg_begin) {
-      vertices[[counter]] = matrix(
-        x0,
-        ncol = 3,
-        nrow = nrow(polygon),
-        byrow = TRUE
-      ) +
-        t((rot_mat %*% twist_mat %*% t(temp_poly * width_temp)))
-      texcoords[[counter]] = matrix(
-        c(poly_tex, rep(morph_vals[i] * texture_repeats, nrow(polygon))),
-        ncol = 2,
-        nrow = nrow(polygon)
-      )
-      if (smooth_normals) {
-        temp_norm = morph_vals[i] *
-          normal_polys_end +
-          (1 - morph_vals[i]) * normal_polys
-        temp_norm[, 3] = width_norm
-        norm_transform = t(solve(rot_mat %*% twist_mat))
-        normals[[counter]] = t((norm_transform %*% t(temp_norm)))
-      }
-
-      counter = counter + 1
-    }
-    #Evaluate next set of vectors
-    v1 = x1 - x0
-    c1 = sum(v1 * v1)
-    rl = r_vec - (2 / c1) * sum(v1 * r_vec) * v1
-    tl = t_vec - (2 / c1) * sum(v1 * t_vec) * v1
-
-    next_deriv = eval_bezier_deriv(cp1, t_temp1)
-    t_vec_prev = next_deriv / sqrt(sum(next_deriv * next_deriv))
-
-    v2 = t_vec_prev - tl
-    c2 = sum(v2 * v2)
-    if (c2 != 0) {
-      t_vec = t_vec_prev
-      r_vec = rl - (2 / c2) * sum(v2 * rl) * v2
-      s_vec = cross_prod(t_vec, r_vec)
-    }
-  }
-  rot_mat = matrix(c(s_vec, r_vec, t_vec), 3, 3)
-
-  temp_angle_r = morph_vals[seg_end] * end_angle_r
-  temp_angle_s = morph_vals[seg_end] * end_angle_s
-  temp_angle_t = morph_vals[seg_end] * end_angle_t
-  ca = cos(temp_angle_t)
-  sa = sin(temp_angle_t)
-  cb = cos(temp_angle_s)
-  sb = sin(temp_angle_s)
-  cc = cos(temp_angle_r)
-  sc = sin(temp_angle_r)
-
-  twist_mat = matrix(
-    c(
-      cb * cc,
-      sa * sb * cc - ca * sc,
-      ca * sb * cc + sa * sc,
-      cb * sc,
-      sa * sb * sc + ca * cc,
-      ca * sb * sc - sa * cc,
-      -sb,
-      sa * cb,
-      ca * cb
-    ),
-    nrow = 3,
-    ncol = 3,
-    byrow = TRUE
+  parts = sweep_mesh_data(
+    points = points,
+    polygon = polygon,
+    polygon_end = polygon_end,
+    breaks = breaks,
+    closed = closed,
+    closed_smooth = closed_smooth,
+    polygon_add_points = polygon_add_points,
+    twists = twists,
+    texture_repeats = texture_repeats,
+    straight = straight,
+    precomputed_control_points = precomputed_control_points,
+    width = width,
+    width_end = width_end,
+    width_ease = width_ease,
+    smooth_normals = smooth_normals,
+    u_min = u_min,
+    u_max = u_max,
+    linear_step = linear_step,
+    end_caps = end_caps,
+    initial_normal = initial_normal,
+    smooth_angle = smooth_angle,
+    arc_tolerance = arc_tolerance
   )
-  vertices[[counter]] = matrix(
-    x1,
-    ncol = 3,
-    nrow = nrow(polygon),
-    byrow = TRUE
-  ) +
-    t((rot_mat %*% twist_mat %*% t(polygon_end * width_vals[seg_end + 1])))
-  texcoords[[counter]] = matrix(
-    c(poly_tex, rep(1 * texture_repeats, nrow(polygon))),
-    ncol = 2,
-    nrow = nrow(polygon)
-  )
-  if (smooth_normals) {
-    norm_transform = t(solve(rot_mat %*% twist_mat))
-    normals[[counter]] = t((norm_transform %*% t(normal_polys_end)))
+  if (!length(parts)) {
+    return(NULL)
   }
-  mesh = list()
-  mesh_caps = list()
-  end_caps[1] = end_caps[1] & width_vals[1] > 0
-  end_caps[2] = end_caps[2] & width_vals[length(width_vals)] > 0
-
-  vb = do.call(rbind, vertices)
-  tex = do.call(rbind, texcoords)
-  if (smooth_normals) {
-    normal_mat = do.call(rbind, normals)
-  }
-
-  faces = (nrow(polygon) - 1) * 2 * (length(vertices) - 1)
-  if (faces == 0) {
-    return()
-  }
-  band_faces = (nrow(polygon) - 1) * 2
-  it = matrix(0, nrow = 3, ncol = faces)
-  polyadd = c(0, 0, nrow(polygon), nrow(polygon), 0, nrow(polygon))
-  single_structure = c(1, 2, 1, 1, 2, 2)
-  single_band = matrix(0, nrow = 6, ncol = band_faces / 2)
-  for (i in seq_len((nrow(polygon) - 1))) {
-    single_band[, i] = polyadd + single_structure + (i - 1)
-  }
-  single_band = matrix(as.vector(single_band), nrow = 3)
-  for (i in seq_len(length(vertices) - 1)) {
-    it[, (1 + (i - 1) * band_faces):(i * band_faces)] = single_band +
-      (i - 1) * nrow(polygon)
-  }
-  cap_it_start = matrix(decido::earcut(polygon[, 1:2]), nrow = 3)
-  end_poly_triangulated = decido::earcut(polygon_end[, 1:2])
-  if (all(end_caps)) {
-    cap_it_end_full = matrix(
-      rev(end_poly_triangulated) + nrow(polygon) * (length(vertices) - 1),
-      nrow = 3
-    )
-    cap_it_end = matrix(
-      rev(end_poly_triangulated) + max(cap_it_start) - min(cap_it_start) + 1,
-      nrow = 3
-    )
-    vb_ends = rbind(
-      vb[seq(1, max(cap_it_start)), ],
-      vb[seq(min(cap_it_end_full), max(cap_it_end_full)), ]
-    )
-    it_ends = cbind(cap_it_start, cap_it_end)
-  } else if (end_caps[1]) {
-    vb_ends = vb[seq(1, max(cap_it_start)), ]
-    it_ends = cap_it_start
-  } else if (end_caps[2]) {
-    cap_it_end_full = matrix(
-      rev(end_poly_triangulated) + nrow(polygon) * (length(vertices) - 1),
-      nrow = 3
-    )
-    cap_it_end = matrix(rev(end_poly_triangulated), nrow = 3)
-    if (min(cap_it_end) == 2) {
-      cap_it_end = cap_it_end - 1
-    }
-    vb_ends = vb[seq(min(cap_it_end_full), max(cap_it_end_full)), ]
-    it_ends = cap_it_end
-  }
-  if (any(end_caps)) {
-    mesh_caps$vb = t(cbind(vb_ends, rep(1, nrow(vb_ends))))
-    mesh_caps$it = it_ends
-  }
-
-  mesh$vb = t(cbind(vb, rep(1, nrow(vb))))
-  if (any(is.nan(mesh$vb))) {
-    stop("NaN coordinates in mesh generated.")
-  }
-  mesh$it = it
-  if (smooth_normals) {
-    mesh$normals = t(normal_mat)
-  }
-  mesh$texcoords = t(tex)
-  if (!is.na(material[[1]]$image[[1]])) {
-    mesh$material$texture = material[[1]]$image[[1]]
-    mesh$meshColor = "vertices"
-  }
-  if (!is.na(material[[1]]$bump_texture[[1]])) {
-    mesh$material$bump_texture = material[[1]]$bump_texture[[1]]
-    mesh$material$bump_intensity = material[[1]]$bump_intensity
-    mesh$meshColor = "vertices"
-  } else {
-    mesh$material$bump_texture = ""
-    mesh$material$bump_intensity = 1
-  }
-  class(mesh) = "mesh3d"
-  class(mesh_caps) = "mesh3d"
-  same_material = FALSE
-  if (is.null(dim(material_caps))) {
+  same_material = is.null(material_caps) ||
+    (is.atomic(material_caps) &&
+      length(material_caps) == 1L &&
+      is.na(material_caps)) ||
+    identical(material_caps, material)
+  if (same_material) {
     material_caps = material
-    same_material = TRUE
   }
-  material_id_old = get("max_material_id", envir = ray_environment)
-  material_id_new = material_id_old + 1L
-  assign("max_material_id", material_id_new, envir = ray_environment)
-  if (any(end_caps)) {
-    return_scene = add_object(
-      mesh3d_model(
-        mesh,
-        x = x,
-        y = y,
-        z = z,
-        override_material = TRUE,
-        angle = angle,
-        order_rotation = order_rotation,
-        flipped = flipped,
-        scale = scale,
-        material = material
-      ),
-      mesh3d_model(
-        mesh_caps,
-        x = x,
-        y = y,
-        z = z,
-        material = material_caps,
-        override_material = TRUE,
-        angle = angle,
-        order_rotation = order_rotation,
-        flipped = flipped,
-        scale = scale
-      )
-    )
-    if (same_material) {
-      for (i in seq_len(nrow(return_scene))) {
-        return_scene$shape_info[[i]]$material_id = material_id_new
-      }
+  surface_id = get("max_material_id", envir = ray_environment) + 1L
+  cap_id = if (same_material) surface_id else surface_id + 1L
+  assign("max_material_id", cap_id, envir = ray_environment)
+  add_mesh_group = function(data, mat, id) {
+    data = Filter(Negate(is.null), data)
+    if (!length(data)) {
+      return(NULL)
     }
-  } else {
-    return_scene = mesh3d_model(
+    meshes = lapply(data, function(piece) {
+      do.call(rayvertex::construct_mesh, piece)
+    })
+    mesh = Reduce(rayvertex::add_shape, meshes)
+    object = raymesh_model(
       mesh,
       x = x,
       y = y,
       z = z,
+      material = mat,
       override_material = TRUE,
       angle = angle,
       order_rotation = order_rotation,
       flipped = flipped,
-      scale = scale,
-      material = material
+      scale = scale
     )
-    if (same_material) {
-      for (i in seq_len(nrow(return_scene))) {
-        return_scene$shape_info[[i]]$material_id = material_id_new
-      }
-    }
+    object$shape_info[[1]]$material_id = id
+    object
   }
-  return(return_scene)
+  surfaces = lapply(parts, function(part) part$surface)
+  caps = unlist(lapply(parts, function(part) part$caps), recursive = FALSE)
+  if (same_material) {
+    add_mesh_group(c(surfaces, caps), material, surface_id)
+  } else {
+    add_object(
+      add_mesh_group(surfaces, material, surface_id),
+      add_mesh_group(caps, material_caps, cap_id)
+    )
+  }
 }
 
 #' `raymesh` model

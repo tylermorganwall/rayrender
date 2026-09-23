@@ -53,6 +53,16 @@ struct alignas(16) hit_record {
   hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};
   point3f p; //PBRT: In Interaction
   Float t; //PBRT: In Interaction
+  // Ordered medium crossings can be closer than one Float ULP. Keep the
+  // computed distance for nearest-hit selection instead of rounding away
+  // a thin entry/exit interval at a sharp mesh edge.
+  double precise_t = INFINITY;
+  double OrderedDistance() const {
+    return std::isfinite(precise_t) ? precise_t : double(t);
+  }
+  Float DistanceUpperBound() const {
+    return double(t) < OrderedDistance() ? std::nextafter(t, Float(INFINITY)) : t;
+  }
   normal3f normal; //PBRT: In interaction
   normal3f geometric_normal{0};
   const MediumBoundary* medium_boundary = nullptr;

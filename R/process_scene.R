@@ -2,6 +2,7 @@
 #'
 #'@keywords internal
 process_scene = function(scene, process_material_ids = TRUE) {
+  scene = prepare_subsurface(scene)
   shapevec = unlist(lapply(
     tolower(scene$shape),
     switch,

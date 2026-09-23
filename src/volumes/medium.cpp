@@ -1,4 +1,5 @@
 #include "medium.h"
+#include "subsurface.h"
 #include "../materials/texture.h"
 #include "boundary.h"
 #include <algorithm>
@@ -171,6 +172,30 @@ Medium::Medium(const Rcpp::List &d)
       temperature_offset(Rcpp::as<Float>(d["temperature_offset"])),
       medium_to_object(Rcpp::as<Rcpp::NumericMatrix>(d["medium_transform"])) {
   ValidateMediumTransform(medium_to_object);
+  if (d.containsElementNamed("subsurface") && !Rf_isNull(d["subsurface"])) {
+    Rcpp::List s = d["subsurface"];
+    subsurface = true;
+    std::string method = Rcpp::as<std::string>(s["method"]);
+    if (method != "guided" && method != "random_walk")
+      throw std::runtime_error("Unknown subsurface sampling method.");
+    subsurface_guided = method == "guided";
+    subsurface_ior = Rcpp::as<double>(s["refraction"]);
+    subsurface_roughness = Rcpp::as<double>(s["roughness"]);
+    if (!(Float(subsurface_ior) > 0) || !std::isfinite(Float(subsurface_ior)) ||
+        !std::isfinite(subsurface_roughness) || subsurface_roughness < 0 || subsurface_roughness > 1 ||
+        (subsurface_roughness > 0 && subsurface_roughness < .0001))
+      throw std::runtime_error("Invalid subsurface boundary parameters.");
+    for (int c = 0; c < 3; ++c) {
+      double st = double(sigma_a[c]) + sigma_s[c];
+      subsurface_pole[c] = SubsurfaceProposal::Pole(st > 0 ? sigma_s[c] / st : 0);
+      subsurface_guide_eligible |= subsurface_pole[c] > 1e-7;
+    }
+    // This pole guide is calibrated for isotropic scattering. In the g=.8
+    // benchmark its joint weights had severe tails and failed regional mean
+    // validation. Until an anisotropic guide is validated, choose the ordinary
+    // proposal before drawing any strategy. The physical HG g stays unchanged.
+    subsurface_guide_eligible &= g == 0;
+  }
   // Missing fields retain haze for older serialized medium descriptions.
   if (d.containsElementNamed("haze")) {
     SEXP value = d["haze"];
@@ -345,6 +370,8 @@ RayMajorantIterator GridMedium::SampleRay(const Ray &r, double t_max) const {
 
 std::shared_ptr<const Medium> LoadMedium(const Rcpp::List &d) {
   std::string type = Rcpp::as<std::string>(d["type"]);
+  if (type != "homogeneous" && d.containsElementNamed("subsurface"))
+    throw std::runtime_error("Subsurface interiors must be homogeneous.");
   if (type == "homogeneous")
     return std::make_shared<Medium>(d);
   if (type == "grid")

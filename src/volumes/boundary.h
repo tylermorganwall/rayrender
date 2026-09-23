@@ -49,11 +49,25 @@ struct MediumEntry {
   const MediumBoundary *boundary;
   uint64_t boundary_id;
   Transform medium_to_world;
+  vec3f guide_axis{0};
+  bool guide_valid = false;
+  const dielectric *surface = nullptr;
+};
+struct PriorityInterface {
+  const dielectric *before = nullptr, *after = nullptr;
+  bool entering = false;
+  bool Hidden() const { return before == after; }
+  double Eta() const;
 };
 struct VolumePathState {
   std::vector<MediumEntry> media;
   std::vector<dielectric *> glass;
-  const MediumEntry *Active() const { return media.empty() ? nullptr : &media.back(); }
+  const dielectric *ActiveDielectric() const;
+  const MediumEntry *Active() const;
+  MediumEntry *Active() { return const_cast<MediumEntry *>(static_cast<const VolumePathState *>(this)->Active()); }
+  bool ContainsSubsurface() const;
+  PriorityInterface Interface(const hit_record &, const vec3f &direction) const;
+  void CrossDielectric(const hit_record &, const vec3f &direction);
   void Cross(const hit_record &, const vec3f &direction);
   void SetRay(Ray &ray) {
     ray.segment_absorption = true;
@@ -64,12 +78,22 @@ struct VolumePathState {
 struct VolumeStatistics {
   std::atomic<uint64_t> paths{0}, segments{0}, null_events{0}, scattering_events{0},
       shadow_candidates{0};
+  std::atomic<uint64_t> subsurface_events{0}, subsurface_boundaries{0},
+      guide_eligible{0}, guide_fallback{0}, subsurface_intersections{0}, max_subsurface_events{0};
+  std::atomic<uint64_t> subsurface_event_paths{0}, total_subsurface_events{0},
+      rounded_subsurface_flights{0};
+  // Power-of-two upper bounds for internal event counts, on paths with events.
+  std::array<std::atomic<uint64_t>, 64> subsurface_event_histogram{};
   void Reset() {
     paths = 0;
     segments = 0;
     null_events = 0;
     scattering_events = 0;
     shadow_candidates = 0;
+    subsurface_events = subsurface_boundaries = guide_eligible = guide_fallback = 0;
+    subsurface_intersections = max_subsurface_events = 0;
+    subsurface_event_paths = total_subsurface_events = rounded_subsurface_flights = 0;
+    for (auto &bin : subsurface_event_histogram) bin = 0;
   }
 };
 class VolumeScene {

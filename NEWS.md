@@ -1,5 +1,44 @@
 # rayrender 0.42.0
 
+* Fixed `extruded_polygon()` cap winding in every plane, reflected scales and
+  reversed heights, multipart holes, direct multiple-hole indices, plain
+  `SpatialPolygons`, per-feature heights, positive x offsets, and uppercase plane
+  names. Shared cap/wall vertices and local-coordinate winding calculations
+  produce consistent closed meshes, including at large coordinate offsets.
+  Redundant vertices are removed; invalid rings, holes, heights, and scales now
+  produce explicit errors. Added geometry tests, SSS rendering regressions, and
+  before/after examples in `tools/polygon/`.
+* Preserve precise triangle distances when ordering medium intersections. Entry
+  and exit hits at grazing mesh edges no longer swap when their single-precision
+  distances round to the same value, preventing rare SSS boundary-state errors.
+  Containment probes also stay on their original ray instead of offsetting past
+  neighbouring faces at pointed mesh corners.
+
+* Fixed `extruded_path()` closed seams, exact trim endpoints, terminal twist and
+  morphing, taper normals, polygon winding, wrapped cap choices, and shared
+  material identities. Zero-width tips now use nondegenerate triangle fans.
+* Extracted an internal indexed sweep builder with adaptive arc-length sampling,
+  added `initial_normal`, `smooth_angle`, and `arc_tolerance`, and added geometry
+  and rendering regressions. Invalid widths, degenerate profiles, and incompatible
+  closed seams now produce explicit errors.
+
+* Added `subsurface()` for homogeneous RGB scattering inside a neutral dielectric
+  boundary, with artist reflectance/extinction-distance controls or direct physical
+  absorption and scattering coefficients. Interiors are prepared automatically,
+  including inside instances, with explicit-medium conflict diagnostics.
+* Added `subsurface(priority = ...)` for overlaps with glass and other SSS bodies.
+  Lower values win; hidden interfaces pass through without extra reflection,
+  refraction, or scattering. Glass/liquid contact can be modeled by extending the
+  lower-priority liquid into the glass wall instead of leaving an air gap.
+* Added separate internal SSS depth and compensated roulette, plus selectable
+  ordinary and Dwivedi direction/distance proposals with joint probability and
+  direct-light MIS correction. `random_walk` remains the default pending broader
+  production benchmarks. The current guide is restricted to isotropic scattering;
+  other anisotropy values retain their physical HG phase in an unguided fallback.
+  Rough boundaries use a single-scattering GGX model.
+* Added deterministic proposal/boundary tests, independent homogeneous slab
+  references, and an opt-in raw-radiance benchmark in `tools/subsurface/validate.R`.
+
 * Allow `sky_light()` and `sky_light_image()` to position the Sun with `elevation`
   and `azimuth` instead of latitude, longitude, and date/time. Add rendered light
   management, standalone Sun/Moon, and medium examples, and install Prague sky

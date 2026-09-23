@@ -3,6 +3,7 @@
 #include "volpath.h"
 #include "boundary.h"
 #include "haze.h"
+#include "subsurface.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -98,6 +99,47 @@ void rescale(RGB &beta, RGB &ru, RGB &rl) {
   }
 }
 
+// An analytic homogeneous segment has no augmented null events. Apply physical,
+// continuation, and light densities separately. The selected hero density is a
+// common divisor and cancels; normalize all terms together in log space instead.
+// This also handles optical thickness large enough to underflow exp(-sigma*t).
+void subsurface_segment(RGB &beta, RGB &ru, RGB &rl, const Medium &medium,
+                        const SubsurfaceProposal &proposal, const vec3f &wi,
+                        double distance, bool collision) {
+  double logs[3][3], largest = -INFINITY;
+  RGB *values[3] = {&beta, &ru, &rl};
+  for (int c = 0; c < 3; ++c) {
+    double st = double(medium.sigma_a[c]) + medium.sigma_s[c];
+    double physical = st == 0 ? 0 : -st * distance;
+    if (collision) physical += medium.sigma_s[c] > 0 ? std::log(medium.sigma_s[c]) : -INFINITY;
+    double factors[3] = {physical, proposal.LogDistancePdf(c, wi, distance, collision),
+                         collision ? -INFINITY : 0};
+    for (int j = 0; j < 3; ++j) {
+      logs[j][c] = (*values[j])[c] > 0 ? std::log((*values[j])[c]) + factors[j] : -INFINITY;
+      if (std::isnan(logs[j][c]) || logs[j][c] == INFINITY)
+        throw std::runtime_error("Non-finite subsurface density. Check coefficients and scene scale.");
+      largest = std::max(largest, logs[j][c]);
+    }
+  }
+  for (int j = 0; j < 3; ++j)
+    for (int c = 0; c < 3; ++c)
+      (*values[j])[c] = largest == -INFINITY ? 0 : std::exp(logs[j][c] - largest);
+}
+
+const Medium *subsurface_medium(const hit_record &h) {
+  const Medium *m = h.medium_boundary ? h.medium_boundary->medium.get() : nullptr;
+  return m && m->subsurface ? m : nullptr;
+}
+
+void cross_subsurface(VolumePathState &state, const hit_record &h, const vec3f &wi) {
+  state.CrossDielectric(h, wi);
+}
+
+bool priority_hidden(const VolumePathState &state, const hit_record &h, const vec3f &wi) {
+  return h.mat_ptr && h.mat_ptr->is_dielectric() &&
+         (subsurface_medium(h) || state.ContainsSubsurface()) && state.Interface(h, wi).Hidden();
+}
+
 
 // Spend two sampler dimensions on a seed, then draw the variable number of
 // tracking candidates from a local RNG. Candidate counts therefore do not consume
@@ -118,10 +160,7 @@ random_gen tracking_rng(Sampler *sampler) {
 // Overlapping dielectrics use the smallest priority value to select absorption.
 // Participating-medium extinction is tracked separately from this glass segment.
 RGB glass_transmittance(const VolumePathState &state, double distance) {
-  const dielectric *active = nullptr;
-  for (const auto *d : state.glass)
-    if (!active || d->priority < active->priority)
-      active = d;
+  const dielectric *active = state.ActiveDielectric();
   return active ? transmittance(active->attenuation, distance) : RGB(1);
 }
 
@@ -215,7 +254,12 @@ void reconcile_surface_origin(const VolumeScene *scene, const hit_record &h, Ray
   hit_record contact;
   random_gen rng(0);
   if (scene->boundary_bvh->hit(probe, 0, 4 * tolerance, contact, rng)) {
+    auto previous = state.Active() ? std::optional<MediumEntry>(*state.Active()) : std::nullopt;
     state = scene->InitialState(ray, cancel);
+    if (previous && state.Active() && previous->boundary_id == state.Active()->boundary_id) {
+      state.Active()->guide_axis = previous->guide_axis;
+      state.Active()->guide_valid = previous->guide_valid;
+    }
     state.SetRay(ray);
   }
 }
@@ -388,6 +432,11 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
       tr *= segment_opacity_transmittance(*entry, ray, distance, rng, cancel);
 
 
+    if (priority_hidden(state, h, ray.d)) {
+      state.CrossDielectric(h, ray.d);
+      ray = spawn(h, ray.d, ray.time(), state);
+      continue;
+    }
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
       ray = spawn(h, ray.d, ray.time(), state);
@@ -437,7 +486,9 @@ struct LightSample {
 RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface, pdf *bsdf_pdf,
                  const HGPhaseFunction *phase, VolumePathState state, const RGB &beta,
                  const RGB &rp, hitable *world, hitable_list *lights, int hero, random_gen &rng,
-                 Sampler *sampler, const std::atomic<bool> *cancel) {
+                 Sampler *sampler, const std::atomic<bool> *cancel,
+                 const SubsurfaceProposal *sss_proposal = nullptr,
+                 const SubsurfaceBoundaryBSDF *sss_bsdf = nullptr) {
   if (!lights->size() || !use_light_sampling())
     return RGB(0);
   VolumeStatistics *stats = lights->volume_scene && lights->volume_scene->collect_statistics
@@ -455,7 +506,8 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   LightSample sample;
   if (emitter_sampler) {
     VolumeLightSampler::Context context{p, surface ?
-        (surface->has_bump ? surface->bump_normal : surface->normal) : normal3f(0), parent.time()};
+        (sss_bsdf ? geometric_normal(*surface) :
+         (surface->has_bump ? surface->bump_normal : surface->normal)) : normal3f(0), parent.time()};
     selected = emitter_sampler->SampleEmitter(context, sampler, rng);
     sample.wi = selected.wi;
     sample.pdf = selected.pdf;
@@ -474,14 +526,21 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   // state is a copy, so a transmitted connection can cross the surface without
   // changing the camera path's medium membership.
   RGB f;
-  Float ps;
-  if (surface) {
+  RGB ps;
+  if (sss_bsdf) {
+    f = RGB(sss_bsdf->Evaluate(sample.wi));
+    ps = RGB(sss_bsdf->Pdf(sample.wi));
+    if (dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
+      cross_subsurface(state, *surface, sample.wi);
+  } else if (surface) {
     f = RGB(surface->mat_ptr->f(parent, *surface, sample.wi));
-    ps = bsdf_pdf->value(sample.wi, rng, parent.time());
+    ps = RGB(bsdf_pdf->value(sample.wi, rng, parent.time()));
     cross_if_transmitted(state, *surface, parent.d, sample.wi);
   } else {
-    ps = phase->p(-parent.d, sample.wi);
-    f = RGB(ps);
+    f = RGB(phase->p(-parent.d, sample.wi));
+    ps = f;
+    if (sss_proposal)
+      for (int c = 0; c < 3; ++c) ps[c] = sss_proposal->DirectionPdf(c, sample.wi);
   }
   if (!(f.Max() > 0))
     return RGB(0);
@@ -597,6 +656,12 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
     // as null events, reducing throughput by extinction instead of choosing a
     // real scattering direction as the main path would.
     if (const auto *entry = state.Active()) {
+      const Medium &medium = *entry->boundary->medium;
+      if (medium.subsurface) {
+        auto ordinary = SubsurfaceProposal::Ordinary(medium);
+        subsurface_segment(tr, ru, rl, medium, sss_proposal ? *sss_proposal : ordinary,
+                            ray.d, distance, false);
+      } else {
       RGB T = sample_majorant(
           *entry, ray, distance, hero, tracker,
           [&](double t, const MediumProperties &mp, const point3f &m, const RGB &T) {
@@ -646,9 +711,11 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
         ru *= w;
         rl *= w;
       }
+      }
     }
 
 
+    sss_proposal = nullptr;
     // The environment is mathematically at infinity. Subtract already counted
     // haze from the radiance at the fixed atmospheric ray origin.
     if (!h.infinite_area_hit) advance(distance);
@@ -657,6 +724,11 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
 
     // Boundary-only geometry and alpha-mask misses do not terminate the light
     // connection. Boundary crossings update membership before continuing straight.
+    if (priority_hidden(state, h, ray.d)) {
+      state.CrossDielectric(h, ray.d);
+      ray = spawn(h, ray.d, ray.time(), state);
+      continue;
+    }
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
       // The next segment resolves pending haze before any selection change.
@@ -744,6 +816,22 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   point3f lighting_origin = ray.o;
   bool specular = true, any_diffuse = false, wrote_feature = false;
   size_t depth = 0;
+  uint64_t internal_events = 0;
+  std::optional<SubsurfaceProposal> subsurface_flight;
+  uint64_t flight_boundary = 0;
+  auto internal_roulette = [&]() {
+    if (internal_events <= 5) return true;
+    double density = ru.Average();
+    double weight = density > 0 ? (beta * RGB(eta_scale) / density).Max() : 0;
+    if (!std::isfinite(weight))
+      throw std::runtime_error("Non-finite subsurface roulette weight. Check scene scale and coefficients.");
+    // Do not impose a constant kill probability on conservative walks. It adds
+    // avoidable heavy tails (and can give unbounded variance in thick bodies).
+    double survival = std::min(1.0, weight);
+    if (!(survival > 0) || sampler->Get1D() >= survival) return false;
+    beta /= survival;
+    return true;
+  };
   const Atmosphere *atmosphere = scene ? scene->atmosphere : nullptr;
   AtmosphereRay atmosphere_ray(atmosphere);
   bool air_active = false;
@@ -771,6 +859,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   while (!cancelled(cancel)) {
     // Find the next geometric endpoint while retaining the atmosphere anchor
     // across straight-through events. A new direction or excluded region resets it.
+    if (stats && state.Active() && state.Active()->boundary->medium->subsurface)
+      stats->subsurface_intersections.fetch_add(1, std::memory_order_relaxed);
     const bool integrate_haze = integrate_atmosphere(atmosphere, state);
     hit_record h;
     if (!world->hit(ray, 0, MaxT, h, rng)) {
@@ -811,6 +901,84 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     // the direction unchanged, terminate this path, or replace it after scattering.
     bool scattered = false, terminated = false;
     if (const auto *entry = state.Active()) {
+      const Medium &medium = *entry->boundary->medium;
+      if (medium.subsurface) {
+        auto proposal = subsurface_flight && flight_boundary == entry->boundary_id
+                            ? *subsurface_flight : SubsurfaceProposal::Ordinary(medium);
+        auto tracker = tracking_rng(sampler);
+        double strategy = proposal.guided ? tracker.unif_rand() : 0;
+        double t = proposal.SampleDistance(hero, ray.d, strategy, tracker.unif_rand());
+        bool collision = t < distance;
+        double end = collision ? t : distance;
+        advance(end);
+        subsurface_segment(beta, ru, rl, medium, proposal, ray.d, end, collision);
+        subsurface_flight.reset();
+        if (!(beta.Max() > 0) || !(ru.Max() > 0)) { flush_haze(); break; }
+        if (collision) {
+          flush_haze();
+          ++internal_events;
+          if (stats) {
+            stats->subsurface_events.fetch_add(1, std::memory_order_relaxed);
+            stats->scattering_events.fetch_add(1, std::memory_order_relaxed);
+          }
+          point3f p;
+          for (int a = 0; a < 3; ++a) p[a] = Float(double(ray.o[a]) + double(ray.d[a]) * t);
+          if (t > 0 && p[0] == ray.o[0] && p[1] == ray.o[1] && p[2] == ray.o[2]) {
+            if (stats) stats->rounded_subsurface_flights.fetch_add(1, std::memory_order_relaxed);
+            // Exponentials have support arbitrarily close to zero. An occasional
+            // rounded displacement is ordinary position roundoff: retain its
+            // sampled distance and density, without resampling or forcing a step.
+            // Fail only when even a typical flight cannot move this position.
+            double rate = proposal.extinction[hero];
+            if (proposal.guided) rate = std::max(rate, proposal.GuideRate(hero, ray.d));
+            bool resolved = false;
+            for (int a = 0; a < 3; ++a)
+              resolved |= Float(double(ray.o[a]) + double(ray.d[a]) / rate) != ray.o[a];
+            if (!resolved)
+              throw std::runtime_error("Subsurface mean free path is below position precision. Reduce optical thickness or move/rescale the scene near the origin.");
+          }
+          // The position may round across the boundary even when t rounds below
+          // h.t. Use the endpoint and ray-position error bounds, not just t.
+          bool adjusted = false;
+          p = SubsurfaceCollisionPoint(p, ray, t, h, adjusted);
+          if (stats && adjusted)
+            stats->rounded_subsurface_flights.fetch_add(1, std::memory_order_relaxed);
+          proposal = SubsurfaceProposal::Ordinary(medium);
+          proposal.wo = -ray.d;
+          proposal.guided = medium.subsurface_guided && medium.subsurface_guide_eligible && entry->guide_valid;
+          if (proposal.guided) proposal.axis = unit_vector(entry->guide_axis);
+          if (stats && medium.subsurface_guided) {
+            auto &counter = proposal.guided ? stats->guide_eligible : stats->guide_fallback;
+            counter.fetch_add(1, std::memory_order_relaxed);
+          }
+          L += direct_light(ray, p, nullptr, nullptr, &proposal.phase, state, beta, ru,
+                            world, lights, hero, rng, sampler, cancel, &proposal);
+          double branch = proposal.guided ? sampler->Get1D() : 0;
+          vec2f u = sampler->Get2D();
+          vec3f wi = proposal.SampleDirection(hero, branch, u.xy.x, u.xy.y);
+          RGB before = ru;
+          beta *= RGB(proposal.phase.p(-ray.d, wi));
+          for (int c = 0; c < 3; ++c) ru[c] *= proposal.DirectionPdf(c, wi);
+          rl = before;
+          rescale(beta, ru, rl);
+          previous_light_context = {p, normal3f(0), ray.time()};
+          ray = Ray(p, wi, ray.time());
+          lighting_origin = p;
+          state.SetRay(ray);
+          subsurface_flight = proposal;
+          flight_boundary = entry->boundary_id;
+          specular = false;
+          any_diffuse = true;
+          if (!wrote_feature) {
+            normal = normal3f(0);
+            albedo = point3f(0);
+            wrote_feature = true;
+          }
+          if (!internal_roulette()) break;
+          continue;
+        }
+      } else {
+      subsurface_flight.reset();
       auto tracker = tracking_rng(sampler);
       RGB T = sample_majorant(
           *entry, ray, distance, hero, tracker,
@@ -957,6 +1125,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         ru *= w;
         rl *= w;
       }
+      }
     }
 
 
@@ -1019,6 +1188,68 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         L += beta * RGB(le) / denom;
     }
 
+
+    // Resolve SSS and adjoining glass with the same priority interface. Hidden
+    // boundaries update membership without a BSDF, tint, depth event or roulette.
+    const Medium *body = subsurface_medium(h);
+    if (body && (!h.mat_ptr || !h.mat_ptr->is_dielectric()))
+      throw std::runtime_error("Subsurface mesh faces must use the neutral dielectric boundary. Disable imported face materials.");
+    if (h.mat_ptr && h.mat_ptr->is_dielectric() && (body || state.ContainsSubsurface())) {
+      auto interface = state.Interface(h, ray.d);
+      if (interface.Hidden()) {
+        state.CrossDielectric(h, ray.d);
+        ray = spawn(h, ray.d, ray.time(), state);
+        reconcile_surface_origin(scene, h, ray, state, cancel);
+        subsurface_flight.reset();
+        continue;
+      }
+      bool from_inside = body && !interface.entering;
+      if ((!from_inside && depth >= max_depth) || !(beta.Max() > 0) || !(ru.Average() > 0)) break;
+      if (from_inside) ++internal_events;
+      else ++depth;
+      if (stats && body) stats->subsurface_boundaries.fetch_add(1, std::memory_order_relaxed);
+      double eta = interface.Eta();
+      SubsurfaceBoundaryBSDF bsdf(ray.d, geometric_normal(h), eta, body ? body->subsurface_roughness : 0);
+      if (!bsdf.IsSpecular())
+        L += direct_light(ray, h.p, &h, nullptr, nullptr, state, beta, ru, world, lights,
+                          hero, rng, sampler, cancel, nullptr, &bsdf);
+      double branch = sampler->Get1D();
+      vec2f u = bsdf.IsSpecular() ? vec2f(0, 0) : sampler->Get2D();
+      auto sample = bsdf.Sample(branch, u.xy.x, u.xy.y);
+      if (!(sample.weight > 0) || !(sample.pdf > 0)) break;
+      beta *= RGB(sample.weight);
+      if (!body && interface.entering)
+        beta *= RGB(static_cast<const dielectric *>(h.mat_ptr)->albedo);
+      if (sample.transmission) {
+        eta_scale *= eta * eta;
+        cross_subsurface(state, h, sample.wi);
+      }
+      if (!sample.specular) {
+        rl = ru / sample.pdf;
+        previous_light_context = {h.p, h.geometric_normal, ray.time()};
+        any_diffuse = true;
+      }
+      specular = sample.specular;
+      ray = spawn(h, sample.wi, ray.time(), state);
+      reconcile_surface_origin(scene, h, ray, state, cancel);
+      subsurface_flight.reset();
+      lighting_origin = ray.o;
+      // A nonlocal body has no fabricated local diffuse denoiser guide.
+      if (!wrote_feature) {
+        normal = body ? normal3f(0) : h.normal;
+        albedo = body ? point3f(0) : h.mat_ptr->get_albedo(h);
+        wrote_feature = true;
+      }
+      rescale(beta, ru, rl);
+      if (from_inside && !internal_roulette()) break;
+      if (!from_inside && depth > roulette_depth) {
+        double survival = std::min(1.0, (beta * RGB(eta_scale) / ru.Average()).Max());
+        if (!(survival > 0) || sampler->Get1D() >= survival) break;
+        beta /= survival;
+      }
+      continue;
+    }
+    subsurface_flight.reset();
 
     // Emission is allowed at the terminal vertex before enforcing the depth
     // limit. Further surface scattering requires positive throughput and density.
@@ -1095,6 +1326,22 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   }
 
 
+  if (stats) {
+    if (internal_events) {
+      stats->subsurface_event_paths.fetch_add(1, std::memory_order_relaxed);
+      stats->total_subsurface_events.fetch_add(internal_events, std::memory_order_relaxed);
+      size_t bin = 0;
+      while (bin < 63 && internal_events > (uint64_t(1) << bin)) ++bin;
+      stats->subsurface_event_histogram[bin].fetch_add(1, std::memory_order_relaxed);
+    }
+    uint64_t old = stats->max_subsurface_events.load(std::memory_order_relaxed);
+    while (old < internal_events && !stats->max_subsurface_events.compare_exchange_weak(
+        old, internal_events, std::memory_order_relaxed)) {}
+  }
   // Perform the final precision conversion only after all contributions are summed.
+  if (internal_events)
+    for (int c = 0; c < 3; ++c)
+      if (!std::isfinite(L[c]) || !std::isfinite(Float(L[c])))
+        throw std::runtime_error("Subsurface radiance exceeds the output buffer range. Check scene units, illumination, and coefficients.");
   radiance = L.FloatRGB();
 }

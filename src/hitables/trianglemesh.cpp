@@ -984,8 +984,12 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
       max_mat_id = 0;
     }
   }
-  if(has_consistent_normals && !any_normal_missing) {
+  // Mixed flat/smooth meshes have no complete consistency table. Hit routines
+  // must use their supplied normals directly instead of indexing an empty one.
+  has_consistent_normals = has_consistent_normals && !any_normal_missing;
+  if(has_consistent_normals) {
     face_n.reset(new normal3f[normalIndices.size() / 3]);
+    alpha_v.assign(nNormals, 0);
     std::map<int, std::priority_queue<Float> > alpha_values;
     for (size_t ii = 0; ii < normalIndices.size(); ii += 3) {
       int idx_n1 = normalIndices[ii];
@@ -1006,7 +1010,7 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
       alpha_values[idx_n3].push(-av3);
     }
     for (auto const& x : alpha_values) {
-      alpha_v.push_back(-x.second.top());
+      alpha_v[x.first] = -x.second.top();
     }
     for(size_t ii = 0; ii < alpha_v.size(); ii++) {
       Float temp_av = clamp(alpha_v[ii],-1,1);

@@ -234,6 +234,7 @@ render_ao = function(
 
   camera_info$preview = FALSE
   camera_info$interactive = FALSE
+  camera_info$auto_exposure = FALSE
   debug_channel = 18 # converted to numeric
 
   #Pathtrace Scene

@@ -2,34 +2,8 @@
 #include "RcppThread.h"
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
+#include "../volumes/intersections.h"
 
-namespace {
-// Use double precision for deterministic boundary crossings. The legacy float
-// error-bound rejection can discard an entry just beyond a spawned ray origin.
-bool volume_triangle_intersection(const Ray& r, const point3f& a, const point3f& b,
-                                  const point3f& c, Float tmin, Float tmax,
-                                  Float& t, Float& b0, Float& b1, Float& b2) {
-  const point3f* vertices[3]={&a,&b,&c};
-  int z=MaxDimension(Abs(r.d)), x=(z+1)%3, y=(x+1)%3;
-  double p[3][3];
-  for(int i=0;i<3;++i) {
-    double dz=double((*vertices[i])[z])-r.o[z];
-    p[i][0]=double((*vertices[i])[x])-r.o[x]-double(r.d[x])/r.d[z]*dz;
-    p[i][1]=double((*vertices[i])[y])-r.o[y]-double(r.d[y])/r.d[z]*dz;
-    p[i][2]=dz/r.d[z];
-  }
-  double e[3]={p[1][0]*p[2][1]-p[1][1]*p[2][0],
-               p[2][0]*p[0][1]-p[2][1]*p[0][0],
-               p[0][0]*p[1][1]-p[0][1]*p[1][0]};
-  if((e[0]<0 || e[1]<0 || e[2]<0) && (e[0]>0 || e[1]>0 || e[2]>0)) return false;
-  double det=e[0]+e[1]+e[2];
-  if(det==0) return false;
-  double distance=(e[0]*p[0][2]+e[1]*p[1][2]+e[2]*p[2][2])/det;
-  if(!(distance>std::max(0.0,double(tmin))) || distance>tmax) return false;
-  t=Float(distance); b0=Float(e[0]/det); b1=Float(e[1]/det); b2=Float(e[2]/det);
-  return true;
-}
-}
 
 OpaqueShadowType triangle::ShadowType() const {
   const int id = mesh->face_material_id[face_number];
@@ -45,7 +19,7 @@ bool triangle::OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng
   }
   const point3f &p0 = mesh->p[v[0]], &p1 = mesh->p[v[1]], &p2 = mesh->p[v[2]];
   Float distance, b0, b1, b2;
-  if (!volume_triangle_intersection(r, p0, p1, p2, t_min, t_max, distance, b0, b1, b2))
+  if (!VolumeTriangleIntersection(r, p0, p1, p2, t_min, t_max, distance, b0, b1, b2))
     return false;
 
   // Match hit()'s degenerate-geometry rejection before omitting the shading
@@ -74,8 +48,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p2 = mesh->p[v[2]];
   
   Float t,b0,b1,b2;
+  double precise_t = INFINITY;
   if(r.segment_absorption) {
-    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+    if(!VolumeTriangleIntersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2,&precise_t)) return false;
   } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
@@ -209,6 +184,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   //Everything after this could be delayed until later
   
   point3f pHit = b0v * p0 + b1v * p1 + b2v * p2;
+  if (r.segment_absorption)
+    for (int a = 0; a < 3; ++a)
+      if (p0[a] == p1[a] && p0[a] == p2[a]) pHit[a] = p0[a];
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
 
   point3f bSum0[3];
@@ -237,6 +215,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   rec.geometric_normal = unit_vector(normal);
   rec.p = pHit;
   rec.t = t;
+  rec.precise_t = precise_t;
   
   // __builtin_prefetch(mesh->bump_textures[mat_id].get()); //WILL_READ_ONLY
   // __builtin_prefetch(mesh->mesh_materials[mat_id].get()); //WILL_READ_ONLY
@@ -315,8 +294,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p2 = mesh->p[v[2]];
   
   Float t,b0,b1,b2;
+  double precise_t = INFINITY;
   if(r.segment_absorption) {
-    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+    if(!VolumeTriangleIntersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2,&precise_t)) return false;
   } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
@@ -440,6 +420,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   // rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
+  if (r.segment_absorption)
+    for (int a = 0; a < 3; ++a)
+      if (p0[a] == p1[a] && p0[a] == p2[a]) pHit[a] = p0[a];
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   
   if(mesh->has_vertex_colors) {
@@ -458,6 +441,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   }
   rec.t = t;
   rec.geometric_normal = unit_vector(normal);
+  rec.precise_t = precise_t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   rec.has_bump = false;

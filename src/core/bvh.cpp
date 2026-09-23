@@ -615,10 +615,11 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
                     // Check for intersection with primitive in BVH node
                     hit_record hrec_temp;
                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, rng);
-                    if (prim_hrec) {
+                    if (prim_hrec && (!r.segment_absorption || !any_hit ||
+                                      hrec_temp.OrderedDistance() <= rec.OrderedDistance())) {
                         any_hit = true;
                         rec = hrec_temp;
-                        t_max = rec.t;
+                        t_max = r.segment_absorption ? rec.DistanceUpperBound() : rec.t;
                     }
                 }
                 if (toVisitOffset == 0) {
@@ -669,10 +670,11 @@ const bool BVHAggregate::hit(const Ray& r, Float t_min, Float t_max, hit_record&
                     // Check for intersection with primitive in BVH node
                     hit_record hrec_temp;
                     bool prim_hrec = primitives[node->primitivesOffset + i]->hit(r, t_min, t_max, hrec_temp, sampler);
-                    if (prim_hrec) {
+                    if (prim_hrec && (!r.segment_absorption || !any_hit ||
+                                      hrec_temp.OrderedDistance() <= rec.OrderedDistance())) {
                         any_hit = true;
                         rec = hrec_temp;
-                        t_max = rec.t;
+                        t_max = r.segment_absorption ? rec.DistanceUpperBound() : rec.t;
                     }
                 }
                 if (toVisitOffset == 0) {
@@ -843,10 +845,12 @@ bool traverseClosestBVH4(
         hit_record tempRec;
         const int primIndex = leaf.primitivesOffset + i;
 
-        if (intersectPrimitive(primIndex, t_min, t_max, tempRec)) {
+        if (intersectPrimitive(primIndex, t_min, t_max, tempRec) &&
+            (!r.segment_absorption || !any_hit ||
+             tempRec.OrderedDistance() <= rec.OrderedDistance())) {
           any_hit = true;
           rec = tempRec;
-          t_max = tempRec.t;
+          t_max = r.segment_absorption ? rec.DistanceUpperBound() : rec.t;
         }
       }
 

@@ -321,6 +321,13 @@ set_medium = function(scene, medium, keep_surface = FALSE) {
     )
   }
   for (i in seq_len(nrow(scene))) {
+    if (!is.null(medium) && !is.null(scene$material[[i]]$subsurface)) {
+      stop(
+        "An explicit medium conflicts with the subsurface material. Replace the material first.",
+        call. = FALSE
+      )
+    }
+    scene$shape_info[[i]]$medium_owner = NULL
     scene$shape_info[[i]]$medium = medium
     scene$shape_info[[i]]$medium_keep_surface = if (is.null(medium)) {
       NULL

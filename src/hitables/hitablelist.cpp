@@ -24,13 +24,16 @@ const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record&
   bool hit_anything = false;
   Float closest_so_far = t_max;
   for (const auto& object : objects) {
+    temp_rec.precise_t = INFINITY;
     temp_rec.medium_boundary = nullptr; temp_rec.boundary_id = 0;
     temp_rec.medium_to_world.reset();
     temp_rec.light_placement = 0;
     temp_rec.geometric_normal = normal3f(0); temp_rec.infinite_area_hit = false;
-    if (object->hit(r, t_min, closest_so_far, temp_rec, rng)) {
+    if (object->hit(r, t_min, closest_so_far, temp_rec, rng) &&
+        (!r.segment_absorption || !hit_anything ||
+         temp_rec.OrderedDistance() <= rec.OrderedDistance())) {
       hit_anything = true;
-      closest_so_far = temp_rec.t;
+      closest_so_far = r.segment_absorption ? temp_rec.DistanceUpperBound() : temp_rec.t;
       rec = temp_rec;
     }
   }
@@ -47,13 +50,16 @@ const bool hitable_list::hit(const Ray& r, Float t_min, Float t_max, hit_record&
   bool hit_anything = false;
   Float closest_so_far = t_max;
   for (const auto& object : objects) {
+    temp_rec.precise_t = INFINITY;
     temp_rec.medium_boundary = nullptr; temp_rec.boundary_id = 0;
     temp_rec.medium_to_world.reset();
     temp_rec.light_placement = 0;
     temp_rec.geometric_normal = normal3f(0); temp_rec.infinite_area_hit = false;
-    if (object->hit(r, t_min, closest_so_far, temp_rec, sampler)) {
+    if (object->hit(r, t_min, closest_so_far, temp_rec, sampler) &&
+        (!r.segment_absorption || !hit_anything ||
+         temp_rec.OrderedDistance() <= rec.OrderedDistance())) {
       hit_anything = true;
-      closest_so_far = temp_rec.t;
+      closest_so_far = r.segment_absorption ? temp_rec.DistanceUpperBound() : temp_rec.t;
       rec = temp_rec;
     }
   }

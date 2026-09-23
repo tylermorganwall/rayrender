@@ -643,6 +643,7 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
   return transformed;
 }
@@ -661,6 +662,7 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
   return transformed;
 }
@@ -679,6 +681,7 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
   return transformed;
 }
@@ -704,6 +707,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
+  hr.precise_t = r.precise_t;
   hr.shape = r.shape;
   hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
@@ -735,6 +739,7 @@ hit_record Transform::operator()(hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
+  hr.precise_t = r.precise_t;
   hr.shape = r.shape;
   hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;

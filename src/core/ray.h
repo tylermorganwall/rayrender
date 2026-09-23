@@ -119,6 +119,10 @@ class Ray {
     std::vector<dielectric*> *pri_stack;
     // nee evaluates Beer-Lambert absorption over traveled segments.
     bool segment_absorption = false;
+    // Containment queries advance on one fixed ray without moving across
+    // neighbouring mesh faces. Triangle crossings retain this precise lower
+    // bound even when two distances share the same Float representation.
+    double medium_t_min = 0;
     const Medium* medium = nullptr;
 };
 
