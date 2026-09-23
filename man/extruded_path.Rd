@@ -42,98 +42,100 @@ extruded_path(
 \item{points}{Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 the x/y/z points that the path should go through.}
 
-\item{x}{Default `0`. x-coordinate offset for the path.}
+\item{x}{Default \code{0}. x-coordinate offset for the path.}
 
-\item{y}{Default `0`. y-coordinate offset for the path.}
+\item{y}{Default \code{0}. y-coordinate offset for the path.}
 
-\item{z}{Default `0`. z-coordinate offset for the path.}
+\item{z}{Default \code{0}. z-coordinate offset for the path.}
 
-\item{polygon}{Default `NA`, which generates a 30-sided circle of diameter 1. A polygon with no holes, specified by a data.frame() parsable by `xy.coords()`. Vertices
+\item{polygon}{Default \code{NA}, which generates a 30-sided circle of diameter 1. A polygon with no holes, specified by a data.frame() parsable by \code{xy.coords()}. Vertices
 are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
-\item{polygon_end}{Default `NA`, which uses `polygon`. If specified, the number of vertices should equal the number of distinct vertices
-of the polygon set in `polygon`. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
+\item{polygon_end}{Default \code{NA}, which uses \code{polygon}. If specified, the number of vertices should equal the number of distinct vertices
+of the polygon set in \code{polygon}. Vertices are taken as sequential rows. If the polygon isn't closed (the last vertex equal to the first), it will be closed automatically.}
 
-\item{breaks}{Default `NA`, which uses 20 times the number of Bezier segments.
+\item{breaks}{Default \code{NA}, which uses 20 times the number of Bezier segments.
 Number of samples along the full path, including endpoints; at least 2. Exact
 trim endpoints and polyline corners are inserted when needed.}
 
-\item{closed}{Default `FALSE`. If `TRUE`, the path will be closed by smoothly connecting the first
+\item{closed}{Default \code{FALSE}. If \code{TRUE}, the path will be closed by smoothly connecting the first
 and last points, also ensuring the final polygon is aligned to the first.}
 
-\item{closed_smooth}{Default `TRUE`. If `closed = TRUE`, this will ensure C2 (second derivative)
-continuity between the ends. With `closed_smooth = FALSE`, the closing Bezier
+\item{closed_smooth}{Default \code{TRUE}. If \code{closed = TRUE}, this will ensure C2 (second derivative)
+continuity between the ends. With \code{closed_smooth = FALSE}, the closing Bezier
 segment has C1 continuity. Ignored for straight paths and precomputed controls.}
 
-\item{polygon_add_points}{Default `0`. Positive integer specifying the number of points to fill in between polygon
-vertices. Higher numbers can give smoother results (especially when combined with `smooth_normals = TRUE`.}
+\item{polygon_add_points}{Default \code{0}. Positive integer specifying the number of points to fill in between polygon
+vertices. Higher numbers can give smoother results (especially when combined with \code{smooth_normals = TRUE}.}
 
-\item{twists}{Default `0`. Number of twists in the polygon from one end to another.}
+\item{twists}{Default \code{0}. Number of twists in the polygon from one end to another.}
 
-\item{texture_repeats}{Default `1`. Number of times to repeat the texture along the length of the path.}
+\item{texture_repeats}{Default \code{1}. Number of times to repeat the texture along the length of the path.}
 
-\item{straight}{Default `FALSE`. If `TRUE`, straight lines will be used to connect the points instead
+\item{straight}{Default \code{FALSE}. If \code{TRUE}, straight lines will be used to connect the points instead
 of bezier curves.}
 
-\item{precomputed_control_points}{Default `FALSE`. If `TRUE`, `points` argument will expect
-a list of control points calculated with the internal rayrender function `rayrender:::calculate_control_points()`.}
+\item{precomputed_control_points}{Default \code{FALSE}. If \code{TRUE}, \code{points} argument will expect
+a list of control points calculated with the internal rayrender function \code{rayrender:::calculate_control_points()}.}
 
-\item{width}{Default `1`. Nonnegative scale of the profile (diameter for the default circle). If `width_ease == "spline"`, `width` is specified in a format that can be read by
-`xy.coords()` (with `y` as the width), and the `x` coordinate is between `0` and `1`, this can also specify the exact
+\item{width}{Default \code{1}. Nonnegative scale of the profile (diameter for the default circle). If \code{width_ease == "spline"}, \code{width} is specified in a format that can be read by
+\code{xy.coords()} (with \code{y} as the width), and the \code{x} coordinate is between \code{0} and \code{1}, this can also specify the exact
 positions along the curve for the corresponding width values. If a numeric vector, specifies the different values of the width evenly along the curve.
-If not a single value, `width_end` will be ignored.}
+If not a single value, \code{width_end} will be ignored.}
 
-\item{width_end}{Default `NA`. Width at end of path. Same as `width`, unless specified. Ignored if multiple width values
-specified in `width`.}
+\item{width_end}{Default \code{NA}. Width at end of path. Same as \code{width}, unless specified. Ignored if multiple width values
+specified in \code{width}.}
 
-\item{width_ease}{Default `"spline"`. Shape-preserving cubic interpolation between width values. Other options: `linear`, `quad`, `cubic`, `exp`.}
+\item{width_ease}{Default \code{"spline"}. Shape-preserving cubic interpolation between width values. Other options: \code{linear}, \code{quad}, \code{cubic}, \code{exp}.}
 
-\item{smooth_normals}{Default `FALSE`. Whether to use surface normals that account
-for taper, twist, and profile morphing. See `smooth_angle` for preserving corners.}
+\item{smooth_normals}{Default \code{FALSE}. Whether to use surface normals that account
+for taper, twist, and profile morphing. See \code{smooth_angle} for preserving corners.}
 
-\item{u_min}{Default `0`. Minimum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
+\item{u_min}{Default \code{0}. Minimum parametric coordinate for the path. If \code{closed = TRUE}, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
 
-\item{u_max}{Default `1`. Maximum parametric coordinate for the path. If `closed = TRUE`, values greater than one will refer to the beginning
+\item{u_max}{Default \code{1}. Maximum parametric coordinate for the path. If \code{closed = TRUE}, values greater than one will refer to the beginning
 of the loop (but the path will be generated as two objects).}
 
-\item{linear_step}{Default `FALSE`. Whether `u` measures normalized arc length
+\item{linear_step}{Default \code{FALSE}. Whether \code{u} measures normalized arc length
 using adaptive sampling and monotone interpolation, rather than Bezier parameter distance.}
 
-\item{end_caps}{Default `c(TRUE, TRUE)`. Specifies whether to add an end cap to the beginning and end of a path.}
+\item{end_caps}{Default \code{c(TRUE, TRUE)}. Specifies whether to add an end cap to the beginning and end of a path.}
 
 \item{material}{Default  \code{\link{diffuse}}. The material, called from one of the material
 functions.}
 
-\item{material_caps}{Default `NA`, which uses the same material set in `material`.
+\item{material_caps}{Default \code{NA}, which uses the same material set in \code{material}.
 Note: emissive objects may not currently function correctly when scaled.}
 
-\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default \code{c(0, 0, 0)}. Angle of rotation around the x, y, and z axes, applied in the order specified in \code{order_rotation}.}
 
-\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default \code{c(1, 2, 3)}. The order to apply the rotations, referring to "x", "y", and "z".}
 
-\item{flipped}{Default `FALSE`. Whether to flip the normals.}
+\item{flipped}{Default \code{FALSE}. Whether to flip the normals.}
 
-\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+\item{scale}{Default \code{c(1, 1, 1)}. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.}
 
-\item{initial_normal}{Default `NULL`. Initial world-space direction of the profile's
+\item{initial_normal}{Default \code{NULL}. Initial world-space direction of the profile's
 positive X axis, projected perpendicular to the initial path tangent. Must not be
 parallel to the tangent. By default, a direction is chosen from curvature with
 a stable axis fallback for straight or collinear paths.}
 
-\item{smooth_angle}{Default `180`. Maximum profile turning angle in degrees to
-smooth when `smooth_normals = TRUE`. Smaller values preserve sharp corners.}
+\item{smooth_angle}{Default \code{180}. Maximum profile turning angle in degrees to
+smooth when \code{smooth_normals = TRUE}. Smaller values preserve sharp corners.}
 
-\item{arc_tolerance}{Default `1e-5`. Relative tolerance for adaptive Bezier
+\item{arc_tolerance}{Default \code{1e-5}. Relative tolerance for adaptive Bezier
 sampling, measured against the total control-polygon length.}
 }
 \value{
 Scene rows containing indexed raymesh surfaces and optional caps, or
-`NULL` for an empty interval or an entirely zero-width sweep.
+\code{NULL} for an empty interval or an entirely zero-width sweep.
 }
 \description{
 Sweep a polygon along a Bezier curve or polyline using transported frames.
+Geometry is constructed by \code{\link[rayvertex:extruded_path_mesh]{rayvertex::extruded_path_mesh()}}; this wrapper
+supplies rayrender materials, boundary identities, and scene transforms.
 }
 \details{
 Closed sweeps correct accumulated frame rotation. A full loop or an interval
@@ -145,7 +147,7 @@ polygons without holes and remain nondegenerate during morphing.
 
 Negative widths are rejected. Zero-width rings use a single geometric vertex
 and triangle fans. Arc-length UVs along the path are obtained with
-`linear_step = TRUE`; perimeter UVs follow distance around each profile.
+\code{linear_step = TRUE}; perimeter UVs follow distance around each profile.
 Geometry, normal, and texture indices are independent, so texture seams and
 sharp shading edges do not split the underlying surface. Caps retain hard
 normals. Pieces with the same material are combined into one raymesh boundary,

@@ -1,5 +1,11 @@
 # rayrender 0.42.0
 
+* Mesh construction for `extruded_path()` and `extruded_polygon()` now lives in
+  rayvertex's `extruded_path_mesh()` and `extruded_polygon_mesh()`. Rayrender's
+  public wrappers preserve their arguments, materials, transforms, and SSS
+  boundary identities. Geometry tests moved with the builders; rayrender retains
+  integration and rendering tests. Requires rayvertex >= 0.16.0.
+  
 * Fixed `extruded_polygon()` cap winding in every plane, reflected scales and
   reversed heights, multipart holes, direct multiple-hole indices, plain
   `SpatialPolygons`, per-feature heights, positive x offsets, and uppercase plane

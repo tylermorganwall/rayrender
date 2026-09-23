@@ -1136,6 +1136,10 @@ ellipsoid = function(
 
 #' Extruded Polygon Object
 #'
+#' Construct geometry with [rayvertex::extruded_polygon_mesh()] and attach
+#' rayrender materials and scene transforms.
+#' @md
+#'
 #' @param polygon Default `NULL`. An `sf` object, `SpatialPolygons` or
 #'   `SpatialPolygonsDataFrame` object, or xy coordinates
 #'   of polygon represented in a way that can be processed by `xy.coords()`.  If
@@ -1439,27 +1443,26 @@ extruded_polygon = function(
   scale = c(1, 1, 1)
 ) {
   for (name in c("x", "y", "z")) {
-    sweep_scalar(get(name), name)
+    value = get(name)
+    if (!is.numeric(value) || length(value) != 1L || !is.finite(value)) {
+      stop(sprintf("`%s` must be a finite number.", name), call. = FALSE)
+    }
   }
-  data = polygon_mesh_data(
-    polygon,
-    plane,
-    top,
-    bottom,
-    holes,
-    center,
-    flip_horizontal,
-    flip_vertical,
-    data_column_top,
-    data_column_bottom,
-    scale_data,
-    scale
+  mesh = rayvertex::extruded_polygon_mesh(
+    polygon = polygon,
+    plane = plane,
+    top = top,
+    bottom = bottom,
+    holes = holes,
+    center = center,
+    flip_horizontal = flip_horizontal,
+    flip_vertical = flip_vertical,
+    data_column_top = data_column_top,
+    data_column_bottom = data_column_bottom,
+    scale_data = scale_data,
+    scale = scale
   )
-  mesh = structure(
-    list(vb = t(data$vertices), it = t(data$indices + 1L)),
-    class = "mesh3d"
-  )
-  mesh3d_model(
+  raymesh_model(
     mesh,
     x = x,
     y = y,
@@ -2710,6 +2713,9 @@ mesh3d_model = function(
 #' Extruded Path Object
 #'
 #' Sweep a polygon along a Bezier curve or polyline using transported frames.
+#' Geometry is constructed by [rayvertex::extruded_path_mesh()]; this wrapper
+#' supplies rayrender materials, boundary identities, and scene transforms.
+#' @md
 #'
 #' @param points Either a list of length-3 numeric vectors or 3-column matrix/data.frame specifying
 #' the x/y/z points that the path should go through.
@@ -2959,7 +2965,12 @@ extruded_path = function(
   smooth_angle = 180,
   arc_tolerance = 1e-5
 ) {
-  parts = sweep_mesh_data(
+  same_material = is.null(material_caps) ||
+    (is.atomic(material_caps) &&
+      length(material_caps) == 1L &&
+      is.na(material_caps)) ||
+    identical(material_caps, material)
+  mesh = rayvertex::extruded_path_mesh(
     points = points,
     polygon = polygon,
     polygon_end = polygon_end,
@@ -2981,31 +2992,19 @@ extruded_path = function(
     end_caps = end_caps,
     initial_normal = initial_normal,
     smooth_angle = smooth_angle,
-    arc_tolerance = arc_tolerance
+    arc_tolerance = arc_tolerance,
+    separate_caps = !same_material
   )
-  if (!length(parts)) {
+  if (is.null(mesh) || (!same_material && all(vapply(mesh, is.null, TRUE)))) {
     return(NULL)
-  }
-  same_material = is.null(material_caps) ||
-    (is.atomic(material_caps) &&
-      length(material_caps) == 1L &&
-      is.na(material_caps)) ||
-    identical(material_caps, material)
-  if (same_material) {
-    material_caps = material
   }
   surface_id = get("max_material_id", envir = ray_environment) + 1L
   cap_id = if (same_material) surface_id else surface_id + 1L
   assign("max_material_id", cap_id, envir = ray_environment)
-  add_mesh_group = function(data, mat, id) {
-    data = Filter(Negate(is.null), data)
-    if (!length(data)) {
+  add_mesh_group = function(mesh, mat, id) {
+    if (is.null(mesh)) {
       return(NULL)
     }
-    meshes = lapply(data, function(piece) {
-      do.call(rayvertex::construct_mesh, piece)
-    })
-    mesh = Reduce(rayvertex::add_shape, meshes)
     object = raymesh_model(
       mesh,
       x = x,
@@ -3021,14 +3020,12 @@ extruded_path = function(
     object$shape_info[[1]]$material_id = id
     object
   }
-  surfaces = lapply(parts, function(part) part$surface)
-  caps = unlist(lapply(parts, function(part) part$caps), recursive = FALSE)
   if (same_material) {
-    add_mesh_group(c(surfaces, caps), material, surface_id)
+    add_mesh_group(mesh, material, surface_id)
   } else {
     add_object(
-      add_mesh_group(surfaces, material, surface_id),
-      add_mesh_group(caps, material_caps, cap_id)
+      add_mesh_group(mesh$surface, material, surface_id),
+      add_mesh_group(mesh$caps, material_caps, cap_id)
     )
   }
 }

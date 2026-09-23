@@ -26,61 +26,61 @@ extruded_polygon(
 )
 }
 \arguments{
-\item{polygon}{Default `NULL`. An `sf` object, `SpatialPolygons` or
-`SpatialPolygonsDataFrame` object, or xy coordinates
-of polygon represented in a way that can be processed by `xy.coords()`.  If
+\item{polygon}{Default \code{NULL}. An \code{sf} object, \code{SpatialPolygons} or
+\code{SpatialPolygonsDataFrame} object, or xy coordinates
+of polygon represented in a way that can be processed by \code{xy.coords()}.  If
 xy-coordinate based polygons are open, they will be closed by adding an
 edge from the last point to the first. Consecutive duplicate and redundant
 collinear vertices are removed. Rings must be simple, with nonzero area;
 holes must be strictly inside their exterior and must not touch or overlap.
-POLYGON and MULTIPOLYGON `sf` geometries retain their component and hole
+POLYGON and MULTIPOLYGON \code{sf} geometries retain their component and hole
 relationships; any Z or M coordinates are ignored.}
 
-\item{x}{Default `0`. x-coordinate to offset the extruded model.}
+\item{x}{Default \code{0}. x-coordinate to offset the extruded model.}
 
-\item{y}{Default `0`. y-coordinate to offset the extruded model.}
+\item{y}{Default \code{0}. y-coordinate to offset the extruded model.}
 
-\item{z}{Default `0`. z-coordinate to offset the extruded model.}
+\item{z}{Default \code{0}. z-coordinate to offset the extruded model.}
 
-\item{plane}{Default `"xz"`. The plane the polygon is drawn in. All possible orientations
-are `xz`, `zx`, `xy`, `yx`, `yz`, and `zy`, matched without regard to case.}
+\item{plane}{Default \code{"xz"}. The plane the polygon is drawn in. All possible orientations
+are \code{xz}, \code{zx}, \code{xy}, \code{yx}, \code{yz}, and \code{zy}, matched without regard to case.}
 
-\item{top}{Default `1`. Extruded top distance. If this equals `bottom`, the polygon will not be
+\item{top}{Default \code{1}. Extruded top distance. If this equals \code{bottom}, the polygon will not be
 extruded and just the one side will be rendered. Values must be finite scalars;
 either height order is supported with outward-facing triangles. When using
 height columns, extrusion is decided separately for each feature.}
 
-\item{bottom}{Default `0`. Extruded bottom distance. If this equals `top`, the polygon will not be
+\item{bottom}{Default \code{0}. Extruded bottom distance. If this equals \code{top}, the polygon will not be
 extruded and just the one side will be rendered.}
 
-\item{holes}{Default `NULL`. For direct xy input, the one-based starting index
+\item{holes}{Default \code{NULL}. For direct xy input, the one-based starting index
 of each hole, in strictly increasing order. Indices refer to the original
-input, before closing rings or removing redundant vertices. `NULL` or `0`
+input, before closing rings or removing redundant vertices. \code{NULL} or \code{0}
 means no holes. Each ring needs at least three distinct vertices.}
 
-\item{angle}{Default `c(0, 0, 0)`. Angle of rotation around the x, y, and z axes, applied in the order specified in `order_rotation`.}
+\item{angle}{Default \code{c(0, 0, 0)}. Angle of rotation around the x, y, and z axes, applied in the order specified in \code{order_rotation}.}
 
-\item{order_rotation}{Default `c(1, 2, 3)`. The order to apply the rotations, referring to "x", "y", and "z".}
+\item{order_rotation}{Default \code{c(1, 2, 3)}. The order to apply the rotations, referring to "x", "y", and "z".}
 
 \item{material}{Default  \code{\link{diffuse}}.The material, called from one of the material
 functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}}.}
 
-\item{center}{Default `FALSE`. Whether to center the polygon at the origin.}
+\item{center}{Default \code{FALSE}. Whether to center the polygon at the origin.}
 
-\item{flip_horizontal}{Default `FALSE`. Flip polygon horizontally in the plane defined by `plane`.}
+\item{flip_horizontal}{Default \code{FALSE}. Flip polygon horizontally in the plane defined by \code{plane}.}
 
-\item{flip_vertical}{Default `FALSE`. Flip polygon vertically in the plane defined by `plane`.}
+\item{flip_vertical}{Default \code{FALSE}. Flip polygon vertically in the plane defined by \code{plane}.}
 
-\item{data_column_top}{Default `NULL`. A string indicating the column in the `sf` object to use
+\item{data_column_top}{Default \code{NULL}. A string indicating the column in the \code{sf} object to use
 to specify the top of the extruded polygon.}
 
-\item{data_column_bottom}{Default `NULL`. A string indicating the column in the `sf` object to use
+\item{data_column_bottom}{Default \code{NULL}. A string indicating the column in the \code{sf} object to use
 to specify the bottom of the extruded polygon.}
 
-\item{scale_data}{Default `1`. If specifying `data_column_top` or `data_column_bottom`, how
+\item{scale_data}{Default \code{1}. If specifying \code{data_column_top} or \code{data_column_bottom}, how
 much to scale that value when rendering.}
 
-\item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
+\item{scale}{Default \code{c(1, 1, 1)}. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Values must be finite and nonzero. Negative scales reflect the geometry
 while preserving outward triangle winding.
@@ -92,7 +92,8 @@ polygon components. Features with equal heights contribute one flat surface;
 such surfaces do not form closed boundaries for subsurface materials.
 }
 \description{
-Extruded Polygon Object
+Construct geometry with \code{\link[rayvertex:extruded_polygon_mesh]{rayvertex::extruded_polygon_mesh()}} and attach
+rayrender materials and scene transforms.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
