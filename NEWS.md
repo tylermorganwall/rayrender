@@ -1,5 +1,27 @@
 # rayrender 0.42.0
 
+* Recover from classified medium and subsurface transport failures by terminating
+  only the affected ray path instead of aborting the render. Retain accumulated
+  light and keep the sample in the image average without retrying it. Scene
+  validation errors and unclassified exceptions still stop rendering.
+* Keep transport diagnostics silent by default, attached to the returned image
+  as `path_warnings`, without console warnings or log files. Set
+  `RAYRENDER_DEBUG_PATHS=true` (or `1`) to enable a summarized warning after image
+  output and a diagnostic log, whose filename is attached as `path_warning_log`.
+  Stills and animation frames retain failure counts and up to eight detailed
+  examples per category. Collection runs only on failed paths, with no diagnostic
+  locking, counting, or formatting on successful paths.
+* Fix medium membership at glass/liquid contact edges and corners, and correct
+  grazing subsurface collisions that round onto a boundary plane. These changes
+  prevent spurious repeated-entry failures while preserving sampled flight
+  distances and scattering weights. Added precision and path-recovery regressions.
+* Fix a sign error in `microfacet(transmission = TRUE)` that produced negative
+  transmitted-light contributions and could make rough transparent surfaces
+  render black. Added a transmitted-radiance regression test.
+* Add reproducible scenes in `tools/subsurface/` for milk and chocolate milk,
+  iced coffee with dielectric-priority ice, droplet and microfacet condensation,
+  and Monterey Bay terrain styled as a cookie in a bowl of milk.
+
 * Mesh construction for `extruded_path()` and `extruded_polygon()` now lives in
   rayvertex's `extruded_path_mesh()` and `extruded_polygon_mesh()`. Rayrender's
   public wrappers preserve their arguments, materials, transforms, and SSS

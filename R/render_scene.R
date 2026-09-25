@@ -177,6 +177,18 @@
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
 #' array (containing either debug data or the RGB).
+#' @details Recoverable medium/subsurface tracking failures terminate only the affected
+#' path, retaining its accumulated light. Rendering continues silently by default:
+#' no warning is emitted and no diagnostic log file is written. These terminated paths
+#' can bias the result. Diagnostics are attached to the returned array as `path_warnings`,
+#' with counts by failure category and up to eight examples per category containing ray
+#' origins, directions, and path state. Collection occurs only on failed paths, not on
+#' successful scattering events.
+#' Set the environment variable `RAYRENDER_DEBUG_PATHS=true` (or `1`) to opt into a
+#' summarized warning after image output and a diagnostic log. The `path_warning_log`
+#' attribute then gives its filename. Saved images use `<filename>.warnings.log`;
+#' renders without a filename, or with an unwritable log directory, use a temporary log.
+#' Scene validation errors and unclassified exceptions remain errors.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Generate a large checkered sphere as the ground

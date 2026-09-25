@@ -30,7 +30,35 @@ point3f SubsurfaceCollisionPoint(const point3f &p, const Ray &ray, double t,
     error2 += error * error;
   }
   adjusted = Float(t) >= endpoint.t || distance2 <= error2;
-  return adjusted ? OffsetMediumOrigin(endpoint, -ray.d) : p;
+  if (adjusted) return OffsetMediumOrigin(endpoint, -ray.d);
+
+  // A grazing collision can round onto the boundary plane while remaining far
+  // from the ray's endpoint along that plane. A Euclidean endpoint-distance
+  // check misses this case, leaving a subsequent inward ray at t=0 with the
+  // medium already active. Correct only plane crossings within position error,
+  // retaining the sampled distance/density and the collision's tangent position.
+  normal3f n = endpoint.geometric_normal.squared_length() > 0
+                   ? endpoint.geometric_normal : endpoint.normal;
+  double plane_distance = 0, plane_error = 0, direction_dot = 0, normal_squared = 0;
+  hit_record local = endpoint;
+  local.p = p;
+  for (int a = 0; a < 3; ++a) {
+    double error = endpoint.pError[a] + gamma(3) *
+        (std::abs(double(ray.o[a])) + std::abs(double(ray.d[a]) * t));
+    local.pError[a] = Float(error);
+    plane_distance += (double(p[a]) - endpoint.p[a]) * n[a];
+    plane_error += error * std::abs(double(n[a]));
+    direction_dot += double(ray.d[a]) * n[a];
+    normal_squared += double(n[a]) * n[a];
+  }
+  if (normal_squared > 0 && direction_dot != 0 &&
+      plane_distance * direction_dot >= 0 && std::abs(plane_distance) <= plane_error) {
+    for (int a = 0; a < 3; ++a)
+      local.p[a] = Float(double(p[a]) - plane_distance * n[a] / normal_squared);
+    adjusted = true;
+    return OffsetMediumOrigin(local, -ray.d);
+  }
+  return p;
 }
 
 double SubsurfaceProposal::Pole(double albedo) {

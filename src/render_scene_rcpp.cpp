@@ -1237,6 +1237,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                   _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
   if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
     final_image.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+  if (imp_sample_objects.volume_scene)
+    final_image.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
   if(Display.Keyframes.size() > 0) {
     List keyframes(Display.Keyframes.size());
     for(unsigned int i = 0; i < Display.Keyframes.size(); i++ ) {

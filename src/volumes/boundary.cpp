@@ -9,6 +9,7 @@
 #include "../hitables/trimesh.h"
 #include "../materials/material.h"
 #include <map>
+#include <iomanip>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -303,10 +304,12 @@ void VolumePathState::Cross(const hit_record &h, const vec3f &direction) {
     for (const auto &entry : media)
       if (entry.boundary == h.medium_boundary && entry.boundary_id == h.boundary_id) {
         std::ostringstream message;
-        message << "Repeated entry into " << h.medium_boundary->geometry->GetName() << " at ("
+        message << std::setprecision(17) << "Repeated entry into " << h.medium_boundary->geometry->GetName() << " at ("
                 << h.p[0] << ", " << h.p[1] << ", " << h.p[2] << "), t=" << h.t
-                << ". Check mesh orientation, self intersections, and nesting.";
-        throw std::runtime_error(message.str());
+                << ", boundary=" << h.boundary_id << ", direction=("
+                << direction[0] << ", " << direction[1] << ", " << direction[2]
+                << "). Check mesh orientation, self intersections, and nesting.";
+        throw PathFailure(PathFailureKind::RepeatedEntry, message.str());
       }
     if (!media.empty()) media.back().guide_valid = false;
     const auto *surface = h.mat_ptr && h.mat_ptr->is_dielectric()
@@ -325,12 +328,14 @@ void VolumePathState::Cross(const hit_record &h, const vec3f &direction) {
     }
     if (!valid) {
       std::ostringstream message;
-      message << "Non-nested or inconsistently oriented medium boundaries encountered at ("
+      message << std::setprecision(17) << "Non-nested or inconsistently oriented medium boundaries encountered at ("
               << h.p[0] << ", " << h.p[1] << ", " << h.p[2] << ") exiting "
               << h.medium_boundary->geometry->GetName() << ". Active boundary: "
               << (media.empty() ? "vacuum" : media.back().boundary->geometry->GetName())
-              << ". Use disjoint or nested closed volumes.";
-      throw std::runtime_error(message.str());
+              << ", boundary=" << h.boundary_id << ", direction=("
+              << direction[0] << ", " << direction[1] << ", " << direction[2]
+              << "). Use disjoint or nested closed volumes.";
+      throw PathFailure(PathFailureKind::InvalidExit, message.str());
     }
     media.erase(found);
     if (!media.empty()) media.back().guide_valid = false;

@@ -13,6 +13,12 @@ post_process_frame = function(
   write_file = TRUE,
   plot_scene = TRUE
 ) {
+  path_record = save_path_warnings(
+    attr(rgb_mat, "path_warnings"),
+    if (write_file) filename else NA_character_
+  )
+  # Warn only after image output, including when options(warn = 2) is enabled.
+  on.exit(warn_path_failures(path_record), add = TRUE)
   if (transparent_background && isTRUE(rgb_mat$premultiplied)) {
     rgb_mat = straight_volume_rgb(rgb_mat)
   }
@@ -37,14 +43,14 @@ post_process_frame = function(
     } else if (plot_scene) {
       rayimage::plot_image(output_array, new_page = TRUE)
     }
-    return(invisible(returnmat))
+    return(invisible(attach_path_warnings(returnmat, path_record)))
   } else if (debug_channel %in% c(2, 3, 4, 5, 6, 7, 8, 9)) {
     if (write_file) {
       rayimage::ray_write_image(full_array, filename)
     } else if (plot_scene) {
       rayimage::plot_image(full_array, new_page = TRUE)
     }
-    return(invisible(full_array))
+    return(invisible(attach_path_warnings(full_array, path_record)))
   }
   coverage = if (transparent_background) full_array[,, 4] else NULL
   if (transparent_background) {
@@ -81,5 +87,5 @@ post_process_frame = function(
   } else if (plot_scene) {
     rayimage::plot_image(full_array, new_page = TRUE)
   }
-  return(invisible(full_array))
+  return(invisible(attach_path_warnings(full_array, path_record)))
 }

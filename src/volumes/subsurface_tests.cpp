@@ -263,6 +263,27 @@ context("Subsurface proposal and boundary") {
     expect_false(adjusted);
     expect_true(unchanged.squared_length() == 0);
   }
+  test_that("grazing collisions stay inside a plane without jumping to its distant endpoint") {
+    const Float plane = Float(2.715);
+    for (Float side : {Float(-1), Float(1)}) {
+      const Float start = std::nextafter(plane, side < 0 ? Float(-INFINITY) : Float(INFINITY));
+      Ray ray(point3f(0, start, 0), vec3f(1, plane - start, 0));
+      hit_record h;
+      h.p = point3f(1, plane, 0);
+      h.pError = gamma(7) * convert_to_vec3(Abs(h.p));
+      h.normal = h.geometric_normal = normal3f(0, -side, 0);
+      h.t = 1;
+      const double t = .75;
+      point3f collision(Float(t), Float(double(start) + double(ray.d[1]) * t), 0);
+      expect_true(collision[1] == plane);
+      bool adjusted = false;
+      auto inside = SubsurfaceCollisionPoint(collision, ray, t, h, adjusted);
+      expect_true(adjusted);
+      expect_true(side * (inside[1] - plane) > 0);
+      expect_true(inside[0] == collision[0]);
+      expect_true(inside[2] == collision[2]);
+    }
+  }
   test_that("coordinate-zero boundary planes get a resolvable scale-aware offset") {
     hit_record h;
     h.p = point3f(0, .3, .2);

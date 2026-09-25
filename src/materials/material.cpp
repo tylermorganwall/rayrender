@@ -682,7 +682,7 @@ point3f MicrofacetTransmission::f(const Ray& r_in, const hit_record& rec, const 
           D * G * AbsCosTheta(wo) *
         std::fabs(eta2 * eta2 *
        dot(wi, wh) * dot(wo, wh)) /
-      (cosThetaI * cosThetaO * sqrtDenom * sqrtDenom));
+      (std::fabs(cosThetaI * cosThetaO) * sqrtDenom * sqrtDenom));
 }
 
 point3f MicrofacetTransmission::get_albedo(const hit_record& rec) const {

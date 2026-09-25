@@ -3,6 +3,7 @@
 #include "../hitables/hitablelist.h"
 #include "lights.h"
 #include "medium.h"
+#include "path_diagnostics.h"
 #include "../lights/atmosphere.h"
 #include <atomic>
 #include <cstdlib>
@@ -123,6 +124,7 @@ public:
   bool collect_statistics = std::getenv("RAYRENDER_VOLUME_STATS") &&
                             std::string(std::getenv("RAYRENDER_VOLUME_STATS")) == "true";
   mutable VolumeStatistics statistics;
+  mutable PathDiagnostics path_diagnostics;
   Rcpp::List Statistics() const;
   void Finish(Float t0, Float t1);
   VolumePathState InitialState(const Ray &, const std::atomic<bool> *cancel,

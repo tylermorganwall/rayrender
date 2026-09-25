@@ -59,8 +59,13 @@ struct RGB {
     return *this;
   }
   RGB &operator+=(const RGB &b) {
+    // Validate the whole contribution before changing any accumulated channel.
+    // A failed sample retains all radiance accumulated before this addition.
     for (int i = 0; i < 3; ++i)
-      v[i] += b[i];
+      if (!std::isfinite(v[i] + b[i]) || !std::isfinite(Float(v[i] + b[i])))
+        throw PathFailure(PathFailureKind::Radiance,
+                          "Radiance exceeds the output buffer range. Check scene units, illumination, and coefficients.");
+    for (int i = 0; i < 3; ++i) v[i] += b[i];
     return *this;
   }
   RGB &operator/=(double b) {
@@ -117,7 +122,7 @@ void subsurface_segment(RGB &beta, RGB &ru, RGB &rl, const Medium &medium,
     for (int j = 0; j < 3; ++j) {
       logs[j][c] = (*values[j])[c] > 0 ? std::log((*values[j])[c]) + factors[j] : -INFINITY;
       if (std::isnan(logs[j][c]) || logs[j][c] == INFINITY)
-        throw std::runtime_error("Non-finite subsurface density. Check coefficients and scene scale.");
+        throw PathFailure(PathFailureKind::Density, "Non-finite subsurface density. Check coefficients and scene scale.");
       largest = std::max(largest, logs[j][c]);
     }
   }
@@ -243,17 +248,24 @@ void reconcile_surface_origin(const VolumeScene *scene, const hit_record &h, Ray
   Float tolerance = 8 * std::numeric_limits<Float>::epsilon() *
                         std::max({Float(1), std::abs(h.p[0]), std::abs(h.p[1]), std::abs(h.p[2])}) +
                     h.pError.length();
-  vec3f offset = ray.o - h.p;
-  vec3f direction = offset.squared_length() > 0 ? unit_vector(offset) : unit_vector(ray.d);
-
-
   // Probe only the error-sized neighbourhood of the surface. Rebuild containment
   // at the spawned origin only if an actual medium boundary is present there.
-  Ray probe(h.p - direction * (2 * tolerance), direction, ray.time());
-  probe.segment_absorption = true;
+  // A surface's offset may run parallel to a nearby medium boundary (a vertical
+  // cookie wall meeting a horizontal milk cap). Checking only that direction
+  // misses contact even when rounding puts the new origin on the wrong side.
+  // Three orthogonal probes cover local planar contacts without changing the
+  // actual ray origin, geometry, or strict crossing checks away from contact.
   hit_record contact;
   random_gen rng(0);
-  if (scene->boundary_bvh->hit(probe, 0, 4 * tolerance, contact, rng)) {
+  bool nearby = false;
+  for (int axis = 0; axis < 3 && !nearby; ++axis) {
+    vec3f direction(0);
+    direction[axis] = 1;
+    Ray probe(h.p - direction * (2 * tolerance), direction, ray.time());
+    probe.segment_absorption = true;
+    nearby = scene->boundary_bvh->hit(probe, 0, 4 * tolerance, contact, rng);
+  }
+  if (nearby) {
     auto previous = state.Active() ? std::optional<MediumEntry>(*state.Active()) : std::nullopt;
     state = scene->InitialState(ray, cancel);
     if (previous && state.Active() && previous->boundary_id == state.Active()->boundary_id) {
@@ -285,7 +297,7 @@ point3f null_coefficient(const MediumProperties &mp, const point3f &majorant) {
     double st = double(mp.sigma_a[i]) + mp.sigma_s[i];
     if (!std::isfinite(st) || mp.sigma_a[i] < 0 || mp.sigma_s[i] < 0 ||
         st > double(majorant[i]) * (1 + 2e-5) + 1e-12)
-      throw std::runtime_error("Medium coefficients exceed their majorant or are invalid.");
+      throw PathFailure(PathFailureKind::Majorant, "Medium coefficients exceed their majorant or are invalid.");
     n[i] = std::max(0.0, double(majorant[i]) - st);
   }
   return n;
@@ -788,7 +800,14 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   VolumeStatistics *stats = scene && scene->collect_statistics ? &scene->statistics : nullptr;
   if (stats)
     stats->paths.fetch_add(1, std::memory_order_relaxed);
-  VolumePathState state = scene ? scene->InitialState(input, cancel) : VolumePathState{};
+  RGB L(0);
+  Ray ray(input.o, unit_vector(input.d), input.time());
+  VolumePathState state;
+  size_t depth = 0;
+  uint64_t internal_events = 0;
+  const char *stage = "initial_membership";
+  try {
+  state = scene ? scene->InitialState(input, cancel) : VolumePathState{};
   if (!scene && input.pri_stack)
     state.glass = *input.pri_stack;
 
@@ -799,6 +818,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   int hero = std::min(2, int(sampler->Get1D() * 3));
   if (scene && scene->has_media) {
     auto alpha_rng = tracking_rng(sampler);
+    stage = "transparency";
     transparency = primary_transparency(input, state, world, alpha_rng, cancel, scene->atmosphere);
   }
 
@@ -806,17 +826,15 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   // L accumulates contributions and beta carries throughput. ru and rl are the
   // rescaled unidirectional/light-sampling density terms used in MIS denominators.
   // Keep the previous scattering vertex for evaluating competing light proposals.
-  Ray ray(input.o, unit_vector(input.d), input.time());
+  stage = "radiance";
   state.SetRay(ray);
-  RGB L(0), beta(1), ru(1), rl(1);
+  RGB beta(1), ru(1), rl(1);
   double eta_scale = 1;
   VolumeLightSampler::Context previous_light_context;
   // Native lighting without finite haze still belongs to the last real vertex.
   // Crossing an invisible cloud boundary must not move its altitude query.
   point3f lighting_origin = ray.o;
   bool specular = true, any_diffuse = false, wrote_feature = false;
-  size_t depth = 0;
-  uint64_t internal_events = 0;
   std::optional<SubsurfaceProposal> subsurface_flight;
   uint64_t flight_boundary = 0;
   auto internal_roulette = [&]() {
@@ -824,7 +842,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     double density = ru.Average();
     double weight = density > 0 ? (beta * RGB(eta_scale) / density).Max() : 0;
     if (!std::isfinite(weight))
-      throw std::runtime_error("Non-finite subsurface roulette weight. Check scene scale and coefficients.");
+      throw PathFailure(PathFailureKind::Roulette, "Non-finite subsurface roulette weight. Check scene scale and coefficients.");
     // Do not impose a constant kill probability on conservative walks. It adds
     // avoidable heavy tails (and can give unbounded variance in thick bodies).
     double survival = std::min(1.0, weight);
@@ -846,7 +864,9 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       correction_uniform = haze_rng.unif_rand();
     }
     auto segment = atmosphere_ray.Flush(endpoint_uniform, correction_uniform);
-    for (int c = 0; c < 3; ++c) L[c] += segment.radiance[c];
+    RGB contribution;
+    for (int c = 0; c < 3; ++c) contribution[c] = segment.radiance[c];
+    L += contribution;
     beta *= RGB(segment.transmission);
   };
   auto select_haze = [&](bool enabled, const point3f &p) {
@@ -935,7 +955,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
             for (int a = 0; a < 3; ++a)
               resolved |= Float(double(ray.o[a]) + double(ray.d[a]) / rate) != ray.o[a];
             if (!resolved)
-              throw std::runtime_error("Subsurface mean free path is below position precision. Reduce optical thickness or move/rescale the scene near the origin.");
+              throw PathFailure(PathFailureKind::PositionPrecision, "Subsurface mean free path is below position precision. Reduce optical thickness or move/rescale the scene near the origin.");
           }
           // The position may round across the boundary even when t rounds below
           // h.t. Use the endpoint and ray-position error bounds, not just t.
@@ -1326,6 +1346,14 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   }
 
 
+  } catch (const PathFailure &failure) {
+    // Do not retry or renormalize surviving samples. Keep this sample in the
+    // estimator, with its accumulated radiance and no further contribution.
+    if (!scene) throw;
+    scene->path_diagnostics.Record(failure, input, ray, depth, internal_events,
+                                  state.Active() ? state.Active()->boundary_id : 0, stage);
+  }
+
   if (stats) {
     if (internal_events) {
       stats->subsurface_event_paths.fetch_add(1, std::memory_order_relaxed);
@@ -1339,9 +1367,70 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         old, internal_events, std::memory_order_relaxed)) {}
   }
   // Perform the final precision conversion only after all contributions are summed.
-  if (internal_events)
-    for (int c = 0; c < 3; ++c)
-      if (!std::isfinite(L[c]) || !std::isfinite(Float(L[c])))
-        throw std::runtime_error("Subsurface radiance exceeds the output buffer range. Check scene units, illumination, and coefficients.");
   radiance = L.FloatRGB();
 }
+
+#ifdef NOT_CRAN
+#include "../hitables/box.h"
+#include "../materials/texture.h"
+#include <testthat.h>
+context("Radiance recovery") {
+  test_that("invalid contributions cannot partially overwrite accumulated light") {
+    for (double invalid : {double(NAN), double(INFINITY), double(std::numeric_limits<Float>::max()) * 2}) {
+      RGB accumulated(point3f(1, 2, 3)), contribution(4);
+      contribution[2] = invalid;
+      bool rejected = false;
+      try { accumulated += contribution; }
+      catch (const PathFailure &failure) {
+        rejected = failure.kind == PathFailureKind::Radiance;
+      }
+      expect_true(rejected);
+      expect_true((accumulated[0] == 1 && accumulated[1] == 2 && accumulated[2] == 3));
+    }
+  }
+}
+context("Surface origins at perpendicular medium boundaries") {
+  test_that("a horizontal surface offset reconciles a nearby horizontal medium cap") {
+    Transform identity;
+    Rcpp::NumericMatrix transform(4, 4);
+    for (int i = 0; i < 4; ++i) transform(i, i) = 1;
+    auto medium = std::make_shared<Medium>(Rcpp::List::create(
+        Rcpp::Named("sigma_a") = Rcpp::NumericVector::create(.1, .1, .1),
+        Rcpp::Named("sigma_s") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("density_scale") = 1, Rcpp::Named("g") = 0,
+        Rcpp::Named("emission") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("temperature") = R_NilValue, Rcpp::Named("emission_scale") = 1,
+        Rcpp::Named("temperature_scale") = 1, Rcpp::Named("temperature_offset") = 0,
+        Rcpp::Named("medium_transform") = transform));
+    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto geometry = std::make_shared<box>(vec3f(-2, -2, -2), vec3f(2, 0, 2),
+                                         mat, nullptr, nullptr, &identity, &identity, false);
+    VolumeScene scene;
+    scene.boundaries.add(std::make_shared<MediumBoundary>(geometry, medium, identity, false,
+                                                         scene.NextBoundaryId()));
+    scene.Finish(0, 1);
+    const Float epsilon = std::numeric_limits<Float>::epsilon();
+    for (Float height : {-epsilon, Float(0), epsilon}) {
+      for (Float vertical : {Float(-1), Float(1)}) {
+        hit_record surface;
+        surface.p = point3f(0, height, 0);
+        surface.pError = vec3f(epsilon, 0, epsilon);
+        Ray ray(point3f(epsilon, height, 0), vec3f(0, vertical, 0));
+        VolumePathState state;
+        reconcile_surface_origin(&scene, surface, ray, state, nullptr);
+        const bool inside = height < 0 || (height == 0 && vertical > 0);
+        expect_true((!state.media.empty()) == inside);
+        expect_true((ray.medium != nullptr) == inside);
+      }
+    }
+    // Away from contact, do not silently repair an invalid incremental state.
+    hit_record away;
+    away.p = point3f(0, -.1, 0);
+    away.pError = vec3f(epsilon, 0, epsilon);
+    Ray ray(point3f(epsilon, -.1, 0), vec3f(0, 1, 0));
+    VolumePathState state;
+    reconcile_surface_origin(&scene, away, ray, state, nullptr);
+    expect_true(state.media.empty());
+  }
+}
+#endif

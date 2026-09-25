@@ -524,6 +524,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["b"] = rgb_output.ConvertRcpp(2));
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, 
@@ -765,6 +767,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
@@ -778,6 +782,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,

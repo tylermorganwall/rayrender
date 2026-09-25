@@ -25,6 +25,9 @@ post_process_scene = function(
   screen_line_overlay = NULL,
   exposure_adjustment = 1
 ) {
+  path_record = save_path_warnings(attr(rgb_mat, "path_warnings"), filename)
+  # Warn only after image output, including when options(warn = 2) is enabled.
+  on.exit(warn_path_failures(path_record), add = TRUE)
   if (isTRUE(attr(rgb_mat, "render_cancelled"))) {
     plot_scene = FALSE
   }
@@ -86,14 +89,14 @@ post_process_scene = function(
           new_page = new_page
         )
       }
-      return(invisible(returnmat))
+      return(invisible(attach_path_warnings(returnmat, path_record)))
     } else {
       rayimage::ray_write_image(
         (returnmat - min(returnmat, na.rm = TRUE)) /
           (max(returnmat, na.rm = TRUE) - min(returnmat, na.rm = TRUE)),
         filename
       )
-      return(invisible(returnmat))
+      return(invisible(attach_path_warnings(returnmat, path_record)))
     }
   } else if (debug_channel %in% c(2, 3, 4, 5, 17)) {
     if (is.na(filename)) {
@@ -110,10 +113,10 @@ post_process_scene = function(
           )
         }
       }
-      return(invisible(full_array))
+      return(invisible(attach_path_warnings(full_array, path_record)))
     } else {
       rayimage::ray_write_image(full_array, filename)
-      return(invisible(full_array))
+      return(invisible(attach_path_warnings(full_array, path_record)))
     }
   } else if (debug_channel %in% c(10, 13)) {
     full_array_ret = full_array
@@ -140,7 +143,7 @@ post_process_scene = function(
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
-    return(invisible(full_array_ret))
+    return(invisible(attach_path_warnings(full_array_ret, path_record)))
   } else if (debug_channel == 11) {
     full_array_ret = full_array
 
@@ -154,7 +157,7 @@ post_process_scene = function(
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
-    return(invisible(full_array_ret))
+    return(invisible(attach_path_warnings(full_array_ret, path_record)))
   } else if (debug_channel %in% c(12, 14, 15, 16)) {
     full_array_ret = full_array
     full_array[is.infinite(full_array)] = max(full_array[
@@ -170,7 +173,7 @@ post_process_scene = function(
     } else {
       rayimage::ray_write_image(full_array, filename)
     }
-    return(invisible(full_array_ret))
+    return(invisible(attach_path_warnings(full_array_ret, path_record)))
   }
   coverage = if (transparent_background) full_array[,, 4] else NULL
   if (transparent_background) {
@@ -302,7 +305,7 @@ post_process_scene = function(
         new_page = new_page
       )
     } else {
-      return(full_array)
+      return(attach_path_warnings(full_array, path_record))
     }
   } else {
     rayimage::ray_write_image(full_array, filename)
@@ -313,5 +316,5 @@ post_process_scene = function(
       )
     }
   }
-  return(invisible(full_array))
+  return(invisible(attach_path_warnings(full_array, path_record)))
 }
