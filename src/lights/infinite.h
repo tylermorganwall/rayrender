@@ -86,6 +86,8 @@ private:
 // small celestial disks and gives support to every phase/texture detail.
 class DiskInfiniteLight final : public InfiniteLight {
 public:
+  DiskInfiniteLight(point3f radiance, vec3f direction, double angular_diameter,
+                    Float rotation);
   DiskInfiniteLight(std::shared_ptr<texture> image, int width, int height,
                     vec3f direction, double angular_diameter, Float rotation,
                     bool clip_horizon = true,

@@ -70,6 +70,25 @@ context("Image infinite lights") {
   }
 }
 context("Celestial disk lights") {
+  test_that("uniform disks have exact power and irradiance across angular sizes") {
+    for (double diameter : {.53, 30., 170.}) {
+      DiskInfiniteLight disk(point3f(2), vec3f(0, 1, 0), diameter, 0);
+      double radius = diameter * M_PI / 360;
+      double solid_angle = 4 * M_PI * std::pow(std::sin(radius / 2), 2);
+      expect_true(std::abs(disk.SamplingWeight() / (2 * solid_angle) - 1) < 1e-6);
+      double irradiance = 0;
+      const int n = 128;
+      for (int i = 0; i < n; ++i) {
+        vec3f wi = disk.Sample(point3f(0), vec2f((i + .5f) / n, .37), 0);
+        double pdf = disk.Pdf(point3f(0), wi, 0);
+        expect_true(std::abs(pdf * solid_angle - 1) < 1e-6);
+        irradiance += disk.Radiance(point3f(0), wi, 0)[0] * wi[1] / pdf;
+      }
+      expect_true(std::abs(irradiance / n / (2 * M_PI * std::pow(std::sin(radius), 2)) - 1) < 1e-5);
+    }
+    DiskInfiniteLight below(point3f(1), vec3f(0, -1, 0), 10, 0);
+    expect_true(below.Radiance(point3f(0), vec3f(0, -1, 0), 0)[0] == 1);
+  }
   test_that("disk proposals integrate irradiance and remain finite at lunar angles") {
     auto white = std::make_shared<constant_texture>(point3f(1));
     const double diameter = .53, radius = diameter * M_PI / 360;

@@ -79,6 +79,7 @@ reference:
   - sky_light
   - sky_light_image
   - sun_light
+  - disk_light
   - add_infinite_light
   - list_infinite_lights
   - remove_infinite_light

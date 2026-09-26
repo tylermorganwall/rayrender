@@ -283,6 +283,17 @@ size_t InfiniteLightMixture::GetSize() const {
 }
 
 
+// Uniform disks share the cone geometry and sampler but have an exact integrated
+// brightness, including for wide angles where texture quadrature is inaccurate.
+DiskInfiniteLight::DiskInfiniteLight(point3f radiance, vec3f direction,
+                                   double diameter, Float rotation)
+    : DiskInfiniteLight(std::make_shared<constant_texture>(radiance), 1, 1,
+                        direction, diameter, rotation, false) {
+  weight = std::max(0.0, .212671 * radiance[0] + .715160 * radiance[1] +
+                        .072169 * radiance[2]) * solid_angle;
+}
+
+
 // Keep a celestial image in its own rectilinear projection instead of baking it
 // into a sky map. A local orthonormal frame maps between its pixels and directions.
 DiskInfiniteLight::DiskInfiniteLight(std::shared_ptr<texture> source, int width,
@@ -412,7 +423,6 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
   for (R_xlen_t i = 0; i < descriptions.size(); ++i) {
     Rcpp::checkUserInterrupt();
     Rcpp::List item = descriptions[i];
-    std::string filename = Rcpp::as<std::string>(item["filename"]);
     std::string type = Rcpp::as<std::string>(item["type"]);
 
     // One sky supplies the scene's atmospheric transport for all other sources.
@@ -427,12 +437,26 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
 
     // Both image-based types share linear HDR loading and intensity validation.
     // Reject invalid texels here rather than allowing worker queries to see them.
-    if (type != "image" && type != "disk")
+    if (type != "image" && type != "disk" && type != "uniform_disk")
       throw std::runtime_error("Unsupported infinite light type.");
     Float intensity = Rcpp::as<Float>(item["intensity"]);
     double rotation = Rcpp::as<double>(item["rotation"]);
     if (!std::isfinite(intensity) || intensity < 0 || !std::isfinite(rotation))
       throw std::runtime_error("Infinite light intensity and rotation must be finite and representable; intensity must be nonnegative.");
+    if (type == "uniform_disk") {
+      Rcpp::NumericVector color = item["color"], d = item["direction"];
+      if (color.size() != 3 || d.size() != 3)
+        throw std::runtime_error("Disk light color and direction must have three components.");
+      for (int c = 0; c < 3; ++c)
+        if (!std::isfinite(color[c]) || color[c] < 0 || color[c] > 1)
+          throw std::runtime_error("Disk light color must be finite and between zero and one.");
+      lights.push_back(std::make_shared<DiskInfiniteLight>(
+          point3f(color[0] * intensity, color[1] * intensity, color[2] * intensity),
+          vec3f(d[0], d[1], d[2]), Rcpp::as<double>(item["angular_diameter"]),
+          -Float(std::fmod(rotation, 360.0))));
+      continue;
+    }
+    std::string filename = Rcpp::as<std::string>(item["filename"]);
     int width, height, channels;
     Float *data = textures.LookupFloat(filename, width, height, channels, 3);
     for (size_t j = 0; j < size_t(width) * height * channels; ++j) {

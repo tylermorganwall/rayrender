@@ -39,3 +39,11 @@ inst/examples/
 inst/doc/
 tools/build-pig-assets.R
 revdep/
+tools/code/
+tools/mesh-migration/
+tools/polygon
+tools/rimgui
+tools/subsurface
+tools/sweep
+tools/rimgui*
+tools/sync*

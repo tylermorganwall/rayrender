@@ -1,4 +1,7 @@
-# rayrender 0.42.0
+# rayrender 0.42.3.9000
+
+* Add `disk_light()` for a uniform infinite disk with color, intensity, angular
+  diameter, and direction controls, without image files or sky datasets.
 
 * Recover from classified medium and subsurface transport failures by terminating
   only the affected ray path instead of aborting the render. Retain accumulated
