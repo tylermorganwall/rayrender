@@ -144,7 +144,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
   }
 
-  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y, integrator_type] (
+  // Diffuse normal mapping consumes both 1D and 2D samples. Always keep those
+  // dimensions independent, including diffuse materials discovered by importers.
+  const bool independent_dimensions = true;
+  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y, independent_dimensions] (
       size_t width, size_t height, const std::vector<unsigned int>& state_seeds,
       std::vector<random_gen>& state_rngs, std::vector<std::unique_ptr<Sampler> >& state_samplers) {
     state_rngs.clear();
@@ -170,7 +173,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           state_samplers.push_back(std::unique_ptr<Sampler>(new SobolBlueNoiseSampler(rng_single)));
           state_samplers.back()->StartPixel(i,j);
         }
-        state_samplers.back()->independent_dimensions = integrator_type == IntegratorType::ShadowRays;
+        state_samplers.back()->independent_dimensions = independent_dimensions;
         state_samplers.back()->SetSampleNumber(0);
         index++;
       }

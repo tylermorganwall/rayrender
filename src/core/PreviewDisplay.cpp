@@ -3320,7 +3320,7 @@ context("Preview picking and orbit targets") {
     auto scene = std::make_shared<VolumeScene>();
     Rcpp::Function describe = Rcpp::Environment::namespace_env("rayrender")["homogeneous_medium"];
     auto medium = LoadMedium(describe());
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     auto sphere_geometry = std::make_shared<sphere>(2, mat, nullptr, nullptr,
                                                   &identity, &identity, false);
     auto boundary = std::make_shared<MediumBoundary>(sphere_geometry, medium, identity, false,
@@ -3348,7 +3348,7 @@ context("Preview picking and orbit targets") {
   }
   test_that("right clicks preserve focus while orbiting about the selected surface") {
     Transform identity;
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     hitable_list world;
     world.add(std::make_shared<sphere>(2, mat, nullptr, nullptr, &identity, &identity, false));
     camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),

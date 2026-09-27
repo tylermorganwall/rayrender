@@ -67,13 +67,12 @@ void PrintClassSizes() {
   Rcpp::Rcout << "---environment_camera    : " << sizeof(RayCamera) << "\n";
   Rcpp::Rcout << "---RealisticCamera       : " << sizeof(RealisticCamera) << "\n\n";
   Rcpp::Rcout << "material                 : " << sizeof(material) << "\n";
-  Rcpp::Rcout << "---lambertian            : " << sizeof(lambertian) << "\n";
+  Rcpp::Rcout << "---diffuse_material            : " << sizeof(diffuse_material) << "\n";
   Rcpp::Rcout << "---metal                 : " << sizeof(metal) << "\n";
   Rcpp::Rcout << "---dielectric            : " << sizeof(dielectric) << "\n";
   Rcpp::Rcout << "---diffuse_light         : " << sizeof(diffuse_light) << "\n";
   Rcpp::Rcout << "---spot_light            : " << sizeof(spot_light) << "\n";
   Rcpp::Rcout << "---isotropic             : " << sizeof(isotropic) << "\n";
-  Rcpp::Rcout << "---orennayar             : " << sizeof(orennayar) << "\n";
   Rcpp::Rcout << "---MicrofacetReflection  : " << sizeof(MicrofacetReflection) << "\n";
   Rcpp::Rcout << "---MicrofacetTransmission: " << sizeof(MicrofacetTransmission) << "\n";
   Rcpp::Rcout << "---glossy                : " << sizeof(glossy) << "\n";

@@ -60,6 +60,7 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, ra
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
   }
   rec.geometric_normal = rec.normal;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -125,6 +126,7 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
   }
   rec.geometric_normal = rec.normal;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   

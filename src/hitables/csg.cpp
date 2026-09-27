@@ -73,6 +73,7 @@ inline void populate_hit_record(const csg& object, const Ray& object_ray,
   rec.normal *= object.reverseOrientation ? -1 : 1;
   rec.bump_normal *= object.reverseOrientation ? -1 : 1;
   rec.geometric_normal = rec.normal;
+  rec.physical_shading_normal = normal3f(0);
   rec.shape = &object;
   rec.alpha_miss = false;
 }

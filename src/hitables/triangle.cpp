@@ -1,3 +1,4 @@
+#include "../materials/normalmap.h"
 #include "../hitables/triangle.h"
 #include "RcppThread.h"
 #include "../utils/raylog.h"
@@ -213,6 +214,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   rec.geometric_normal = unit_vector(normal);
+  rec.physical_shading_normal = rec.geometric_normal;
   rec.p = pHit;
   rec.t = t;
   rec.precise_t = precise_t;
@@ -230,13 +232,14 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     } else {
       np.make_unit_vector();
+      rec.physical_shading_normal = normal3f(np[0],np[1],np[2]);
       if(mesh->has_consistent_normals) {
         bool flip = dot(np, r.direction()) > 0;
         Float af1 = mesh->alpha_v[n[0]];
         Float af2 = mesh->alpha_v[n[1]];
         Float af3 = mesh->alpha_v[n[2]];
         Float af = b0 * af1 + b1 * af2 + b2 * af3;
-        vec3f i = (-r.direction()); //normalizing here really increases time--see if you can normalize once
+        vec3f i = -unit_vector(r.direction()); // Match the Sampler overload without changing ray t.
         i *= flip ? -1 : 1;
         Float b = dot(i,np);
         Float q = (1 - 2 * M_1_PI * af) * (1 - (2 * M_1_PI) * af)/(1 + 2 * (1 - 2 * M_1_PI) * af);
@@ -269,13 +272,24 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
 
   if(bump_tex) {
-    vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
-
-    point3f bvbu = bump_tex->value(uHit, vHit, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
-                            rec.dpdv - bvbu.xyz.y * norm_bump));
-    rec.bump_normal.make_unit_vector();
-    rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+    if (mesh->mesh_materials[mat_id]->physical_normal_mapping()) {
+      using normalmap::Vector;
+      const point3f slopes = bump_tex->value(uvHit[0], uvHit[1], rec.p);
+      const auto& n = rec.physical_shading_normal;
+      const auto bumped = normalmap::perturb(Vector(n[0],n[1],n[2]),
+          Vector(rec.dpdu[0],rec.dpdu[1],rec.dpdu[2]), Vector(rec.dpdv[0],rec.dpdv[1],rec.dpdv[2]),
+          slopes[0], slopes[1]);
+      rec.physical_shading_normal = normal3f(bumped[0],bumped[1],bumped[2]);
+      rec.bump_normal = rec.physical_shading_normal;
+    } else {
+      // Non-diffuse BSDFs retain their own shading-frame convention.
+      const vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
+      const point3f bvbu = bump_tex->value(uvHit[0], uvHit[1], rec.p);
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump,
+                                                rec.dpdv - bvbu.xyz.y * norm_bump));
+      rec.bump_normal.make_unit_vector();
+      rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+    }
     rec.has_bump = true;
   }
 
@@ -441,6 +455,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   }
   rec.t = t;
   rec.geometric_normal = unit_vector(normal);
+  rec.physical_shading_normal = rec.geometric_normal;
   rec.precise_t = precise_t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
@@ -456,6 +471,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     } else {
       np.make_unit_vector();
+      rec.physical_shading_normal = normal3f(np[0],np[1],np[2]);
       if(mesh->has_consistent_normals) {
         bool flip = dot(np, r.direction()) > 0;
         Float af1 = mesh->alpha_v[n[0]];
@@ -484,17 +500,28 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
 
   if(bump_tex) {
-    vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
-    
-    point3f bvbu = bump_tex->value(uvHit[0], uvHit[1], rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
-                            rec.dpdv - bvbu.xyz.y * norm_bump));
-    rec.bump_normal.make_unit_vector();
-    rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+    if (mesh->mesh_materials[mat_id]->physical_normal_mapping()) {
+      using normalmap::Vector;
+      const point3f slopes = bump_tex->value(uvHit[0], uvHit[1], rec.p);
+      const auto& n = rec.physical_shading_normal;
+      const auto bumped = normalmap::perturb(Vector(n[0],n[1],n[2]),
+          Vector(rec.dpdu[0],rec.dpdu[1],rec.dpdu[2]), Vector(rec.dpdv[0],rec.dpdv[1],rec.dpdv[2]),
+          slopes[0], slopes[1]);
+      rec.physical_shading_normal = normal3f(bumped[0],bumped[1],bumped[2]);
+      rec.bump_normal = rec.physical_shading_normal;
+    } else {
+      // Non-diffuse BSDFs retain their own shading-frame convention.
+      const vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
+      const point3f bvbu = bump_tex->value(uvHit[0], uvHit[1], rec.p);
+      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump,
+                                                rec.dpdv - bvbu.xyz.y * norm_bump));
+      rec.bump_normal.make_unit_vector();
+      rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+    }
     rec.has_bump = true;
   }
-  rec.u = uvHit[0];
-  rec.v = uvHit[1];
+  rec.u = mesh->has_vertex_colors ? b0 : uvHit[0];
+  rec.v = mesh->has_vertex_colors ? b1 : uvHit[1];
   
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;

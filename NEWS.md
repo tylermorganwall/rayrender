@@ -1,3 +1,19 @@
+# Development version
+
+* Diffuse materials now always use the analytic normal-mapping model of
+  Schuessler et al. (2017), including imported diffuse face materials and vertex
+  colors. Removed the legacy diffuse bump implementation and the beta
+  `normal_mapping` argument; ordinary `diffuse(bump_texture = ...)` uses the
+  updated model. Constant bump maps preserve smooth normals and UV scale.
+* Replaced the approximate Oren–Nayar BRDF with energy-preserving Oren–Nayar
+  (EON). `sigma` maps to roughness as `min(sigma / 90, 1)`; zero remains
+  Lambertian. EON includes color-dependent multiple scattering. Nonfinite,
+  negative, or nonscalar `sigma` values fail validation.
+* Fixed the Sampler triangle bump path to use the computed UV derivatives,
+  and made vertex-color coordinates consistent between both hit overloads.
+* Fixed the RNG triangle consistent-normal heuristic's dependence on ray length
+  by matching the Sampler overload's normalized local direction.
+
 # rayrender 0.42.3.9000
 
 * Add `disk_light()` for a uniform infinite disk with color, intensity, angular

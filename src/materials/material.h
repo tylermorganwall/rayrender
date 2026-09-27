@@ -9,6 +9,7 @@
 #include "../math/mathinline.h"
 #include "../materials/microfacetdist.h"
 #include <array>
+#include "normalmap.h"
 
 // #define DEBUG2
 
@@ -93,25 +94,32 @@ class material {
     virtual bool is_dielectric() const {
       return(false);
     }
+    virtual bool physical_normal_mapping() const { return false; }
     virtual ~material() {};
     virtual const std::string GetName() = 0;
     virtual size_t GetSize() = 0;
 };
 
 
-class lambertian : public material {
-  public: 
-    lambertian(std::shared_ptr<texture> a) : albedo(a) {}
-    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    point3f get_albedo(const hit_record& rec) const;
-    size_t GetSize();
-    const std::string GetName() {
-      return(std::string("diffuse"));
-    };
-    std::shared_ptr<texture> albedo;
+// Opaque reflective adapter with a validated diffuse child. Texture ownership
+// follows the other materials; per-interaction state belongs only to its PDF.
+class diffuse_material final : public material {
+public:
+  diffuse_material(std::shared_ptr<texture> albedo, double sigma = 0)
+    : albedo(std::move(albedo)), child(sigma) {}
+  bool scatter(const Ray&, const hit_record&, scatter_record&, random_gen&) override;
+  bool scatter(const Ray&, const hit_record&, scatter_record&, Sampler*) override;
+  point3f f(const Ray&, const hit_record&, const vec3f&) const override;
+  point3f get_albedo(const hit_record&) const override;
+  bool physical_normal_mapping() const override { return true; }
+  const std::string GetName() override { return "diffuse"; }
+  size_t GetSize() override { return sizeof(*this); }
+private:
+  std::shared_ptr<texture> albedo;
+  normalmap::DiffuseChild child;
 };
+// Metric bump input for diffuse analytic primitives.
+void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump);
 
 class metal : public material {
   public:
@@ -220,26 +228,6 @@ public:
   const std::string GetName() {
     return(std::string("isotropic"));
   };
-  std::shared_ptr<texture> albedo;
-};
-
-class orennayar : public material {
-public:
-  orennayar(std::shared_ptr<texture>  a, Float sigma) : albedo(a)  {
-    Float sigma2 = sigma*sigma;
-    A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
-    B = 0.45f * sigma2 / (sigma2 + 0.09f);
-  }
-  ~orennayar() {}
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
-    return(std::string("orennayer"));
-  };
-  Float A, B;
   std::shared_ptr<texture> albedo;
 };
 
@@ -372,9 +360,8 @@ class hair : public material {
 inline OpaqueShadowType opaque_shadow_material(const material* m) {
   if (!m) return OpaqueShadowType::Unsupported;
   const auto& type = typeid(*m);
-  if (type == typeid(lambertian) || type == typeid(orennayar) ||
-      type == typeid(metal) || type == typeid(MicrofacetReflection) ||
-      type == typeid(glossy)) return OpaqueShadowType::Opaque;
+  if (type == typeid(metal) || type == typeid(MicrofacetReflection) ||
+      type == typeid(glossy) || type == typeid(diffuse_material)) return OpaqueShadowType::Opaque;
   if (type == typeid(diffuse_light) && !static_cast<const diffuse_light*>(m)->invisible)
     return OpaqueShadowType::Light;
   if (type == typeid(spot_light) && !static_cast<const spot_light*>(m)->invisible)

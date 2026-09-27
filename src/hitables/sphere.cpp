@@ -95,6 +95,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -135,6 +136,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -222,6 +224,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -262,6 +265,7 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     

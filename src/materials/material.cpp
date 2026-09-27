@@ -24,59 +24,6 @@ inline bool Refract(const vec3f &wi, const normal3f &n, Float eta, vec3f *wt) {
 }
 
 
-point3f lambertian::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Lambertian F");
-  
-  //unit_vector(scattered) == wo
-  //r_in.direction() == wi
-  vec3f wi = unit_vector(scattered);
-  normal3f n = rec.normal;
-  Float cosine = dot(n, wi);
-  //Shadow terminator if bump map
-  Float G = 1.0f;
-  if(rec.has_bump) {
-    
-    Float NsNlight = dot(rec.bump_normal, wi);
-    Float NsNg = dot(rec.bump_normal, n);
-    G = NsNlight > 0.0 && NsNg > 0.0 ? ffmin(1.f, dot(wi, n) / (NsNlight * NsNg)) : 0;
-    G = G > 0.0f ? -G * G * G + G * G + G : 0.0f;
-    cosine = dot(rec.bump_normal, wi);
-  }
-  if(cosine < 0) {
-    cosine = 0;
-  }
-  return(G * albedo->value(rec.u, rec.v, rec.p) * cosine * static_cast<Float>(M_1_PI));
-}
-
-bool lambertian::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Lambertian Scatter");
-  
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new cosine_pdf(hrec.normal);
-  return(true);
-}
-
-bool lambertian::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Lambertian Scatter");
-  
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new cosine_pdf(hrec.normal);
-  return(true);
-}
-point3f lambertian::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
-}
-
-size_t lambertian::GetSize()  {
-  return(sizeof(*this));
-}
-
-//
 //Metal
 //
 
@@ -455,76 +402,6 @@ point3f isotropic::get_albedo(const hit_record& rec) const {
 }
 
 size_t isotropic::GetSize()  {
-  return(sizeof(*this));
-}
-
-//
-//Oren Nayar
-//
-
-bool orennayar::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Oren-Nayar Scatter");
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new cosine_pdf(hrec.normal);
-  return(true);
-}
-
-bool orennayar::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Oren-Nayar Scatter");
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  srec.pdf_ptr = new cosine_pdf(hrec.normal);
-  return(true);
-}
-
-point3f orennayar::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Oren-Nayar F");
-  onb uvw;
-  if(!rec.has_bump) {
-    uvw.build_from_w_normalized(rec.normal);
-  } else {
-    uvw.build_from_w_normalized(rec.bump_normal);
-  }
-  vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered));
-  
-  Float cosine = wo.xyz.z;
-  
-  if(cosine < 0) {
-    cosine = 0;
-  }
-  
-  Float sinThetaI = SinTheta(wi);
-  Float sinThetaO = SinTheta(wo);
-  Float maxCos = 0;
-  if(sinThetaI > 1e-4 && sinThetaO > 1e-4) {
-    Float sinPhiI = SinPhi(wi);
-    Float cosPhiI = CosPhi(wi);
-    Float sinPhiO = SinPhi(wo);
-    Float cosPhiO = CosPhi(wo);
-    Float dCos = cosPhiI * cosPhiO + sinPhiI * sinPhiO;
-    maxCos = std::fmax((Float)0, dCos);
-  }
-  Float sinAlpha, tanBeta;
-  if(AbsCosTheta(wi) > AbsCosTheta(wo)) {
-    sinAlpha = sinThetaO;
-    tanBeta = sinThetaI / AbsCosTheta(wi);
-  } else {
-    sinAlpha = sinThetaI;
-    tanBeta = sinThetaO / AbsCosTheta(wo);
-  }
-  return(albedo->value(rec.u, rec.v, rec.p) * (A + B * maxCos * sinAlpha * tanBeta ) * cosine * static_cast<Float>(M_1_PI ));
-}
-
-point3f orennayar::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
-}
-
-size_t orennayar::GetSize()  {
   return(sizeof(*this));
 }
 

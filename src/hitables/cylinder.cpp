@@ -80,6 +80,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, -length, 0);
+    if (mat_ptr->physical_normal_mapping()) {
+      // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
+      // Its metric frame must be the same for both hit overloads and roots.
+      rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
+      rec.dpdv = vec3f(0, length, 0);
+    }
     rec.has_bump = bump_tex ? true : false;
     rec.normal *= reverseOrientation  ? -1 : 1;
     
@@ -96,6 +102,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
       
@@ -147,6 +154,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     return(true);
   }
@@ -191,6 +199,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
 
     return(true);
@@ -214,6 +223,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
+    if (mat_ptr->physical_normal_mapping()) {
+      // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
+      // Its metric frame must be the same for both hit overloads and roots.
+      rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
+      rec.dpdv = vec3f(0, length, 0);
+    }
     rec.has_bump = bump_tex ? true : false;
     rec.normal *= reverseOrientation  ? -1 : 1;
     
@@ -231,6 +246,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -310,6 +326,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
+    if (mat_ptr->physical_normal_mapping()) {
+      // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
+      // Its metric frame must be the same for both hit overloads and roots.
+      rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
+      rec.dpdv = vec3f(0, length, 0);
+    }
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -326,6 +348,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -374,6 +397,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     
     return(true);
@@ -418,6 +442,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     
     rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
@@ -442,6 +467,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
+    if (mat_ptr->physical_normal_mapping()) {
+      // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
+      // Its metric frame must be the same for both hit overloads and roots.
+      rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
+      rec.dpdv = vec3f(0, length, 0);
+    }
     rec.has_bump = bump_tex ? true : false;
     
     if(bump_tex) {
@@ -456,6 +487,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.normal *= reverseOrientation  ? -1 : 1;
     rec.bump_normal *= reverseOrientation  ? -1 : 1;
     rec.geometric_normal = rec.normal;
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);

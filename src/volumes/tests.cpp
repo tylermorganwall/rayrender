@@ -39,7 +39,7 @@ struct PickingScene {
   VolumeScene scene;
   hitable_list world;
   std::shared_ptr<material> mat =
-      std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+      std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
   void Add(const std::shared_ptr<const Medium> &medium, Float radius, bool surface = false) {
     auto geometry = std::make_shared<box>(vec3f(-radius), vec3f(radius), mat, nullptr, nullptr,
                                          &identity, &identity, false);
@@ -477,7 +477,7 @@ context("Participating media geometry and sampling") {
   test_that("cancelled containment traversal returns promptly") {
     VolumeScene scene;
     Transform identity;
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     auto geometry = std::make_shared<sphere>(1, mat, nullptr, nullptr, &identity, &identity, false);
     auto medium = std::make_shared<Medium>(medium_description());
     scene.boundaries.add(std::make_shared<MediumBoundary>(geometry, medium, identity, false,
@@ -514,7 +514,7 @@ context("Participating media geometry and sampling") {
   test_that("shared nested boundaries have distinct IDs in render and containment traversal") {
     Transform identity, larger = Scale(2, 2, 2), larger_inverse = Inverse(larger);
     Transform side = Translate(vec3f(0, 8, 0)), side_inverse = Inverse(side);
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto medium = std::make_shared<Medium>(medium_description());
     VolumeScene leaf, branch, scene;
     auto geometry = std::make_shared<sphere>(1, mat, nullptr, nullptr, &identity, &identity, false);
@@ -619,7 +619,7 @@ context("Participating media geometry and sampling") {
     };
     auto medium = std::make_shared<NullOnlyMedium>();
     Transform identity;
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     auto geometry = std::make_shared<sphere>(1, mat, nullptr, nullptr, &identity, &identity, false);
     auto scene = std::make_shared<VolumeScene>();
     auto boundary = std::make_shared<MediumBoundary>(geometry, medium, identity, false,
@@ -704,7 +704,7 @@ context("Participating media geometry and sampling") {
   }
   test_that("box edge contacts are not medium crossings") {
     Transform identity;
-    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto geometry = std::make_shared<box>(vec3f(-1), vec3f(1), material, nullptr, nullptr,
                                           &identity, &identity, false);
     auto medium = std::make_shared<Medium>(medium_description());
@@ -723,7 +723,7 @@ context("Participating media geometry and sampling") {
   test_that("invisible boxes retain grazing entries before their exits") {
     Transform transform = Scale(-1, 1, -1) * Translate(vec3f(5.889312909, 11.514999986, 0));
     Transform inverse = Inverse(transform);
-    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     vec3f half_size(16.956099017, 5, 23.314636148);
     auto geometry = std::make_shared<box>(-half_size, half_size, material, nullptr, nullptr,
                                          &transform, &inverse, false);
@@ -757,7 +757,7 @@ context("Participating media geometry and sampling") {
   }
   test_that("camera containment resolves points close to a curved boundary") {
     Transform transform = Translate(vec3f(278, 220, 250)), inverse = Inverse(transform);
-    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto geometry =
         std::make_shared<sphere>(110, material, nullptr, nullptr, &transform, &inverse, false);
     auto medium = std::make_shared<Medium>(medium_description());
@@ -773,7 +773,7 @@ context("Participating media geometry and sampling") {
   }
   test_that("rays starting on a box face count the initial crossing once") {
     Transform transform = Translate(vec3f(0, 10.5, 0)), inverse = Inverse(transform);
-    auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto geometry = std::make_shared<box>(vec3f(-50, -6.5, -38), vec3f(50, 6.5, 38),
                                          material, nullptr, nullptr, &transform, &inverse, false);
     auto medium = std::make_shared<Medium>(medium_description());
@@ -813,7 +813,7 @@ context("Participating media geometry and sampling") {
     for (Transform transform : {Translate(vec3f(1000, 2000, 3000)),
                                 Translate(vec3f(1000, 2000, 3000)) * Scale(.7, 1.8, 1.2)}) {
       Transform inverse = Inverse(transform);
-      auto material = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+      auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
       auto geometry = std::make_shared<sphere>(50, material, nullptr, nullptr,
                                               &transform, &inverse, false);
       hitable_list lights;
@@ -888,7 +888,7 @@ context("Conservative bounds around medium boundaries") {
 
   test_that("a surface just behind a cloud face cannot hide its entry") {
     Transform transform = Translate(vec3f(0, 13.4, 63)), inverse = Inverse(transform), identity;
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto geometry = std::make_shared<box>(vec3f(-45, -.9, -12), vec3f(45, .9, 12),
                                          mat, nullptr, nullptr, &transform, &inverse, false);
     auto medium = std::make_shared<Medium>(medium_description(0));
@@ -938,7 +938,7 @@ public:
 context("Restricted opaque shadow connections") {
   test_that("visibility preserves radiance and both random streams, including near-light ties") {
     Transform identity;
-    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.6)));
+    auto matte = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.6)));
     auto emission = std::make_shared<diffuse_light>(
         std::make_shared<constant_texture>(point3f(1, .8, .4)), 3, false);
     auto ground = std::make_shared<xz_rect>(-20, 20, -20, 20, 0, matte, nullptr, nullptr,
@@ -979,7 +979,7 @@ context("Restricted opaque shadow connections") {
   test_that("unsupported materials, masks, and boundaries opt out") {
     Transform identity;
     auto texture = std::make_shared<constant_texture>(point3f(.5));
-    auto matte = std::make_shared<lambertian>(texture);
+    auto matte = std::make_shared<diffuse_material>(texture);
     auto glass = std::make_shared<dielectric>(point3f(1), 1.5, point3f(0), 0);
     auto emitter = std::make_shared<diffuse_light>(texture, 1, false);
     auto invisible = std::make_shared<diffuse_light>(texture, 1, true);
@@ -1002,7 +1002,7 @@ context("Restricted opaque shadow connections") {
 
   test_that("triangle predicates match NEE hit distances at edges and tiny offsets") {
     Transform identity;
-    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.5)));
+    auto matte = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     float vertices[9] = {-1, -1, 0, 1, -1, 0, 0, 1, 0};
     int indices[3] = {0, 1, 2};
     TriangleMesh mesh(vertices, indices, nullptr, nullptr, 3, 3, nullptr, nullptr,
@@ -1237,7 +1237,7 @@ context("Explicit emitter sampling") {
 
   test_that("overlapping emitter proposals preserve mean radiance with matching MIS") {
     Transform identity;
-    auto matte = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(.6)));
+    auto matte = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.6)));
     auto warm = std::make_shared<diffuse_light>(
         std::make_shared<constant_texture>(point3f(1, .4, .2)), 3, false);
     auto cool = std::make_shared<diffuse_light>(

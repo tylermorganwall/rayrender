@@ -222,6 +222,8 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
 
   Float lightintensity = as<Float>(SingleMaterial["lightintensity"]);
   Float sigma = as<Float>(SingleMaterial["sigma"]);
+  if (type == ORENNAYER && (!std::isfinite(sigma) || sigma < 0))
+    Rcpp::stop("EON sigma must be finite and nonnegative.");
   NumericVector glossyinfo = as<NumericVector>(as<List>(SingleMaterial["glossyinfo"])(0));
   
   std::string image_file = as<std::string>(SingleMaterial["image"]);
@@ -295,7 +297,7 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
   bool is_invisible;
   switch (type) {
     case DIFFUSE: {
-      mat = std::make_shared<lambertian>(material_texture);
+      mat = std::make_shared<diffuse_material>(material_texture);
       break;
     }
     case METAL: {
@@ -314,7 +316,7 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
       break;
     }
     case ORENNAYER: {
-      mat = std::make_shared<orennayar>(material_texture, sigma);
+      mat = std::make_shared<diffuse_material>(material_texture, sigma);
       break;
     }
     case LIGHT: {
@@ -377,7 +379,7 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
       break;
     }
     default: {
-      mat = std::make_shared<lambertian>(material_texture);
+      mat = std::make_shared<diffuse_material>(material_texture);
       break;
     }
   }

@@ -207,9 +207,9 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         } else {
           if(has_diffuse[mat_num]) {
             if(has_single_diffuse[mat_num]) {
-              tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[mat_num]));
+              tex = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(diffuse_materials[mat_num]));
             } else {
-              tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[mat_num],
+              tex = std::make_shared<diffuse_material>(std::make_shared<image_texture_char>(obj_texture_data[mat_num],
                                                                                       nx_mat[mat_num], 
                                                                                       ny_mat[mat_num],
                                                                                       nn_mat[mat_num]));
@@ -487,12 +487,12 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         }
       } else {
         if(has_diffuse_texture[material_num]) {
-          tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+          tex = std::make_shared<diffuse_material>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
                                                                                   nx_mat[material_num], 
                                                                                   ny_mat[material_num],
                                                                                   nn_mat[material_num]));
         } else if (has_single_diffuse[material_num]) {
-          tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+          tex = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
         } else {
           tex = default_material;
         }
@@ -671,7 +671,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
           new triangle_texture(vc[vertexIndices[s]],
                                vc[vertexIndices[s+1]],
                                vc[vertexIndices[s+2]]));
-        mesh_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+        mesh_materials.push_back(std::shared_ptr<material>(new diffuse_material(tex)));
         material_is_light.push_back(false);
         face_material_id.push_back(s / 3 + 1);
         alpha_textures.push_back(nullptr);
@@ -825,7 +825,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
         new triangle_texture(vc[vertexIndices[s]],
                              vc[vertexIndices[s+1]],
                              vc[vertexIndices[s+2]]));
-      mesh_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+      mesh_materials.push_back(std::shared_ptr<material>(new diffuse_material(tex)));
       face_material_id.push_back(s / 3 + 1);
       alpha_textures.push_back(nullptr);
       bump_textures.push_back(nullptr);

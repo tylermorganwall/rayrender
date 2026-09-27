@@ -81,9 +81,10 @@ be used to specify a bump map for the surface.}
 
 \item{fogdensity}{Default `0.01`. The density of the fog. Higher values will produce more opaque objects.}
 
-\item{sigma}{Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
-Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
-to the default lambertian behavior.}
+\item{sigma}{Default `NULL`. Nonnegative finite roughness control in degrees
+for energy-preserving Oren-Nayar (EON). EON roughness is `min(sigma / 90, 1)`;
+values at or above 90 give maximum roughness. `NULL` or zero uses Lambertian
+reflection. This control is no longer a microfacet angle standard deviation.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
@@ -95,6 +96,16 @@ Single row of a tibble describing the diffuse material.
 }
 \description{
 Diffuse Material
+}
+\details{
+Diffuse surfaces use energy-conserving analytic normal mapping for
+  bump textures and smooth mesh normals. Positive `sigma` uses EON rough
+  diffuse with color-dependent multiple scattering; zero uses Lambertian
+  reflection. Image and procedural reflectance is bounded to [0, 1], with
+  nonfinite values treated as absorbing. The analytic normal-mapping model
+  can lose energy because it truncates higher scattering orders.
+  Imported diffuse face materials and vertex colors use the same model.
+  Fog uses volumetric scattering instead of a surface bump model.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

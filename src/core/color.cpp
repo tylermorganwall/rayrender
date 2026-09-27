@@ -102,7 +102,8 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError,
+                 hrec.mat_ptr->physical_normal_mapping() ? hrec.geometric_normal : hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = srec.pdf_ptr->value(
             dir, rng, r2.time()); // generates a pdf value based the
@@ -235,7 +236,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError,
+                 hrec.mat_ptr->physical_normal_mapping() ? hrec.geometric_normal : hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = p.value(dir, rng,
                           r2.time()); // generates a pdf value based the

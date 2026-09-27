@@ -56,6 +56,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
@@ -115,6 +116,7 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
@@ -255,6 +257,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.pError = vec3f(0,0,0);
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -319,6 +322,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -466,6 +470,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
     rec.bump_normal.make_unit_vector();
   }
   rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
@@ -529,6 +534,7 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec = (*ObjectToWorld)(rec);
   
   rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
     rec.shape = this;
   rec.alpha_miss = alpha_miss;
   

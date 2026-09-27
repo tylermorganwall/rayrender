@@ -1402,7 +1402,7 @@ context("Surface origins at perpendicular medium boundaries") {
         Rcpp::Named("temperature") = R_NilValue, Rcpp::Named("emission_scale") = 1,
         Rcpp::Named("temperature_scale") = 1, Rcpp::Named("temperature_offset") = 0,
         Rcpp::Named("medium_transform") = transform));
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     auto geometry = std::make_shared<box>(vec3f(-2, -2, -2), vec3f(2, 0, 2),
                                          mat, nullptr, nullptr, &identity, &identity, false);
     VolumeScene scene;

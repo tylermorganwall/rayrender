@@ -65,6 +65,9 @@ struct alignas(16) hit_record {
   }
   normal3f normal; //PBRT: In interaction
   normal3f geometric_normal{0};
+  // Raw smooth (and, when present, corrected bump) input before ray-dependent
+  // triangle repairs. Zero means an analytic primitive: use its normal/bump.
+  normal3f physical_shading_normal{0};
   const MediumBoundary* medium_boundary = nullptr;
   uint64_t boundary_id = 0; // Scene-assigned placement ID; zero for ordinary surfaces.
   // Ordinary candidate intersections need no medium placement. Keep its two
@@ -80,7 +83,7 @@ struct alignas(16) hit_record {
   bool has_bump; 
   bool alpha_miss;
   bool infinite_area_hit;
-  normal3f bump_normal; 
+  normal3f bump_normal{0};
 
   // vec3f wo; //PBRT: In Interaction, negative ray direction
   const hitable* shape = nullptr; //PBRT: In SurfaceInteraction, const Shape *shape

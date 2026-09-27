@@ -55,3 +55,5 @@
 ^revdep($|/)
 ^tools/benchmarks($|/)
 ^tools/subsurface($|/)
+
+^tools/normal-mapping($|/)
