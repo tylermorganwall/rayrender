@@ -272,7 +272,12 @@ test_that("observed non-nested boundaries are diagnosed", {
   vacuum = homogeneous_medium(sigma_s = 0)
   overlap = set_medium(cube(x = -0.2, z = 0.3), vacuum) |>
     add_object(set_medium(cube(x = 0.2, z = -0.3), vacuum))
-  expect_error(medium_test_render(overlap, samples = 1), "Non-nested")
+  # Classified path failures are recorded without aborting a completed render.
+  image = medium_test_render(overlap, samples = 1)
+  diagnostics = attr(image, "path_warnings")
+  expect_true(all(is.finite(image)))
+  expect_gt(diagnostics$counts[["invalid_exit"]], 0)
+  expect_match(diagnostics$examples$invalid_exit[[1]], "Non-nested")
 })
 
 test_that("glowing media inside glass include radiance transport across the interface", {

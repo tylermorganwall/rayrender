@@ -203,3 +203,15 @@
 * Correct NEE light PDFs, sampler dimension reuse, segment-based dielectric
   absorption, deterministic volume boundary intersections, and realistic-camera
   shutter-time preservation.
+
+## Bugfixes
+
+- `render_scene()` Opaque renders containing media or subsurface materials no
+  longer trace unused transparency or wait for the 64-sample alpha convergence
+  minimum. Transparent renders retain their coverage estimator and minimum.
+
+## Other
+
+- `render_scene()` Distributes expensive regions across smaller rendering jobs,
+  improving core utilization in scenes with localized glass or subsurface
+  scattering. Preserves pixel sampling and adaptive convergence regions.

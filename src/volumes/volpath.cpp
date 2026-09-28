@@ -818,8 +818,13 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
   int hero = std::min(2, int(sampler->Get1D() * 3));
   if (scene && scene->has_media) {
     auto alpha_rng = tracking_rng(sampler);
-    stage = "transparency";
-    transparency = primary_transparency(input, state, world, alpha_rng, cancel, scene->atmosphere);
+    // Reserve the same sampler dimensions for reproducible RGB paths, but do
+    // not trace coverage that opaque output will discard. Transparent output
+    // still uses the independent physical transmittance estimate unchanged.
+    if (scene->transparent_background) {
+      stage = "transparency";
+      transparency = primary_transparency(input, state, world, alpha_rng, cancel, scene->atmosphere);
+    }
   }
 
 

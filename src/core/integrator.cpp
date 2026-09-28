@@ -51,6 +51,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   display.write_fast_output = false;
   bool adaptive_on = min_variance > 0;
   bool has_media = hlist.volume_scene && hlist.volume_scene->has_media;
+  // Opaque output discards alpha. Do not impose alpha's 64-sample safety floor
+  // on every pixel merely because some distant object contains a medium.
+  bool track_alpha = has_media && hlist.volume_scene->transparent_background;
   display.volume_scene = hlist.volume_scene;
   display.transparent_volume_background = hlist.volume_scene && hlist.volume_scene->transparent_background;
   if(hlist.volume_scene) {
@@ -69,7 +72,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                           rgb_output2,
                                           normalOutput, albedoOutput,
                                           alpha_output, draw_rgb_output,
-                                          adaptive_on, has_media);
+                                          adaptive_on, track_alpha);
 
   size_t nx_small = nx*0.25;
   size_t ny_small = ny*0.25;
@@ -91,7 +94,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                                 albedo_output_small,
                                                 alpha_output_small,
                                                 draw_rgb_output_small,
-                                                adaptive_on, has_media);
+                                                adaptive_on, track_alpha);
 
 #ifdef HAS_OIDN
   RayMatrix oidn_normal_output_small(nx_small, ny_small, 3);
@@ -307,11 +310,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                    &rngs, fov, &samplers,
                    cam, &world, &hlist,
                    clampval, sample_minimum, max_depth, roulette_active, integrator_type,
-                   &render_cancelled] (int k) {
-                     int nx_begin = adaptive_pixel_sampler.pixel_chunks[k].startx;
-                     int ny_begin = adaptive_pixel_sampler.pixel_chunks[k].starty;
-                     int nx_end = adaptive_pixel_sampler.pixel_chunks[k].endx;
-                     int ny_end = adaptive_pixel_sampler.pixel_chunks[k].endy;
+                   &render_cancelled] (RenderTile tile) {
+                     int nx_begin = tile.x_begin, ny_begin = tile.y_begin;
+                     int nx_end = tile.x_end, ny_end = tile.y_end;
 
                      std::vector<dielectric*> mat_stack;
                      for(int i = nx_begin; i < nx_end; i++) {
@@ -358,21 +359,25 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          samplers[index]->StartNextSample();
                        }
                      }
-                     if (adaptive_pixel_sampler.adaptive_on) {
-                      if(!render_cancelled.load(std::memory_order_relaxed) &&
-                         ((s % 2 == 1 && s > 3 && sample_method != 2) ||
-                          (s % 2 == 1 && sample_method == 2 && s > 64))) {
-                        adaptive_pixel_sampler.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
-                      }
-                     }
                    };
     std::vector<std::future<void> > futures;
-    futures.reserve(adaptive_pixel_sampler.size());
-    for(size_t j = 0; j < adaptive_pixel_sampler.size(); j++) {
-      futures.push_back(render_pool.pushReturn(worker, static_cast<int>(j)));
-    }
+    auto tiles = make_render_tiles(adaptive_pixel_sampler.pixel_chunks);
+    futures.reserve(tiles.size());
+    for (const auto& tile : tiles)
+      futures.push_back(render_pool.pushReturn(worker, tile));
     bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
+    // All pixels in each original block must be complete before its error is
+    // tested. Scheduling tiles must not change adaptive thresholds or splits.
+    if (completed_sample && adaptive_pixel_sampler.adaptive_on &&
+        ((s % 2 == 1 && s > 3 && sample_method != 2) ||
+         (s % 2 == 1 && sample_method == 2 && s > 64))) {
+      for (size_t k = 0; k < adaptive_pixel_sampler.size(); ++k) {
+        const auto& block = adaptive_pixel_sampler.pixel_chunks[k];
+        adaptive_pixel_sampler.test_for_convergence(k, s, block.endx, block.startx,
+                                                     block.endy, block.starty);
+      }
+    }
     if (adaptive_pixel_sampler.adaptive_on) {
       if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler.split_remove_chunks(s);
@@ -395,11 +400,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                    &rngs_small, fov, &samplers_small,
                    cam, &world, &hlist,
                    clampval, sample_minimum, max_depth, roulette_active, integrator_type,
-                   &render_cancelled] (int k) {
-                     int nx_begin = adaptive_pixel_sampler_small.pixel_chunks[k].startx;
-                     int ny_begin = adaptive_pixel_sampler_small.pixel_chunks[k].starty;
-                     int nx_end = adaptive_pixel_sampler_small.pixel_chunks[k].endx;
-                     int ny_end = adaptive_pixel_sampler_small.pixel_chunks[k].endy;
+                   &render_cancelled] (RenderTile tile) {
+                     int nx_begin = tile.x_begin, ny_begin = tile.y_begin;
+                     int nx_end = tile.x_end, ny_end = tile.y_end;
 
                      std::vector<dielectric*> mat_stack;
                      for(int i = nx_begin; i < nx_end; i++) {
@@ -448,21 +451,25 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          samplers_small[index]->StartNextSample();
                        }
                      }
-                     if (adaptive_pixel_sampler_small.adaptive_on) {
-                        if(!render_cancelled.load(std::memory_order_relaxed) &&
-                           ((s % 2 == 1 && s > 3 && sample_method != 2) ||
-                            (s % 2 == 1 && sample_method == 2 && s > 64))) {
-                          adaptive_pixel_sampler_small.test_for_convergence(k, s, nx_end, nx_begin, ny_end, ny_begin);
-                        }
-                     }
                    };
     std::vector<std::future<void> > futures;
-    futures.reserve(adaptive_pixel_sampler_small.size());
-    for(size_t j = 0; j < adaptive_pixel_sampler_small.size(); j++) {
-      futures.push_back(render_pool.pushReturn(worker, static_cast<int>(j)));
-    }
+    auto tiles = make_render_tiles(adaptive_pixel_sampler_small.pixel_chunks);
+    futures.reserve(tiles.size());
+    for (const auto& tile : tiles)
+      futures.push_back(render_pool.pushReturn(worker, tile));
     bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
+    // All pixels in each original block must be complete before its error is
+    // tested. Scheduling tiles must not change adaptive thresholds or splits.
+    if (completed_sample && adaptive_pixel_sampler_small.adaptive_on &&
+        ((s % 2 == 1 && s > 3 && sample_method != 2) ||
+         (s % 2 == 1 && sample_method == 2 && s > 64))) {
+      for (size_t k = 0; k < adaptive_pixel_sampler_small.size(); ++k) {
+        const auto& block = adaptive_pixel_sampler_small.pixel_chunks[k];
+        adaptive_pixel_sampler_small.test_for_convergence(k, s, block.endx, block.startx,
+                                                     block.endy, block.starty);
+      }
+    }
     if (adaptive_pixel_sampler_small.adaptive_on) {
       if(completed_sample && s % 2 == 1 && s > 1) {
         adaptive_pixel_sampler_small.split_remove_chunks(s);

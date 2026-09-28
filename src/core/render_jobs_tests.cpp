@@ -16,6 +16,23 @@ void finish_when_cancelled(const std::atomic<bool>& cancelled, std::atomic<int>&
 }
 
 context("Render sample scheduling") {
+  test_that("work tiles cover irregular adaptive blocks exactly once") {
+    struct Block { int startx, starty, endx, endy; };
+    std::vector<Block> blocks{{0, 0, 19, 37}, {19, 0, 41, 37},
+                              {0, 37, 41, 40}, {41, 0, 41, 40}};
+    auto tiles = make_render_tiles(blocks);
+    std::vector<int> coverage(41 * 40, 0);
+    for (const auto& tile : tiles) {
+      expect_true(tile.x_end > tile.x_begin && tile.x_end - tile.x_begin <= 16);
+      expect_true(tile.y_end > tile.y_begin && tile.y_end - tile.y_begin <= 16);
+      for (int x = tile.x_begin; x < tile.x_end; ++x)
+        for (int y = tile.y_begin; y < tile.y_end; ++y)
+          ++coverage[x * 40 + y];
+    }
+    for (int count : coverage) expect_true(count == 1);
+    expect_true(make_render_tiles(std::vector<Block>{}).empty());
+  }
+
   test_that("a persistent pool completes independent batches and empty passes") {
     std::atomic<bool> cancelled(false);
     RcppThread::ThreadPool pool(2);

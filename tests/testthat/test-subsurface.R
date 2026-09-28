@@ -652,6 +652,8 @@ test_that("SSS preserves the random sampler across thread counts", {
   serial = sss_test_render(
     scene,
     samples = 16L,
+    width = 41L,
+    height = 37L,
     backgroundhigh = "white",
     backgroundlow = "white"
   )
@@ -659,6 +661,8 @@ test_that("SSS preserves the random sampler across thread counts", {
   threaded = sss_test_render(
     scene,
     samples = 16L,
+    width = 41L,
+    height = 37L,
     parallel = TRUE,
     backgroundhigh = "white",
     backgroundlow = "white"
@@ -771,4 +775,22 @@ test_that("SSS preview, AO and denoising keep their established auxiliary polici
     backgroundlow = "white"
   )
   expect_true(all(is.finite(image)))
+})
+
+test_that("opaque SSS scenes do not inherit the transparent alpha sample floor", {
+  withr::local_envvar(RAYRENDER_VOLUME_STATS = "true")
+  # The off-screen medium must not force the empty, opaque background to spend
+  # 64 samples estimating coverage that will be discarded by post-processing.
+  scene = sphere(x = 100, material = subsurface(sigma_s = 3, sigma_a = .2))
+  opaque = sss_test_render(scene, samples = 64L, min_variance = .001)
+  transparent = sss_test_render(
+    scene,
+    samples = 64L,
+    min_variance = .001,
+    transparent_background = TRUE
+  )
+  expect_lt(attr(opaque, "volume_statistics")$paths, 36 * 64)
+  expect_equal(attr(transparent, "volume_statistics")$paths, 36 * 64)
+  expect_equal(as.numeric(transparent[,, 4]), rep(0, 36))
+  expect_equal(as.numeric(opaque[,, 1:3]), as.numeric(transparent[,, 1:3]))
 })
