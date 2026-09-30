@@ -140,6 +140,12 @@ public:
 
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
+    // Containment probes only: primitives must be whole closed objects, not
+    // individual mesh triangles. Objects outside the origin's bounds cannot
+    // contain it; their entry/exit pairs need not be traced and replayed.
+    // Exclusions identify complete objects already classified by a probe.
+    bool HitContainingObjects(const Ray&, Float, Float, hit_record&, random_gen&,
+                              const std::vector<const hitable*>* excluded = nullptr) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
     OpaqueShadowType ShadowType() const { return shadow_type; }

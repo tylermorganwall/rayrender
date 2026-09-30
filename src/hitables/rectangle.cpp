@@ -7,9 +7,11 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -67,9 +69,11 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -128,9 +132,11 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -147,9 +153,11 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -206,9 +214,11 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
 
@@ -272,9 +282,11 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -335,9 +347,11 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   
@@ -357,9 +371,11 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   
@@ -420,9 +436,11 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -483,9 +501,11 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -547,9 +567,11 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -566,9 +588,11 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;

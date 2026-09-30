@@ -1000,7 +1000,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                         ny,
                         RayOidnQuality::Balanced,
                         false,
-                        false, !has_media);
+                        false, true);
   }
 #endif
   print_time(verbose, "Built Scene BVH" );
@@ -1187,6 +1187,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     oidn_aux_options.sample_method = sample_method;
     oidn_aux_options.stratified_x = stratified_x;
     oidn_aux_options.stratified_y = stratified_y;
+    if (has_media) {
+      std::copy(normalOutput.begin(), normalOutput.end(), oidn_normal_output.begin());
+      std::copy(albedoOutput.begin(), albedoOutput.end(), oidn_albedo_output.begin());
+    }
     if(!has_media) render_oidn_aux_features(numbercores,
                              nx,
                              ny,
@@ -1204,7 +1208,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                         ny,
                         RayOidnQuality::High,
                         true,
-                        true, !has_media);
+                        true, true);
     oidn_denoiser.Execute();
     oidn_denoiser.ReportError();
   }

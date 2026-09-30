@@ -263,3 +263,17 @@ void adaptive_sampler::add_alpha_count(size_t i, size_t j, Float transparency) {
     alpha_m2[pixel] += delta * (transparency - alpha_mean[pixel]);
   }
 }
+
+// Finalized adaptive pixels are already averages; active pixels still contain
+// sums. Copy into stable buffers because OIDN holds pointers to their storage.
+void adaptive_sampler::copy_denoising_features(RayMatrix& normal, RayMatrix& albedo) const {
+  for (size_t y = 0; y < ny; ++y) {
+    for (size_t x = 0; x < nx; ++x) {
+      float divisor = finalized[x + nx * y] ? 1.f : float(std::max<size_t>(max_s, 1));
+      for (int c = 0; c < 3; ++c) {
+        normal(x, y, c) = normalOutput(x, y, c) / divisor;
+        albedo(x, y, c) = albedoOutput(x, y, c) / divisor;
+      }
+    }
+  }
+}

@@ -110,7 +110,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                 ny_small,
                                 RayOidnQuality::Fast,
                                 false,
-                                false, !has_media);
+                                false, true);
   }
 #endif
 
@@ -203,7 +203,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_full_preview_oidn_aux = [&]() {
-    if(has_media) { display.oidn_aux_dirty = false; return; }
+    if(has_media) {
+      if (display.denoise && display.oidn_normal_output && display.oidn_albedo_output)
+        adaptive_pixel_sampler.copy_denoising_features(*display.oidn_normal_output,
+                                                       *display.oidn_albedo_output);
+      display.oidn_aux_dirty = false;
+      return;
+    }
     if(!display.preview ||
        !display.denoise ||
        !display.oidn_aux_dirty ||
@@ -232,7 +238,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_fast_preview_oidn_aux = [&]() {
-    if(has_media) { display.oidn_fast_aux_dirty = false; return; }
+    if(has_media) {
+      if (denoise_fast_preview)
+        adaptive_pixel_sampler_small.copy_denoising_features(oidn_normal_output_small,
+                                                             oidn_albedo_output_small);
+      display.oidn_fast_aux_dirty = false;
+      return;
+    }
     if(!display.preview ||
        !denoise_fast_preview ||
        !display.oidn_fast_aux_dirty) {
@@ -292,6 +304,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   // worker executes a tile. The pool is destroyed before captured render state.
   RcppThread::ThreadPool render_pool(numbercores);
 
+  auto report_diffusion_interior = [&hlist]() {
+    if (hlist.volume_scene && hlist.volume_scene->path_diagnostics.TakeDiffusionInteriorNotice()) {
+      // Console notice on the R thread, once per render, even without debug
+      // logging. Avoid an R warning condition: options(warn=2) must not turn
+      // unsupported camera rays into a fatal render error.
+      Rcpp::Rcout << "Warning: rays starting inside active subsurface_diffusion() regions are being terminated; rendering continues. Move the camera outside or use subsurface() for interior transport.\n";
+    }
+  };
+
   // Sampled haze corrections may be signed. Clamping them before accumulation
   // would bias their expectation; ordinary rendering keeps its existing floor.
   auto sample_floor = [&hlist]() -> Float {
@@ -302,7 +323,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                             &render_cancelled, &render_pool, &display] (size_t s) -> bool {
+                             &render_cancelled, &render_pool, &display, &report_diffusion_interior] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler,
@@ -367,6 +388,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       futures.push_back(render_pool.pushReturn(worker, tile));
     bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
+    report_diffusion_interior();
     // All pixels in each original block must be complete before its error is
     // tested. Scheduling tiles must not change adaptive thresholds or splits.
     if (completed_sample && adaptive_pixel_sampler.adaptive_on &&
@@ -392,7 +414,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   auto render_small_sample = [&adaptive_pixel_sampler_small, nx_small, ny_small, sample_method,
                               &rngs_small, fov, &samplers_small, cam, &world, &hlist,
                               clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                              &render_cancelled, &render_pool, &display] (size_t s) -> bool {
+                              &render_cancelled, &render_pool, &display, &report_diffusion_interior] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler_small,
@@ -459,6 +481,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       futures.push_back(render_pool.pushReturn(worker, tile));
     bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
+    report_diffusion_interior();
     // All pixels in each original block must be complete before its error is
     // tested. Scheduling tiles must not change adaptive thresholds or splits.
     if (completed_sample && adaptive_pixel_sampler_small.adaptive_on &&

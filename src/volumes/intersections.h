@@ -22,7 +22,13 @@ inline bool VolumeTriangleIntersection(const Ray &r, const point3f &a, const poi
   double e[3] = {p[1][0] * p[2][1] - p[1][1] * p[2][0],
                  p[2][0] * p[0][1] - p[2][1] * p[0][0],
                  p[0][0] * p[1][1] - p[0][1] * p[1][0]};
-  if ((e[0] < 0 || e[1] < 0 || e[2] < 0) && (e[0] > 0 || e[1] > 0 || e[2] > 0)) return false;
+  // Evaluate every sign comparison before combining the masks. Short-circuit
+  // logic produces several branches in this frequently executed coverage test.
+  // Compare with zero rather than inspecting sign bits: both signed zeros must
+  // remain on the edge, and unordered comparisons retain their existing result.
+  const unsigned negative = unsigned(e[0] < 0) | unsigned(e[1] < 0) | unsigned(e[2] < 0);
+  const unsigned positive = unsigned(e[0] > 0) | unsigned(e[1] > 0) | unsigned(e[2] > 0);
+  if (negative & positive) return false;
   double det = e[0] + e[1] + e[2];
   if (det == 0) return false;
   double n[3] = {ab[1] * ac[2] - ab[2] * ac[1],

@@ -16,8 +16,39 @@
 
 # rayrender 0.42.3.9000
 
+## New features
+
+- `subsurface()` Adds opt-in `accelerate = TRUE` to limit geometry queries to
+  sampled free flights and simplify well-conditioned collision weights. Both
+  random and guided walks retain their physical
+  scattering model, embedded objects, and dielectric-priority interfaces.
+
+- `subsurface_diffusion()` Adds fast normalized diffusion for optically thick
+  solids, with a dielectric surface and priority-aware glass/liquid contacts.
+  Its profile radius controls the scattering spread; use `subsurface()` when
+  physical random-walk transport is needed. Importance-sampling surface exits
+  reduces bright outliers during repeated glass/liquid interactions. Exit
+  directions importance-sample Fresnel transmission for the adjacent material,
+  avoiding directions outside the transmitting cone without changing the lobe.
+
 * Add `disk_light()` for a uniform infinite disk with color, intensity, angular
   diameter, and direction controls, without image files or sky datasets.
+
+## Bugfixes
+
+- `subsurface_diffusion()` Keeps interactive rendering responsive when the camera
+  enters an active diffusion region. Affected rays terminate with recorded
+  diagnostics and a console warning instead of aborting the render.
+
+- Overall: Denoising follows perfect glass and mirror paths to the first
+  non-specular interaction for both albedo and normal guides. Nested glass no
+  longer forces white guides after the first interface. Volume and subsurface
+  renders now use guides from their scattering paths, with auxiliary prefiltering
+  for final images.
+
+- Overall: Parallel rays no longer produce invalid rectangle intersections.
+  This prevents runaway memory use when diffusion probes lie in a box face;
+  invalid ordered medium crossings terminate the affected path with diagnostics.
 
 * Recover from classified medium and subsurface transport failures by terminating
   only the affected ray path instead of aborting the render. Retain accumulated
@@ -212,6 +243,12 @@
 
 ## Other
 
+- `render_scene()` Speeds up triangle coverage tests in medium and subsurface
+  paths by reducing conditional branches, while preserving double-precision
+  intersections and inclusive boundary handling.
+- `render_scene()` Speeds up medium and subsurface membership checks by pruning
+  distant closed objects and classifying individual boundaries from their first
+  crossing. Retains full crossing replay for instances and exact contacts.
 - `render_scene()` Distributes expensive regions across smaller rendering jobs,
   improving core utilization in scenes with localized glass or subsurface
   scattering. Preserves pixel sampling and adaptive convergence regions.

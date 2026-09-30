@@ -45,6 +45,13 @@ test_that("subsurface descriptors validate both parameter modes", {
   expect_error(subsurface(color = c(1, 2, 3)), "color")
   expect_error(subsurface(color = c("red", "green")), "color")
   expect_error(subsurface(method = "fake"), "arg")
+  expect_false(subsurface()[[1]]$subsurface$subsurface$accelerate)
+  expect_true(
+    subsurface(accelerate = TRUE)[[1]]$subsurface$subsurface$accelerate
+  )
+  for (value in list(NA, 1, "yes", logical(), c(TRUE, FALSE), matrix(TRUE))) {
+    expect_error(subsurface(accelerate = value), "accelerate")
+  }
   expect_equal(subsurface(priority = 7)[[1]]$properties[[1]][8], 7)
   for (value in list(-1, .5, NA_real_, Inf, 2^31, "high", c(0, 1))) {
     expect_error(subsurface(priority = value), "priority")
@@ -124,6 +131,152 @@ sss_test_render = function(scene, samples = 64L, ...) {
   )
   do.call(render_scene, modifyList(args, list(...)))
 }
+
+test_that("bounded SSS walks preserve raw transport through priority and nested geometry", {
+  withr::local_envvar(RAYRENDER_VOLUME_STATS = "true")
+  for (method in c("random_walk", "guided")) {
+    for (case in c(
+      "bare",
+      "glass",
+      "embedded",
+      "nested",
+      "thin",
+      "scaled",
+      "inside",
+      "concave",
+      "motion",
+      "rough",
+      "conservative"
+    )) {
+      images = lapply(c(FALSE, TRUE), function(accelerate) {
+        material = subsurface(
+          sigma_a = if (case == "conservative") 0 else c(.05, .1, .2),
+          sigma_s = 12,
+          method = method,
+          priority = 1,
+          roughness = if (case == "rough") .15 else 0,
+          accelerate = accelerate
+        )
+        body = sphere(material = material)
+        if (case == "glass") {
+          # A higher-priority glass slab intersects the body's front half.
+          # Its back face becomes the effective glass/liquid interface.
+          body = add_object(
+            body,
+            cube(
+              z = .8,
+              zwidth = .6,
+              xwidth = 3,
+              ywidth = 3,
+              material = dielectric(refraction = 1.5, priority = 0)
+            )
+          )
+        } else if (case == "embedded") {
+          body = add_object(
+            body,
+            sphere(radius = .6, material = diffuse("black"))
+          )
+        } else if (case == "nested") {
+          body = add_object(
+            body,
+            sphere(
+              radius = .6,
+              material = subsurface(
+                sigma_a = 1,
+                sigma_s = .5,
+                priority = 0,
+                accelerate = accelerate
+              )
+            )
+          )
+        } else if (case == "thin") {
+          body = cube(xwidth = 2, ywidth = 2, zwidth = .03, material = material)
+        } else if (case == "scaled") {
+          body = create_instances(
+            body,
+            scale_x = 1.3,
+            scale_y = .8,
+            scale_z = .7
+          )
+        } else if (case == "concave") {
+          body = extruded_polygon(
+            rbind(c(-1, -1), c(1, -1), c(1, 1), c(.1, .2), c(-1, 1)),
+            plane = "xy",
+            bottom = -.4,
+            top = .4,
+            material = material
+          )
+        } else if (case == "motion") {
+          body = animate_objects(body, end_position = c(.2, .1, 0))
+        }
+        set.seed(191)
+        image = sss_test_render(
+          body,
+          samples = 32L,
+          backgroundhigh = "white",
+          backgroundlow = "white",
+          lookfrom = if (case == "inside") c(0, 0, 0) else c(0, 0, 3),
+          lookat = if (case == "inside") c(0, 0, -1) else c(0, 0, 0)
+        )
+        expect_true(all(is.finite(image)))
+        expect_null(attr(image, "path_warnings"))
+        if (accelerate) {
+          expect_gt(
+            attr(image, "volume_statistics")$subsurface_bounded_queries,
+            0
+          )
+          expect_gt(
+            attr(image, "volume_statistics")$subsurface_bounded_misses,
+            0
+          )
+        }
+        image
+      })
+      expect_equal(
+        as.numeric(images[[1]]),
+        as.numeric(images[[2]]),
+        tolerance = 1e-6,
+        info = paste(method, case)
+      )
+      expect_equal(
+        attr(images[[1]], "volume_statistics")$subsurface_events,
+        attr(images[[2]], "volume_statistics")$subsurface_events,
+        info = paste(method, case)
+      )
+    }
+  }
+})
+
+test_that("bounded walks handle vacuum, absorption, anisotropy and zero-extinction channels", {
+  for (coefficients in list(
+    c(0, 0, 0),
+    c(2, 0, 0),
+    c(.1, 10, .8),
+    c(.1, 10, -.6)
+  )) {
+    images = lapply(c(FALSE, TRUE), function(accelerate) {
+      material = subsurface(
+        sigma_a = c(0, coefficients[1], coefficients[1]),
+        sigma_s = c(0, coefficients[2], coefficients[2]),
+        g = coefficients[3],
+        refraction = 1,
+        accelerate = accelerate
+      )
+      set.seed(314)
+      sss_test_render(
+        sphere(material = material),
+        samples = 32L,
+        backgroundhigh = "white",
+        backgroundlow = "white"
+      )
+    })
+    expect_equal(
+      as.numeric(images[[1]]),
+      as.numeric(images[[2]]),
+      tolerance = 1e-6
+    )
+  }
+})
 
 test_that("dielectric priority controls overlap extinction from both directions", {
   glass_absorption = c(.1, .2, .3)

@@ -89,6 +89,9 @@ public:
   bool has_temperature = false, has_rgb_emission = false;
   bool haze = true;
   bool subsurface = false, subsurface_guided = false;
+  bool subsurface_accelerated = false;
+  bool subsurface_diffusion = false;
+  std::array<double, 3> diffusion_color{}, diffusion_radius{};
   bool subsurface_guide_eligible = false;
   double subsurface_ior = 1, subsurface_roughness = 0;
   std::array<double, 3> subsurface_pole{};

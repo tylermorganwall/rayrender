@@ -83,10 +83,14 @@ struct VolumeStatistics {
       guide_eligible{0}, guide_fallback{0}, subsurface_intersections{0}, max_subsurface_events{0};
   std::atomic<uint64_t> subsurface_event_paths{0}, total_subsurface_events{0},
       rounded_subsurface_flights{0};
+  std::atomic<uint64_t> diffusion_samples{0};
+  std::atomic<uint64_t> subsurface_bounded_queries{0}, subsurface_bounded_misses{0};
   // Power-of-two upper bounds for internal event counts, on paths with events.
   std::array<std::atomic<uint64_t>, 64> subsurface_event_histogram{};
   void Reset() {
     paths = 0;
+    diffusion_samples = 0;
+    subsurface_bounded_queries = subsurface_bounded_misses = 0;
     segments = 0;
     null_events = 0;
     scattering_events = 0;
@@ -121,6 +125,7 @@ public:
   std::shared_ptr<hitable> boundary_bvh;
   std::vector<std::shared_ptr<VolumeScene>> children;
   bool has_media = false, has_emission = false, transparent_background = false;
+  bool has_diffusion = false;
   bool collect_statistics = std::getenv("RAYRENDER_VOLUME_STATS") &&
                             std::string(std::getenv("RAYRENDER_VOLUME_STATS")) == "true";
   mutable VolumeStatistics statistics;
@@ -132,6 +137,7 @@ public:
 
 private:
   uint64_t boundary_count = 0;
+  bool individual_boundaries = false;
 };
 // Returns false for ordinary geometry that cannot form a supported closed boundary.
 bool ValidateMediumBoundary(hitable *geometry, bool required);

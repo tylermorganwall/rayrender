@@ -454,6 +454,39 @@ context("Deterministic volume picking") {
   }
 }
 context("Participating media geometry and sampling") {
+  test_that("first-crossing containment matches full replay for nested boundaries and exact contacts") {
+    PickingScene direct;
+    auto medium = std::make_shared<Medium>(medium_description());
+    direct.Add(medium, 3);
+    direct.Add(medium, 1);
+    // An identity instance deliberately selects the full crossing replay. It
+    // shares geometry and IDs, allowing an exact comparison of ordered states.
+    hitable_list lights;
+    VolumeScene reference;
+    reference.boundaries.add(std::make_shared<instance>(
+        direct.scene.boundary_bvh.get(), &direct.identity, &direct.identity, &lights, 0));
+    reference.Finish(0, 1);
+    bool same = true;
+    for (Float x : {-4.f, -3.f, -2.9999998f, -1.f, -.99999994f, 0.f,
+                     .99999994f, 1.f, 2.9999998f, 3.f, 4.f}) {
+      for (Float y : {0.f, 1.f, 3.f}) {
+        for (Float sign : {-1.f, 1.f}) {
+          Ray ray(point3f(x, y, 0), vec3f(sign, .2f, .1f));
+          auto fast = direct.scene.InitialState(ray, nullptr);
+          auto full = reference.InitialState(ray, nullptr);
+          same &= fast.media.size() == full.media.size();
+          for (size_t i = 0; i < std::min(fast.media.size(), full.media.size()); ++i) {
+            same &= fast.media[i].boundary_id == full.media[i].boundary_id;
+            same &= fast.media[i].boundary == full.media[i].boundary;
+            same &= fast.media[i].medium_to_world == full.media[i].medium_to_world;
+            same &= !fast.media[i].guide_valid;
+          }
+        }
+      }
+    }
+    expect_true(same);
+  }
+
   test_that("NEE scalar and vector requests use distinct sampler coordinates") {
     random_gen rng1(7), rng2(7);
     SobolBlueNoiseSampler a(rng1), b(rng2);

@@ -817,7 +817,7 @@ private:
   bool using_heap_ = false;
 };
 
-template <typename IntersectPrimitive>
+template <bool ContainmentOnly = false, typename IntersectPrimitive>
 bool traverseClosestBVH4(
     const LinearBVHNode4* nodes4,
     const LinearBVHLeaf4* leaves4,
@@ -867,7 +867,22 @@ bool traverseClosestBVH4(
       rayBBoxIntersect4(rbox, node->bbox4, t_min, t_max, hits, tEnters);
       const IVec4 valid_hit =
           simd_and(hits, simd_not_equals_minus_one(node->childOffsets));
-      const int hitmask = simd_extract_hitmask(valid_hit);
+      int hitmask = simd_extract_hitmask(valid_hit);
+      if constexpr (ContainmentOnly) {
+        // Keep the ordinary closest-first ordering, but prune closed objects
+        // that cannot contain the origin. Pad inclusively to retain rounded
+        // contacts at faces/edges and transformed bounds. This restriction is
+        // local to this aggregate: a candidate's mesh must still test ALL faces.
+        for (int axis = 0; axis < 3; ++axis) {
+          const Float padding = 8 * std::numeric_limits<Float>::epsilon() *
+                                std::max(Float(1), std::abs(r.o[axis]));
+          for (int child = 0; child < 4; ++child) {
+            if (r.o[axis] < node->bbox4.corners[2 * axis][child] - padding ||
+                r.o[axis] > node->bbox4.corners[2 * axis + 1][child] + padding)
+              hitmask &= ~(1 << child);
+          }
+        }
+      }
       if (hitmask != 0) {
         float tEntersArray[4];
         simd_extract_fvec4(tEnters, tEntersArray);
@@ -937,6 +952,31 @@ bool traverseAnyPriorityBVH4(
 }
 
 } // namespace
+
+bool BVHAggregate::HitContainingObjects(const Ray& r, Float t_min, Float t_max,
+                                       hit_record& rec, random_gen& rng,
+                                       const std::vector<const hitable*>* excluded) const {
+  return traverseClosestBVH4<true>(
+      nodes4.get(), leaves4.get(), root4, r, t_min, t_max, rec,
+      [&](int primIndex, Float lo, Float hi, hit_record& result) {
+        // Leaves can contain several coincident-centroid objects, even when
+        // maxPrimsInNode is one. Check each whole object's bounds as well.
+        const auto& object = primitives[primIndex];
+        if (excluded && std::find(excluded->begin(), excluded->end(), object.get()) != excluded->end())
+          return false;
+        aabb bounds;
+        if (object->bounding_box(r.time(), r.time(), bounds)) {
+          for (int axis = 0; axis < 3; ++axis) {
+            const Float padding = 8 * std::numeric_limits<Float>::epsilon() *
+                                  std::max(Float(1), std::abs(r.o[axis]));
+            if (r.o[axis] < bounds.min()[axis] - padding ||
+                r.o[axis] > bounds.max()[axis] + padding)
+              return false;
+          }
+        }
+        return object->hit(r, lo, hi, result, rng);
+      });
+}
 
 const bool BVHAggregate::hit(
     const Ray& r,
@@ -1110,6 +1150,50 @@ private:
 }
 
 context("BVH compact leaves") {
+  test_that("containment probes prune distant whole objects, including root and coincident leaves") {
+    random_gen rng(91);
+    bool correct = true;
+    for (bool coincident : {false, true}) {
+      for (int count : {0, 1, 2, 17, 300}) {
+        for (int maxLeaf : {1, 4}) {
+          std::vector<int> visits;
+          std::vector<std::shared_ptr<hitable>> probes;
+          int target = -1;
+          for (int i = 0; i < count; ++i)
+            probes.push_back(std::make_shared<BVHLeafProbe>(i, coincident, target, visits));
+          BVHAggregate bvh(probes, 0, 1, maxLeaf, true);
+          for (int index : {0, count / 2, count}) {
+            const Float x = coincident ? .5f : 2 * index + .5f;
+            for (Float y : {0.f, 1.f, 2.f}) {
+              visits.clear();
+              hit_record rec;
+              bool hit = bvh.HitContainingObjects(
+                  Ray(point3f(x, y, 0), vec3f(1, 0, 0)), 0, FLT_MAX, rec, rng);
+              std::vector<int> expected;
+              if (y <= 1) {
+                if (coincident)
+                  for (int i = 0; i < count; ++i) expected.push_back(i);
+                else if (index < count) expected.push_back(index);
+              }
+              std::sort(visits.begin(), visits.end());
+              correct &= !hit && visits == expected;
+              if (!probes.empty()) {
+                std::vector<const hitable*> excluded{probes.front().get()};
+                visits.clear();
+                hit = bvh.HitContainingObjects(
+                    Ray(point3f(x, y, 0), vec3f(1, 0, 0)), 0, FLT_MAX, rec, rng, &excluded);
+                expected.erase(std::remove(expected.begin(), expected.end(), 0), expected.end());
+                std::sort(visits.begin(), visits.end());
+                correct &= !hit && visits == expected;
+              }
+            }
+          }
+        }
+      }
+    }
+    expect_true(correct);
+  }
+
   test_that("leaf references preserve the unused sentinel and full index range") {
     expect_false(isBVH4Leaf(kBVH4Empty));
     expect_false(isBVH4Leaf(0));
@@ -1174,6 +1258,37 @@ context("BVH compact leaves") {
   }
 }
 #endif
+#endif
+
+#ifndef RAYSIMD
+bool BVHAggregate::HitContainingObjects(const Ray& r, Float t_min, Float t_max,
+                                       hit_record& rec, random_gen& rng,
+                                       const std::vector<const hitable*>* excluded) const {
+  // Scalar builds use the same whole-object filter without a point BVH walk.
+  bool found = false;
+  for (const auto& object : primitives) {
+    if (excluded && std::find(excluded->begin(), excluded->end(), object.get()) != excluded->end())
+      continue;
+    aabb bounds;
+    bool outside = false;
+    if (object->bounding_box(r.time(), r.time(), bounds)) {
+      for (int axis = 0; axis < 3; ++axis) {
+        const Float padding = 8 * std::numeric_limits<Float>::epsilon() *
+                              std::max(Float(1), std::abs(r.o[axis]));
+        outside |= r.o[axis] < bounds.min()[axis] - padding ||
+                   r.o[axis] > bounds.max()[axis] + padding;
+      }
+    }
+    hit_record candidate;
+    if (!outside && object->hit(r, t_min, t_max, candidate, rng) &&
+        (!found || candidate.OrderedDistance() <= rec.OrderedDistance())) {
+      rec = candidate;
+      t_max = rec.DistanceUpperBound();
+      found = true;
+    }
+  }
+  return found;
+}
 #endif
 
 Float BVHAggregate::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {

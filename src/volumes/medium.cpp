@@ -176,9 +176,28 @@ Medium::Medium(const Rcpp::List &d)
     Rcpp::List s = d["subsurface"];
     subsurface = true;
     std::string method = Rcpp::as<std::string>(s["method"]);
-    if (method != "guided" && method != "random_walk")
+    if (method != "guided" && method != "random_walk" && method != "diffusion")
       throw std::runtime_error("Unknown subsurface sampling method.");
+    subsurface_diffusion = method == "diffusion";
+    if (subsurface_diffusion) {
+      Rcpp::NumericVector color = s["color"], radius = s["radius"];
+      if (color.size() != 3 || radius.size() != 3)
+        throw std::runtime_error("Diffusion color and radius require three channels.");
+      for (int c = 0; c < 3; ++c) {
+        if (!std::isfinite(color[c]) || color[c] < 0 || color[c] > 1 ||
+            !(radius[c] > 0) || !std::isfinite(radius[c]) || !std::isfinite(1 / radius[c]))
+          throw std::runtime_error("Invalid diffusion color or radius.");
+        diffusion_color[c] = color[c];
+        diffusion_radius[c] = radius[c];
+      }
+    }
     subsurface_guided = method == "guided";
+    if (s.containsElementNamed("accelerate")) {
+      SEXP value = s["accelerate"];
+      if (TYPEOF(value) != LGLSXP || Rf_xlength(value) != 1 || LOGICAL(value)[0] == NA_LOGICAL)
+        throw std::runtime_error("Subsurface accelerate must be TRUE or FALSE.");
+      subsurface_accelerated = LOGICAL(value)[0];
+    }
     subsurface_ior = Rcpp::as<double>(s["refraction"]);
     subsurface_roughness = Rcpp::as<double>(s["roughness"]);
     if (!(Float(subsurface_ior) > 0) || !std::isfinite(Float(subsurface_ior)) ||

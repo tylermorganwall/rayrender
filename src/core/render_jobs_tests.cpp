@@ -23,8 +23,8 @@ context("Render sample scheduling") {
     auto tiles = make_render_tiles(blocks);
     std::vector<int> coverage(41 * 40, 0);
     for (const auto& tile : tiles) {
-      expect_true(tile.x_end > tile.x_begin && tile.x_end - tile.x_begin <= 16);
-      expect_true(tile.y_end > tile.y_begin && tile.y_end - tile.y_begin <= 16);
+      expect_true((tile.x_end > tile.x_begin && tile.x_end - tile.x_begin <= 16));
+      expect_true((tile.y_end > tile.y_begin && tile.y_end - tile.y_begin <= 16));
       for (int x = tile.x_begin; x < tile.x_end; ++x)
         for (int y = tile.y_begin; y < tile.y_end; ++y)
           ++coverage[x * 40 + y];

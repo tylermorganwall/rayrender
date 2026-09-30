@@ -14,7 +14,8 @@ subsurface(
   sigma_a = NULL,
   sigma_s = NULL,
   method = c("random_walk", "guided"),
-  priority = 0
+  priority = 0,
+  accelerate = FALSE
 )
 }
 \arguments{
@@ -49,6 +50,13 @@ values win in overlaps with dielectrics or other subsurface bodies. Equal
 values support innermost selection for properly nested bodies. Use distinct
 priorities for non-nested overlaps. For liquid in glass, give the glass a
 lower value and extend the liquid slightly into the glass wall.}
+
+\item{accelerate}{Default \code{FALSE}. Limit geometry queries to the sampled
+free-flight distance and use direct collision-weight arithmetic when safe,
+retaining log-space arithmetic for extreme values and guided proposals.
+This opt-in acceleration retains individual scattering
+events, physical coefficients, and priority handling. It works with either
+sampling method; it does not substitute a diffusion approximation.}
 }
 \value{
 A \code{ray_material} descriptor.

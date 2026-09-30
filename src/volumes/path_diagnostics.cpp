@@ -5,7 +5,7 @@
 namespace {
 const char *names[] = {"repeated_entry", "invalid_exit", "invalid_density",
                       "invalid_majorant", "invalid_roulette_weight",
-                      "position_precision", "invalid_radiance"};
+                      "position_precision", "invalid_radiance", "diffusion_interior"};
 }
 
 void PathDiagnostics::Record(const PathFailure &failure, const Ray &camera,
@@ -29,6 +29,14 @@ void PathDiagnostics::Record(const PathFailure &failure, const Ray &camera,
   examples[kind].push_back(message.str());
 }
 
+bool PathDiagnostics::TakeDiffusionInteriorNotice() {
+  std::lock_guard<std::mutex> lock(mutex);
+  if (diffusion_interior_reported || counts[size_t(PathFailureKind::DiffusionInterior)] == 0)
+    return false;
+  diffusion_interior_reported = true;
+  return true;
+}
+
 Rcpp::List PathDiagnostics::Take() {
   std::lock_guard<std::mutex> lock(mutex);
   Rcpp::NumericVector totals(kinds);
@@ -45,6 +53,7 @@ Rcpp::List PathDiagnostics::Take() {
   }
   totals.attr("names") = labels;
   records.attr("names") = labels;
+  diffusion_interior_reported = false;
   return Rcpp::List::create(Rcpp::Named("terminated_paths") = double(total),
                             Rcpp::Named("counts") = totals,
                             Rcpp::Named("examples") = records,

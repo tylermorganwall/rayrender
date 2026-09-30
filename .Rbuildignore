@@ -57,3 +57,5 @@
 ^tools/subsurface($|/)
 
 ^tools/normal-mapping($|/)
+^dev($|/)
+^\.agents($|/)

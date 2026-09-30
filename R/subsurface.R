@@ -27,6 +27,11 @@
 #'   values support innermost selection for properly nested bodies. Use distinct
 #'   priorities for non-nested overlaps. For liquid in glass, give the glass a
 #'   lower value and extend the liquid slightly into the glass wall.
+#' @param accelerate Default `FALSE`. Limit geometry queries to the sampled
+#'   free-flight distance and use direct collision-weight arithmetic when safe,
+#'   retaining log-space arithmetic for extreme values and guided proposals.
+#'   This opt-in acceleration retains individual scattering
+#'   events, physical coefficients, and priority handling.
 #'
 #' @details
 #' In physical mode coefficients are used directly without color conversion.
@@ -84,9 +89,18 @@ subsurface = function(
   sigma_a = NULL,
   sigma_s = NULL,
   method = c("random_walk", "guided"),
-  priority = 0
+  priority = 0,
+  accelerate = FALSE
 ) {
   method = match.arg(method)
+  if (
+    !is.logical(accelerate) ||
+      length(accelerate) != 1L ||
+      !is.null(dim(accelerate)) ||
+      is.na(accelerate)
+  ) {
+    stop("`accelerate` must be TRUE or FALSE.", call. = FALSE)
+  }
   scalar = function(x, name, lower, upper, strict = FALSE) {
     if (
       !is.numeric(x) ||
@@ -180,6 +194,7 @@ subsurface = function(
   )
   medium$subsurface = list(
     method = method,
+    accelerate = accelerate,
     refraction = refraction,
     roughness = roughness
   )

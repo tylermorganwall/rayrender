@@ -349,6 +349,11 @@ uint64_t VolumeScene::ReserveBoundaryIds(uint64_t count) {
   return offset;
 }
 void VolumeScene::Finish(Float t0, Float t1) {
+  has_diffusion = std::any_of(medium_cache->begin(), medium_cache->end(),
+      [](const auto &entry) { return entry.second && entry.second->subsurface_diffusion; });
+  for (const auto &child : children) has_diffusion |= child->has_diffusion;
+  individual_boundaries = std::all_of(boundaries.objects.begin(), boundaries.objects.end(),
+      [](const auto &object) { return dynamic_cast<const MediumBoundary *>(object.get()) != nullptr; });
   if (!boundaries.objects.empty())
     boundary_bvh = std::make_shared<BVHAggregate>(boundaries.objects, t0, t1, 1, true);
 }
@@ -357,6 +362,10 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   VolumePathState state;
   if (!boundary_bvh)
     return state;
+  // Finish() builds this aggregate from whole boundary placements. Distant
+  // objects contribute cancelling entry/exit pairs, so exclude them before
+  // traversing their meshes. Do not apply this filter inside a boundary mesh.
+  const auto *containment_bvh = static_cast<const BVHAggregate *>(boundary_bvh.get());
   vec3f direction = unit_vector(vec3f(1, 0.317f, 0.129f));
   Ray probe(ray.o, direction, ray.time());
   probe.segment_absorption = true;
@@ -370,10 +379,42 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   auto cancelled = [&] {
     return (cancel && cancel->load(std::memory_order_relaxed)) || (poll && poll());
   };
-  while (!cancelled()) {
+  bool classify_first_crossings = individual_boundaries;
+  if (classify_first_crossings) {
+    // For a single closed, consistently oriented boundary, the first crossing
+    // is an exit iff the origin is inside. Ignore its later entry/exit pairs.
+    // Query complete objects in distance order, then replay only these exits
+    // in reverse to retain nesting and equal-priority dielectric ordering.
+    // An instance may contain several boundaries, so it uses the full walk.
+    std::vector<const hitable *> classified;
+    double previous = -INFINITY;
+    while (!cancelled()) {
+      hit_record h;
+      if (!containment_bvh->HitContainingObjects(probe, 0, MaxT, h, rng, &classified))
+        break;
+      double orientation = dot(direction, h.geometric_normal);
+      if (!std::isfinite(h.OrderedDistance()) || !std::isfinite(orientation))
+        throw PathFailure(PathFailureKind::PositionPrecision,
+                          "Non-finite boundary intersection in initial membership.");
+      if (h.t == 0 || h.OrderedDistance() == previous || orientation == 0) {
+        // Exact contacts/ties need the original direction-sensitive crossing
+        // rules. Restart without exclusions rather than inventing a tie order.
+        classify_first_crossings = false;
+        crossings.clear();
+        break;
+      }
+      previous = h.OrderedDistance();
+      classified.push_back(h.medium_boundary);
+      if (orientation > 0) crossings.push_back(h);
+    }
+  }
+  while (!classify_first_crossings && !cancelled()) {
     hit_record h;
-    if (!boundary_bvh->hit(probe, lower, MaxT, h, rng))
+    if (!containment_bvh->HitContainingObjects(probe, lower, MaxT, h, rng))
       break;
+    if (!std::isfinite(h.OrderedDistance()) || h.OrderedDistance() < probe.medium_t_min)
+      throw PathFailure(PathFailureKind::PositionPrecision,
+                        "Non-finite or non-advancing boundary intersection in initial membership.");
     // A ray starting exactly on a boundary still processes its t=0 hit.
     // Initialize the side immediately before that crossing, using the actual
     // ray direction rather than the arbitrary containment probe direction.
@@ -481,11 +522,14 @@ Rcpp::List VolumeScene::Statistics() const {
       Rcpp::Named("camera_null_events") = double(statistics.null_events.load()),
       Rcpp::Named("scattering_events") = double(statistics.scattering_events.load()),
       Rcpp::Named("shadow_candidates") = double(statistics.shadow_candidates.load()),
+      Rcpp::Named("diffusion_samples") = double(statistics.diffusion_samples.load()),
       Rcpp::Named("subsurface_events") = double(statistics.subsurface_events.load()),
       Rcpp::Named("subsurface_boundaries") = double(statistics.subsurface_boundaries.load()),
       Rcpp::Named("guide_eligible") = double(statistics.guide_eligible.load()),
       Rcpp::Named("guide_fallback") = double(statistics.guide_fallback.load()),
       Rcpp::Named("subsurface_intersections") = double(statistics.subsurface_intersections.load()),
+      Rcpp::Named("subsurface_bounded_queries") = double(statistics.subsurface_bounded_queries.load()),
+      Rcpp::Named("subsurface_bounded_misses") = double(statistics.subsurface_bounded_misses.load()),
       Rcpp::Named("max_subsurface_events") = double(statistics.max_subsurface_events.load()),
       Rcpp::Named("subsurface_event_paths") = double(statistics.subsurface_event_paths.load()),
       Rcpp::Named("total_subsurface_events") = double(statistics.total_subsurface_events.load()),

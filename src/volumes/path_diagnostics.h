@@ -11,7 +11,7 @@
 // Only explicitly classified transport failures are recoverable. Allocation,
 // cancellation and scene construction errors must retain their normal behavior.
 enum class PathFailureKind { RepeatedEntry, InvalidExit, Density, Majorant,
-                             Roulette, PositionPrecision, Radiance, Count };
+                             Roulette, PositionPrecision, Radiance, DiffusionInterior, Count };
 class PathFailure : public std::runtime_error {
 public:
   PathFailure(PathFailureKind kind, const std::string &message)
@@ -27,11 +27,15 @@ public:
               const char *stage);
   // Called on the R thread after workers join; drains per-frame diagnostics.
   Rcpp::List Take();
+  // Called on the R thread between sample passes. Consumes only the notice,
+  // retaining all counts/examples for the final diagnostics and optional log.
+  bool TakeDiffusionInteriorNotice();
 private:
   static constexpr size_t kinds = size_t(PathFailureKind::Count);
   static constexpr size_t examples_per_kind = 8;
   std::mutex mutex;
   std::array<uint64_t, kinds> counts{};
   std::array<std::vector<std::string>, kinds> examples;
+  bool diffusion_interior_reported = false;
 };
 #endif

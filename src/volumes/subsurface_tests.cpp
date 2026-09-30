@@ -4,6 +4,7 @@
 #include "../math/rng.h"
 #include "../materials/material.h"
 #include "../hitables/sphere.h"
+#include "../hitables/rectangle.h"
 #include "../core/bvh.h"
 #include "intersections.h"
 #include <testthat.h>
@@ -44,6 +45,103 @@ private:
 }
 
 context("Subsurface proposal and boundary") {
+  test_that("volume triangle coverage includes edges and rejects points just outside") {
+    struct Probe { Float x, y; bool inside; };
+    const Float step = std::numeric_limits<Float>::epsilon();
+    const Probe probes[] = {
+      {0, 0, true}, {-Float(0), Float(0), true}, {1, 0, true}, {0, 1, true},
+      {.5f, 0, true}, {0, .5f, true}, {.5f, .5f, true}, {.25f, .25f, true},
+      {-step, .5f, false}, {.5f, -step, false}, {.5f, .5f + step, false},
+      {1, 1, false}, {-1, -1, false}
+    };
+    // Rotate the plane through all three dominant ray axes and test either
+    // winding from both sides. Expected coverage comes from x>=0,y>=0,x+y<=1.
+    for (int axis = 0; axis < 3; ++axis) {
+      auto point = [axis](Float x, Float y, Float z) {
+        point3f p(0);
+        p[axis] = z;
+        p[(axis + 1) % 3] = x;
+        p[(axis + 2) % 3] = y;
+        return p;
+      };
+      for (bool reverse : {false, true}) {
+        point3f a = point(0, 0, 0), b = point(1, 0, 0), c = point(0, 1, 0);
+        if (reverse) std::swap(b, c);
+        for (Float side : {-1.f, 1.f}) {
+          vec3f direction(0);
+          direction[axis] = -side;
+          for (const auto &probe : probes) {
+            Ray ray(point(probe.x, probe.y, side), direction);
+            Float t = -1, b0 = -1, b1 = -1, b2 = -1;
+            double precise = -1;
+            bool hit = VolumeTriangleIntersection(ray, a, b, c, 1, 1, t, b0, b1, b2, &precise);
+            expect_true(hit == probe.inside);
+            if (hit) {
+              expect_true(t == 1);
+              expect_true(precise == 1);
+              expect_true(b0 == Float(1) - probe.x - probe.y);
+              expect_true(b1 == (reverse ? probe.y : probe.x));
+              expect_true(b2 == (reverse ? probe.x : probe.y));
+              // A double lower bound can exclude the hit even when its Float
+              // representation rounds back to exactly the same distance.
+              ray.medium_t_min = std::nextafter(1.0, INFINITY);
+              expect_false(VolumeTriangleIntersection(ray, a, b, c, 1, 1, t, b0, b1, b2));
+            }
+          }
+        }
+      }
+    }
+  }
+
+  test_that("volume triangle origin contacts and degenerate planes retain their rules") {
+    const point3f a(0, 0, 0), b(1, 0, 0), c(0, 1, 0);
+    Float t, b0, b1, b2;
+    double precise;
+    for (Float zero : {Float(0), -Float(0)}) {
+      for (Float direction : {-1.f, 1.f}) {
+        Ray ray(point3f(.25f, .25f, zero), vec3f(0, 0, direction));
+        expect_true(VolumeTriangleIntersection(ray, a, b, c, 0, 0, t, b0, b1, b2, &precise));
+        expect_true(t == 0);
+        expect_true(precise == 0);
+        ray.medium_t_min = std::nextafter(0.0, INFINITY);
+        expect_false(VolumeTriangleIntersection(ray, a, b, c, 0, 1, t, b0, b1, b2));
+      }
+    }
+    Ray normal(point3f(.25f, .25f, 1), vec3f(0, 0, -1));
+    expect_false(VolumeTriangleIntersection(normal, a, a, c, 0, 2, t, b0, b1, b2));
+    expect_false(VolumeTriangleIntersection(normal, a, b, point3f(2, 0, 0), 0, 2, t, b0, b1, b2));
+    Ray parallel(point3f(.25f, .25f, 1), vec3f(1, 0, 0));
+    expect_false(VolumeTriangleIntersection(parallel, a, b, c, 0, 2, t, b0, b1, b2));
+  }
+
+  test_that("bounded flights retain all surfaces before the collision and near its endpoint") {
+    // Two surfaces stand for a nested object and the enclosing body's exit.
+    // The query must not assume that the active medium owns the first surface.
+    std::vector<std::shared_ptr<hitable>> faces;
+    for (Float z : {.25f, 1.f})
+      faces.push_back(std::make_shared<OrderedTriangleProbe>(
+          point3f(-10, -10, z), point3f(10, -10, z), point3f(0, 10, z)));
+    BVHAggregate world(faces, 0, 1, 1, true);
+    Ray ray(point3f(0), vec3f(0, 0, 1));
+    ray.segment_absorption = true;
+    random_gen rng(824);
+    hit_record full, bounded;
+    expect_true(world.hit(ray, 0, MaxT, full, rng));
+    for (double t : {0.0, .001, .1, .249, .24999999, .25, .25000001, .8, 2.0}) {
+      Float limit = SubsurfaceFlightLimit(ray, t);
+      expect_true(double(limit) > t);
+      bool hit = world.hit(ray, 0, limit, bounded, rng);
+      expect_true((t < full.t) == (!hit || t < bounded.t));
+      if (hit) expect_true(bounded.t == full.t);
+    }
+    expect_true(world.hit(ray, 0, SubsurfaceFlightLimit(ray, .24999999), bounded, rng));
+    expect_true(SubsurfaceFlightLimit(ray, INFINITY) == MaxT);
+    expect_true(SubsurfaceFlightLimit(ray, double(MaxT)) == MaxT);
+    // A large coordinate increases the guard rather than rounding below t.
+    ray.o = point3f(1000000, -1000000, 1000000);
+    expect_true(SubsurfaceFlightLimit(ray, .001) > .001);
+  }
+
   test_that("containment probes do not jump across pointed mesh corners") {
     Transform identity;
     Rcpp::NumericMatrix transform(4, 4);
@@ -427,6 +525,211 @@ context("Subsurface proposal and boundary") {
       expect_true(transmitted>20);
       expect_true((energy/30000>.65 && energy/30000<1.01));
     }
+  }
+}
+
+context("Normalized diffusion") {
+  test_that("coplanar projection rays do not produce NaN rectangle hits") {
+    Transform identity;
+    std::vector<std::shared_ptr<hitable>> faces{
+      std::make_shared<yz_rect>(-1, 1, -1, 1, 0, nullptr, nullptr, nullptr, &identity, &identity, false),
+      std::make_shared<xz_rect>(-1, 1, -1, 1, 0, nullptr, nullptr, nullptr, &identity, &identity, false),
+      std::make_shared<xy_rect>(-1, 1, -1, 1, 0, nullptr, nullptr, nullptr, &identity, &identity, false)};
+    random_gen rng(72);
+    RandomSampler sampler(rng);
+    for (int axis = 0; axis < 3; ++axis) {
+      for (bool volume_ray : {false, true}) {
+        vec3f direction(0);
+        direction[(axis + 1) % 3] = 1;
+        for (Float plane_distance : {Float(0), Float(.5)}) {
+          point3f origin(0);
+          origin[axis] = plane_distance;
+          Ray ray(origin, direction);
+          ray.segment_absorption = volume_ray;
+          hit_record hit;
+          expect_false(faces[axis]->hit(ray, 0, MaxT, hit, rng));
+          expect_false(faces[axis]->hit(ray, 0, MaxT, hit, &sampler));
+          expect_false(faces[axis]->HitP(ray, 0, MaxT, rng));
+          expect_false(faces[axis]->HitP(ray, 0, MaxT, &sampler));
+        }
+      }
+    }
+  }
+
+  test_that("normalized radial profiles integrate to one and sample the full tail") {
+    NormalizedDiffusionProfile profile{{.2, .7, 1}, {.01, .2, 3}};
+    random_gen rng(927);
+    for (int c = 0; c < 3; ++c) {
+      double integral = 0, mean = 0;
+      int below = 0;
+      constexpr int count = 100000;
+      for (int i = 0; i < count; ++i) {
+        double r = profile.radius[c] * 90 * (i + .5) / count;
+        integral += 2 * M_PI * r * std::exp(profile.LogAreaPdf(c, r)) *
+                    profile.radius[c] * 90 / count;
+        double component = rng.unif_rand(), uniform = rng.unif_rand();
+        double sample = profile.SampleRadius(c, component, uniform);
+        mean += sample / count;
+        below += sample <= profile.radius[c];
+      }
+      expect_true(std::abs(integral - 1) < 1e-6);
+      expect_true(std::abs(mean / profile.radius[c] - 2.5) < .035);
+      expect_true(std::abs(double(below) / count - profile.Cdf(c, profile.radius[c])) < .006);
+      expect_true(profile.SampleRadius(c, .5, 1 - 1e-12) > 80 * profile.radius[c]);
+    }
+  }
+  test_that("exit lobes normalize Fresnel for air and higher-index neighboring glass") {
+    for (double ratio : {1.0, 1.333, 1.333 / 1.5, 1.5, .5, 2.5}) {
+      DiffusionExitBSDF lobe(normal3f(0, 0, 1), ratio, 1);
+      double integral = 0;
+      constexpr int count = 100000;
+      for (int i = 0; i < count; ++i) {
+        double cosine = (i + .5) / count;
+        vec3f wi(Float(std::sqrt(1 - cosine * cosine)), 0, Float(cosine));
+        integral += 2 * M_PI * lobe.Evaluate(wi) / count / lobe.EtaSquared();
+      }
+      expect_true(std::abs(integral - 1) < 2e-5);
+      expect_true(lobe.Evaluate(vec3f(0, 0, -1)) == 0);
+      expect_true(lobe.Pdf(vec3f(0, 0, -1)) == 0);
+      vec3f sample = lobe.Sample(.3, .7);
+      expect_true(std::abs(sample.length() - 1) < 1e-6);
+      expect_true(lobe.Pdf(sample) > 0);
+    }
+  }
+  test_that("Fresnel exit sampling matches its PDF and removes angular weight variance") {
+    for (double ratio : {.25, .5, 1.333 / 1.5, .9999, 1.0, 1.0001, 1.333, 2.5, 10.0}) {
+      DiffusionExitBSDF lobe(normal3f(0, 0, 1), ratio, 1);
+      constexpr int count = 100000;
+      double integral = 0, pdf_moment = 0, sample_moment = 0;
+      double weight_sum = 0, weight_square_sum = 0;
+      double old_sum = 0, old_square_sum = 0;
+      for (int i = 0; i < count; ++i) {
+        double u = (i + .5) / count;
+        vec3f direction(Float(std::sqrt(1 - u * u)), 0, Float(u));
+        double pdf = lobe.Pdf(direction);
+        integral += 2 * M_PI * pdf / count;
+        pdf_moment += 2 * M_PI * pdf * u / count;
+        vec3f sample = lobe.Sample(u, .37);
+        double sample_pdf = lobe.Pdf(sample);
+        double weight = sample_pdf > 0 ? lobe.Evaluate(sample) / sample_pdf / lobe.EtaSquared() : 0;
+        sample_moment += sample[2] / count;
+        weight_sum += weight / count;
+        weight_square_sum += weight * weight / count;
+        // The old cosine estimator evaluates exactly the same physical lobe.
+        double cosine = std::sqrt(1 - u);
+        vec3f old_sample(Float(std::sqrt(u)), 0, Float(cosine));
+        double old_weight = lobe.Evaluate(old_sample) * M_PI / cosine / lobe.EtaSquared();
+        old_sum += old_weight / count;
+        old_square_sum += old_weight * old_weight / count;
+      }
+      expect_true(std::abs(integral - 1) < 3e-4);
+      expect_true(std::abs(pdf_moment - sample_moment) < 3e-4);
+      expect_true(std::abs(weight_sum - 1) < 3e-5);
+      double variance = weight_square_sum - weight_sum * weight_sum;
+      double old_variance = old_square_sum - old_sum * old_sum;
+      expect_true(variance < 1e-5);
+      if (ratio < .9 || ratio > 1.2) expect_true(variance < old_variance * .001);
+      for (double endpoint : {0.0, 1.0}) {
+        vec3f sample = lobe.Sample(endpoint, endpoint);
+        expect_true(std::isfinite(lobe.Pdf(sample)));
+        expect_true(lobe.Pdf(sample) > 0);
+        expect_true(std::abs(sample.length() - 1) < 1e-6);
+      }
+    }
+    // Frame transforms and critical-angle rounding must not create NaN weights.
+    DiffusionExitBSDF rotated(unit_vector(normal3f(1, 2, 3)), 1.333, 1.5);
+    for (double u : {0.0, .1, .9, .999, 1.0}) {
+      vec3f sample = rotated.Sample(u, .6);
+      double pdf = rotated.Pdf(sample);
+      expect_true((pdf >= 0 && std::isfinite(pdf)));
+      expect_true(std::isfinite(rotated.Evaluate(sample)));
+    }
+  }
+  test_that("diffusion samples effective glass boundaries and excludes hidden liquid faces") {
+    Rcpp::NumericMatrix transform(4, 4);
+    for (int i = 0; i < 4; ++i) transform(i, i) = 1;
+    auto medium = std::make_shared<Medium>(Rcpp::List::create(
+        Rcpp::Named("sigma_a") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("sigma_s") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("density_scale") = 1, Rcpp::Named("g") = 0,
+        Rcpp::Named("emission") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("temperature") = R_NilValue, Rcpp::Named("emission_scale") = 1,
+        Rcpp::Named("temperature_scale") = 1, Rcpp::Named("temperature_offset") = 0,
+        Rcpp::Named("medium_transform") = transform,
+        Rcpp::Named("subsurface") = Rcpp::List::create(
+          Rcpp::Named("method") = "diffusion", Rcpp::Named("refraction") = 1.333,
+          Rcpp::Named("roughness") = 0,
+          Rcpp::Named("color") = Rcpp::NumericVector::create(1, 1, 1),
+          Rcpp::Named("radius") = Rcpp::NumericVector::create(.3, .3, .3))));
+    Transform identity, glass_transform = Translate(vec3f(.6, 0, 0));
+    Transform glass_inverse = Inverse(glass_transform);
+    auto milk = std::make_shared<dielectric>(point3f(1), 1.333, point3f(0), 1);
+    auto glass = std::make_shared<dielectric>(point3f(1), 1.5, point3f(0), 0);
+    auto milk_shape = std::make_shared<sphere>(1, milk, nullptr, nullptr, &identity, &identity, false);
+    auto glass_shape = std::make_shared<sphere>(.8, glass, nullptr, nullptr,
+                                              &glass_transform, &glass_inverse, false);
+    VolumeScene scene;
+    auto milk_boundary = std::make_shared<MediumBoundary>(milk_shape, medium, identity, true,
+                                                         scene.NextBoundaryId());
+    auto glass_boundary = std::make_shared<MediumBoundary>(glass_shape, nullptr, glass_transform,
+                                                          true, scene.NextBoundaryId());
+    scene.boundaries.add(milk_boundary);
+    scene.boundaries.add(glass_boundary);
+    scene.Finish(0, 1);
+    random_gen rng(1927);
+    RandomSampler sampler(rng);
+    auto state = scene.InitialState(Ray(point3f(-.99, 0, 0), vec3f(1, 0, 0)), nullptr);
+    expect_true(state.Active() != nullptr);
+    MediumEntry body = *state.Active();
+    int own_hits = 0, glass_hits = 0;
+    for (int i = 0; i < 3000; ++i) {
+      auto sample = SampleDiffusionSurface(scene, body, point3f(-1, 0, 0),
+                                           normal3f(-1, 0, 0), 0, &sampler, rng, nullptr);
+      if (!sample) continue;
+      expect_true((!sample->outside.Active() || sample->outside.Active()->boundary_id != body.boundary_id));
+      bool on_glass = sample->hit.medium_boundary == glass_boundary.get();
+      glass_hits += on_glass;
+      own_hits += !on_glass;
+      if (on_glass) {
+        expect_true(sample->outside.ActiveDielectric() == glass.get());
+        expect_true(dot(sample->outward, sample->hit.geometric_normal) < -.99);
+        expect_true((sample->hit.p - point3f(0)).length() < 1.00001);
+      } else {
+        expect_true((sample->hit.p - point3f(.6, 0, 0)).length() >= .79999);
+      }
+      for (double w : sample->weight) expect_true((std::isfinite(w) && w >= 0));
+    }
+    expect_true(own_hits > 100);
+    expect_true(glass_hits > 100);
+    // Reversing priority restores the uncut milk surface, including the overlap.
+    glass->priority = 2;
+    int buried = 0;
+    for (int i = 0; i < 500; ++i) {
+      auto sample = SampleDiffusionSurface(scene, body, point3f(-1, 0, 0),
+                                           normal3f(-1, 0, 0), 0, &sampler, rng, nullptr);
+      if (!sample) continue;
+      expect_true(sample->hit.medium_boundary == milk_boundary.get());
+      buried += (sample->hit.p - point3f(.6, 0, 0)).length() < .8;
+    }
+    expect_true(buried > 5);
+    // A white sphere in a white furnace has response CDF(2R), approximately
+    // one for this short profile. Check both its mean and spatial-estimator
+    // second moment: uniform far-side selection formerly gave about four.
+    medium->diffusion_radius = {.01, .01, .01};
+    double mean = 0, second_moment = 0;
+    constexpr int samples = 30000;
+    for (int i = 0; i < samples; ++i) {
+      auto sample = SampleDiffusionSurface(scene, body, point3f(-1, 0, 0),
+                                           normal3f(-1, 0, 0), 0, &sampler, rng, nullptr);
+      double w = sample ? sample->weight[0] : 0;
+      mean += w / samples;
+      second_moment += w * w / samples;
+    }
+    expect_true(std::abs(mean - 1) < .025);
+    expect_true(second_moment < 2.6);
+    std::atomic<bool> cancelled{true};
+    expect_false(SampleDiffusionSurface(scene, body, point3f(-1, 0, 0), normal3f(-1, 0, 0),
+                                        0, &sampler, rng, &cancelled).has_value());
   }
 }
 #endif

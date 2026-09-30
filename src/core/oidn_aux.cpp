@@ -92,7 +92,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
                              std::size_t dielectric_splits,
                              const std::atomic<bool>* cancel) {
   if(AuxCancelled(cancel) || depth >= options.max_depth) {
-    return {point3f(1, 1, 1), normal3f(0, 0, 0), false};
+    return {point3f(0), normal3f(0), false};
   }
 
   Ray current_ray = ray;
@@ -100,7 +100,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
   while(!AuxCancelled(cancel) &&
         world->hit(current_ray, static_cast<Float>(0.001), MaxT, hrec, rng)) {
     if(AuxCancelled(cancel)) {
-      return {point3f(1, 1, 1), normal3f(0, 0, 0), false};
+      return {point3f(0), normal3f(0), false};
     }
     if(hrec.alpha_miss) {
       current_ray.o = OffsetRayOrigin(hrec.p,
@@ -167,10 +167,6 @@ OidnFeature TraceOidnFeature(const Ray& ray,
                                 cancel);
       }
 
-      if(dielectric_splits >= options.max_dielectric_splits) {
-        return {point3f(1, 1, 1), feature_normal, true};
-      }
-
       Float current_ref_idx = prev_active != -1 ?
         base_stack[static_cast<size_t>(prev_active)]->ref_idx :
         static_cast<Float>(1);
@@ -182,68 +178,50 @@ OidnFeature TraceOidnFeature(const Ray& ray,
       Float reflected_weight = FrDielectric(dot(wi, outward_normal), ni_over_nt);
 
       std::vector<dielectric*> reflected_stack = base_stack;
-      if(entering && !reflected_stack.empty()) {
-        reflected_stack.pop_back();
-      }
-      vec3f reflected = Reflect(wi, outward_normal);
-      Ray reflected_ray = MakeFeatureRay(offset_p,
-                                         reflected,
-                                         reflected_stack,
-                                         current_ray.time());
-      OidnFeature reflected_feature = TraceOidnFeature(reflected_ray,
-                                                       world,
-                                                       rng,
-                                                       options,
-                                                       depth + 1,
-                                                       dielectric_splits + 1,
-                                                       cancel);
-      if(AuxCancelled(cancel)) {
-        return {point3f(1, 1, 1), feature_normal, false};
-      }
-
+      if(entering && !reflected_stack.empty()) reflected_stack.pop_back();
       std::vector<dielectric*> transmitted_stack = base_stack;
-      if(!entering && current_layer != -1) {
-        transmitted_stack.erase(transmitted_stack.begin() +
-                                static_cast<size_t>(current_layer));
-      }
-      vec3f refracted(0, 0, 0);
-      bool has_refracted = RefractFeatureRay(wi,
-                                             outward_normal,
-                                             ni_over_nt,
-                                             &refracted);
-      if(!has_refracted) {
-        return reflected_feature.valid ?
-          reflected_feature :
-          OidnFeature{point3f(1, 1, 1), feature_normal, true};
-      }
+      if(!entering && current_layer != -1)
+        transmitted_stack.erase(transmitted_stack.begin() + current_layer);
 
-      Ray transmitted_ray = MakeFeatureRay(offset_p,
-                                           refracted,
-                                           transmitted_stack,
-                                           current_ray.time());
-      OidnFeature transmitted_feature = TraceOidnFeature(transmitted_ray,
-                                                         world,
-                                                         rng,
-                                                         options,
-                                                         depth + 1,
-                                                         dielectric_splits + 1,
-                                                         cancel);
-      if(AuxCancelled(cancel)) {
-        return {point3f(1, 1, 1), feature_normal, false};
+      vec3f reflected = Reflect(wi, outward_normal), refracted(0);
+      bool has_refracted = RefractFeatureRay(wi, outward_normal, ni_over_nt, &refracted);
+      if(!has_refracted) reflected_weight = 1;
+      // Offset each branch toward its own side of the interface. Using the
+      // incoming direction for reflection can put the guide inside the glass.
+      auto trace_branch = [&](const vec3f& direction, std::vector<dielectric*>& stack) {
+        Ray next = MakeFeatureRay(OffsetRayOrigin(hrec.p, hrec.pError,
+                                                   hrec.normal, direction),
+                                  direction, stack, current_ray.time());
+        return TraceOidnFeature(next, world, rng, options, depth + 1,
+                                dielectric_splits + 1, cancel);
+      };
+      // Split only the first interfaces to bound work. Beyond the split budget,
+      // sample a Fresnel branch and keep following it to a non-delta surface.
+      // This estimates the same blend without exponential recursion or a white
+      // fallback at the back face of every glass object.
+      if(reflected_weight >= 1) return trace_branch(reflected, reflected_stack);
+      if(reflected_weight <= 0) return trace_branch(refracted, transmitted_stack);
+      if(dielectric_splits >= options.max_dielectric_splits) {
+        return rng.unif_rand() < reflected_weight ?
+          trace_branch(reflected, reflected_stack) :
+          trace_branch(refracted, transmitted_stack);
       }
+      OidnFeature reflected_feature = trace_branch(reflected, reflected_stack);
+      OidnFeature transmitted_feature = trace_branch(refracted, transmitted_stack);
+      if(AuxCancelled(cancel)) return {point3f(0), normal3f(0), false};
 
       point3f reflected_albedo = reflected_feature.valid ?
         reflected_feature.albedo :
-        point3f(1, 1, 1);
+        point3f(0);
       point3f transmitted_albedo = transmitted_feature.valid ?
         transmitted_feature.albedo :
-        point3f(1, 1, 1);
+        point3f(0);
       normal3f reflected_normal = reflected_feature.valid ?
         reflected_feature.normal :
-        feature_normal;
+        normal3f(0);
       normal3f transmitted_normal = transmitted_feature.valid ?
         transmitted_feature.normal :
-        feature_normal;
+        normal3f(0);
 
       point3f blended_albedo =
         reflected_weight * reflected_albedo +
@@ -272,9 +250,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
                                                        depth + 1,
                                                        dielectric_splits,
                                                        cancel);
-      if(reflected_feature.valid) {
-        return reflected_feature;
-      }
+      return reflected_feature;
     }
 
     return {ClampOidnAlbedo(mat->get_albedo(hrec)), feature_normal, true};
@@ -451,3 +427,181 @@ void render_oidn_aux_features(std::size_t numbercores,
     }
   }
 }
+
+#ifdef NOT_CRAN
+#include <testthat.h>
+#include "../hitables/sphere.h"
+#include "../core/color.h"
+#include "../core/adaptivesampler.h"
+#include "../volumes/volpath.h"
+#include "../volumes/boundary.h"
+
+context("Denoising features through specular paths") {
+  test_that("nested glass reaches a colored non-specular surface beyond the split budget") {
+    Transform identity;
+    auto matte = std::make_shared<diffuse_material>(
+      std::make_shared<constant_texture>(point3f(.2, .4, .7)));
+    for (Float ior : {Float(1), Float(1.5)}) {
+      auto glass = std::make_shared<dielectric>(point3f(1), ior, point3f(0), 1);
+      auto inner = std::make_shared<dielectric>(point3f(1), Float(1.2), point3f(0), 2);
+      hitable_list world;
+      world.add(std::make_shared<sphere>(10, matte, nullptr, nullptr, &identity, &identity, false));
+      world.add(std::make_shared<sphere>(1, glass, nullptr, nullptr, &identity, &identity, false));
+      world.add(std::make_shared<sphere>(.5, inner, nullptr, nullptr, &identity, &identity, false));
+      random_gen rng(513);
+      std::vector<dielectric*> stack;
+      Ray ray(point3f(0, 0, -4), vec3f(0, 0, 1), &stack);
+      OidnAuxRenderOptions options;
+      options.max_depth = 64;
+      for (size_t splits : {size_t(0), size_t(1)}) {
+        options.max_dielectric_splits = splits;
+        for (int i = 0; i < 100; ++i) {
+          auto feature = TraceOidnFeature(ray, &world, rng, options, 0, 0, nullptr);
+          expect_true(feature.valid);
+          expect_true((feature.albedo - point3f(.2, .4, .7)).length() < 1e-5);
+          expect_true(std::abs(feature.normal[2]) > .85);
+        }
+      }
+      options.max_depth = 1;
+      auto exhausted = TraceOidnFeature(ray, &world, rng, options, 0, 0, nullptr);
+      expect_true(exhausted.albedo.length() == 0);
+    }
+  }
+
+  test_that("mirror guides use the reflected surface and unresolved paths have no guide") {
+    Transform identity;
+    auto mirror = std::make_shared<metal>(std::make_shared<constant_texture>(point3f(1)),
+                                         0, point3f(1), point3f(1));
+    hitable_list world;
+    world.add(std::make_shared<sphere>(1, mirror, nullptr, nullptr, &identity, &identity, false));
+    random_gen rng(93);
+    Ray ray(point3f(0, 0, -4), vec3f(0, 0, 1));
+    OidnAuxRenderOptions options;
+    auto missing = TraceOidnFeature(ray, &world, rng, options, 0, 0, nullptr);
+    expect_false(missing.valid);
+    auto matte = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.3)));
+    world.add(std::make_shared<sphere>(10, matte, nullptr, nullptr, &identity, &identity, false));
+    auto reflected = TraceOidnFeature(ray, &world, rng, options, 0, 0, nullptr);
+    expect_true(reflected.valid);
+    expect_true((reflected.albedo - point3f(.3)).length() < 1e-6);
+    expect_true(reflected.normal[2] < -.999);
+  }
+
+  test_that("all beauty integrators defer guides until after both glass faces") {
+    Transform identity;
+    auto glass = std::make_shared<dielectric>(point3f(1), 1, point3f(0), 1);
+    auto matte = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.2, .4, .7)));
+    hitable_list world, lights;
+    world.add(std::make_shared<sphere>(1, glass, nullptr, nullptr, &identity, &identity, false));
+    world.add(std::make_shared<sphere>(10, matte, nullptr, nullptr, &identity, &identity, false));
+    lights.add(world.objects.back());
+    for (auto integrator : {IntegratorType::Basic, IntegratorType::BasicPathGuiding,
+                            IntegratorType::ShadowRays}) {
+      random_gen rng(17);
+      RandomSampler sampler(rng);
+      std::vector<dielectric*> stack;
+      Ray ray(point3f(0, 0, -4), vec3f(0, 0, 1), &stack);
+      Float alpha;
+      point3f radiance, albedo;
+      normal3f normal;
+      color(ray, &world, &lights, 5, 5, rng, &sampler, alpha, integrator,
+            radiance, normal, albedo);
+      expect_true((albedo - point3f(.2, .4, .7)).length() < 1e-6);
+      expect_true(normal[2] > .999);
+    }
+  }
+
+  test_that("rough metals remain first-hit guides even though they return a specular ray") {
+    Transform identity;
+    auto rough = std::make_shared<metal>(std::make_shared<constant_texture>(point3f(.3)),
+                                        .2, point3f(1), point3f(1));
+    hitable_list world, lights;
+    world.add(std::make_shared<sphere>(1, rough, nullptr, nullptr, &identity, &identity, false));
+    for (auto integrator : {IntegratorType::Basic, IntegratorType::BasicPathGuiding,
+                            IntegratorType::ShadowRays}) {
+      random_gen rng(17);
+      RandomSampler sampler(rng);
+      std::vector<dielectric*> stack;
+      Ray ray(point3f(0, 0, -4), vec3f(0, 0, 1), &stack);
+      Float alpha;
+      point3f radiance, albedo;
+      normal3f normal;
+      color(ray, &world, &lights, 2, 5, rng, &sampler, alpha, integrator,
+            radiance, normal, albedo);
+      expect_true((albedo - point3f(.3)).length() < 1e-6);
+      expect_true(normal[2] < -.999);
+    }
+  }
+
+  test_that("volume and diffusion guides survive a preceding priority dielectric") {
+    Transform identity, placement = Translate(vec3f(0, 0, 3)), inverse = Inverse(placement);
+    Rcpp::NumericMatrix transform(4, 4);
+    for (int i = 0; i < 4; ++i) transform(i, i) = 1;
+    for (bool diffusion : {false, true}) {
+      auto medium = std::make_shared<Medium>(Rcpp::List::create(
+        Rcpp::Named("sigma_a") = Rcpp::NumericVector::create(8, 6, 3),
+        Rcpp::Named("sigma_s") = Rcpp::NumericVector::create(2, 4, 7),
+        Rcpp::Named("density_scale") = 1, Rcpp::Named("g") = 0,
+        Rcpp::Named("emission") = Rcpp::NumericVector::create(0, 0, 0),
+        Rcpp::Named("temperature") = R_NilValue, Rcpp::Named("emission_scale") = 1,
+        Rcpp::Named("temperature_scale") = 1, Rcpp::Named("temperature_offset") = 0,
+        Rcpp::Named("medium_transform") = transform));
+      medium->subsurface = diffusion;
+      medium->subsurface_diffusion = diffusion;
+      medium->subsurface_ior = 1;
+      medium->diffusion_color = {.2, .4, .7};
+      medium->diffusion_radius = {.05, .05, .05};
+      auto glass = std::make_shared<dielectric>(point3f(1), 1, point3f(0), 0);
+      auto body = std::make_shared<dielectric>(point3f(1), 1, point3f(0), 1);
+      auto glass_shape = std::make_shared<sphere>(1, glass, nullptr, nullptr, &identity, &identity, false);
+      auto body_shape = std::make_shared<sphere>(.5, body, nullptr, nullptr, &placement, &inverse, false);
+      auto scene = std::make_shared<VolumeScene>();
+      auto glass_boundary = std::make_shared<MediumBoundary>(glass_shape, nullptr, identity, true, scene->NextBoundaryId());
+      auto body_boundary = std::make_shared<MediumBoundary>(body_shape, medium, placement, true, scene->NextBoundaryId());
+      scene->boundaries.add(glass_boundary);
+      scene->boundaries.add(body_boundary);
+      scene->Finish(0, 1);
+      hitable_list world, lights;
+      world.add(glass_boundary);
+      world.add(body_boundary);
+      lights.volume_scene = scene;
+      random_gen rng(72);
+      RandomSampler sampler(rng);
+      int scattering_guides = 0;
+      for (int i = 0; i < 50; ++i) {
+        point3f radiance, albedo;
+        normal3f normal;
+        Float alpha;
+        color_volume(Ray(point3f(0, 0, -4), vec3f(0, 0, 1)), &world, &lights,
+                     8, 8, rng, &sampler, alpha, radiance, normal, albedo, nullptr);
+        if (albedo.length() > 0) {
+          ++scattering_guides;
+          expect_true((albedo - point3f(.2, .4, .7)).length() < 1e-6);
+          expect_true(normal.length() == 0);
+        }
+      }
+      expect_true(scattering_guides > 0);
+    }
+  }
+
+  test_that("adaptive guide copies average active samples without rescaling finished pixels") {
+    RayMatrix rgb(2, 1, 3), rgb2(2, 1, 3), normals(2, 1, 3), albedos(2, 1, 3),
+              alpha(2, 1, 1), draw(2, 1, 3), normal_copy(2, 1, 3), albedo_copy(2, 1, 3);
+    adaptive_sampler sampler(1, 2, 1, 8, 0, 0, 1, rgb, rgb2, normals, albedos, alpha, draw, true);
+    sampler.max_s = 4;
+    sampler.finalized[0] = true;
+    normals(0, 0, 2) = 1;
+    albedos(0, 0, 0) = .2;
+    normals(1, 0, 2) = -4;
+    albedos(1, 0, 0) = .8;
+    auto* storage = albedo_copy.begin();
+    sampler.copy_denoising_features(normal_copy, albedo_copy);
+    expect_true(storage == albedo_copy.begin());
+    expect_true(std::abs(albedo_copy(0, 0, 0) - .2) < 1e-6);
+    expect_true(std::abs(albedo_copy(1, 0, 0) - .2) < 1e-6);
+    expect_true(normal_copy(0, 0, 2) == 1);
+    expect_true(normal_copy(1, 0, 2) == -1);
+    expect_true(normals(1, 0, 2) == -4);
+  }
+}
+#endif
