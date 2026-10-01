@@ -947,3 +947,31 @@ test_that("opaque SSS scenes do not inherit the transparent alpha sample floor",
   expect_equal(as.numeric(transparent[,, 4]), rep(0, 36))
   expect_equal(as.numeric(opaque[,, 1:3]), as.numeric(transparent[,, 1:3]))
 })
+
+test_that("ordinary scenes are unchanged and mixed interiors remain isolated", {
+  ordinary = do.call(vctrs::vec_rbind, rep(list(sphere()), 600L))
+  expect_identical(prepare_subsurface(ordinary), ordinary)
+  expect_identical(prepare_subsurface(ordinary[FALSE, ]), ordinary[FALSE, ])
+  stale = prepare_subsurface(sphere(material = subsurface()))
+  stale$material = diffuse()
+  explicit = set_medium(sphere(), homogeneous_medium(sigma_a = .2, sigma_s = 0))
+  nested = create_instances(create_instances(sphere(material = subsurface())))
+  scene = do.call(vctrs::vec_rbind, list(ordinary, stale, explicit, nested))
+  before = serialize(scene, NULL)
+  prepared = prepare_subsurface(scene)
+  expect_identical(serialize(scene, NULL), before)
+  expect_identical(prepared[seq_len(600L), ], ordinary)
+  expect_null(prepared$shape_info[[601L]]$medium)
+  expect_null(prepared$shape_info[[601L]]$medium_owner)
+  expect_identical(
+    prepared$shape_info[[602L]]$medium,
+    explicit$shape_info[[1]]$medium
+  )
+  expect_true(scene_medium_features(prepared[603L, ])$attached)
+  expect_identical(prepare_subsurface(prepared), prepared)
+  expect_s3_class(prepared$shape_info, "ray_shape_info")
+  expect_identical(
+    process_scene(scene),
+    process_scene(prepared, subsurface_prepared = TRUE)
+  )
+})

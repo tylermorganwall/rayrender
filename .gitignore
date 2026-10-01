@@ -48,3 +48,7 @@ tools/sweep
 tools/rimgui*
 tools/sync*
 tools/normal-mapping
+pbrt-v4-tests/
+tools/pbrt/suite-preview/
+tools/pbrt/disney-preview/
+tools/pbrt/comparisons/

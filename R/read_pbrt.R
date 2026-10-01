@@ -113,12 +113,12 @@ read_pbrt = function(
     if (!complete && length(context$assets)) unlink(context$assets),
     add = TRUE
   )
-  context$diagnostics = list()
+  context$diagnostics = pbrt_row_buffer()
   context$parsed = new.env(parent = emptyenv())
   context$source_files = character()
   context$include_stack = character()
   context$objects = list()
-  context$rows = list()
+  context$rows = pbrt_row_buffer()
   context$lights = list()
   context$point_lights = list()
   context$stack = list()
@@ -149,8 +149,9 @@ read_pbrt = function(
   if (length(context$stack) || !is.null(context$object)) {
     stop("Unclosed PBRT attribute, transform, or object scope.", call. = FALSE)
   }
-  scene = if (length(context$rows)) {
-    do.call(rbind, context$rows)
+  rows = pbrt_buffer_rows(context$rows)
+  scene = if (length(rows)) {
+    vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ])
   } else {
     sphere()[FALSE, ]
   }
@@ -169,8 +170,9 @@ read_pbrt = function(
     )
   }
   render_args = pbrt_render_arguments(context)
-  diagnostics = if (length(context$diagnostics)) {
-    unique(do.call(rbind, context$diagnostics))
+  notes = pbrt_buffer_rows(context$diagnostics)
+  diagnostics = if (length(notes)) {
+    unique(vctrs::list_unchop(notes, ptype = notes[[1]][FALSE, ]))
   } else {
     data.frame(
       file = character(),
@@ -199,6 +201,16 @@ read_pbrt = function(
     source_files = context$source_files,
     assets = context$assets
   )
+}
+
+#' @return An import-local buffer of bounded lists, preserving insertion order.
+#' @keywords internal
+#' @noRd
+pbrt_row_buffer = function() {
+  buffer = new.env(hash = TRUE, parent = emptyenv())
+  buffer$pending = list()
+  buffer$chunks = 0L
+  buffer
 }
 
 #' @param filename Absolute input path.
@@ -250,6 +262,20 @@ pbrt_execute_file = function(filename, state, context, continuation = list()) {
     state = pbrt_execute(command, state, context)
   }
   state
+}
+
+#' @param buffer An import-local row buffer.
+#' @return The accumulated rows in insertion order, as a list.
+#' @keywords internal
+#' @noRd
+pbrt_buffer_rows = function(buffer) {
+  chunks = mget(
+    as.character(seq_len(buffer$chunks)),
+    envir = buffer,
+    inherits = FALSE
+  )
+  chunks[[length(chunks) + 1L]] = buffer$pending
+  unlist(chunks, recursive = FALSE, use.names = FALSE)
 }
 
 #' @param context Import resources and camera/settings descriptions.
@@ -798,7 +824,7 @@ pbrt_execute = function(command, state, context) {
       }
       context$object = args[1]
       context$outer_rows = context$rows
-      context$rows = list()
+      context$rows = pbrt_row_buffer()
     }
     context$stack[[length(context$stack) + 1L]] = list(
       kind = name,
@@ -826,7 +852,15 @@ pbrt_execute = function(command, state, context) {
       state = saved
     }
     if (name == "ObjectEnd") {
-      context$objects[context$object] = list(context$rows)
+      # Bind an object definition once, not again for every ObjectInstance.
+      rows = pbrt_buffer_rows(context$rows)
+      context$objects[context$object] = list(
+        if (length(rows)) {
+          vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ])
+        } else {
+          sphere()[FALSE, ]
+        }
+      )
       context$rows = context$outer_rows
       context$object = NULL
     }
@@ -984,16 +1018,16 @@ pbrt_execute = function(command, state, context) {
         pbrt_error(command, paste("Undefined object:", args[1]))
       }
       original = context$objects[[args[1]]]
-      if (!length(original)) {
+      if (!nrow(original)) {
         return(state)
       }
-      rows = create_instances(do.call(rbind, original), x = 0)
+      rows = create_instances(original, x = 0)
       rows = pbrt_place(rows, state, diag(4), context)
     } else {
       rows = pbrt_shape(command, state, context)
     }
     if (!is.null(rows) && nrow(rows)) {
-      context$rows[[length(context$rows) + 1L]] = rows
+      pbrt_buffer_append(context$rows, rows)
     }
   } else {
     pbrt_note(context, command, paste("Unsupported directive omitted:", name))
@@ -1065,6 +1099,23 @@ pbrt_get = function(p, name, default = NULL, size = NULL) {
   value
 }
 
+#' @param buffer An import-local row buffer.
+#' @param row One scene fragment or diagnostic data frame.
+#' @return NULL after appending the row.
+#' @keywords internal
+#' @noRd
+pbrt_buffer_append = function(buffer, row) {
+  # Environment-bound list updates copy their container. Bound that work to a
+  # small chunk; completed chunks live in separate bindings and never grow.
+  buffer$pending[[length(buffer$pending) + 1L]] = row
+  if (length(buffer$pending) == 256L) {
+    buffer$chunks = buffer$chunks + 1L
+    buffer[[as.character(buffer$chunks)]] = buffer$pending
+    buffer$pending = list()
+  }
+  invisible(NULL)
+}
+
 #' @param context Import resources.
 #' @param command Source directive.
 #' @param message Diagnostic text describing the actual fallback.
@@ -1078,11 +1129,14 @@ pbrt_note = function(context, command, message) {
       paste0(message, " Use strict = FALSE to allow this conversion.")
     )
   }
-  context$diagnostics[[length(context$diagnostics) + 1L]] = data.frame(
-    file = command$file,
-    line = command$line,
-    directive = command$name,
-    message = message
+  pbrt_buffer_append(
+    context$diagnostics,
+    data.frame(
+      file = command$file,
+      line = command$line,
+      directive = command$name,
+      message = message
+    )
   )
   invisible(NULL)
 }
@@ -2035,7 +2089,7 @@ pbrt_shape = function(command, state, context) {
       }
       rows[[i]] = do.call(bezier_curve, args)
     }
-    rows = do.call(rbind, rows)
+    rows = vctrs::list_unchop(rows)
   } else {
     pbrt_note(context, command, paste("Unsupported shape omitted:", type))
     return(NULL)

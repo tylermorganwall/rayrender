@@ -207,10 +207,21 @@ subsurface = function(
 #' @param scene A scene, including processed children stored in instances.
 #' @keywords internal
 prepare_subsurface = function(scene) {
+  # Mutate bare local lists, not a vctrs column through the data frame on every
+  # iteration. Ordinary surfaces need no assignment at all.
+  shape_info = vctrs::vec_data(scene$shape_info)
+  materials = vctrs::vec_data(scene$material)
+  changed = FALSE
   for (i in seq_len(nrow(scene))) {
-    info = scene$shape_info[[i]]
-    body = scene$material[[i]]$subsurface
-    if (identical(info$medium_owner, "subsurface")) {
+    info = shape_info[[i]]
+    body = materials[[i]]$subsurface
+    owned = identical(info$medium_owner, "subsurface")
+    if (
+      is.null(body) && !owned && is.null(info$shape_properties$original_scene)
+    ) {
+      next
+    }
+    if (owned) {
       info$medium = NULL
       info$medium_keep_surface = NULL
       info$medium_owner = NULL
@@ -266,7 +277,11 @@ prepare_subsurface = function(scene) {
         1
       ]])
     }
-    scene$shape_info[[i]] = info
+    shape_info[[i]] = info
+    changed = TRUE
+  }
+  if (changed) {
+    scene$shape_info = vctrs::vec_restore(shape_info, scene$shape_info)
   }
   scene
 }

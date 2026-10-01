@@ -77,6 +77,14 @@
 
 ## Bugfixes
 
+- `read_pbrt()` Accumulates large scene imports in bounded lists and combines
+  them once, avoiding repeated copying of scene rows and diagnostics. Object
+  definitions are combined once and reused by their instances.
+- Overall: Avoids repeated list-column copying during scene preparation and
+  skips unnecessary subsurface updates for ordinary surfaces. Resolves
+  subsurface interiors once per preparation pass while preserving nested
+  instances, explicit media, and material replacement.
+
 - `read_pbrt()` Converts Disney subsurface color and diffusion distance together
   using Hyperion's dielectric-aware fit, reducing excessive absorption in the
   OpenPBR conversion. Per-channel extinction mean free paths are preserved;

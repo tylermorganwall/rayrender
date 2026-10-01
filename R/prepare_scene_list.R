@@ -89,7 +89,7 @@ prepare_scene_list = function(
   ) {
     integrator_type = 1L
   }
-  scene_info = process_scene(scene)
+  scene_info = process_scene(scene, subsurface_prepared = TRUE)
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
       tolower(debug_channel),

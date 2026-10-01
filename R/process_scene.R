@@ -1,8 +1,21 @@
 #'@title Process a scene
 #'
+#' @param scene Scene to process.
+#' @param process_material_ids Default `TRUE`. Renumber shared material IDs.
+#' @param subsurface_prepared Default `FALSE`. Whether this call's scene already has resolved subsurface interiors.
+#' @return Processed scene and native shape/material metadata.
 #'@keywords internal
-process_scene = function(scene, process_material_ids = TRUE) {
-  scene = prepare_subsurface(scene)
+process_scene = function(
+  scene,
+  process_material_ids = TRUE,
+  subsurface_prepared = FALSE
+) {
+  if (!subsurface_prepared) {
+    scene = prepare_subsurface(scene)
+  }
+  # Keep list-column updates local through all texture and material passes.
+  materials = vctrs::vec_data(scene$material)
+  shape_info = vctrs::vec_data(scene$shape_info)
   shapevec = unlist(lapply(
     tolower(scene$shape),
     switch,
@@ -28,7 +41,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
   typevec = rep(0, nrow(scene))
 
   for (i in seq_len(nrow(scene))) {
-    typevec[i] = scene$material[[i]]$type
+    typevec[i] = materials[[i]]$type
   }
 
   #alpha texture handler -- need to do this before images to override alpha if present
@@ -37,7 +50,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
     fileext = ".png"
   )
   for (i in seq_len(nrow(scene))) {
-    alpha_input = scene$material[[i]]$alphaimage
+    alpha_input = materials[[i]]$alphaimage
     alpha_tex_bool = is.array(alpha_input)
     alpha_is_filename = is.character(alpha_input) && nchar(alpha_input) > 0
     if (alpha_tex_bool) {
@@ -63,7 +76,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           ") not valid for texture."
         )
       }
-      scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
+      materials[[i]]$alphaimage = alpha_temp_file_names[i]
     } else if (alpha_is_filename) {
       if (any(!file.exists(path.expand(alpha_input)))) {
         stop(paste0(
@@ -84,7 +97,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
       ) {
         temp_array[,, 4] = temp_array[,, 1]
       }
-      scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
+      materials[[i]]$alphaimage = alpha_temp_file_names[i]
       png::writePNG(temp_array, alpha_temp_file_names[i])
     }
   }
@@ -95,7 +108,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
     fileext = ".png"
   )
   for (i in seq_len(nrow(scene))) {
-    image_input = scene$material[[i]]$image
+    image_input = materials[[i]]$image
     image_tex_bool = is.array(image_input)
     image_is_filename = is.character(image_input) && nchar(image_input) > 0
     if (image_tex_bool) {
@@ -112,7 +125,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           # image_input[,,4] = image_input[,,4]
           # image_input =
           # png::writePNG(fliplr(aperm(image_input[,,1:4],c(2,1,3))), alpha_temp_file_names[i])
-          scene$material[[i]]$alphaimage = temp_file_names[i]
+          materials[[i]]$alphaimage = temp_file_names[i]
         }
       } else if (dim(image_input)[3] == 3) {
         png::writePNG(
@@ -120,7 +133,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           temp_file_names[i]
         )
       }
-      scene$material[[i]]$image = temp_file_names[i]
+      materials[[i]]$image = temp_file_names[i]
     } else if (image_is_filename) {
       image_input = path.expand(image_input)
       if (!file.exists(image_input)) {
@@ -140,11 +153,11 @@ process_scene = function(scene, process_material_ids = TRUE) {
           tmp_image[,, 3] = tmp_image[,, 4]
           tmp_image[,, 4] = tmp_image[,, 4]
           png::writePNG(tmp_image[,, 1:4], alpha_temp_file_names[i])
-          scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
+          materials[[i]]$alphaimage = alpha_temp_file_names[i]
         }
       }
       temp_file_names[i] = image_input
-      scene$material[[i]]$image = temp_file_names[i]
+      materials[[i]]$image = temp_file_names[i]
     }
   }
 
@@ -159,9 +172,9 @@ process_scene = function(scene, process_material_ids = TRUE) {
       next
     }
     if (scene$shape[[i]] == 13) {
-      image_input = scene$shape_info[[i]]$mesh_info[[1]]$displacement_texture
+      image_input = shape_info[[i]]$mesh_info[[1]]$displacement_texture
     } else {
-      image_input = scene$shape_info[[i]]$shape_properties$displacement_texture
+      image_input = shape_info[[i]]$shape_properties$displacement_texture
     }
     image_tex_bool = is.array(image_input)
     image_is_filename = is.character(image_input) && nchar(image_input) > 0
@@ -177,7 +190,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           disp_temp_file_names[i]
         )
       }
-      scene$shape_info[[
+      shape_info[[
         i
       ]]$shape_properties$displacement_texture = disp_temp_file_names[i]
     } else if (image_is_filename) {
@@ -188,7 +201,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
         ))
       }
       disp_temp_file_names[i] = path.expand(image_input)
-      scene$shape_info[[
+      shape_info[[
         i
       ]]$shape_properties$displacement_texture = disp_temp_file_names[i]
     }
@@ -200,7 +213,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
     fileext = ".png"
   )
   for (i in seq_len(nrow(scene))) {
-    bump_input = scene$material[[i]]$bump_texture
+    bump_input = materials[[i]]$bump_texture
     bump_tex_bool = is.array(bump_input)
     bump_is_filename = is.character(bump_input) && nchar(bump_input) > 0
     if (bump_tex_bool) {
@@ -225,7 +238,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           bump_temp_file_names[i]
         )
       }
-      scene$material[[i]]$bump_texture = bump_temp_file_names[i]
+      materials[[i]]$bump_texture = bump_temp_file_names[i]
     } else if (bump_is_filename) {
       if (any(!file.exists(path.expand(bump_input)))) {
         stop(paste0(
@@ -234,7 +247,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
         ))
       }
       bump_temp_file_names[i] = path.expand(bump_input)
-      scene$material[[i]]$bump_texture = bump_temp_file_names[i]
+      materials[[i]]$bump_texture = bump_temp_file_names[i]
     }
   }
 
@@ -244,7 +257,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
     fileext = ".png"
   )
   for (i in seq_len(nrow(scene))) {
-    roughness_input = scene$material[[i]]$roughness_texture
+    roughness_input = materials[[i]]$roughness_texture
     rough_tex_bool = is.array(roughness_input)
     roughness_is_filename = is.character(roughness_input) &&
       nchar(roughness_input) > 0
@@ -263,7 +276,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           ") not valid for texture."
         )
       }
-      scene$material[[i]]$roughness_texture = rough_temp_file_names[i]
+      materials[[i]]$roughness_texture = rough_temp_file_names[i]
     } else if (roughness_is_filename) {
       if (any(!file.exists(path.expand(roughness_input)))) {
         stop(paste0(
@@ -272,17 +285,17 @@ process_scene = function(scene, process_material_ids = TRUE) {
         ))
       }
       rough_temp_file_names[i] = path.expand(roughness_input)
-      scene$material[[i]]$roughness_texture = rough_temp_file_names[i]
+      materials[[i]]$roughness_texture = rough_temp_file_names[i]
     }
   }
 
   for (i in seq_len(nrow(scene))) {
-    fileinfovec = scene$shape_info[[i]]$fileinfo
+    fileinfovec = shape_info[[i]]$fileinfo
     if (!is.na(fileinfovec)) {
       if (
         any(
-          !file.exists(scene$shape_info[[i]]$fileinfo) &
-            nchar(scene$shape_info[[i]]$fileinfo) > 0
+          !file.exists(shape_info[[i]]$fileinfo) &
+            nchar(shape_info[[i]]$fileinfo) > 0
         )
       ) {
         stop(paste0(
@@ -301,7 +314,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
     }
     for (i in seq_len(nrow(scene))) {
       if (typevec[i] == 8) {
-        scene$material[[i]]$properties[[1]][4:6] = scene$material[[
+        materials[[i]]$properties[[1]][4:6] = materials[[
           i
         ]]$properties[[1]][4:6] -
           c(scene$x[i], scene$y[i], scene$z[i])
@@ -314,14 +327,14 @@ process_scene = function(scene, process_material_ids = TRUE) {
     #Material ID handler; these must show up in increasing order.  Note, this will
     #cause problems if `match` is ever changed to return doubles when matching in
     #long vectors as has happened with `which` recently.
-    material_id = unlist(lapply(scene$shape_info, \(x) x$material_id))
+    material_id = unlist(lapply(shape_info, \(x) x$material_id))
     is_na_mat = is.na(material_id)
     material_id_increasing = as.integer(
       match(material_id, unique(material_id)) - 1L
     )
     for (i in seq_len(nrow(scene))) {
       if (!is_na_mat[i]) {
-        scene$shape_info[[i]]$material_id = material_id_increasing[i]
+        shape_info[[i]]$material_id = material_id_increasing[i]
       }
     }
   }
@@ -330,14 +343,17 @@ process_scene = function(scene, process_material_ids = TRUE) {
   any_light = FALSE
   for (i in seq_len(nrow(scene))) {
     any_light = any_light ||
-      (scene$material[[i]]$type %in% c(5, 8)) ||
-      (identical(scene$material[[i]]$type, 11L) &&
-        scene$material[[i]]$openpbr$emission_luminance > 0)
+      (materials[[i]]$type %in% c(5, 8)) ||
+      (identical(materials[[i]]$type, 11L) &&
+        materials[[i]]$openpbr$emission_luminance > 0)
     if (scene$shape[[i]] == 15) {
       #instance
-      any_light = any_light || scene$shape_info[[i]]$shape_properties$any_light
+      any_light = any_light || shape_info[[i]]$shape_properties$any_light
     }
   }
+
+  scene$material = vctrs::vec_restore(materials, scene$material)
+  scene$shape_info = vctrs::vec_restore(shape_info, scene$shape_info)
 
   scene_info = list()
   scene_info$scene = scene

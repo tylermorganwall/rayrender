@@ -1101,3 +1101,71 @@ test_that("a converted PBRT fixture renders geometry and area emission", {
   expect_gt(max(image), .5)
   expect_gt(mean(image[10:15, 10:15, 1]), mean(image[1:3, 1:3, 1]))
 })
+
+test_that("PBRT row buffers preserve scene and diagnostic order across chunks", {
+  count = 600L
+  file = pbrt_test_file(c(
+    "WorldBegin",
+    as.vector(rbind(
+      sprintf('Shape "sphere" "float radius" [%d]', seq_len(count)),
+      rep("UnsupportedDirective", count)
+    ))
+  ))
+  imported = suppressWarnings(read_pbrt(file, strict = FALSE))
+  expect_equal(nrow(imported$scene), count)
+  expect_equal(
+    vapply(
+      imported$scene$shape_info,
+      function(x) x$shape_properties$radius,
+      numeric(1)
+    ),
+    seq_len(count)
+  )
+  expect_equal(imported$diagnostics$line, seq.int(3L, 2L * count + 1L, by = 2L))
+  expect_true(all(imported$diagnostics$directive == "UnsupportedDirective"))
+  expect_s3_class(imported$scene, "ray_scene")
+  expect_s3_class(imported$scene$shape_info, "ray_shape_info")
+  expect_s3_class(imported$scene$material, "ray_material")
+})
+
+test_that("PBRT definitions have independent buffers and can be reused", {
+  file = pbrt_test_file(c(
+    "WorldBegin",
+    rep('Shape "sphere" "float radius" [1]', 270),
+    'ObjectBegin "many"',
+    rep('Shape "sphere" "float radius" [2]', 300),
+    'ObjectEnd',
+    'ObjectBegin "empty"',
+    'ObjectEnd',
+    'ObjectInstance "empty"',
+    'ObjectInstance "many"',
+    'Translate 3 0 0',
+    'ObjectInstance "many"',
+    'Shape "sphere" "float radius" [4]'
+  ))
+  scene = read_pbrt(file)$scene
+  expect_equal(nrow(scene), 273L)
+  expect_equal(scene$shape[c(271L, 272L)], c("instance", "instance"))
+  children = lapply(scene$shape_info[c(271L, 272L)], function(x) {
+    x$shape_properties$original_scene[[1]]
+  })
+  expect_identical(children[[1]], children[[2]])
+  expect_equal(nrow(children[[1]]), 300L)
+  expect_true(all(
+    vapply(
+      children[[1]]$shape_info,
+      function(x) x$shape_properties$radius,
+      numeric(1)
+    ) ==
+      2
+  ))
+  expect_equal(scene$shape_info[[273L]]$shape_properties$radius, 4)
+  expect_true(all(
+    vapply(
+      scene$shape_info[seq_len(270L)],
+      function(x) x$shape_properties$radius,
+      numeric(1)
+    ) ==
+      1
+  ))
+})
