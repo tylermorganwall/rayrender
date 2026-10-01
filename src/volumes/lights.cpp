@@ -12,6 +12,7 @@
 #include "../hitables/trimesh.h"
 #include "boundary.h"
 #include "intersections.h"
+#include "../materials/openpbr.h"
 #include <algorithm>
 #include <array>
 #include <unordered_set>
@@ -315,6 +316,7 @@ bool finite_bounds(const aabb &box) {
 // A few deterministic probes are sufficient for a power estimate. In
 // particular, these do not replace the emitter's actual texture evaluation.
 double emission_estimate(const material *mat, const point3f &p) {
+  if (auto *pbr = dynamic_cast<const OpenPBRMaterial *>(mat)) return pbr->EmissionEstimate();
   const texture *emit = nullptr;
   double intensity = 1;
   if (auto *light = dynamic_cast<const diffuse_light *>(mat)) {

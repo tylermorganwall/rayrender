@@ -139,6 +139,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float motion_time = sample_motion_time(u1);
+  const Float ray_time = time0 + (time1 - time0) * motion_time;
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -162,11 +163,11 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
     return(Ray(frame.origin + offset,
                motion_lower_left + s * motion_horizontal +
                  t * motion_vertical - frame.origin - offset,
-               motion_time));
+               ray_time));
   }
   point3f rd = lens_radius * u3;
   vec3f offset = u * rd.xyz.x + v * rd.xyz.y;
-  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, motion_time));
+  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, ray_time));
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -353,6 +354,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   Float motion_time = sample_motion_time(u);
+  const Float ray_time = time0 + (time1 - time0) * motion_time;
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -372,9 +374,9 @@ Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
     return(Ray(motion_lower_left + s * motion_horizontal +
                  t * motion_vertical,
                frame.forward,
-               motion_time));
+               ray_time));
   }
-  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, motion_time));
+  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, ray_time));
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -540,6 +542,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   Float motion_time = sample_motion_time(u1);
+  const Float ray_time = time0 + (time1 - time0) * motion_time;
   point3f ray_origin = origin;
   onb ray_uvw = uvw;
   if(camera_motion_blur && camera_motion_blur_has_range) {
@@ -563,7 +566,7 @@ Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
             std::cos(theta),
             std::sin(theta) * std::cos(phi));
   dir = ray_uvw.local_to_world(dir);
-  return(Ray(ray_origin, dir, motion_time));
+  return(Ray(ray_origin, dir, ray_time));
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -1189,6 +1192,7 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 
 Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
   Float motion_time = sample_motion_time(sample.time);
+  const Float ray_time = shutterOpen + (shutterClose - shutterOpen) * motion_time;
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
   point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
@@ -1198,7 +1202,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   point3f pRear = SampleExitPupil(point2f(pFilm.xyz.x, pFilm.xyz.y), sample.pLens,
                                   &exitPupilBoundsArea);
 
-  Ray rFilm(pFilm, unit_vector(pRear - pFilm), motion_time);
+  Ray rFilm(pFilm, unit_vector(pRear - pFilm), ray_time);
   if (!TraceLensesFromFilm(rFilm, ray2)) {
     return 0;
   }
@@ -1398,6 +1402,22 @@ void ConfigureQuarterMotion(RayCamera& cam) {
 }
 
 context("Camera shutter speed temporal mapping") {
+  test_that("absolute ray times preserve normalized camera motion fractions") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                       60.f, 1.f, 0.f, 10.f, 2.f, 6.f, 1.f);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                              2.f, 2.f, 2.f, 6.f, 1.f);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                                   2.f, 6.f, 1.f);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      Ray ray = cam->get_ray(.5f, .5f, point3f(0), 1.f);
+      expect_true(ray.time() == Approx(3.f));
+      expect_true(ray.origin()[0] == Approx(2.5f));
+    }
+  }
   test_that("shutter speed maps unit samples to motion time") {
     ExpectRayTimeForShutterSpeed(1.f, 1.f, 1.f);
     ExpectRayTimeForShutterSpeed(2.f, 1.f, 0.5f);
@@ -1459,7 +1479,7 @@ context("Camera shutter speed temporal mapping") {
       437.065f, 3.22f, 1.717f, 20.f,
       -39.73f, 0.f, 1.f, 20.f
     };
-    RealisticCamera cam(cam_tr, 0.f, 1.f, 10.f, 10.f, 10.f, 10.f,
+    RealisticCamera cam(cam_tr, 2.f, 6.f, 10.f, 10.f, 10.f, 10.f,
                         false, lens_data, 0.022f, 1.f, 1.f,
                         vec3f(0, 1, 0), cam_transform, point3f(0, 0, 0));
     ConfigureQuarterMotion(cam);
@@ -1477,7 +1497,7 @@ context("Camera shutter speed temporal mapping") {
                                                  &full_ray);
 
     expect_true(full_weight > 0.f);
-    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.time() == Approx(3.f));
     expect_true(ray.origin().xyz.x == Approx(2.5f).epsilon(0.01));
     expect_true(same_exposure_weight == Approx(full_weight));
   }

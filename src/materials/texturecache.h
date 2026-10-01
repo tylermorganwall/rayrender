@@ -34,7 +34,8 @@ public:
   Float* LookupFloat(const std::string& filename,
                      int& nx, int& ny, int& nn, int desired_channels = 3);
   unsigned char * LookupChar(const std::string& filename,
-                             int& nx, int& ny, int& nn, int desired_channels = 3);
+                             int& nx, int& ny, int& nn, int desired_channels = 3,
+                             const std::string& variant = "");
 
 private:
   std::vector<float*> rawDataFloat;

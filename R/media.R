@@ -516,6 +516,11 @@ straight_volume_rgb = function(rgb_mat) {
 scene_medium_features = function(scene) {
   attached = FALSE
   emissive = FALSE
+  openpbr = any(vapply(
+    scene$material,
+    function(x) identical(x$type, 11L),
+    logical(1)
+  ))
   for (info in scene$shape_info) {
     medium = info[["medium"]]
     if (!is.null(medium)) {
@@ -531,7 +536,8 @@ scene_medium_features = function(scene) {
       child = scene_medium_features(original[[1]])
       attached = attached || child$attached
       emissive = emissive || child$emissive
+      openpbr = openpbr || child$openpbr
     }
   }
-  list(attached = attached, emissive = emissive)
+  list(attached = attached, emissive = emissive, openpbr = openpbr)
 }

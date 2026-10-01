@@ -14,7 +14,7 @@ ray_material = function(...) {
 }
 
 #' @export
-vec_ptype_abbr.ray_material <- function(x, ...) {
+vec_ptype_abbr.ray_material = function(x, ...) {
   "ray_mat"
 }
 
@@ -32,7 +32,8 @@ print.ray_material = function(x, ...) {
       "glossy" = cli::col_magenta,
       "spotlight" = cli::col_yellow,
       "hair" = cli::col_black,
-      "mf-t" = cli::col_br_blue
+      "mf-t" = cli::col_br_blue,
+      "openpbr" = cli::col_green
     )
     mat_col(sprintf("%s", x))
   }
@@ -69,7 +70,7 @@ print.ray_material = function(x, ...) {
 
 #' @keywords internal
 format_pillar = function(x) {
-  format_material <- function(x) {
+  format_material = function(x) {
     x_char = get_material_name(x$type)
     mat_col = switch(
       x$type,
@@ -82,7 +83,8 @@ format_pillar = function(x) {
       "glossy" = cli::col_magenta,
       "spotlight" = cli::col_yellow,
       "hair" = cli::col_black,
-      "mf-t" = cli::col_br_blue
+      "mf-t" = cli::col_br_blue,
+      "openpbr" = cli::col_green
     )
     mat_col(sprintf("<%s>", x_char))
   }
@@ -90,6 +92,6 @@ format_pillar = function(x) {
 }
 
 #' @export
-pillar_shaft.ray_material <- function(x, ...) {
+pillar_shaft.ray_material = function(x, ...) {
   pillar::new_pillar_shaft_simple(format_pillar(x), width = 11)
 }

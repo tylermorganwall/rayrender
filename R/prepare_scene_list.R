@@ -58,6 +58,7 @@ prepare_scene_list = function(
   scene = prepare_subsurface(scene)
   #Process images, convert shapes and materials to enums, extract positions, and
   medium_features = scene_medium_features(scene)
+  point_lights = ray_scene_point_lights(scene)
   atmospheric_lights = vapply(
     ray_scene_infinite_lights(scene),
     function(light) {
@@ -80,7 +81,12 @@ prepare_scene_list = function(
   )
   # Resolve required transport here so stills, animations, and camera previews
   # all use NEE for atmospheres and attached media, including inside instances.
-  if (any(atmospheric_lights) || medium_features$attached) {
+  if (
+    any(atmospheric_lights) ||
+      medium_features$attached ||
+      medium_features$openpbr ||
+      length(point_lights)
+  ) {
     integrator_type = 1L
   }
   scene_info = process_scene(scene)
@@ -158,7 +164,8 @@ prepare_scene_list = function(
       !(integrator_type == 1L && medium_features$emissive) &&
       is.null(ambient_light) &&
       is.null(environment_light) &&
-      !length(infinite_lights)
+      !length(infinite_lights) &&
+      !length(point_lights)
   ) {
     ambient_light = TRUE
   } else {
@@ -273,7 +280,7 @@ prepare_scene_list = function(
     )
 
     if (file.exists(camera_description_file)) {
-      real_camera_info = as.matrix(utils::read.delim(
+      real_camera_info = as.matrix(utils::read.table(
         camera_description_file,
         header = FALSE,
         comment.char = "#"
@@ -351,6 +358,7 @@ prepare_scene_list = function(
   render_info$rotate_env = rotate_env
   render_info$intensity_env = intensity_env
   render_info$infinite_lights = prepare_scene_infinite_lights(infinite_lights)
+  render_info$point_lights = point_lights
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene

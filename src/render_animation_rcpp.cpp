@@ -337,6 +337,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   hitable_list imp_sample_objects;
   if(integrator_type == IntegratorType::ShadowRays) {
     imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    if (render_info.containsElementNamed("point_lights"))
+      imp_sample_objects.volume_scene->point_lights = PointLightSet(as<List>(render_info["point_lights"]));
     imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
   }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
@@ -347,7 +349,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::vector<int> texture_idx;
 
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
-                                                  static_cast<Float>(0), static_cast<Float>(1),
+                                                  shutteropen, shutterclose,
                                                   textures, 
                                                   alpha_textures,
                                                   bump_textures,

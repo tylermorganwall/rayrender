@@ -941,6 +941,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   cam->set_camera_motion_blur(camera_motion_blur);
   cam->set_shutter_speed(shutter_speed);
+  if (camera_motion_blur && camera_info.containsElementNamed("motion_endpoint")) {
+    List endpoint = camera_info["motion_endpoint"];
+    NumericVector origin = endpoint["lookfrom"], target = endpoint["lookat"], up = endpoint["up"];
+    cam->set_camera_motion_blur_range(lookfrom, lookat,
+        vec3f(camera_up(0), camera_up(1), camera_up(2)), dist_to_focus,
+        point3f(origin[0], origin[1], origin[2]), point3f(target[0], target[1], target[2]),
+        vec3f(up[0], up[1], up[2]), as<Float>(endpoint["focal"]));
+  }
   print_time(verbose, "Generated Camera" );
 
 
@@ -957,6 +965,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   hitable_list imp_sample_objects;
   if(integrator_type == IntegratorType::ShadowRays) {
     imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    if (render_info.containsElementNamed("point_lights"))
+      imp_sample_objects.volume_scene->point_lights = PointLightSet(as<List>(render_info["point_lights"]));
     imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
   }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
@@ -968,8 +978,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
-                                                   static_cast<Float>(0),
-                                                   static_cast<Float>(1),
+                                                   shutteropen,
+                                                   shutterclose,
                                                    textures, 
                                                    alpha_textures,
                                                    bump_textures,

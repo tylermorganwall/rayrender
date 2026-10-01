@@ -64,8 +64,12 @@ Float* TextureCache::LookupFloat(const std::string& filename,
 }
 
 unsigned char * TextureCache::LookupChar(const std::string& filename,
-                                         int& nx, int& ny, int& nn, int desired_channels) {
-  std::string standardizedFilename = StandardizeFilename(filename);
+                                         int& nx, int& ny, int& nn, int desired_channels,
+                                         const std::string& variant) {
+  // Channel layouts cannot share a buffer. Keep OpenPBR's raw data separate
+  // from legacy roughness buffers, which are remapped in place by the loader.
+  std::string standardizedFilename = StandardizeFilename(filename) + "|char:" +
+                                    std::to_string(desired_channels) + "|" + variant;
   auto it = hashTableChar.find(standardizedFilename);
   if (it != hashTableChar.end()) {
     auto itDim = hashTableDims.find(standardizedFilename);

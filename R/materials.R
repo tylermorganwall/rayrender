@@ -1283,9 +1283,20 @@ hair = function(
   beta_n = 0.3,
   alpha = 2
 ) {
-  if (!is.na(sigma_a)) {
-    sigma_a = sigma_a
-  } else if (!is.na(color)) {
+  if (!all(is.na(sigma_a))) {
+    if (
+      !is.numeric(sigma_a) ||
+        !length(sigma_a) %in% c(1L, 3L) ||
+        any(!is.finite(sigma_a)) ||
+        any(sigma_a < 0)
+    ) {
+      stop(
+        "`sigma_a` must be one or three finite nonnegative values.",
+        call. = FALSE
+      )
+    }
+    sigma_a = rep(sigma_a, length.out = 3L)
+  } else if (!all(is.na(color))) {
     sigma_a = SigmaAFromReflectance(convert_color(color), beta_n)
   } else {
     stopifnot(pigment >= 0)
@@ -1379,6 +1390,7 @@ get_material_enum = function(material) {
     "spotlight" = 8L,
     "hair" = 9L,
     "mf-t" = 10L,
+    "openpbr" = 11L,
     stop(sprintf("Material type `%s` not found", material))
   )
 }
@@ -1396,6 +1408,7 @@ get_material_name = function(material) {
     "glossy",
     "spotlight",
     "hair",
-    "mf-t"
+    "mf-t",
+    "openpbr"
   )[material]
 }

@@ -155,11 +155,13 @@ public:
 class alpha_texture {
 public:
   alpha_texture() {}
+  explicit alpha_texture(Float opacity) : data(nullptr), nx(0), ny(0), channels(0), opacity(opacity) {}
   alpha_texture(unsigned char *pixels, int A, int B, int nn) : 
     data(pixels), nx(A), ny(B), channels(nn) {}
   Float value(Float u, Float v, const point3f& p) const;
   unsigned char *data;
   int nx, ny, channels;
+  Float opacity = 1;
 };
 
 
@@ -185,6 +187,7 @@ public:
   roughness_texture(unsigned char *pixels, int A, int B, int nn) : 
     data(pixels), nx(A), ny(B), channels(nn) {}
   point2f value(Float u, Float v) const;
+  point2f raw_value(Float u, Float v) const;
   static Float RoughnessToAlpha(Float roughness);
   unsigned char *data;
   int nx, ny, channels;

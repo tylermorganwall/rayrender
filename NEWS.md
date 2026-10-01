@@ -18,6 +18,47 @@
 
 ## New features
 
+- `read_pbrt()` Converts legacy PBRT Disney materials to OpenPBR, retaining
+  base-color, bump, and roughness textures and mapping metallic, anisotropic
+  specular, clearcoat, sheen, transmission, and subsurface controls. Model
+  differences and unsupported texture controls are reported with `strict = FALSE`.
+
+- `read_pbrt()` Improves opaque Disney-to-OpenPBR conversion with fitted diffuse,
+  partial-metal, tint, sheen, and clearcoat mappings. Reduces excessive fuzz rims
+  and coat highlights while preserving GGX widths. Thin, transmissive, and
+  subsurface materials retain their physical interface IOR and prior conversion.
+
+- `read_pbrt()` Imports PBRT scene files in R, returning an editable scene and
+  camera/render arguments. Supports includes, transforms, instances, common
+  geometry and materials, textures, lights, and homogeneous media, with explicit
+  diagnostics for approximated or unsupported features.
+
+- `point_light()` and `spot_light()` Add geometry-free lights with inverse-square
+  falloff, PBRT v4 spot cones, shadows, and medium attenuation. Attach and manage
+  them with `add_light()`, `get_light()`, `list_lights()`, and `remove_light()`.
+  PBRT point and spot lights now use these native emitters.
+
+- `read_pbrt()` Maps coated conductors to OpenPBR, imports hair, grid/NanoVDB
+  media, realistic lens cameras, and animated object/instance transforms. Maps
+  material displacement to bump mapping and PLY displacement through rayvertex,
+  with diagnostics for model and tessellation approximations. Animated camera
+  imports render a single exposure using both shutter endpoint poses.
+
+- `hair()` Accepts RGB absorption and color inputs; scalar absorption is expanded
+  to all three channels. Still images from camera motion now respect the next
+  pose when camera motion blur is enabled. Realistic lens files accept spaces
+  as well as tabs.
+
+- Camera rays now respect `shutteropen` and `shutterclose` for animated geometry,
+  while camera pose interpolation retains normalized shutter fractions. PBRT
+  imports sample their full shutter interval.
+
+- `openpbr()` Adds a separate OpenPBR Surface 1.1.1 uber shader with layered
+  diffuse, metal, transmission, subsurface, coat, fuzz, thin-film, and emission
+  controls. Solid interiors use random walks and dielectric priorities; thin
+  surfaces use the thin-walled model. Supports base-color, roughness, and bump
+  textures and automatically selects the NEE integrator.
+
 - `subsurface()` Adds opt-in `accelerate = TRUE` to limit geometry queries to
   sampled free flights and simplify well-conditioned collision weights. Both
   random and guided walks retain their physical
@@ -35,6 +76,27 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `read_pbrt()` Converts Disney subsurface color and diffusion distance together
+  using Hyperion's dielectric-aware fit, reducing excessive absorption in the
+  OpenPBR conversion. Per-channel extinction mean free paths are preserved;
+  the fit's IOR assumption and random-walk depth requirements are diagnosed.
+  Specular tint now correctly has no effect at pure dielectric/metallic endpoints.
+
+- `read_pbrt()` Accepts PBRT execution options such as `Option "wavefront" true`,
+  recording unsupported options in the conversion diagnostics instead of failing
+  to parse otherwise renderable scenes. Parameter lists can continue after an
+  `Include`, including nested and repeated includes.
+
+- `read_pbrt()` Imports one-pixel environment maps without crashing the EXR writer.
+
+- `read_pbrt()` Accepts identical repeated parameters. With `strict = FALSE`,
+  unresolved material names use a diagnosed diffuse fallback and repeated
+  texture names are redefined with a scope warning, allowing more previews to
+  finish. Strict imports still reject unresolved or repeated resource names.
+
+- Image textures: JPEG, HDR, and EXR files no longer fail during PNG-only alpha
+  inspection before rendering.
 
 - `subsurface_diffusion()` Keeps interactive rendering responsive when the camera
   enters an active diffusion region. Affected rays terminate with recorded
@@ -242,6 +304,10 @@
   minimum. Transparent renders retain their coverage estimator and minimum.
 
 ## Other
+
+- Overall: Obtains GLM and the OpenPBR BSDF headers from the separate
+  `glmheaders` and `openpbr` packages through `LinkingTo`, replacing bundled
+  header copies while retaining third-party attribution.
 
 - `render_scene()` Speeds up triangle coverage tests in medium and subsurface
   paths by reducing conditional branches, while preserving double-precision

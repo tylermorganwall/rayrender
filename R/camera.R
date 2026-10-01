@@ -904,6 +904,18 @@ preserve_ray_scene_attrs = function(newscene, scene, objects = NULL) {
   }
   lights = c(scene_lights, object_lights)
   attr(newscene, "ray_infinite_lights") = if (length(lights)) lights else NULL
+  scene_points = ray_scene_point_lights(scene)
+  object_points = ray_scene_point_lights(objects)
+  duplicate_points = intersect(names(scene_points), names(object_points))
+  if (length(duplicate_points)) {
+    stop(
+      "Duplicate point/spot light names found while combining scenes: ",
+      paste(duplicate_points, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  points = c(scene_points, object_points)
+  attr(newscene, "ray_lights") = if (length(points)) points else NULL
   if (!is.null(attr(scene, "cornell")) || !is.null(attr(objects, "cornell"))) {
     attr(newscene, "cornell") = TRUE
   }
@@ -1304,6 +1316,10 @@ render_scene_legacy_camera = function(
 camera_frame_args = function(camera, frame = 1) {
   frame = camera_frame_range(nrow(camera$motion), frame, frame)
   motion = camera$motion[frame, , drop = FALSE]
+  blur = motion[["camera_motion_blur", exact = TRUE]]
+  if (is.null(blur) || is.na(blur)) {
+    blur = camera$camera_motion_blur
+  }
   list(
     lookfrom = c(motion$x, motion$y, motion$z),
     lookat = c(motion$dx, motion$dy, motion$dz),
@@ -1318,7 +1334,7 @@ camera_frame_args = function(camera, frame = 1) {
     film_size = camera$film_size,
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
-    camera_motion_blur = isTRUE(camera$camera_motion_blur),
+    camera_motion_blur = isTRUE(blur),
     shutter_speed = ray_camera_shutter_speed(camera)
   )
 }

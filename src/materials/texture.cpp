@@ -103,6 +103,7 @@ point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
 }
 
 Float alpha_texture::value(Float u, Float v, const point3f& p) const {
+  if (!data) return opacity;
   while(u < 0) u += 1;
   while(v < 0) v += 1;
   while(u > 1) u -= 1;
@@ -151,7 +152,7 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
   return(point3f(intensity*bu,intensity*bv,0));
 }
 
-point2f roughness_texture::value(Float u, Float v) const {
+point2f roughness_texture::raw_value(Float u, Float v) const {
   while(u < 0) u += 1;
   while(v < 0) v += 1;
   while(u > 1) u -= 1;
@@ -162,8 +163,15 @@ point2f roughness_texture::value(Float u, Float v) const {
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  Float alphax = RoughnessToAlpha((Float)data[channels*i + channels*nx*j] * rescale);
-  Float alphay = channels > 1 ? RoughnessToAlpha((Float)data[channels*i + channels*nx*j+1] * rescale) : alphax;
+  Float x = (Float)data[channels*i + channels*nx*j] * rescale;
+  Float y = channels > 1 ? (Float)data[channels*i + channels*nx*j+1] * rescale : x;
+  return point2f(x, y);
+}
+
+point2f roughness_texture::value(Float u, Float v) const {
+  const auto raw = raw_value(u, v);
+  Float alphax = RoughnessToAlpha(raw[0]);
+  Float alphay = RoughnessToAlpha(raw[1]);
   return(point2f(alphax * alphax, alphay * alphay));
 }
 

@@ -5,6 +5,7 @@
 #include "medium.h"
 #include "path_diagnostics.h"
 #include "../lights/atmosphere.h"
+#include "../lights/point.h"
 #include <atomic>
 #include <cstdlib>
 #include <functional>
@@ -112,6 +113,7 @@ public:
   uint64_t BoundaryCount() const { return boundary_count; }
   hitable_list boundaries;
   std::shared_ptr<VolumeLightSampler> light_sampler;
+  PointLightSet point_lights;
   // Owned by the scene's infinite light collection; immutable during a render.
   const Atmosphere *atmosphere = nullptr;
   using MediumCache = std::unordered_map<SEXP, std::shared_ptr<const Medium>>;

@@ -261,16 +261,22 @@ NanoVDBMedium::NanoVDBMedium(const Rcpp::List &d) : Medium(d), data(new Data) {
   if (data->d->tree().background() != 0)
     throw std::runtime_error("NanoVDB density background must be zero.");
   if (d.containsElementNamed("temperature_grid") && !Rf_isNull(d["temperature_grid"])) {
-    data->temperature =
-        read_grid(filename, Rcpp::as<std::string>(d["temperature_grid"]), locations);
-    data->t = data->temperature.grid<float>();
-    auto validate = [&](const nanovdb::Coord &, int, float v) {
-      if (!std::isfinite(v) || v < 0 ||
-          !std::isfinite(Float((double(v) - temperature_offset) * temperature_scale)))
-        throw std::runtime_error("NanoVDB temperatures and their scaled values must be finite.");
-    };
-    validate(nanovdb::Coord(0), 1, data->t->tree().background());
-    visit_values(data->t->tree().root(), validate);
+    const std::string temperature_name = Rcpp::as<std::string>(d["temperature_grid"]);
+    const bool optional = d.containsElementNamed("temperature_optional") &&
+                          Rcpp::as<bool>(d["temperature_optional"]);
+    const bool present = std::any_of(locations.begin(), locations.end(),
+        [&](const GridLocation &location) { return location.name == temperature_name; });
+    if (!optional || present) {
+      data->temperature = read_grid(filename, temperature_name, locations);
+      data->t = data->temperature.grid<float>();
+      auto validate = [&](const nanovdb::Coord &, int, float v) {
+        if (!std::isfinite(v) || v < 0 ||
+            !std::isfinite(Float((double(v) - temperature_offset) * temperature_scale)))
+          throw std::runtime_error("NanoVDB temperatures and their scaled values must be finite.");
+      };
+      validate(nanovdb::Coord(0), 1, data->t->tree().background());
+      visit_values(data->t->tree().root(), validate);
+    }
   }
   has_temperature = data->t != nullptr;
   majorants.resolution = 64;

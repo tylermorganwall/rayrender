@@ -1,6 +1,7 @@
 #include "medium.h"
 #include "subsurface.h"
 #include "../materials/texture.h"
+#include "../materials/openpbr.h"
 #include "boundary.h"
 #include <algorithm>
 #include <stdexcept>
@@ -172,6 +173,17 @@ Medium::Medium(const Rcpp::List &d)
       temperature_offset(Rcpp::as<Float>(d["temperature_offset"])),
       medium_to_object(Rcpp::as<Rcpp::NumericMatrix>(d["medium_transform"])) {
   ValidateMediumTransform(medium_to_object);
+  if (d.containsElementNamed("openpbr") && !Rf_isNull(d["openpbr"])) {
+    const auto volume = OpenPBRInterior(Rcpp::as<Rcpp::List>(d["openpbr"]));
+    sigma_a = volume.absorption;
+    sigma_s = volume.scattering;
+    g = volume.anisotropy;
+    // Use the homogeneous free-flight engine and dielectric-priority ownership.
+    // Surface scattering remains the complete OpenPBR BSDF in volpath.cpp.
+    subsurface = true;
+    subsurface_accelerated = true;
+    subsurface_ior = volume.ior;
+  }
   if (d.containsElementNamed("subsurface") && !Rf_isNull(d["subsurface"])) {
     Rcpp::List s = d["subsurface"];
     subsurface = true;

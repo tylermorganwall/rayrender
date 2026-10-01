@@ -122,7 +122,17 @@ process_scene = function(scene, process_material_ids = TRUE) {
       }
       scene$material[[i]]$image = temp_file_names[i]
     } else if (image_is_filename) {
-      tmp_image = png::readPNG(image_input)
+      image_input = path.expand(image_input)
+      if (!file.exists(image_input)) {
+        stop(paste0("Cannot find the following texture file:\n", image_input))
+      }
+      # Automatic alpha extraction is a PNG operation. JPEG and floating-point
+      # HDR/EXR textures are loaded directly by the renderer's image decoder.
+      tmp_image = if (tolower(tools::file_ext(image_input)) == "png") {
+        png::readPNG(image_input)
+      } else {
+        NULL
+      }
       if (length(dim(tmp_image)) == 3 && dim(tmp_image)[3] == 4) {
         if (any(tmp_image[,, 4] != 1)) {
           tmp_image[,, 1] = tmp_image[,, 4]
@@ -133,13 +143,7 @@ process_scene = function(scene, process_material_ids = TRUE) {
           scene$material[[i]]$alphaimage = alpha_temp_file_names[i]
         }
       }
-      if (any(!file.exists(path.expand(image_input)))) {
-        stop(paste0(
-          "Cannot find the following texture file:\n",
-          paste(image_input, collapse = "\n")
-        ))
-      }
-      temp_file_names[i] = path.expand(image_input)
+      temp_file_names[i] = image_input
       scene$material[[i]]$image = temp_file_names[i]
     }
   }
@@ -325,7 +329,10 @@ process_scene = function(scene, process_material_ids = TRUE) {
   #Detect any importance sampling
   any_light = FALSE
   for (i in seq_len(nrow(scene))) {
-    any_light = any_light || (scene$material[[i]]$type %in% c(5, 8)) #light and spotlight
+    any_light = any_light ||
+      (scene$material[[i]]$type %in% c(5, 8)) ||
+      (identical(scene$material[[i]]$type, 11L) &&
+        scene$material[[i]]$openpbr$emission_luminance > 0)
     if (scene$shape[[i]] == 15) {
       #instance
       any_light = any_light || scene$shape_info[[i]]$shape_properties$any_light

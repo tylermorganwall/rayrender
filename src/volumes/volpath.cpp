@@ -4,6 +4,7 @@
 #include "boundary.h"
 #include "haze.h"
 #include "subsurface.h"
+#include "../materials/openpbr.h"
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -530,13 +531,14 @@ struct LightSample {
 // Estimate direct illumination at a surface or medium collision. Trace the chosen
 // direction through null events and boundary transitions, carrying the density
 // terms needed to compare light sampling with the BSDF/phase-function strategy.
-RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface, pdf *bsdf_pdf,
+RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *surface, pdf *bsdf_pdf,
                  const HGPhaseFunction *phase, VolumePathState state, const RGB &beta,
                  const RGB &rp, hitable *world, hitable_list *lights, int hero, random_gen &rng,
                  Sampler *sampler, const std::atomic<bool> *cancel,
                  const SubsurfaceProposal *sss_proposal = nullptr,
                  const SubsurfaceBoundaryBSDF *sss_bsdf = nullptr,
-                 const DiffusionExitBSDF *diffusion_exit = nullptr) {
+                 const DiffusionExitBSDF *diffusion_exit = nullptr,
+                 const OpenPBRInteraction *openpbr = nullptr) {
   if (!lights->size() || !use_light_sampling())
     return RGB(0);
   VolumeStatistics *stats = lights->volume_scene && lights->volume_scene->collect_statistics
@@ -575,7 +577,13 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
   // changing the camera path's medium membership.
   RGB f;
   RGB ps;
-  if (diffusion_exit) {
+  if (openpbr) {
+    f = RGB(openpbr->Evaluate(sample.wi));
+    ps = RGB(openpbr->Pdf(sample.wi));
+    if (surface->mat_ptr->is_dielectric() &&
+        dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
+      state.CrossDielectric(*surface, sample.wi);
+  } else if (diffusion_exit) {
     // The sampled diffusion endpoint already supplies its exterior membership.
     f = RGB(diffusion_exit->Evaluate(sample.wi));
     ps = RGB(diffusion_exit->Pdf(sample.wi));
@@ -824,6 +832,95 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
     return atmospheric_light;
   }
   return RGB(0);
+}
+// Delta-position lights cannot be reached by a continuously sampled BSDF/phase
+// direction. Their discrete selection PMF therefore has no competing MIS term.
+// Estimate RGB shadow transmission independently of the camera path's spectral
+// proposal; only the camera prefix rp belongs in the contribution denominator.
+RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *surface,
+                       const HGPhaseFunction *phase, VolumePathState state,
+                       const RGB &beta, const RGB &rp, hitable *world,
+                       const VolumeScene *scene, random_gen &rng, Sampler *sampler,
+                       const std::atomic<bool> *cancel,
+                       const SubsurfaceBoundaryBSDF *sss_bsdf,
+                       const DiffusionExitBSDF *diffusion_exit,
+                       const OpenPBRInteraction *openpbr) {
+  if (!scene || scene->point_lights.Empty() || !use_light_sampling()) return RGB(0);
+  const auto sample = scene->point_lights.Sample(p, sampler->Get1D());
+  if (!(sample.pmf > 0) || !(RGB(sample.radiance).Max() > 0)) return RGB(0);
+  RGB f;
+  if (openpbr) {
+    f = RGB(openpbr->Evaluate(sample.wi));
+    if (surface->mat_ptr->is_dielectric() &&
+        dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
+      state.CrossDielectric(*surface, sample.wi);
+  } else if (diffusion_exit) {
+    f = RGB(diffusion_exit->Evaluate(sample.wi));
+  } else if (sss_bsdf) {
+    f = RGB(sss_bsdf->Evaluate(sample.wi));
+    if (dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
+      cross_subsurface(state, *surface, sample.wi);
+  } else if (surface) {
+    f = RGB(surface->mat_ptr->f(parent, *surface, sample.wi));
+    cross_if_transmitted(state, *surface, parent.d, sample.wi);
+  } else {
+    f = RGB(phase->p(-parent.d, sample.wi));
+  }
+  if (!(f.Max() > 0)) return RGB(0);
+  Ray ray = surface ? spawn(*surface, sample.wi, parent.time(), state)
+                    : Ray(p, sample.wi, parent.time());
+  state.SetRay(ray);
+  if (surface) reconcile_surface_origin(scene, *surface, ray, state, cancel);
+  RGB tr(1);
+  random_gen tracker = tracking_rng(sampler);
+  while (!cancelled(cancel)) {
+    const double remaining = dot(sample.position - ray.o, ray.d);
+    if (!(remaining > 0)) break;
+    hit_record h;
+    const bool found = world->hit(ray, 0, Float(remaining), h, rng) && !h.infinite_area_hit;
+    const double distance = found ? h.t : remaining;
+    tr *= glass_transmittance(state, distance);
+    if (const auto *entry = state.Active())
+      tr *= segment_opacity_transmittance(*entry, ray, distance, tracker, cancel);
+    auto intervals = haze_intervals(scene->atmosphere, state, ray, distance, cancel);
+    while (auto interval = intervals.Next())
+      if (interval->integrate)
+        tr *= RGB(scene->atmosphere->Transmission(ray(Float(interval->t_min)), ray.d,
+                                                  interval->t_max - interval->t_min));
+    if (!(tr.Max() > 0)) return RGB(0);
+    if (!found) break;
+    if (priority_hidden(state, h, ray.d)) {
+      state.CrossDielectric(h, ray.d);
+    } else if (h.medium_boundary && !h.medium_boundary->keep_surface) {
+      state.Cross(h, ray.d);
+    } else {
+      bool invisible = false;
+      if (h.mat_ptr) h.mat_ptr->emitted(ray, h, h.u, h.v, h.p, invisible);
+      if (!h.alpha_miss && !invisible) return RGB(0);
+    }
+    ray = spawn(h, ray.d, ray.time(), state);
+  }
+  const double denominator = rp.Average() * sample.pmf;
+  return !cancelled(cancel) && denominator > 0
+      ? beta * f * tr * RGB(sample.radiance) / denominator : RGB(0);
+}
+
+RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface, pdf *bsdf_pdf,
+                 const HGPhaseFunction *phase, VolumePathState state, const RGB &beta,
+                 const RGB &rp, hitable *world, hitable_list *lights, int hero, random_gen &rng,
+                 Sampler *sampler, const std::atomic<bool> *cancel,
+                 const SubsurfaceProposal *sss_proposal = nullptr,
+                 const SubsurfaceBoundaryBSDF *sss_bsdf = nullptr,
+                 const DiffusionExitBSDF *diffusion_exit = nullptr,
+                 const OpenPBRInteraction *openpbr = nullptr) {
+  if (!lights->volume_scene || lights->volume_scene->point_lights.Empty())
+    return direct_area_light(parent, p, surface, bsdf_pdf, phase, std::move(state), beta, rp,
+        world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr);
+  RGB result = direct_area_light(parent, p, surface, bsdf_pdf, phase, state, beta, rp,
+      world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr);
+  result += direct_point_light(parent, p, surface, phase, std::move(state), beta, rp, world,
+      lights->volume_scene.get(), rng, sampler, cancel, sss_bsdf, diffusion_exit, openpbr);
+  return result;
 }
 } // namespace
 
@@ -1307,6 +1404,16 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     else beta *= glass_transmittance(state, distance - previous_distance);
 
 
+    // Losing OpenPBR surfaces contribute neither emission nor a scattering
+    // event. Classify before emission, just as a physically hidden boundary.
+    const auto *pbr = dynamic_cast<const OpenPBRMaterial *>(h.mat_ptr);
+    if (pbr && priority_hidden(state, h, ray.d)) {
+      state.CrossDielectric(h, ray.d);
+      ray = spawn(h, ray.d, ray.time(), state);
+      subsurface_flight.reset();
+      continue;
+    }
+
     // Invisible medium boundaries and alpha-mask misses continue the same path
     // without spending a bounce or changing the last real scattering proposal.
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
@@ -1359,6 +1466,56 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         L += beta * RGB(le) / denom;
     }
 
+
+    // OpenPBR supplies a jointly sampled layered BSDF, including any discrete
+    // thin-wall lobe. The adapter supplies cosine and radiance-mode refraction
+    // scaling; applying either again here would darken transmission twice.
+    if (pbr) {
+      const bool solid = pbr->is_dielectric();
+      PriorityInterface interface;
+      if (solid) interface = state.Interface(h, ray.d);
+      const bool from_inside = solid && !interface.entering;
+      if ((!from_inside && depth >= max_depth) || !(beta.Max() > 0) || !(ru.Average() > 0)) break;
+      if (from_inside) ++internal_events;
+      else ++depth;
+      const dielectric *exterior = solid ? (interface.entering ? interface.before : interface.after)
+                                         : state.ActiveDielectric();
+      auto bsdf = pbr->Prepare(ray, h, exterior ? exterior->ref_idx : 1);
+      L += direct_light(ray, h.p, &h, nullptr, nullptr, state, beta, ru, world, lights,
+                        hero, rng, sampler, cancel, nullptr, nullptr, nullptr, &bsdf);
+      const Float branch = sampler->Get1D();
+      const vec2f uv = sampler->Get2D();
+      const auto sample = bsdf.Sample(branch, uv[0], uv[1]);
+      if (!(sample.pdf > 0) || !(RGB(sample.weight).Max() > 0)) break;
+      beta *= RGB(sample.weight);
+      if (solid && sample.transmission) {
+        state.CrossDielectric(h, sample.direction);
+        eta_scale *= sample.eta_squared; // roulette compensation only, not throughput
+      }
+      if (!sample.specular) {
+        rl = ru / sample.pdf;
+        previous_light_context = {h.p, h.has_bump ? h.bump_normal : h.normal, ray.time()};
+        any_diffuse = true;
+        if (!wrote_feature) {
+          albedo = pbr->get_albedo(h);
+          normal = h.has_bump ? h.bump_normal : h.normal;
+          wrote_feature = true;
+        }
+      }
+      specular = sample.specular;
+      ray = spawn(h, unit_vector(sample.direction), ray.time(), state);
+      reconcile_surface_origin(scene, h, ray, state, cancel);
+      subsurface_flight.reset();
+      lighting_origin = ray.o;
+      rescale(beta, ru, rl);
+      if (from_inside && !internal_roulette()) break;
+      if (!from_inside && depth > roulette_depth) {
+        const double survival = std::min(1.0, (beta * RGB(eta_scale) / ru.Average()).Max());
+        if (!(survival > 0) || sampler->Get1D() >= survival) break;
+        beta /= survival;
+      }
+      continue;
+    }
 
     // Resolve SSS and adjoining glass with the same priority interface. Hidden
     // boundaries update membership without a BSDF, tint, depth event or roulette.

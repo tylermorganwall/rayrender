@@ -780,6 +780,24 @@ HAS_OIDN: %s
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
+  if (isTRUE(camera_motion_blur) && frame < nrow(selected_camera$motion)) {
+    endpoint = camera_frame_args(selected_camera, frame + 1L)
+    groups = selected_camera$motion$camera_motion_blur_group
+    same_group = is.null(groups) || identical(groups[frame], groups[frame + 1L])
+    same_projection = identical(
+      c(fov < 0, fov == 0, fov == 360),
+      c(endpoint$fov < 0, endpoint$fov == 0, endpoint$fov == 360)
+    )
+    # Match animation rendering: camera cuts and projection changes end motion.
+    if (same_group && same_projection) {
+      camera_info$motion_endpoint = list(
+        lookfrom = endpoint$lookfrom,
+        lookat = endpoint$lookat,
+        up = endpoint$camera_up,
+        focal = endpoint$focal_distance
+      )
+    }
+  }
   camera_info$shutter_speed = shutter_speed
   camera_info$snapshot_filename = snapshot_filename
   camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
