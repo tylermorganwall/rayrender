@@ -12,7 +12,8 @@ dielectric(
   priority = 0,
   importance_sample = FALSE,
   bump_texture = "",
-  bump_intensity = 1
+  bump_intensity = 1,
+  image_offset = c(0, 0)
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ this will help with the convergence of the image.}
 be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for the bump texture, applied before wrapping.}
 }
 \value{
 Single row of a tibble describing the dielectric material.

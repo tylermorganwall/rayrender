@@ -1004,6 +1004,52 @@ test_that("PBRT textures preserve linear color values and resolve image paths", 
   expect_no_error(process_scene(x$scene))
 })
 
+test_that("PBRT image-map declarations accept offsets and retain independent repeat", {
+  directory = tempfile()
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  image = array(seq_len(48) / 50, c(4, 4, 3))
+  png::writePNG(image, file.path(directory, "map.png"))
+  source_image = pbrt_read_image(
+    file.path(directory, "map.png"),
+    source_linear = TRUE
+  )
+  file = file.path(directory, "scene.pbrt")
+  for (offset in list(c(0, 0), c(.25, -.25), c(-.25, .25), c(.125, .125))) {
+    writeLines(
+      c(
+        'WorldBegin',
+        sprintf(
+          paste(
+            'Texture "image" "spectrum" "imagemap" "string filename" "map.png"',
+            '"string encoding" "linear" "float uscale" 2 "float vscale" 3',
+            '"float udelta" %s "float vdelta" %s'
+          ),
+          offset[1],
+          offset[2]
+        ),
+        'Material "diffuse" "texture reflectance" "image"',
+        'Shape "trianglemesh" "point3 P" [0 0 0 1 0 0 0 1 0]'
+      ),
+      file
+    )
+    expect_no_warning(
+      result <- read_pbrt(file, asset_dir = file.path(directory, "assets"))
+    )
+    expect_equal(nrow(result$diagnostics), 0L)
+    material = result$scene$material[[1]]
+    expect_equal(material$image_repeat[[1]], c(2, 3))
+    expect_equal(material$image_offset[[1]], offset)
+    baked = rayimage::ray_read_image(material$image, convert_to_array = TRUE)
+    expect_equal(
+      baked,
+      source_image,
+      tolerance = .001,
+      ignore_attr = TRUE
+    )
+  }
+})
+
 test_that("PBRT equal-area environments are resampled with their transforms", {
   image = array(.5, c(64, 64, 3))
   constant = pbrt_environment_image(image, diag(4))
@@ -1275,4 +1321,36 @@ test_that("large PBRT light lists preserve names, order, and independent values"
     setNames(seq_len(count), names(lights)[seq_len(count)])
   )
   expect_identical(lights[[count + 1L]]$type, "spot")
+})
+
+test_that("PBRT retains independent native offsets for color, bump, and roughness", {
+  directory = tempfile()
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  png::writePNG(
+    array(seq_len(48) / 50, c(4, 4, 3)),
+    file.path(directory, "map.png")
+  )
+  file = file.path(directory, "scene.pbrt")
+  writeLines(
+    c(
+      'WorldBegin',
+      'Texture "color" "spectrum" "imagemap" "string filename" "map.png" "float udelta" .1 "float vdelta" .2',
+      'Texture "bump" "float" "imagemap" "string filename" "map.png" "float udelta" -.3 "float vdelta" .4',
+      'Texture "rough" "float" "imagemap" "string filename" "map.png" "float udelta" .5 "float vdelta" -.6',
+      'Material "disney" "texture color" "color" "texture roughness" "rough" "texture bumpmap" "bump"',
+      'Shape "trianglemesh" "point3 P" [0 0 0 1 0 0 0 1 0]'
+    ),
+    file
+  )
+  result = suppressWarnings(read_pbrt(
+    file,
+    strict = FALSE,
+    asset_dir = file.path(directory, "assets")
+  ))
+  material = result$scene$material[[1]]
+  expect_equal(material$image_offset[[1]], c(.1, .2))
+  expect_equal(material$texture_offsets$bump, c(-.3, .4))
+  expect_equal(material$texture_offsets$roughness, c(.5, -.6))
+  expect_false(any(grepl("udelta|vdelta", result$diagnostics$message)))
 })

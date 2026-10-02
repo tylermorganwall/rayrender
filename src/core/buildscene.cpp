@@ -27,6 +27,24 @@
 #include "../utils/raylog.h"
 #include "../volumes/boundary.h"
 
+namespace {
+// Public materials share one offset across maps. Imported PBRT textures may
+// override individual slots, since their mapping belongs to each texture.
+point2f material_texture_offset(const List& material, const char* slot) {
+  NumericVector offset = NumericVector::create(0., 0.);
+  if (material.containsElementNamed("image_offset"))
+    offset = as<NumericVector>(as<List>(material["image_offset"])[0]);
+  if (material.containsElementNamed("texture_offsets")) {
+    List overrides = material["texture_offsets"];
+    if (overrides.containsElementNamed(slot)) offset = as<NumericVector>(overrides[slot]);
+  }
+  if (offset.size() != 2 || !std::isfinite(offset[0]) || !std::isfinite(offset[1]))
+    Rcpp::stop("Texture offsets must contain two finite values.");
+  // Reduce in double precision before conversion to the renderer's Float.
+  return point2f(std::fmod(offset[0], 1.), std::fmod(offset[1], 1.));
+}
+}
+
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
   for (int i = 0; i < 3; i++) {
@@ -230,12 +248,14 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
 
   std::shared_ptr<roughness_texture> roughness;
   if (has_roughness) {
-    roughness = std::make_shared<roughness_texture>(roughness_textures.back(), nvecr[0], nvecr[1], nvecr[2]);
+    const auto offset = material_texture_offset(SingleMaterial, "roughness");
+    roughness = std::make_shared<roughness_texture>(roughness_textures.back(), nvecr[0], nvecr[1], nvecr[2], offset[0], offset[1]);
   }
 
   if (has_image) {
+    const auto offset = material_texture_offset(SingleMaterial, "image");
     material_texture = std::make_shared<image_texture_float>(textures.back(), nvec[0], nvec[1], nvec[2],
-                                                             image_repeat[0], image_repeat[1], 1.0);
+                                                             image_repeat[0], image_repeat[1], 1.0, offset[0], offset[1]);
   } else if (isnoise) {
     material_texture = std::make_shared<noise_texture>(noise, point3f(properties(0), properties(1), properties(2)),
                                                        point3f(noisecolor(0), noisecolor(1), noisecolor(2)), noisephase,
@@ -470,13 +490,15 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       alpha.push_back(std::make_shared<alpha_texture>(opacity));
       has_alpha = true;
     } else if (has_alpha) {
-      alpha.push_back(std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1], nveca[2]));
+      const auto offset = material_texture_offset(SingleMaterial, "alpha");
+      alpha.push_back(std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1], nveca[2], offset[0], offset[1]));
     } else {
       alpha.push_back(nullptr);
     }
     if (has_bump) {
+      const auto offset = material_texture_offset(SingleMaterial, "bump");
       bump.push_back(std::make_shared<bump_texture>(bump_textures[mat_idx], nvecb[0], nvecb[1], nvecb[2],
-                                                    bump_intensity, image_repeat[0], image_repeat[1]));
+                                                    bump_intensity, image_repeat[0], image_repeat[1], offset[0], offset[1]));
     } else {
       bump.push_back(nullptr);
     }

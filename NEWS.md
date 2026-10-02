@@ -77,6 +77,11 @@
 
 ## Bugfixes
 
+- Texture-capable materials accept `image_offset = c(0, 0)` for native UV
+  translation of their image maps. `read_pbrt()` carries `udelta` and `vdelta`
+  into texture lookups, including independent bump and roughness offsets,
+  without resampling image pixels. Zero offsets no longer produce diagnostics.
+
 - `read_pbrt()` Uses a PEGTL grammar through `piton` to parse PBRT files,
   retaining large numeric arrays without duplicate character-token buffers.
   Reuses decoded parameter declarations and avoids revalidating meshes already

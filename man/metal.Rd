@@ -22,6 +22,7 @@ metal(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -77,6 +78,8 @@ begins with value `gradient_color`.}
 
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
+
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.}
 
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 

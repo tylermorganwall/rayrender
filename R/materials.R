@@ -26,6 +26,7 @@
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to
 #' be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
@@ -104,6 +105,7 @@ diffuse = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -179,6 +181,7 @@ diffuse = function(
     noisecolor = list(noisecolor),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
     fog = fog,
@@ -226,6 +229,7 @@ diffuse = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
@@ -289,6 +293,7 @@ metal = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -357,6 +362,7 @@ metal = function(
     lightinfo = list(NA),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
     fog = FALSE,
@@ -443,6 +449,7 @@ metal = function(
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) |>
 #'   add_object(sphere(y=5,x=-5,radius=3,material=light())) |>
 #'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5))
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for the bump texture, applied before wrapping.
 dielectric = function(
   color = "white",
   refraction = 1.5,
@@ -451,7 +458,8 @@ dielectric = function(
   priority = 0,
   importance_sample = FALSE,
   bump_texture = "",
-  bump_intensity = 1
+  bump_intensity = 1,
+  image_offset = c(0, 0)
 ) {
   color = convert_color(color)
   stopifnot(
@@ -481,6 +489,7 @@ dielectric = function(
     noisecolor = list(c(0, 0, 0)),
     image = "",
     image_repeat = list(c(1, 1)),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = "",
     lightintensity = NA_real_,
     fog = FALSE,
@@ -537,6 +546,7 @@ dielectric = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
@@ -631,6 +641,7 @@ microfacet = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -735,6 +746,7 @@ microfacet = function(
         noisecolor = list(noisecolor),
         image = image_texture,
         image_repeat = list(image_repeat),
+        image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
         fog = FALSE,
@@ -762,6 +774,7 @@ microfacet = function(
         noisecolor = list(noisecolor),
         image = image_texture,
         image_repeat = list(image_repeat),
+        image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
         fog = FALSE,
@@ -795,6 +808,7 @@ microfacet = function(
       noisecolor = list(noisecolor),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = alpha_texture,
       lightintensity = NA_real_,
       fog = FALSE,
@@ -827,6 +841,7 @@ microfacet = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 #' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
@@ -873,6 +888,7 @@ light = function(
   invisible = FALSE,
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   gradient_color = NA,
   gradient_transpose = FALSE,
   gradient_point_start = NA,
@@ -935,6 +951,7 @@ light = function(
       noisecolor = list(c(0, 0, 0)),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
       fog = FALSE,
@@ -963,6 +980,7 @@ light = function(
       noisecolor = list(c(0, 0, 0)),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
       fog = FALSE,
@@ -1009,6 +1027,7 @@ light = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
@@ -1080,6 +1099,7 @@ glossy = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -1174,6 +1194,7 @@ glossy = function(
     noisecolor = list(noisecolor),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
     fog = FALSE,
@@ -1411,4 +1432,22 @@ get_material_name = function(material) {
     "mf-t",
     "openpbr"
   )[material]
+}
+
+#' @param image_offset User-supplied UV translation.
+#' @return Finite numeric vector with two components.
+#' @keywords internal
+#' @noRd
+check_image_offset = function(image_offset) {
+  if (
+    !is.numeric(image_offset) ||
+      length(image_offset) != 2L ||
+      any(!is.finite(image_offset))
+  ) {
+    stop(
+      '`image_offset` must contain exactly two finite numeric values.',
+      call. = FALSE
+    )
+  }
+  as.numeric(image_offset)
 }

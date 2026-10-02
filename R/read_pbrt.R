@@ -1414,7 +1414,11 @@ pbrt_material = function(command, state, context) {
       context
     )
     color_args = if (!is.null(color$image)) {
-      list(image_texture = color$image, image_repeat = color$uv_repeat)
+      list(
+        image_texture = color$image,
+        image_repeat = color$uv_repeat,
+        image_offset = color$uv_offset
+      )
     } else {
       list()
     }
@@ -1522,7 +1526,11 @@ pbrt_material = function(command, state, context) {
           coat_roughness = mean(coat)
         ),
         if (!is.null(color$image)) {
-          list(image_texture = color$image, image_repeat = color$uv_repeat)
+          list(
+            image_texture = color$image,
+            image_repeat = color$uv_repeat,
+            image_offset = color$uv_offset
+          )
         } else {
           list()
         },
@@ -1608,6 +1616,9 @@ pbrt_material = function(command, state, context) {
       paste("Unsupported material replaced by neutral diffuse:", type)
     )
   }
+  if (!is.null(bump$image)) {
+    material[[1]]$texture_offsets$bump = bump$uv_offset
+  }
   pbrt_unused(p)
   list(material = material, interface = interface)
 }
@@ -1623,7 +1634,8 @@ pbrt_texture = function(command, state, context) {
   type = command$args[3]
   result = list(
     value = if (command$args[2] == "float") .5 else rep(.5, 3),
-    uv_repeat = c(1, 1)
+    uv_repeat = c(1, 1),
+    uv_offset = c(0, 0)
   )
   if (!command$args[2] %in% c("float", "spectrum", "color")) {
     pbrt_error(command, "Unknown texture value type.")
@@ -1657,6 +1669,13 @@ pbrt_texture = function(command, state, context) {
       pbrt_get(p, "uscale", 1, 1L),
       pbrt_get(p, "vscale", 1, 1L)
     )
+    offset = c(
+      pbrt_get(p, "udelta", 0, 1L),
+      pbrt_get(p, "vdelta", 0, 1L)
+    )
+    if (any(!is.finite(offset))) {
+      pbrt_error(command, "Image UV offsets must be finite.")
+    }
     wrap = pbrt_get(p, "wrap", "repeat", 1L)
     if (wrap != "repeat") {
       pbrt_note(context, command, "Image wrap mode replaced by repeat.")
@@ -1684,6 +1703,7 @@ pbrt_texture = function(command, state, context) {
       filename,
       source_linear = encoding == "linear"
     )
+    result$uv_offset = offset
     scale = pbrt_get(p, "scale", 1, 1L)
     if (any(!is.finite(image)) || !is.finite(scale)) {
       pbrt_error(
@@ -2265,9 +2285,17 @@ pbrt_texture_parameter = function(p, name, default, context) {
     return(result)
   }
   if (!is.null(p$values[[name]]) && p$values[[name]]$type == "float") {
-    return(list(value = pbrt_get(p, name, default, 1L), uv_repeat = c(1, 1)))
+    return(list(
+      value = pbrt_get(p, name, default, 1L),
+      uv_repeat = c(1, 1),
+      uv_offset = c(0, 0)
+    ))
   }
-  list(value = pbrt_spectrum(p, name, default), uv_repeat = c(1, 1))
+  list(
+    value = pbrt_spectrum(p, name, default),
+    uv_repeat = c(1, 1),
+    uv_offset = c(0, 0)
+  )
 }
 
 #' @param filename Image file path.
@@ -2614,6 +2642,7 @@ pbrt_disney_material = function(p, context, bump_args) {
   if (!is.null(color$image)) {
     args$image_texture = color$image
     args$image_repeat = color$uv_repeat
+    args$image_offset = color$uv_offset
     if (
       specular_tint_weight > 0 ||
         values$sheen > 0 ||
@@ -2650,7 +2679,11 @@ pbrt_disney_material = function(p, context, bump_args) {
       "Disney roughness image drives OpenPBR specular roughness; diffuse roughness remains constant and the minimum-alpha anisotropy clamp is approximate."
     )
   }
-  do.call(openpbr, c(args, bump_args))
+  material = do.call(openpbr, c(args, bump_args))
+  if (!is.null(roughness$image)) {
+    material[[1]]$texture_offsets$roughness = roughness$uv_offset
+  }
+  material
 }
 
 #' @param color Linear RGB Disney surface albedo in [0, 1].

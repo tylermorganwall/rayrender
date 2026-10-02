@@ -15,21 +15,21 @@ struct bilinear_texture_sample {
   Float y_weight;
 };
 
-Float wrap_texture_coordinate(Float coordinate, Float repeat) {
-  while(coordinate < 0) coordinate += 1;
-  while(coordinate > 1) coordinate -= 1;
-  Float repeated = coordinate * repeat;
-  Float wrapped = std::fmod(repeated, static_cast<Float>(1));
+Float wrap_texture_coordinate(Float coordinate, Float repeat, Float offset = 0) {
+  // Translate in texture space, after scaling; never pre-wrap the source UV.
+  Float mapped = coordinate * repeat + offset;
+  Float wrapped = std::fmod(mapped, static_cast<Float>(1));
   if(wrapped < 0) wrapped += 1;
-  if(wrapped == 0 && repeated > 0) wrapped = 1;
+  // Preserve the renderer's existing upper-endpoint convention.
+  if(wrapped == 0 && mapped > 0) wrapped = 1;
   return wrapped;
 }
 
 bilinear_texture_sample get_bilinear_texture_sample(Float u, Float v,
                                                      Float repeatu, Float repeatv,
-                                                     int nx, int ny) {
-  u = wrap_texture_coordinate(u, repeatu);
-  v = wrap_texture_coordinate(v, repeatv);
+                                                     int nx, int ny, Float offsetu = 0, Float offsetv = 0) {
+  u = wrap_texture_coordinate(u, repeatu, offsetu);
+  v = wrap_texture_coordinate(v, repeatv, offsetv);
   Float x = u * static_cast<Float>(nx - 1);
   Float y = (1 - v) * static_cast<Float>(ny - 1);
   int x0 = static_cast<int>(std::floor(x));
@@ -55,7 +55,7 @@ point3f triangle_texture::value(Float u, Float v, const point3f& p) const {
 
 point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
   bilinear_texture_sample sample = get_bilinear_texture_sample(
-    u, v, repeatu, repeatv, nx, ny
+    u, v, repeatu, repeatv, nx, ny, offsetu, offsetv
   );
   auto channel_value = [&](int x, int y, int channel) {
     return data[channels*x + channels*nx*y + channel];
@@ -78,7 +78,7 @@ point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
 
 point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
   bilinear_texture_sample sample = get_bilinear_texture_sample(
-    u, v, repeatu, repeatv, nx, ny
+    u, v, repeatu, repeatv, nx, ny, offsetu, offsetv
   );
   auto channel_value = [&](int x, int y, int channel) {
     Float value = static_cast<Float>(
@@ -104,10 +104,8 @@ point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
 
 Float alpha_texture::value(Float u, Float v, const point3f& p) const {
   if (!data) return opacity;
-  while(u < 0) u += 1;
-  while(v < 0) v += 1;
-  while(u > 1) u -= 1;
-  while(v > 1) v -= 1;
+  u = wrap_texture_coordinate(u, 1, offsetu);
+  v = wrap_texture_coordinate(v, 1, offsetv);
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
@@ -119,12 +117,8 @@ Float alpha_texture::value(Float u, Float v, const point3f& p) const {
 
 
 Float bump_texture::raw_value(Float u, Float v, const point3f& p) const {
-  while(u < 0) u += 1;
-  while(v < 0) v += 1;
-  while(u > 1) u -= 1;
-  while(v > 1) v -= 1;
-  u = fmod(u * repeatu,1);
-  v = fmod(v * repeatv,1);
+  u = std::fmod(wrap_texture_coordinate(u, repeatu, offsetu), Float(1));
+  v = std::fmod(wrap_texture_coordinate(v, repeatv, offsetv), Float(1));
   int i = u * (nx-1);
   int j = (1-v) * (ny-1);
   if (i < 1) i = 1;
@@ -135,12 +129,8 @@ Float bump_texture::raw_value(Float u, Float v, const point3f& p) const {
 }
 
 point3f bump_texture::value(Float u, Float v, const point3f& p) const {
-  while(u < 0) u += 1;
-  while(v < 0) v += 1;
-  while(u > 1) u -= 1;
-  while(v > 1) v -= 1;
-  u = fmod(u * repeatu,1);
-  v = fmod(v * repeatv,1);
+  u = std::fmod(wrap_texture_coordinate(u, repeatu, offsetu), Float(1));
+  v = std::fmod(wrap_texture_coordinate(v, repeatv, offsetv), Float(1));
   int i = u * (nx-1);
   int j = (1-v) * (ny-1);
   if (i < 1) i = 1;
@@ -153,10 +143,8 @@ point3f bump_texture::value(Float u, Float v, const point3f& p) const {
 }
 
 point2f roughness_texture::raw_value(Float u, Float v) const {
-  while(u < 0) u += 1;
-  while(v < 0) v += 1;
-  while(u > 1) u -= 1;
-  while(v > 1) v -= 1;
+  u = wrap_texture_coordinate(u, 1, offsetu);
+  v = wrap_texture_coordinate(v, 1, offsetv);
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
@@ -186,6 +174,49 @@ Float roughness_texture::RoughnessToAlpha(Float roughness) {
 #include <testthat.h>
 
 context("Image texture interpolation") {
+  test_that("[UV offsets translate lookups after scaling without resampling]") {
+    Float pixels[8 * 8 * 3];
+    unsigned char bytes[8 * 8 * 3];
+    for (int i = 0; i < 8 * 8 * 3; ++i) {
+      pixels[i] = Float((i * 37) % 251) / 255;
+      bytes[i] = (i * 37) % 251;
+    }
+    const point3f p(0, 0, 0);
+    image_texture_float base(pixels, 8, 8, 3);
+    image_texture_char base_char(bytes, 8, 8, 3);
+    for (Float du : {Float(-.37), Float(0), Float(.23)}) {
+      const Float dv = -.19;
+      image_texture_float shifted(pixels, 8, 8, 3, 1.5, 2.3, 1, du, dv);
+      image_texture_char shifted_char(bytes, 8, 8, 3, 1.5, 2.3, 1, du, dv);
+      for (Float u : {Float(-2.13), Float(.17), Float(1.31)}) {
+        const Float v = .41;
+        const Float s = u * Float(1.5) + du;
+        const Float t = v * Float(2.3) + dv;
+        const auto expected = base.value(s - std::floor(s), t - std::floor(t), p);
+        const auto actual = shifted.value(u, v, p);
+        const auto expected_char = base_char.value(s - std::floor(s), t - std::floor(t), p);
+        const auto actual_char = shifted_char.value(u, v, p);
+        for (int c = 0; c < 3; ++c) {
+          expect_true(actual[c] == Approx(expected[c]));
+          expect_true(actual_char[c] == Approx(expected_char[c]));
+        }
+      }
+      alpha_texture alpha(bytes, 8, 8, 3, du, dv), alpha_base(bytes, 8, 8, 3);
+      roughness_texture rough(bytes, 8, 8, 3, du, dv), rough_base(bytes, 8, 8, 3);
+      bump_texture bump(bytes, 8, 8, 3, 1, 1.5, 2.3, du, dv);
+      bump_texture bump_base(bytes, 8, 8, 3, 1);
+      expect_true(alpha.value(.17, .41, p) == Approx(alpha_base.value(.17 + du, .41 + dv, p)));
+      const auto r = rough.raw_value(.17, .41);
+      const auto r0 = rough_base.raw_value(.17 + du, .41 + dv);
+      expect_true(r[0] == Approx(r0[0]));
+      expect_true(r[1] == Approx(r0[1]));
+      const Float s = Float(.17) * Float(1.5) + du, t = Float(.41) * Float(2.3) + dv;
+      expect_true(bump.raw_value(.17, .41, p) == Approx(bump_base.raw_value(s, t, p)));
+      const auto b = bump.value(.17, .41, p), b0 = bump_base.value(s, t, p);
+      expect_true(b[0] == Approx(b0[0]));
+      expect_true(b[1] == Approx(b0[1]));
+    }
+  }
   test_that("[floating-point textures interpolate between texels]") {
     Float pixels[] = {
       0, 0, 0,

@@ -48,6 +48,7 @@
 #' @param priority Default `0`. Nonnegative dielectric priority; lower values win.
 #' @param image_texture Default `""`. Base-color texture filename or RGB array; replaces base_color.
 #' @param image_repeat Default `1`. One or two positive UV repeat factors.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation applied after repeat, before wrapping, to base-color, bump, and roughness textures.
 #' @param bump_texture Default `""`. Height-map filename, matrix, or array.
 #' @param bump_intensity Default `1`. Finite height-map strength in world units.
 #' @param roughness_texture Default `""`. Scalar image replacing specular_roughness, without gamma decoding.
@@ -135,6 +136,7 @@ openpbr = function(
   priority = 0,
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   bump_texture = "",
   bump_intensity = 1,
   roughness_texture = "",
@@ -343,6 +345,7 @@ openpbr = function(
     color = parameters$base_color,
     image_texture = image_texture,
     image_repeat = image_repeat,
+    image_offset = image_offset,
     bump_texture = bump_texture,
     bump_intensity = bump_intensity,
     importance_sample = importance_sample && emission_luminance > 0

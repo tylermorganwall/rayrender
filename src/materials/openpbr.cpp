@@ -173,8 +173,8 @@ OpenPBRInteraction OpenPBRMaterial::Prepare(const Ray& ray, const hit_record& h,
   p.base_color = vector(get_albedo(h));
   if (impl->has_roughness)
     p.specular_roughness = impl->roughness->raw_value(
-      std::fmod(h.u * impl->texture_repeat[0], Float(1)),
-      std::fmod(h.v * impl->texture_repeat[1], Float(1)))[0];
+      h.u * impl->texture_repeat[0],
+      h.v * impl->texture_repeat[1])[0];
   const auto geometric = vector(h.geometric_normal.squared_length() > 0 ? h.geometric_normal : h.normal);
   auto n = vector(h.physical_shading_normal.squared_length() > 0 ? h.physical_shading_normal :
                   h.has_bump ? h.bump_normal : h.normal);

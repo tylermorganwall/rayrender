@@ -49,6 +49,7 @@ openpbr(
   priority = 0,
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   bump_texture = "",
   bump_intensity = 1,
   roughness_texture = "",
@@ -143,6 +144,8 @@ openpbr(
 \item{image_texture}{Default \code{""}. Base-color texture filename or RGB array; replaces base_color.}
 
 \item{image_repeat}{Default \code{1}. One or two positive UV repeat factors.}
+
+\item{image_offset}{Default \code{c(0, 0)}. Finite length-two UV translation applied after repeat, before wrapping, to base-color, bump, and roughness textures.}
 
 \item{bump_texture}{Default \code{""}. Height-map filename, matrix, or array.}
 

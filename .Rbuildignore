@@ -59,3 +59,6 @@
 ^tools/normal-mapping($|/)
 ^dev($|/)
 ^\.agents($|/)
+^tools/openpbr($|/)
+^tools/pbrt($|/)
+^pbrt-v4-tests($|/)
