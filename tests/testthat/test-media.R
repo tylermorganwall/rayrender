@@ -292,3 +292,21 @@ test_that("glowing media inside glass include radiance transport across the inte
   fresnel = ((1.5 - 1) / (1.5 + 1))^2
   expect_lt(abs(mean(image[,, 1]) - (1 - fresnel) / 1.5^2), 0.01)
 })
+
+test_that("grid emission multipliers retain scalar fields without RGB expansion", {
+  density = array(1, c(2, 3, 4))
+  scale = array(seq_len(24) / 24, dim(density))
+  medium = grid_medium(density, emission = c(1, 2, 3), emission_scale = scale)
+  expect_identical(medium$emission_scale_grid, scale)
+  expect_equal(medium$emission_scale, 1)
+  expect_equal(medium$emission, c(1, 2, 3))
+  expect_error(
+    grid_medium(density, emission_scale = array(1, c(3, 2, 4))),
+    'dimensions'
+  )
+  expect_error(
+    grid_medium(density, emission_scale = array(-1, dim(density))),
+    'emission_scale'
+  )
+  expect_error(homogeneous_medium(emission_scale = scale), 'emission_scale')
+})

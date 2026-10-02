@@ -77,6 +77,20 @@
 
 ## Bugfixes
 
+- `read_pbrt()` Uses a PEGTL grammar through `piton` to parse PBRT files,
+  retaining large numeric arrays without duplicate character-token buffers.
+  Reuses decoded parameter declarations and avoids revalidating meshes already
+  checked during conversion, reducing setup costs in large scenes.
+  Point, spot, and infinite lights are collected in bounded lists and attached
+  once, avoiding repeated validation of growing light lists.
+- `read_pbrt()` Loads PFM environment and texture images, preserving their
+  floating-point values, scale, byte order, and row orientation.
+- Fix texture selection after nested instances, which could attach another
+  object's bump map or dereference a null bump buffer during rendering.
+- `render_scene()` Avoids generating unused temporary texture paths for
+  untextured objects, reducing preparation time and memory in large scenes.
+- `grid_medium()` Accepts spatial emission multipliers without expanding them
+  into RGB grids. `read_pbrt()` preserves uniform-grid `Lescale` arrays.
 - `read_pbrt()` Accumulates large scene imports in bounded lists and combines
   them once, avoiding repeated copying of scene rows and diagnostics. Object
   definitions are combined once and reused by their instances.

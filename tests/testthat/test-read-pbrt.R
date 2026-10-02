@@ -1169,3 +1169,110 @@ test_that("PBRT definitions have independent buffers and can be reused", {
       1
   ))
 })
+
+test_that("PBRT grammar preserves large numeric arrays and following source lines", {
+  values = seq(-1, 1, length.out = 10001)
+  text = c(
+    'WorldBegin',
+    'Shape "trianglemesh" "float payload" [',
+    sprintf('%.17g', values),
+    ']',
+    'Translate 1 2 3'
+  )
+  commands = pbrt_parse_file(pbrt_test_file(text))
+  # The reference is R's conversion of the text actually stored in the file;
+  # R_strtod and the platform strtod can differ by one ULP after formatting.
+  expect_identical(
+    commands[[2]]$params$payload$value,
+    as.numeric(sprintf("%.17g", values))
+  )
+  expect_equal(commands[[3]]$line, length(text))
+  expect_identical(commands[[3]]$args, c('1', '2', '3'))
+  for (value in c('1e', '1foo', '@array:1')) {
+    expect_error(pbrt_parse_file(pbrt_test_file(paste0(
+      'Shape "sphere" "float radius" [',
+      value,
+      ']'
+    ))))
+  }
+  empty = pbrt_parse_file(pbrt_test_file('Shape "sphere" "string names" []'))
+  expect_identical(empty[[1]]$params$names$value, character())
+})
+
+test_that("PBRT gzip grammar errors identify the original file", {
+  path = tempfile(fileext = ".pbrt.gz")
+  output = gzfile(path, "wt")
+  writeLines(c("# comment", "stray_token"), output)
+  close(output)
+  error = tryCatch(pbrt_parse_file(path), error = identity)
+  expect_s3_class(error, "error")
+  expect_match(conditionMessage(error), paste0(path, ":2:"), fixed = TRUE)
+})
+
+test_that("PBRT uniform grids retain spatial emission scale", {
+  scene = read_pbrt(pbrt_test_file(c(
+    'WorldBegin',
+    'MakeNamedMedium "glow" "string type" "uniformgrid"',
+    '"integer nx" 2 "integer ny" 1 "integer nz" 1',
+    '"float density" [1 1] "rgb Le" [1 2 3] "float Lescale" [0 2]',
+    'Material "interface" MediumInterface "glow" "" Shape "sphere"'
+  )))
+  medium = scene$scene$shape_info[[1]]$medium
+  expect_equal(as.vector(medium$emission_scale_grid), c(0, 2))
+  expect_equal(unname(dim(medium$emission_scale_grid)), c(2, 1, 1))
+  expect_equal(medium$emission, c(1, 2, 3))
+})
+
+test_that("PBRT PFM images preserve orientation, channels, scale and byte order", {
+  expected = array(seq_len(18) / 20, c(3, 2, 3))
+  for (endian in c("little", "big")) {
+    path = tempfile(fileext = ".pfm")
+    output = file(path, "wb")
+    writeLines(c("PF", "2 3", if (endian == "little") "-2" else "2"), output)
+    writeBin(
+      as.vector(aperm(expected[3:1, , , drop = FALSE], c(3, 2, 1))) / 2,
+      output,
+      size = 4L,
+      endian = endian
+    )
+    close(output)
+    expect_equal(pbrt_read_image(path), expected, tolerance = 1e-7)
+    expect_equal(
+      pbrt_read_image(path, source_linear = FALSE),
+      ifelse(
+        expected <= .04045,
+        expected / 12.92,
+        ((expected + .055) / 1.055)^2.4
+      ),
+      tolerance = 1e-7
+    )
+  }
+  path = tempfile(fileext = ".pfm")
+  output = file(path, "wb")
+  writeLines(c("Pf", "2 1", "-1"), output)
+  writeBin(c(.25, .5), output, size = 4L, endian = "little")
+  close(output)
+  expect_equal(pbrt_read_image(path), array(rep(c(.25, .5), 3), c(1, 2, 3)))
+  writeLines(c("PF", "2 3", "-1"), path)
+  expect_error(pbrt_read_image(path), "Invalid PFM dimensions|Truncated")
+  writeLines(c("PF", "2 3", "0"), path)
+  expect_error(pbrt_read_image(path), "Invalid PFM dimensions")
+})
+
+test_that("large PBRT light lists preserve names, order, and independent values", {
+  count = 513L
+  imported = read_pbrt(pbrt_test_file(c(
+    "WorldBegin",
+    sprintf('LightSource "point" "point3 from" [%d 0 0]', seq_len(count)),
+    'LightSource "spot" "point3 from" [0 2 0] "point3 to" [0 0 0]',
+    'Shape "sphere"'
+  )))
+  lights = list_lights(imported$scene)
+  expect_length(lights, count + 1L)
+  expect_identical(names(lights), paste0("pbrt-point-", seq_len(count + 1L)))
+  expect_equal(
+    vapply(lights[seq_len(count)], function(x) x$position[1], numeric(1)),
+    setNames(seq_len(count), names(lights)[seq_len(count)])
+  )
+  expect_identical(lights[[count + 1L]]$type, "spot")
+})

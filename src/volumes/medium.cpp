@@ -306,6 +306,18 @@ GridMedium::GridMedium(const Rcpp::List &d) : Medium(d) {
   density = field(d["density"]);
   temperatures = field(d["temperature"]);
   emissions = field(d["emission"], 3);
+  if (d.containsElementNamed("emission_scale_grid")) {
+    emission_scales = field(d["emission_scale_grid"]);
+    if (emission_scales.dims != density.dims || emission_scales.values.empty())
+      throw std::runtime_error("Emission scale array dimensions must match density.");
+    if (has_rgb_emission) {
+      Float max_scale = *std::max_element(emission_scales.values.begin(), emission_scales.values.end());
+      Float max_emission = *std::max_element(emissions.values.begin(), emissions.values.end());
+      if (!std::isfinite(max_scale * double(max_emission) * emission_scale) ||
+          !std::isfinite(Float(max_scale * double(max_emission) * emission_scale)))
+        throw std::runtime_error("Scaled grid emission must be finite and representable as float values.");
+    }
+  }
   Rcpp::NumericMatrix bounds(d["bounds"]);
   for (int a = 0; a < 3; ++a) {
     majorants.lo[a] = bounds(0, a);
@@ -382,10 +394,14 @@ point3f GridMedium::Emission(const point3f &p) const {
   if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
     return point3f(0);
   point3f uvw = Normalize(p);
+  // PBRT's scalar Lescale grid is interpolated separately from Le. Keeping it
+  // scalar also avoids expanding large volume grids into three RGB arrays.
+  Float scale = emission_scale *
+                (emission_scales.values.empty() ? 1 : emission_scales.Lookup(uvw));
   if (has_temperature)
-    return emission_scale *
+    return scale *
            BlackbodyRGB((temperatures.Lookup(uvw) - temperature_offset) * temperature_scale);
-  return emission_scale *
+  return scale *
          point3f(emissions.Lookup(uvw, 0), emissions.Lookup(uvw, 1), emissions.Lookup(uvw, 2));
 }
 MediumProperties GridMedium::SamplePoint(const point3f &p) const {
@@ -415,5 +431,6 @@ std::shared_ptr<const Medium> LoadMedium(const Rcpp::List &d) {
 size_t GridMedium::MemoryBytes() const {
   return sizeof(*this) +
          sizeof(Float) * (density.values.capacity() + temperatures.values.capacity() +
-                          emissions.values.capacity() + majorants.density.capacity());
+                          emissions.values.capacity() + emission_scales.values.capacity() +
+                          majorants.density.capacity());
 }

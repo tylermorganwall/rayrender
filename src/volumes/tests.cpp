@@ -92,6 +92,29 @@ context("Hit record medium placement") {
   }
 }
 context("Grid medium emission") {
+  test_that("scalar emission grids interpolate separately from RGB radiance") {
+    auto description = grid_description(Rcpp::NumericVector(2, 1.0), 2, 1, 1);
+    Rcpp::NumericVector scales = Rcpp::NumericVector::create(0, 2);
+    scales.attr("dim") = Rcpp::IntegerVector::create(2, 1, 1);
+    description["emission_scale_grid"] = scales;
+    description["emission"] = Rcpp::NumericVector::create(1, 2, 3);
+    GridMedium medium(description);
+    for (int c = 0; c < 3; ++c) {
+      expect_true(medium.Emission(point3f(-.5, 0, 0))[c] == 0);
+      expect_true(medium.Emission(point3f(0))[c] == c + 1);
+      expect_true(medium.Emission(point3f(.5, 0, 0))[c] == 2 * (c + 1));
+    }
+    description["emission"] = Rcpp::NumericVector::create(0, 0, 0);
+    description["temperature"] = 4000;
+    GridMedium thermal(description);
+    for (int c = 0; c < 3; ++c) {
+      expect_true(thermal.Emission(point3f(-.5, 0, 0))[c] == 0);
+      expect_true(thermal.Emission(point3f(0))[c] == BlackbodyRGB(4000)[c]);
+    }
+    scales.attr("dim") = Rcpp::IntegerVector::create(1, 2, 1);
+    description["emission_scale_grid"] = scales;
+    expect_error(GridMedium(description));
+  }
   test_that("zero RGB fields preserve density and return zero emission") {
     for (bool array_field : {false, true}) {
       auto description = grid_description(Rcpp::NumericVector(8, .35), 2, 2, 2);

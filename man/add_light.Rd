@@ -9,7 +9,7 @@ add_light(scene, light, name = NULL, replace = FALSE)
 \arguments{
 \item{scene}{Scene to modify.}
 
-\item{light}{Description from \code{\link[rayvertex:point_light]{point_light()}} or \code{spot_light()}.}
+\item{light}{Description from \code{\link[=point_light]{point_light()}} or \code{spot_light()}.}
 
 \item{name}{Default \code{NULL}. Optional override for the light name.}
 

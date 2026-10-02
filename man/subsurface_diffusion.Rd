@@ -46,8 +46,8 @@ For reflectance A and scaled radius d, the radial area profile is
 \code{radius} sets the spread, not the object's opacity: this model has no ballistic
 transmission. Black still retains the neutral surface reflection.
 
-This is an empirical, separable diffusion approximation, not a faster sampler
-of the physical random-walk model. The profile is normalized on a plane;
+This is an empirical, separable diffusion approximation.
+The profile is normalized on a plane;
 finite-geometry energy conservation is not enforced. Thin, sharply curved,
 concave, or disconnected geometry can gain energy or leak light. Prefer
 \code{\link[=subsurface]{subsurface()}} for finite-geometry energy conservation, accurate thin transmission,

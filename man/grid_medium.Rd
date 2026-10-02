@@ -44,7 +44,9 @@ Two rows giving minimum and maximum medium-space coordinates.}
 \item{temperature}{Default `NULL`. Scalar kelvin temperature or an array with
 the same dimensions as `density`. Mutually exclusive with nonzero emission.}
 
-\item{emission_scale}{Default `1`. Nonnegative multiplier for emitted radiance.}
+\item{emission_scale}{Default `1`. Nonnegative scalar multiplier, or a
+nonnegative array with the same dimensions as `density`, interpolated
+independently of the emission or temperature field.}
 
 \item{temperature_scale}{Default `1`. Nonnegative multiplier applied after
 subtracting `temperature_offset` from the temperature.}

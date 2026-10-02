@@ -107,6 +107,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// pbrt_lex_cpp
+Rcpp::List pbrt_lex_cpp(std::string filename, std::string source);
+RcppExport SEXP _rayrender_pbrt_lex_cpp(SEXP filenameSEXP, SEXP sourceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type source(sourceSEXP);
+    rcpp_result_gen = Rcpp::wrap(pbrt_lex_cpp(filename, source));
+    return rcpp_result_gen;
+END_RCPP
+}
 // render_animation_rcpp
 List render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, CharacterVector tonemap, bool bloom, bool write_image, bool transparent_background);
 RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonemapSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
@@ -157,6 +169,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_cppdef_HAS_SSE2", (DL_FUNC) &_rayrender_cppdef_HAS_SSE2, 0},
     {"_rayrender_cppdef_HAS_SSE3", (DL_FUNC) &_rayrender_cppdef_HAS_SSE3, 0},
     {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
+    {"_rayrender_pbrt_lex_cpp", (DL_FUNC) &_rayrender_pbrt_lex_cpp, 2},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},

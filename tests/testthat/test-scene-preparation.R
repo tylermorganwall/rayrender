@@ -31,3 +31,46 @@ test_that("local texture processing preserves input columns and material IDs", {
   expect_identical(scene$material[[1]], scene$material[[2]])
   expect_equal(processed$typevec, rep(material[[1]]$type, 2))
 })
+
+test_that("nested instances do not shift subsequent bump texture assignments", {
+  withr::local_options(list(cores = 1))
+  bump = outer(seq(0, 1, length.out = 8), seq(0, 1, length.out = 8))
+  background = sphere(x = -4)
+  nested = create_instances(create_instances(background))
+  render_bump = function(scene) {
+    set.seed(930)
+    render_scene(
+      scene,
+      width = 24,
+      height = 24,
+      samples = 1,
+      lookfrom = c(0, 0, 5),
+      lookat = c(0, 0, 0),
+      fov = 35,
+      parallel = FALSE,
+      preview = FALSE,
+      interactive = FALSE,
+      plot_scene = FALSE,
+      progress = FALSE,
+      denoise = FALSE,
+      bloom = FALSE,
+      debug_channel = "bump",
+      tonemap = "raw"
+    )
+  }
+  # The first case previously lost its bump; the second dereferenced the null
+  # buffer assigned to the preceding, off-camera object's bump texture.
+  for (tail in list(
+    sphere(material = diffuse(bump_texture = bump)),
+    add_object(
+      sphere(x = -4, material = diffuse(bump_texture = bump)),
+      sphere()
+    )
+  )) {
+    reference = render_bump(add_object(background, tail))
+    actual = render_bump(add_object(nested, tail))
+    expect_true(all(is.finite(actual)))
+    # Instance bounds can change the last float bit of camera/BVH arithmetic.
+    expect_equal(actual, reference, tolerance = 1e-6)
+  }
+})

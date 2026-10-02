@@ -42,7 +42,7 @@ from the light toward the illuminated region.}
 \code{cone_angle}. Zero gives a hard cone edge.}
 }
 \value{
-A \code{ray_light} description for \code{\link[rayvertex:add_light]{add_light()}}. Lights have no visible
+A \code{ray_light} description for \code{\link[=add_light]{add_light()}}. Lights have no visible
 surface and automatically select the NEE integrator. Surface and volume
 scattering receive their illumination; specular caustics require a transport
 method that can connect through specular paths.

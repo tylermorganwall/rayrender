@@ -107,6 +107,9 @@ homogeneous_medium = function(
 #'   Two rows giving minimum and maximum medium-space coordinates.
 #' @param emission Default `0`. Scalar/RGB radiance or an array with dimensions
 #'   `c(nx, ny, nz, 3)`. The volume source is `sigma_a * Le`.
+#' @param emission_scale Default `1`. Nonnegative scalar multiplier, or a
+#'   nonnegative array with the same dimensions as `density`, interpolated
+#'   independently of the emission or temperature field.
 #' @param temperature Default `NULL`. Scalar kelvin temperature or an array with
 #'   the same dimensions as `density`. Mutually exclusive with nonzero emission.
 #' @return A reusable `ray_medium` description.
@@ -142,6 +145,15 @@ grid_medium = function(
   haze_density_threshold = NULL
 ) {
   validate_medium_array(density, "density", 3L)
+  emission_scale_grid = NULL
+  if (!is.null(dim(emission_scale))) {
+    validate_medium_array(emission_scale, "emission_scale", 3L)
+    if (!identical(dim(emission_scale), dim(density))) {
+      stop("Emission scale array dimensions must match density.", call. = FALSE)
+    }
+    emission_scale_grid = emission_scale
+    emission_scale = 1
+  }
   if (
     !is.matrix(bounds) ||
       !identical(dim(bounds), c(2L, 3L)) ||
@@ -185,6 +197,9 @@ grid_medium = function(
     haze_density_threshold
   )
   out$density = density
+  if (!is.null(emission_scale_grid)) {
+    out$emission_scale_grid = emission_scale_grid
+  }
   out$bounds = bounds
   out
 }

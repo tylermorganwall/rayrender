@@ -116,7 +116,7 @@ public:
   point3f Emission(const point3f &p) const override;
 
 private:
-  SampledField density, temperatures, emissions;
+  SampledField density, temperatures, emissions, emission_scales;
   MajorantGrid majorants;
   point3f Normalize(const point3f &p) const;
 };

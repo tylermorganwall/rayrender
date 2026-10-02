@@ -4,18 +4,14 @@
 \alias{process_scene}
 \title{Process a scene}
 \usage{
-process_scene(
-  scene,
-  process_material_ids = TRUE,
-  subsurface_prepared = FALSE
-)
+process_scene(scene, process_material_ids = TRUE, subsurface_prepared = FALSE)
 }
 \arguments{
 \item{scene}{Scene to process.}
 
-\item{process_material_ids}{Default \code{TRUE}. Renumber shared material IDs.}
+\item{process_material_ids}{Default `TRUE`. Renumber shared material IDs.}
 
-\item{subsurface_prepared}{Default \code{FALSE}. Whether this call's scene already has resolved subsurface interiors.}
+\item{subsurface_prepared}{Default `FALSE`. Whether this call's scene already has resolved subsurface interiors.}
 }
 \value{
 Processed scene and native shape/material metadata.

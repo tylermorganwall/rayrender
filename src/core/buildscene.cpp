@@ -373,7 +373,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
   auto nveca = std::make_unique<int[]>(3);
   auto nvecb = std::make_unique<int[]>(3);
   auto nvecr = std::make_unique<int[]>(3);
-  int init_texture_size = texture_idx.size();
 
   hitable_list list;
   NumericMatrix IdentityMat(4, 4);
@@ -424,7 +423,9 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       shape_material = LoadSingleMaterial(SingleMaterial, texCache, textures, alpha_textures, bump_textures,
                                           roughness_textures, nvec.get(), nveca.get(), nvecb.get(), nvecr.get(),
                                           has_image, has_alpha, has_bump, has_roughness, tricolorinfo);
-      texture_idx.push_back(init_texture_size + i);
+      // Recursive instance construction appends to these same texture buffers.
+      // A parent row offset no longer identifies its newly loaded material.
+      texture_idx.push_back(static_cast<int>(textures.size()) - 1);
     }
     if (is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
       shared_materials->push_back(shape_material);

@@ -1,7 +1,7 @@
 #' Read a PBRT Scene
 #'
 #' Convert a PBRT text file to an editable rayrender scene. Parsing and scene
-#' conversion are implemented in R; a PBRT installation is not required.
+#' conversion use a PEGTL grammar and R scene translation.
 #'
 #' @md
 #' @param filename Path to a PBRT scene, optionally compressed with gzip.
@@ -119,8 +119,8 @@ read_pbrt = function(
   context$include_stack = character()
   context$objects = list()
   context$rows = pbrt_row_buffer()
-  context$lights = list()
-  context$point_lights = list()
+  context$lights = pbrt_row_buffer()
+  context$point_lights = pbrt_row_buffer()
   context$stack = list()
   context$object = NULL
   context$world = FALSE
@@ -155,19 +155,23 @@ read_pbrt = function(
   } else {
     sphere()[FALSE, ]
   }
-  for (i in seq_along(context$lights)) {
-    scene = add_infinite_light(
-      scene,
-      context$lights[[i]],
-      name = paste0("pbrt-light-", i)
-    )
+  # Constructors already validate these descriptors. Attach each complete list
+  # once: add_light() in a loop would revalidate all preceding lights each time.
+  lights = pbrt_buffer_rows(context$lights)
+  if (length(lights)) {
+    names(lights) = paste0("pbrt-light-", seq_along(lights))
+    for (i in seq_along(lights)) {
+      lights[[i]]$name = names(lights)[i]
+    }
+    attr(scene, "ray_infinite_lights") = lights
   }
-  for (i in seq_along(context$point_lights)) {
-    scene = add_light(
-      scene,
-      context$point_lights[[i]],
-      name = paste0("pbrt-point-", i)
-    )
+  lights = pbrt_buffer_rows(context$point_lights)
+  if (length(lights)) {
+    names(lights) = paste0("pbrt-point-", seq_along(lights))
+    for (i in seq_along(lights)) {
+      lights[[i]]$name = names(lights)[i]
+    }
+    attr(scene, "ray_lights") = lights
   }
   render_args = pbrt_render_arguments(context)
   notes = pbrt_buffer_rows(context$diagnostics)
@@ -470,33 +474,11 @@ pbrt_render_arguments = function(context) {
 #' @keywords internal
 #' @noRd
 pbrt_parse_file = function(filename) {
-  connection = if (grepl("\\.gz$", filename, ignore.case = TRUE)) {
-    gzfile(filename, "rt")
-  } else {
-    file(filename, "rt")
-  }
-  on.exit(close(connection))
-  lines = readLines(connection, warn = FALSE)
-  if (!length(lines)) {
-    stop("Empty PBRT file: ", filename, call. = FALSE)
-  }
-  # Tokenize in C via vectorized regular expressions, retaining source lines.
-  # Quoted strings are recognized before comments: '#' inside a path is data.
-  pattern = '"([^"\\\\]|\\\\.)*"|#[^\\r\\n]*|\\[|\\]|[^[:space:]\\[\\]"#]+'
-  matches = gregexpr(pattern, lines, perl = TRUE)
-  tokens_by_line = regmatches(lines, matches)
-  remainder = regmatches(lines, matches, invert = TRUE)
-  bad = which(vapply(remainder, function(x) any(nzchar(trimws(x))), logical(1)))
-  if (length(bad)) {
-    stop(filename, ":", bad[1], ": malformed quoted string.", call. = FALSE)
-  }
-  tokens = unlist(tokens_by_line, use.names = FALSE)
-  line = rep(seq_along(lines), lengths(tokens_by_line))
-  keep = !startsWith(tokens, "#")
-  tokens = tokens[keep]
-  line = line[keep]
-  quoted = startsWith(tokens, '"')
-  # Capitalized bare words are directives; these three are ActiveTransform operands.
+  lexed = pbrt_file_tokens(filename)
+  tokens = lexed$tokens
+  line = lexed$line
+  arrays = lexed$arrays
+  quoted = startsWith(tokens, "\"")
   starts = which(
     !quoted &
       grepl("^[A-Z][A-Za-z]+$", tokens) &
@@ -553,6 +535,9 @@ pbrt_parse_file = function(filename) {
     Option = 2
   )
   commands = vector("list", length(starts))
+  # Parameter declarations repeat across millions of primitives. Decode each
+  # spelling once; values and directive-local validation still run separately.
+  declarations = new.env(hash = TRUE, parent = emptyenv())
   parameter_directives = c(
     "Camera",
     "Film",
@@ -580,9 +565,35 @@ pbrt_parse_file = function(filename) {
       line = line[from]
     )
     command$accepts_parameters = command$name %in% parameter_directives
-    t = if (ends[i] > from) tokens[seq.int(from + 1L, ends[i])] else character()
+    t = if (ends[i] > from) {
+      tokens[seq.int(from + 1L, ends[i])]
+    } else {
+      character()
+    }
+    if (
+      command$name %in%
+        c("Transform", "ConcatTransform") &&
+        length(t) >= 3L &&
+        t[1] == "[" &&
+        startsWith(t[2], "@array:")
+    ) {
+      t = c(
+        "[",
+        as.character(arrays[[as.integer(substring(t[2], 8L))]]),
+        "]",
+        tail(t, -3L)
+      )
+    }
     n = unname(arity[command$name])
     if (is.na(n)) {
+      packed = which(startsWith(t, "@array:"))
+      if (length(packed)) {
+        pieces = as.list(t)
+        for (j in packed) {
+          pieces[[j]] = as.character(arrays[[as.integer(substring(t[j], 8L))]])
+        }
+        t = unlist(pieces, use.names = FALSE)
+      }
       command$args = t
       commands[[i]] = command
       next
@@ -610,15 +621,19 @@ pbrt_parse_file = function(filename) {
     }
     at = 1L
     while (at <= length(t)) {
-      if (!startsWith(t[at], '"')) {
+      if (!startsWith(t[at], "\"")) {
         pbrt_error(command, "Expected a quoted parameter declaration.")
       }
-      declaration = strsplit(
-        trimws(pbrt_unquote(t[at], command)),
-        "[[:space:]]+"
-      )[[1]]
-      if (length(declaration) != 2L) {
-        pbrt_error(command, "Parameters must be declared as \"type name\".")
+      declaration = declarations[[t[at]]]
+      if (is.null(declaration)) {
+        declaration = strsplit(
+          trimws(pbrt_unquote(t[at], command)),
+          "[[:space:]]+"
+        )[[1]]
+        if (length(declaration) != 2L) {
+          pbrt_error(command, "Parameters must be declared as \"type name\".")
+        }
+        declarations[[t[at]]] = declaration
       }
       type = declaration[1]
       name = declaration[2]
@@ -641,8 +656,17 @@ pbrt_parse_file = function(filename) {
         value = t[at]
         at = at + 1L
       }
-      string_value = startsWith(value, '"')
-      value = pbrt_unquote(value, command)
+      if (length(value) == 1L && startsWith(value, "@array:")) {
+        value = arrays[[as.integer(substring(value, 8L))]]
+      }
+      string_value = if (is.numeric(value)) {
+        FALSE
+      } else {
+        startsWith(value, "\"")
+      }
+      if (!is.numeric(value)) {
+        value = pbrt_unquote(value, command)
+      }
       if (
         type %in%
           c("string", "texture") ||
@@ -721,6 +745,34 @@ pbrt_parse_file = function(filename) {
     commands[[i]] = command
   }
   commands
+}
+
+#' @param filename PBRT input, optionally gzip-compressed.
+#' @return Compact grammar tokens and typed arrays.
+#' @keywords internal
+#' @noRd
+pbrt_file_tokens = function(filename) {
+  if (!grepl("[.]gz$", filename, ignore.case = TRUE)) {
+    return(pbrt_lex_cpp(filename))
+  }
+  temporary = tempfile(fileext = ".pbrt")
+  on.exit(unlink(temporary), add = TRUE)
+  input = gzfile(filename, "rb")
+  on.exit(close(input), add = TRUE)
+  output = file(temporary, "wb")
+  tryCatch(
+    {
+      repeat {
+        bytes = readBin(input, what = "raw", n = 16L * 1024L * 1024L)
+        if (!length(bytes)) {
+          break
+        }
+        writeBin(bytes, output)
+      }
+    },
+    finally = close(output)
+  )
+  pbrt_lex_cpp(temporary, filename)
 }
 
 #' @param command Parsed directive.
@@ -1614,7 +1666,7 @@ pbrt_texture = function(command, state, context) {
     encoding = pbrt_get(
       p,
       "encoding",
-      if (tolower(tools::file_ext(filename)) %in% c("exr", "hdr")) {
+      if (tolower(tools::file_ext(filename)) %in% c("exr", "hdr", "pfm")) {
         "linear"
       } else {
         "sRGB"
@@ -1628,9 +1680,8 @@ pbrt_texture = function(command, state, context) {
         "Unsupported image encoding replaced by sRGB."
       )
     }
-    image = rayimage::ray_read_image(
+    image = pbrt_read_image(
       filename,
-      convert_to_array = TRUE,
       source_linear = encoding == "linear"
     )
     scale = pbrt_get(p, "scale", 1, 1L)
@@ -1729,7 +1780,7 @@ pbrt_medium = function(command, state, context) {
       p,
       if ("LeScale" %in% names(p$values)) "LeScale" else "Lescale",
       1,
-      1L
+      if (type == "uniformgrid") NULL else 1L
     )
   )
   if (type != "homogeneous") {
@@ -1771,6 +1822,12 @@ pbrt_medium = function(command, state, context) {
       pbrt_error(command, "uniformgrid requires density samples.")
     }
     args$density = array(density, dims)
+    if (length(args$emission_scale) != 1L) {
+      if (length(args$emission_scale) != prod(dims)) {
+        pbrt_error(command, "Lescale requires one value or one per grid cell.")
+      }
+      args$emission_scale = array(args$emission_scale, dims)
+    }
     args$bounds = rbind(
       pbrt_get(p, "p0", c(0, 0, 0), 3L),
       pbrt_get(p, "p1", c(1, 1, 1), 3L)
@@ -1815,7 +1872,7 @@ pbrt_light = function(command, state, context) {
     radiance = pbrt_spectrum(p, "L", rep(1, 3)) * pbrt_get(p, "scale", 1, 1L)
     if (nzchar(filename)) {
       source = pbrt_asset(filename, context, command)
-      image = rayimage::ray_read_image(source, convert_to_array = TRUE)
+      image = pbrt_read_image(source)
       if (
         length(dim(image)) != 3L || dim(image)[3] < 3L || any(!is.finite(image))
       ) {
@@ -1829,11 +1886,11 @@ pbrt_light = function(command, state, context) {
         image[,, channel] = image[,, channel] * radiance[channel]
       }
       light = infinite_light(pbrt_write_asset(image, ".exr", context))
-      context$lights[[length(context$lights) + 1L]] = light
+      pbrt_buffer_append(context$lights, light)
     } else {
       image = array(rep(radiance, each = 8), c(2, 4, 3))
       light = infinite_light(pbrt_write_asset(image, ".exr", context))
-      context$lights[[length(context$lights) + 1L]] = light
+      pbrt_buffer_append(context$lights, light)
     }
   } else if (type == "distant") {
     radiance = pbrt_spectrum(p, "L", rep(1, 3)) * pbrt_get(p, "scale", 1, 1L)
@@ -1850,11 +1907,12 @@ pbrt_light = function(command, state, context) {
     )
     solid_angle = 2 * pi * (1 - cos(.53 * pi / 360))
     intensity = max(radiance)
-    context$lights[[length(context$lights) + 1L]] = disk_light(
+    light = disk_light(
       color = if (intensity > 0) radiance / intensity else rep(0, 3),
       intensity = intensity / solid_angle,
       direction = direction
     )
+    pbrt_buffer_append(context$lights, light)
   } else if (type %in% c("point", "spot")) {
     intensity = pbrt_spectrum(p, "I", rep(1, 3)) * pbrt_get(p, "scale", 1, 1L)
     from = pbrt_get(p, "from", c(0, 0, 0), 3L)
@@ -1874,8 +1932,10 @@ pbrt_light = function(command, state, context) {
       light_args$cone_angle = angle
       light_args$falloff_angle = delta
     }
-    context$point_lights[[length(context$point_lights) + 1L]] =
+    pbrt_buffer_append(
+      context$point_lights,
       do.call(if (type == "point") point_light else spot_light, light_args)
+    )
   } else {
     pbrt_note(context, command, paste("Unsupported light omitted:", type))
   }
@@ -1891,7 +1951,8 @@ pbrt_light = function(command, state, context) {
 #' @keywords internal
 #' @noRd
 pbrt_place = function(rows, state, local, context) {
-  moving = !isTRUE(all.equal(state$transform, state$end_transform))
+  moving = !identical(state$transform, state$end_transform) &&
+    !isTRUE(all.equal(state$transform, state$end_transform))
   times = if (is.null(context$settings$TransformTimes)) {
     c(0, 1)
   } else {
@@ -2089,7 +2150,13 @@ pbrt_shape = function(command, state, context) {
       }
       rows[[i]] = do.call(bezier_curve, args)
     }
-    rows = vctrs::list_unchop(rows)
+    # Most PBRT hair directives contain one segment. Its constructor already
+    # returned a scene row; inferring and casting its type again is unnecessary.
+    rows = if (count == 1L) {
+      rows[[1]]
+    } else {
+      vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ])
+    }
   } else {
     pbrt_note(context, command, paste("Unsupported shape omitted:", type))
     return(NULL)
@@ -2201,6 +2268,66 @@ pbrt_texture_parameter = function(p, name, default, context) {
     return(list(value = pbrt_get(p, name, default, 1L), uv_repeat = c(1, 1)))
   }
   list(value = pbrt_spectrum(p, name, default), uv_repeat = c(1, 1))
+}
+
+#' @param filename Image file path.
+#' @param source_linear Default `NULL`. Detect encoding from the format, or override it.
+#' @return Linear RGB image array, including floating-point PFM assets.
+#' @keywords internal
+#' @noRd
+pbrt_read_image = function(filename, source_linear = NULL) {
+  if (tolower(tools::file_ext(filename)) != "pfm") {
+    args = list(filename, convert_to_array = TRUE)
+    if (!is.null(source_linear)) {
+      args$source_linear = source_linear
+    }
+    return(do.call(rayimage::ray_read_image, args))
+  }
+  input = file(filename, "rb")
+  on.exit(close(input))
+  header = readLines(input, n = 3L, warn = FALSE)
+  fields = strsplit(paste(header, collapse = " "), "[[:space:]]+")[[1]]
+  if (length(fields) != 4L || !fields[1] %in% c("PF", "Pf")) {
+    stop("Invalid PFM header: ", filename, call. = FALSE)
+  }
+  size_scale = suppressWarnings(as.numeric(fields[2:4]))
+  size = size_scale[1:2]
+  scale = size_scale[3]
+  channels = if (fields[1] == "PF") 3L else 1L
+  count = prod(size) * channels
+  if (
+    any(!is.finite(size_scale)) ||
+      any(size < 1 | size != floor(size)) ||
+      scale == 0 ||
+      !is.finite(count) ||
+      count * 4 > file.info(filename)$size
+  ) {
+    stop("Invalid PFM dimensions or scale: ", filename, call. = FALSE)
+  }
+  pixels = readBin(
+    input,
+    numeric(),
+    n = count,
+    size = 4L,
+    endian = if (scale < 0) "little" else "big"
+  )
+  if (length(pixels) != count || any(!is.finite(pixels))) {
+    stop("Truncated or nonfinite PFM pixels: ", filename, call. = FALSE)
+  }
+  # PFM stores interleaved channels, left to right, with the bottom row first.
+  image = aperm(array(pixels * abs(scale), c(channels, size)), c(3, 2, 1))
+  image = image[seq.int(size[2], 1L), , , drop = FALSE]
+  if (channels == 1L) {
+    image = image[,, rep(1L, 3L), drop = FALSE]
+  }
+  if (identical(source_linear, FALSE)) {
+    image = ifelse(
+      image <= 0.04045,
+      image / 12.92,
+      ((image + 0.055) / 1.055)^2.4
+    )
+  }
+  image
 }
 
 #' @param image RGB array to write.
@@ -2875,6 +3002,10 @@ pbrt_mesh = function(p, type, material, flipped) {
     material = material,
     flipped = flipped,
     subdivision_levels = levels,
+    # Coordinates, indices, normals and UVs were validated above; construct_mesh
+    # supplies the remaining structure. Revalidating every tiny PBRT patch is
+    # a substantial part of import time in scenes with many separate meshes.
+    validate_mesh = FALSE,
     importance_sample_lights = material[[1]]$type == 5L
   )
 }

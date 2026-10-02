@@ -55,8 +55,7 @@ lower value and extend the liquid slightly into the glass wall.}
 free-flight distance and use direct collision-weight arithmetic when safe,
 retaining log-space arithmetic for extreme values and guided proposals.
 This opt-in acceleration retains individual scattering
-events, physical coefficients, and priority handling. It works with either
-sampling method; it does not substitute a diffusion approximation.}
+events, physical coefficients, and priority handling.}
 }
 \value{
 A \code{ray_material} descriptor.

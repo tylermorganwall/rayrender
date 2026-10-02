@@ -37,6 +37,10 @@ cppdef_HAS_SSE41 <- function() {
     .Call(`_rayrender_cppdef_HAS_SSE41`)
 }
 
+pbrt_lex_cpp <- function(filename, source = "") {
+    .Call(`_rayrender_pbrt_lex_cpp`, filename, source)
+}
+
 render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background) {
     .Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background)
 }
