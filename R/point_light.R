@@ -487,56 +487,144 @@ list_lights = function(scene) {
 #' @rdname get_light
 #' @export
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
-#' # remove_light(): the campfire has gone out, but the moon still lights the logs.
-#' # Removing a named light keeps the geometry and every other light intact.
-#' scene = generate_ground(depth = 0, material = diffuse("#55554c"))
-#' for (i in 1:3) {
+#' # remove_light(): switch off one streetlight on a moonlit road.
+#' night = as.POSIXct("2026-09-26 20:30:00", tz = "America/New_York")
+#' scene = generate_ground(depth = -.03, material = diffuse("#25352c")) |>
+#'   add_object(xz_rect(xwidth = 40, zwidth = 6, material = diffuse("#30343c")))
+#' for (side in c(-1, 1)) {
 #'   scene = add_object(
 #'     scene,
-#'     cylinder(
-#'       y = .12 + .12 * (i - 1),
-#'       radius = .12,
-#'       length = 1.8,
-#'       angle = c(90, (i - 1) * 60, 0),
-#'       material = diffuse("#885538")
+#'     cube(
+#'       z = side * 3.15,
+#'       y = .06,
+#'       xwidth = 40,
+#'       ywidth = .12,
+#'       zwidth = .3,
+#'       material = diffuse("#999b95")
 #'     )
 #'   )
 #' }
-#' scene = scene |>
-#'   add_light(
-#'     point_light(position = c(0, 1, 0), color = "#ff9e43", intensity = 12),
-#'     name = "fire"
-#'   ) |>
-#'   add_light(
-#'     point_light(position = c(-3, 4, 2), color = "#8caaff", intensity = 25),
-#'     name = "moon"
+#' for (x in seq(-18, 18, by = 3)) {
+#'   scene = add_object(
+#'     scene,
+#'     xz_rect(
+#'       x = x,
+#'       y = .006,
+#'       xwidth = 1.4,
+#'       zwidth = .1,
+#'       material = diffuse("#ddd4a6")
+#'     )
 #'   )
-#'
-#' # Before: warm firelight and cool moonlight together.
+#' }
+#' # Low buildings silhouette the far side of the street.
+#' for (i in 1:7) {
+#'   h = c(2.8, 3.6, 2.4, 3.2, 2.6, 3.8, 2.9)[i]
+#'   scene = add_object(
+#'     scene,
+#'     cube(
+#'       x = (i - 4) * 4,
+#'       y = h / 2,
+#'       z = -6,
+#'       xwidth = 3.7,
+#'       ywidth = h,
+#'       zwidth = 3,
+#'       material = diffuse("#48505a")
+#'     )
+#'   )
+#' }
+#' for (i in 1:7) {
+#'   for (dx in c(-.8, .8)) {
+#'     scene = add_object(
+#'       scene,
+#'       xy_rect(
+#'         x = (i - 4) * 4 + dx,
+#'         y = 1.6,
+#'         z = -4.49,
+#'         xwidth = .6,
+#'         ywidth = .9,
+#'         material = diffuse("#101926")
+#'       )
+#'     )
+#'   }
+#' }
+#' metal = microfacet(color = "#303944", roughness = .35)
+#' for (i in 1:3) {
+#'   x = c(-7, 0, 7)[i]
+#'   scene = scene |>
+#'     add_object(cylinder(
+#'       x = x,
+#'       y = 2.3,
+#'       z = -2.7,
+#'       radius = .055,
+#'       length = 4.6,
+#'       material = metal
+#'     )) |>
+#'     add_object(segment(
+#'       start = c(x, 4.6, -2.7),
+#'       end = c(x, 4.6, -1.7),
+#'       radius = .055,
+#'       material = metal
+#'     )) |>
+#'     add_object(cube(
+#'       x = x,
+#'       y = 4.57,
+#'       z = -1.65,
+#'       xwidth = .5,
+#'       ywidth = .14,
+#'       zwidth = .8,
+#'       material = diffuse("#a8adb1")
+#'     )) |>
+#'     add_light(
+#'       spot_light(
+#'         position = c(x, 4.43, -1.65),
+#'         direction = c(0, -1, .25),
+#'         cone_angle = 42,
+#'         falloff_angle = 12,
+#'         color = "#ffad55",
+#'         intensity = 4
+#'       ),
+#'       name = paste0("street-", i)
+#'     )
+#' }
+#' scene = scene |>
+#'   add_infinite_light(sky_light_image(
+#'     40.7,
+#'     -74,
+#'     night,
+#'     moon = TRUE,
+#'     moon_atmosphere = TRUE,
+#'     stars = TRUE,
+#'     star_width = 1,
+#'     stars_exposure = 2,
+#'     resolution = 2048,
+#'     rotation = 34,
+#'     name = "night-sky"
+#'   ))
+#' # Before: all three streetlights are on.
 #' render_scene(
 #'   scene,
-#'   lookfrom = c(3, 3, 5),
-#'   lookat = c(0, 0.2, 0),
-#'   fov = 0,
-#'   ortho_dimensions = c(3.8, 3),
-#'   width = 420,
-#'   height = 340,
+#'   lookfrom = c(12, 4.5, 20),
+#'   lookat = c(0, 4.6, -1),
+#'   fov = 50,
+#'   width = 600,
+#'   height = 450,
 #'   samples = 16,
-#'   denoise = TRUE
+#'   denoise = TRUE,
+#'   iso = 12000
 #' )
-#' # After: remove only the firelight.
-#' scene = remove_light(scene, "fire")
-#' names(list_lights(scene)) # Only "moon" remains.
+#' # After: the middle fixture remains, but its pool of light disappears.
+#' scene = remove_light(scene, "street-2")
+#' names(list_lights(scene)) # "street-1" and "street-3" remain.
 #' render_scene(
 #'   scene,
-#'   lookfrom = c(3, 3, 5),
-#'   lookat = c(0, 0.2, 0),
-#'   fov = 0,
-#'   ortho_dimensions = c(3.8, 3),
-#'   width = 420,
-#'   height = 340,
+#'   lookfrom = c(12, 4.5, 20),
+#'   lookat = c(0, 4.6, -1),
+#'   fov = 50,
+#'   width = 600,
+#'   height = 450,
 #'   samples = 16,
-#'   denoise = TRUE
+#'   denoise = TRUE,
+#'   iso = 12000
 #' )
 remove_light = function(scene, name) {
   get_light(scene, name)
