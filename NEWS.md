@@ -89,6 +89,11 @@
 
 ## Bugfixes
 
+- `dielectric()` Transmits direct illumination through ordinary glass when the
+  priority-selected IORs match, preserving colored absorption and surface tint.
+  Point, spot, area, and environment lights share this behavior, and matched
+  boundaries preserve camera-path depth and light-sampling weights.
+
 - Overall: Corrects bump-map slopes to use UV units and signed texture-repeat
   scaling with PBRT-style filtered height differences and curved-surface normal
   derivatives. Camera ray differentials propagate through transforms, reflection,
@@ -391,6 +396,13 @@
   minimum. Transparent renders retain their coverage estimator and minimum.
 
 ## Documentation
+
+- Overall: Adds a distinct rendered example directly to each new function's
+  roxygen documentation, including texture composition, OpenPBR, diffusion,
+  translucent materials, light management, and PBRT import. Examples use 16
+  samples with denoising, directional lighting, and before/after renders for
+  light editing and removal. Texture details explain each operation's purpose,
+  practical uses, and the distinction between scaling values and coordinates.
 
 - Overall: Adds a composable-texture vignette with 26 rendered examples,
   reproducible recipes, coordinate and image-mapping comparisons, and current
