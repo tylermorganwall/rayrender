@@ -387,6 +387,10 @@ metal = function(
 
 #' Dielectric (glass) Material
 #'
+#' With the NEE integrator, interfaces whose priority-selected refractive indices
+#' match transmit direct illumination in a straight line, including surface tint
+#' and interior attenuation. Interfaces that bend light still block these direct
+#' light connections.
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.

@@ -50,13 +50,49 @@ Global \code{rotate_env} rotation applies in addition to its own rotation.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-scene = generate_ground(material = diffuse("grey60")) |>
-  add_object(sphere(y = 1, material = diffuse("coral"))) |>
-  add_infinite_light(disk_light(
-    color = "#fff0dd", intensity = 100, angular_diameter = 10,
-    direction = c(-1, 2, 1)
-  ))
-render_scene(scene, lookfrom = c(4, 3, -8), lookat = c(0, 1, 0),
-             samples = 64, aperture = 0, ambient_light = FALSE)
+# disk_light(): a toy skyline in the long shadows of a low sun.
+# A broad angular diameter softens shadows even though the light is infinitely far away.
+scene = generate_ground(depth = 0, material = diffuse("#edd9ad"))
+for (i in 1:5) {
+  h = c(.6, 1.1, 1.6, .9, 1.3)[i]
+  scene = add_object(
+    scene,
+    cube(
+      x = (i - 3) * .6,
+      y = h / 2,
+      xwidth = .4,
+      ywidth = h,
+      zwidth = .45,
+      material = diffuse(c(
+        "#b96853",
+        "#cf9466",
+        "#708c8e",
+        "#b96853",
+        "#cf9466"
+      )[i])
+    )
+  )
+}
+scene = add_infinite_light(
+  scene,
+  disk_light(
+    direction = c(-1.82, .55, -1.26),
+    angular_diameter = 12,
+    intensity = 110,
+    color = "#ffce93"
+  )
+)
+render_scene(
+  scene,
+  lookfrom = c(2.75, 2.98, 4.81),
+  lookat = c(.12, .84, .22),
+  rotate_env = -72,
+  fov = 0,
+  ortho_dimensions = c(5.5, 4.4),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
 \dontshow{\}) # examplesIf}
 }

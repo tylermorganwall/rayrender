@@ -180,6 +180,32 @@ bool priority_hidden(const VolumePathState &state, const hit_record &h, const ve
          (subsurface_medium(h) || state.ContainsSubsurface()) && state.Interface(h, wi).Hidden();
 }
 
+// A smooth, ordinary dielectric has no directional scattering when the active
+// IORs match exactly. Cross it as a null interface on BOTH camera and light
+// paths: preserve the previous vertex/PDF, but still change the absorbing region.
+// Deliberately exclude derived/layered materials and SSS surface models; equal
+// IOR alone does not remove their other scattering lobes. No IOR tolerance is
+// used, since even a small real mismatch can produce grazing-angle reflection.
+bool cross_matched_dielectric(VolumePathState &state, const hit_record &h,
+                              const vec3f &direction, RGB &weight,
+                              const VolumePathState *adjacent = nullptr) {
+  if (!h.mat_ptr || typeid(*h.mat_ptr) != typeid(dielectric) || h.alpha_miss ||
+      (h.medium_boundary && (!h.medium_boundary->keep_surface || subsurface_medium(h))))
+    return false;
+  auto interface = state.Interface(h, direction);
+  if (adjacent) interface.after = adjacent->ActiveDielectric();
+  if (interface.Eta() != 1) return false;
+
+  // Match ordinary camera transport: surface tint is applied once on entry,
+  // never on a priority-hidden boundary. Beer-Lambert absorption belongs to the
+  // following segment and is already handled by glass_transmittance().
+  if (!interface.Hidden() && interface.entering)
+    weight *= RGB(static_cast<const dielectric *>(h.mat_ptr)->albedo);
+  if (adjacent) state = *adjacent;
+  else state.CrossDielectric(h, direction);
+  return true;
+}
+
 
 // Spend two sampler dimensions on a seed, then draw the variable number of
 // tracking candidates from a local RNG. Candidate counts therefore do not consume
@@ -809,6 +835,12 @@ RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *sur
         PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
+    if (cross_matched_dielectric(state, h, ray.d, tr)) {
+      Ray next = spawn(h, ray.d, ray.time(), state);
+      PropagateRayDifferentials(ray, h, next, false, 1, true);
+      ray = next;
+      continue;
+    }
     flush_haze();
     bool invisible = false;
     Ray emission_ray = ray;
@@ -897,6 +929,8 @@ RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *su
     if (!found) break;
     if (priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
+    } else if (cross_matched_dielectric(state, h, ray.d, tr)) {
+      // The following segment uses the new priority-selected absorption.
     } else if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
     } else {
@@ -1547,6 +1581,19 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
           (after && after->boundary->medium->subsurface_diffusion))
         diffusion_transmitted_state = std::move(adjacent);
     }
+    if (cross_matched_dielectric(state, h, ray.d, beta,
+                                diffusion_transmitted_state ? &*diffusion_transmitted_state : nullptr)) {
+      Ray next = spawn(h, ray.d, ray.time(), state);
+      PropagateRayDifferentials(ray, h, next, false, 1, true);
+      ray = next;
+      reconcile_surface_origin(scene, h, ray, state, cancel);
+      if (state.Active() && state.Active()->boundary->medium->subsurface_diffusion)
+        diffusion_entry = h;
+      subsurface_flight.reset();
+      // Do not spend depth or reset specular, lighting_origin, ru/rl, or the
+      // previous light context: direct-light sampling also crosses this pane.
+      continue;
+    }
     if (h.mat_ptr && h.mat_ptr->is_dielectric() &&
         (body || state.ContainsSubsurface() || diffusion_transmitted_state)) {
       auto interface = state.Interface(h, ray.d);
@@ -1725,6 +1772,67 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
 #include "../hitables/box.h"
 #include "../materials/texture.h"
 #include <testthat.h>
+context("Index-matched dielectric connections") {
+  test_that("equal active IORs change absorption and tint without hiding the boundary") {
+    dielectric outside(point3f(1), 1.5, point3f(.1), 5);
+    dielectric pane(point3f(.7, .8, .9), 1.5, point3f(.2, .5, 1), 1);
+    VolumePathState state;
+    state.glass.push_back(&outside);
+    hit_record h;
+    h.mat_ptr = &pane;
+    h.normal = h.geometric_normal = normal3f(0, 0, 1);
+    RGB weight(1);
+    expect_true(cross_matched_dielectric(state, h, vec3f(0, 0, -1), weight));
+    expect_true(state.ActiveDielectric() == &pane);
+    weight *= glass_transmittance(state, 2);
+    expect_true(cross_matched_dielectric(state, h, vec3f(0, 0, 1), weight));
+    expect_true(state.ActiveDielectric() == &outside);
+    expect_true(state.glass.size() == 1);
+    for (int c = 0; c < 3; ++c)
+      expect_true(std::abs(weight[c] - pane.albedo[c] * std::exp(-2. * pane.attenuation[c])) < 1e-7);
+    expect_true(opaque_shadow_material(&pane) == OpaqueShadowType::Unsupported);
+  }
+  test_that("priority-hidden glass crosses without tint or absorption changes") {
+    dielectric winner(point3f(1), 1.3, point3f(.2), 0);
+    dielectric hidden(point3f(0), 1.8, point3f(100), 2);
+    VolumePathState state;
+    state.glass.push_back(&winner);
+    hit_record h;
+    h.mat_ptr = &hidden;
+    h.normal = h.geometric_normal = normal3f(0, 0, 1);
+    RGB weight(1);
+    expect_true(cross_matched_dielectric(state, h, vec3f(0, 0, -1), weight));
+    expect_true(state.glass.size() == 2);
+    expect_true(state.ActiveDielectric() == &winner);
+    expect_true(cross_matched_dielectric(state, h, vec3f(0, 0, 1), weight));
+    expect_true(state.glass.size() == 1);
+    expect_true(weight.Average() == 1);
+  }
+  test_that("real mismatches and layered materials are not straight-through filters") {
+    VolumePathState state;
+    dielectric pane(point3f(1), Float(1.0001), point3f(0), 0);
+    hit_record h;
+    h.mat_ptr = &pane;
+    h.normal = h.geometric_normal = normal3f(0, 0, 1);
+    RGB weight(1);
+    expect_false(cross_matched_dielectric(state, h, vec3f(0, 0, -1), weight));
+    expect_true(state.glass.empty());
+
+    Rcpp::Function constructor = Rcpp::Environment::namespace_env("rayrender")["openpbr"];
+    Rcpp::List materials = constructor();
+    Rcpp::List descriptor = materials[0];
+    Rcpp::List parameters = Rcpp::clone(Rcpp::as<Rcpp::List>(descriptor["openpbr"]));
+    parameters["specular_ior"] = 1.;
+    parameters["transmission_weight"] = 1.;
+    parameters["coat_weight"] = .7;
+    OpenPBRMaterial layered(parameters, std::make_shared<constant_texture>(point3f(1)), nullptr, false);
+    h.mat_ptr = &layered;
+    expect_true(layered.is_dielectric());
+    expect_false(cross_matched_dielectric(state, h, vec3f(0, 0, -1), weight));
+    expect_true(state.glass.empty());
+    expect_true(weight.Average() == 1);
+  }
+}
 context("Accelerated subsurface arithmetic") {
   test_that("ordinary collision products agree with log-space weights and retain extreme fallbacks") {
     Rcpp::NumericMatrix transform(4, 4);

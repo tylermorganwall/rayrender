@@ -51,7 +51,10 @@ be used to specify a bump map for the surface.}
 Single row of a tibble describing the dielectric material.
 }
 \description{
-Dielectric (glass) Material
+With the NEE integrator, interfaces whose priority-selected refractive indices
+match transmit direct illumination in a straight line, including surface tint
+and interior attenuation. Interfaces that bend light still block these direct
+light connections.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

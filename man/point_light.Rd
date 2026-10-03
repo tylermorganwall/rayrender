@@ -58,9 +58,188 @@ The analytic sky atmosphere attenuates their shadow connections; its
 atmospheric in-scattering remains driven by its infinite lights.
 }
 \examples{
-scene = sphere() |>
-  add_light(point_light(position = c(-3, 4, -2), intensity = 40))
-scene = scene |>
-  add_light(spot_light(position = c(3, 4, -2), direction = c(-3, -4, 2),
-                      color = "lightblue", intensity = 80))
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# point_light(): a miniature sundial with a starburst of hard shadows.
+# One geometry-free source illuminates every direction; nearby pegs receive more light.
+scene = generate_ground(depth = -.12, material = diffuse("#20354b")) |>
+  add_object(cylinder(
+    y = -.05,
+    radius = 1.9,
+    length = .1,
+    material = diffuse("#e8d6af")
+  ))
+for (i in 0:11) {
+  phi = i * pi / 6
+  scene = add_object(
+    scene,
+    cylinder(
+      x = 1.05 * cos(phi),
+      z = 1.05 * sin(phi),
+      y = .25,
+      radius = .055,
+      length = .5,
+      material = diffuse("#b56d4c")
+    )
+  )
+}
+scene = add_light(
+  scene,
+  point_light(position = c(.2, 1.3, .1), intensity = 9, color = "#ffe0ac")
+)
+render_scene(
+  scene,
+  lookfrom = c(3, 5, 5),
+  lookat = c(0, 0, 0),
+  fov = 0,
+  ortho_dimensions = c(4.6, 3.8),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# spot_light(): a hanging mobile makes a quacking duck only in shadow.
+# A blocker at fraction t of the light-to-wall distance needs t times the
+# desired shadow dimensions. Different t values scatter the toys in depth.
+# Keep them near the projector, and view from the side to separate toys and shadow.
+projector = c(-.5, 2.4, 4.5)
+wall_z = -2
+thread = diffuse("#c4c7cf")
+hanging_height = 3.9
+parts = data.frame(
+  x = c(-.15, .48, .28, -.79, -.76),
+  y = c(1.15, 1.9, 1.55, 1.46, 1.49),
+  a = c(.75, .28, .18, .34, .30),
+  b = c(.38, .28, .4, .09, .075),
+  tilt = c(0, 0, 0, -25, -48),
+  fraction = c(.28, .44, .36, .10, .18)
+)
+scene = generate_ground(depth = 0, material = diffuse("#39475c")) |>
+  add_object(xy_rect(
+    x = -.9,
+    y = 1.8,
+    z = wall_z,
+    xwidth = 6.8,
+    ywidth = 3.6,
+    material = diffuse("#f5e7ce")
+  ))
+for (i in seq_len(nrow(parts))) {
+  t = parts$fraction[i]
+  p = projector + t * (c(parts$x[i], parts$y[i], wall_z) - projector)
+  scene = add_object(
+    scene,
+    ellipsoid(
+      x = p[1],
+      y = p[2],
+      z = p[3],
+      a = t * parts$a[i],
+      b = t * parts$b[i],
+      c = .06,
+      angle = c(0, 0, parts$tilt[i]),
+      material = diffuse(c(
+        "#e5ad48",
+        "#e27160",
+        "#639d99",
+        "#617899",
+        "#789cb5"
+      )[i])
+    )
+  )
+  scene = add_object(
+    scene,
+    segment(
+      start = p,
+      end = c(p[1], hanging_height, p[3]),
+      radius = .0018,
+      material = thread
+    )
+  )
+}
+# Two tilted blocks project the upper and lower halves of an open bill.
+for (i in 1:2) {
+  t = c(.37, .50)[i]
+  p = projector + t * (c(.92, c(2.02, 1.76)[i], wall_z) - projector)
+  scene = add_object(
+    scene,
+    cube(
+      x = p[1],
+      y = p[2],
+      z = p[3],
+      xwidth = .64 * t,
+      ywidth = .10 * t,
+      zwidth = .03,
+      angle = c(0, 0, c(20, -20)[i]),
+      material = diffuse("#efb947")
+    )
+  )
+  scene = add_object(
+    scene,
+    segment(
+      start = p,
+      end = c(p[1], hanging_height, p[3]),
+      radius = .0018,
+      material = thread
+    )
+  )
+}
+# Hang the glass first, nearest the projector. Scale its dimensions with
+# distance to preserve the water projection, and preserve its optical depth.
+water_fraction = .04
+water_scale = water_fraction / .30
+water_width = 1.4 * water_scale
+water_height = .22 * water_scale
+water_target = c(.12, .83 - water_height / (2 * water_fraction), wall_z)
+water = projector + water_fraction * (water_target - projector)
+# Give the glass a closed, thin volume so absorption colors transmitted light.
+# Match air's IOR to project a blue filter without bending the spotlight rays.
+scene = add_object(
+  scene,
+  cube(
+    x = water[1],
+    y = water[2],
+    z = water[3],
+    xwidth = water_width,
+    ywidth = water_height,
+    zwidth = .035 * water_scale,
+    material = dielectric(
+      refraction = 1,
+      attenuation = c(30, 10, 1) / water_scale
+    )
+  )
+)
+for (x in water[1] + c(-1, 1) * water_width / 2) {
+  scene = add_object(
+    scene,
+    segment(
+      start = c(x, water[2] + water_height / 2, water[3]),
+      end = c(x, hanging_height, water[3]),
+      radius = .0025 * water_scale,
+      material = thread
+    )
+  )
+}
+scene = add_light(
+  scene,
+  spot_light(
+    position = projector,
+    direction = c(0, 1.5, wall_z) - projector,
+    cone_angle = 36,
+    falloff_angle = 5,
+    intensity = 65,
+    color = "#fff1d4"
+  )
+)
+render_scene(
+  scene,
+  lookfrom = c(4.5, 4.1, 8),
+  lookat = c(-.2, 1.5, -.4),
+  fov = 0,
+  ortho_dimensions = c(6.3, 4.7),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
 }

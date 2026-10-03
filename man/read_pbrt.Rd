@@ -95,14 +95,99 @@ PBRT's spectral-to-photometric normalization. NanoVDB files must contain
 uncompressed float grids; blackbody volume emission uses rayrender's RGB model.
 }
 \examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# read_pbrt(): import a tiny Newton's cradle, with one pendulum pulled aside.
+# PBRT object instances share the metal ball and its two suspension wires.
+# Camera, geometry, and materials come from the file; add rayrender disk lights afterward.
 file = tempfile(fileext = ".pbrt")
-writeLines(c('LookAt 0 1 -5  0 0 0  0 1 0',
-             'Camera "perspective" "float fov" 35',
-             'WorldBegin', 'LightSource "infinite" "rgb L" [.5 .5 .5]',
-             'Material "diffuse" "rgb reflectance" [.7 .2 .1]',
-             'Shape "sphere"'), file)
+lines = c(
+  'LookAt 4 3 -7  0 1.2 0  0 1 0',
+  'Camera "perspective" "float fov" 32',
+  'WorldBegin',
+  'ObjectBegin "pendulum"',
+  'Material "conductor" "rgb eta" [.2 .9 1.1] "rgb k" [3.9 2.5 2.1] "float roughness" .01',
+  'AttributeBegin Translate 0 .76 0 Shape "sphere" "float radius" .24 AttributeEnd',
+  'Material "diffuse" "rgb reflectance" [.12 .15 .2]'
+)
+for (side in c(-1, 1)) {
+  p = rbind(
+    c(0, 2.4, side * .4),
+    c(0, 1.933, side * .267),
+    c(0, 1.467, side * .133),
+    c(0, 1, 0)
+  )
+  lines = c(
+    lines,
+    sprintf(
+      'Shape "curve" "string type" "cylinder" "point3 P" [\%s] "float width" .012',
+      paste(t(p), collapse = ' ')
+    )
+  )
+}
+lines = c(lines, 'ObjectEnd')
+for (x in c(-.72, -.24, .24, .72)) {
+  lines = c(
+    lines,
+    sprintf(
+      'AttributeBegin Translate \%g 0 0 ObjectInstance "pendulum" AttributeEnd',
+      x
+    )
+  )
+}
+lines = c(
+  lines,
+  'AttributeBegin Translate -1.2 2.4 0 Rotate -28 0 0 1 Translate 0 -2.4 0 ObjectInstance "pendulum" AttributeEnd',
+  'Material "diffuse" "rgb reflectance" [.16 .36 .42]'
+)
+for (z in c(-.4, .4)) {
+  lines = c(
+    lines,
+    sprintf(
+      'AttributeBegin Translate -2 2.4 \%g Rotate 90 0 1 0 Shape "cylinder" "float radius" .055 "float zmax" 3.4 AttributeEnd',
+      z
+    )
+  )
+  for (x in c(-2, 1.4)) {
+    lines = c(
+      lines,
+      sprintf(
+        'AttributeBegin Translate \%g 0 \%g Rotate -90 1 0 0 Shape "cylinder" "float radius" .055 "float zmax" 2.4 AttributeEnd',
+        x,
+        z
+      )
+    )
+  }
+}
+lines = c(
+  lines,
+  'Material "diffuse" "rgb reflectance" [.3 .25 .18]',
+  'Shape "trianglemesh" "point3 P" [-100 0 4 100 0 4 100 100 4 -100 100 4] "integer indices" [0 2 1 0 3 2]',
+  'Shape "trianglemesh" "point3 P" [-100 0 -100 100 0 -100 100 0 100 -100 0 100] "integer indices" [0 2 1 0 3 2]'
+)
+writeLines(lines, file)
 imported = read_pbrt(file)
-# do.call(render_scene, c(list(scene = imported$scene), imported$render_args))
+scene = imported$scene |>
+  add_infinite_light(disk_light(
+    direction = c(-1, 1, -1),
+    angular_diameter = 35,
+    intensity = 12,
+    name = "key"
+  )) |>
+  add_infinite_light(disk_light(
+    direction = c(1, .5, 1),
+    angular_diameter = 30,
+    intensity = 2,
+    color = "#c3dfff",
+    name = "rim"
+  ))
+settings = imported$render_args
+settings$width = 500
+settings$height = 400
+settings$samples = 16
+settings$denoise = TRUE
+do.call(render_scene, c(list(scene = scene), settings))
+unlink(file)
+\dontshow{\}) # examplesIf}
 }
 \references{
 \href{https://pbrt.org/fileformat-v4}{PBRT v4 file format}

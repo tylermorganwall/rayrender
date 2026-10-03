@@ -24,3 +24,186 @@ list, and \code{remove_light()} returns the modified scene.
 \description{
 Inspect or Remove Point and Spot Lights
 }
+\examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# get_light(): hand the followspot from one paper star to the other.
+# Retrieve the descriptor, edit its direction, and replace the same named light.
+a = pi / 2 + (0:9) * pi / 5
+star = cbind(cos(a), sin(a)) * rep(c(.58, .26), 5)
+scene = generate_ground(depth = 0, material = diffuse("#272d3a")) |>
+  add_object(xy_rect(
+    y = 1.2,
+    z = -.2,
+    xwidth = 4.5,
+    ywidth = 2.4,
+    material = diffuse("#687888")
+  ))
+for (i in 1:2) {
+  scene = add_object(
+    scene,
+    extruded_polygon(
+      star,
+      x = c(-1.1, 1.1)[i],
+      y = 1.1,
+      plane = "xy",
+      bottom = 0,
+      top = .06,
+      material = diffuse(c("#efa24b", "#479ec4")[i])
+    )
+  )
+}
+scene = scene |>
+  add_infinite_light(disk_light(
+    direction = c(-1, 1, 1),
+    angular_diameter = 40,
+    intensity = .2,
+    name = "fill"
+  )) |>
+  add_light(
+    spot_light(
+      position = c(0, 2.6, 4),
+      direction = c(-1.1, -1.5, -4),
+      cone_angle = 12,
+      falloff_angle = 3,
+      intensity = 18
+    ),
+    name = "followspot"
+  )
+# Before: the amber star has the spotlight.
+
+render_scene(
+  scene,
+  lookfrom = c(0, 2, 7),
+  lookat = c(0, 1, 0),
+  fov = 0,
+  ortho_dimensions = c(4.9, 3.4),
+  width = 500,
+  height = 400,
+  samples = 16,
+  denoise = TRUE
+)
+
+beam = get_light(scene, "followspot")
+beam$direction = c(1.1, 1.1, 0) - beam$position
+scene = add_light(scene, beam, name = "followspot", replace = TRUE)
+# After: the blue star has the very same light, aimed in a new direction.
+
+render_scene(
+  scene,
+  lookfrom = c(0, 2, 7),
+  lookat = c(0, 1, 0),
+  fov = 0,
+  ortho_dimensions = c(4.9, 3.4),
+  width = 500,
+  height = 400,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# list_lights(): turn the lighting inventory into a string of visible lanterns.
+# The returned named list contains positions and colors, not just light names.
+scene = generate_ground(depth = 0, material = diffuse("#374054"))
+for (i in 1:5) {
+  scene = add_light(
+    scene,
+    point_light(
+      position = c((i - 3) * .65, 1.2 + .12 * (i - 3)^2, 0),
+      color = c("#ed8b68", "#f4d16f", "#a9d899", "#7abcc4", "#c5a5df")[i],
+      intensity = 3
+    ),
+    name = paste0("lantern", i)
+  )
+}
+lamps = list_lights(scene)
+names(lamps)
+for (lamp in lamps) {
+  p = lamp$position
+  # Put the visible bulb above its point source so it does not block the light.
+  p[2] = p[2] + .18
+  scene = scene |>
+    add_object(sphere(
+      x = p[1],
+      y = p[2],
+      z = p[3],
+      radius = .13,
+      material = light(
+        color = lamp$color,
+        intensity = 1,
+        importance_sample = FALSE
+      )
+    )) |>
+    add_object(cylinder(
+      x = p[1],
+      y = (p[2] + 2.1) / 2,
+      radius = .008,
+      length = 2.1 - p[2],
+      material = diffuse("#172b39")
+    ))
+}
+render_scene(
+  scene,
+  lookfrom = c(1, 2, 7),
+  lookat = c(0, 1, 0),
+  fov = 0,
+  ortho_dimensions = c(4.2, 3.4),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# remove_light(): the campfire has gone out, but the moon still lights the logs.
+# Removing a named light keeps the geometry and every other light intact.
+scene = generate_ground(depth = 0, material = diffuse("#55554c"))
+for (i in 1:3) {
+  scene = add_object(
+    scene,
+    cylinder(
+      y = .12 + .12 * (i - 1),
+      radius = .12,
+      length = 1.8,
+      angle = c(90, (i - 1) * 60, 0),
+      material = diffuse("#885538")
+    )
+  )
+}
+scene = scene |>
+  add_light(
+    point_light(position = c(0, 1, 0), color = "#ff9e43", intensity = 12),
+    name = "fire"
+  ) |>
+  add_light(
+    point_light(position = c(-3, 4, 2), color = "#8caaff", intensity = 25),
+    name = "moon"
+  )
+
+# Before: warm firelight and cool moonlight together.
+render_scene(
+  scene,
+  lookfrom = c(3, 3, 5),
+  lookat = c(0, 0.2, 0),
+  fov = 0,
+  ortho_dimensions = c(3.8, 3),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+# After: remove only the firelight.
+scene = remove_light(scene, "fire")
+names(list_lights(scene)) # Only "moon" remains.
+render_scene(
+  scene,
+  lookfrom = c(3, 3, 5),
+  lookat = c(0, 0.2, 0),
+  fov = 0,
+  ortho_dimensions = c(3.8, 3),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
+}

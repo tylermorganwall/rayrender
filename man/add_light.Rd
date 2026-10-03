@@ -23,3 +23,44 @@ Attach a named world-space light without adding emissive geometry. Use
 \code{\link[=add_infinite_light]{add_infinite_light()}} for environment and sky lights. Adding objects preserves
 attached lights; geometry transforms do not move these world-space lights.
 }
+\examples{
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# add_light(): three colored lamps give one rocket three colored shadows.
+# Each named light adds to the scene; it does not replace the previous one.
+scene = generate_ground(depth = 0, material = diffuse("white")) |>
+  add_object(cylinder(
+    y = .8,
+    radius = .27,
+    length = 1.1,
+    material = diffuse("ivory")
+  )) |>
+  add_object(cone(
+    start = c(0, 1.35, 0),
+    end = c(0, 1.9, 0),
+    radius = .27,
+    material = diffuse("ivory")
+  ))
+for (i in 1:3) {
+  scene = add_light(
+    scene,
+    point_light(
+      position = c(c(-2, 0, 2)[i], 3, 2),
+      color = c("#ff574a", "#64ff91", "#7298ff")[i],
+      intensity = 18
+    ),
+    name = c("red", "green", "blue")[i]
+  )
+}
+render_scene(
+  scene,
+  lookfrom = c(0, 7, 4),
+  lookat = c(0, 0, -1.7),
+  fov = 0,
+  ortho_dimensions = c(8, 6.5),
+  width = 420,
+  height = 340,
+  samples = 16,
+  denoise = TRUE
+)
+\dontshow{\}) # examplesIf}
+}

@@ -16,8 +16,75 @@
 #' @param alpha_texture Default `""`. Surface coverage image, separate from diffuse transmission.
 #' @return A rayrender material.
 #' @export
-#' @examples
-#' translucent(reflectance = c(.25, .25, .25), transmittance = c(.6, .5, .3))
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' # translucent(): a folded-paper lantern lit from within.
+#' # Reflectance controls light returning from the paper; transmittance controls
+#' # the warm glow passing through it. Their sum stays below one in each channel.
+#' paper = translucent(
+#'   reflectance = c(.25, .18, .1),
+#'   transmittance = c(.65, .45, .18)
+#' )
+#' scene = generate_ground(depth = 0, material = diffuse("#253541")) |>
+#'   add_object(xy_rect(
+#'     y = .8,
+#'     z = -.5,
+#'     xwidth = 1,
+#'     ywidth = 1.5,
+#'     material = paper
+#'   )) |>
+#'   add_object(xy_rect(
+#'     y = .8,
+#'     z = .5,
+#'     xwidth = 1,
+#'     ywidth = 1.5,
+#'     material = paper
+#'   )) |>
+#'   add_object(yz_rect(
+#'     x = -.5,
+#'     y = .8,
+#'     ywidth = 1.5,
+#'     zwidth = 1,
+#'     material = paper
+#'   )) |>
+#'   add_object(yz_rect(
+#'     x = .5,
+#'     y = .8,
+#'     ywidth = 1.5,
+#'     zwidth = 1,
+#'     material = paper
+#'   )) |>
+#'   add_light(point_light(
+#'     position = c(0, .8, 0),
+#'     color = "#ffdb98",
+#'     intensity = 2
+#'   ))
+#' for (x in c(-.52, .52)) {
+#'   for (z in c(-.52, .52)) {
+#'     scene = add_object(
+#'       scene,
+#'       cylinder(
+#'         x = x,
+#'         y = .8,
+#'         z = z,
+#'         radius = .025,
+#'         length = 1.65,
+#'         material = diffuse("#4b2633")
+#'       )
+#'     )
+#'   }
+#' }
+#' render_scene(
+#'   scene,
+#'   lookfrom = c(3, 2, 5),
+#'   lookat = c(0, .7, 0),
+#'   fov = 0,
+#'   ortho_dimensions = c(2.7, 2.7),
+#'   width = 360,
+#'   height = 360,
+#'   samples = 16,
+#'   denoise = TRUE,
+#'   max_depth = 12
+#' )
 translucent = function(
   reflectance = c(.25, .25, .25),
   transmittance = c(.25, .25, .25),

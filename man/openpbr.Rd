@@ -192,11 +192,110 @@ energy-conserving camera-to-light layering, which is not fully reciprocal.
 Shading-normal hemisphere clipping may lose energy at extreme bump slopes.
 }
 \examples{
-coated_metal = openpbr(base_color = "goldenrod", base_metalness = 1,
-                        coat_weight = 0.5, coat_roughness = 0.15)
-milk = openpbr(subsurface_weight = 1, subsurface_color = c(0.95, 0.95, 0.94),
-               subsurface_radius = 0.05, subsurface_radius_scale = c(1, 1, 1),
-               specular_ior = 1.333, priority = 1)
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# openpbr(): six eggs from a very unusual Easter basket.
+# The same geometry shows fuzz, metal, coat, thin film, transmission, and SSS.
+materials = list(
+  Velvet = openpbr(
+    base_color = "#531c46",
+    specular_roughness = .6,
+    fuzz_weight = 1,
+    fuzz_color = "#f5a5de",
+    fuzz_roughness = .65
+  ),
+  Copper = openpbr(
+    base_color = "#df783c",
+    base_metalness = 1,
+    specular_roughness = .23,
+    specular_roughness_anisotropy = .8
+  ),
+  Lacquer = openpbr(
+    base_color = "#961f29",
+    coat_weight = 1,
+    coat_roughness = .08,
+    specular_roughness = .45
+  ),
+  Iridescent = openpbr(
+    base_color = "#bccac9",
+    base_metalness = 1,
+    specular_roughness = .17,
+    thin_film_weight = 1,
+    thin_film_thickness = .65
+  ),
+  Glass = openpbr(
+    transmission_weight = 1,
+    transmission_color = "#79cedd",
+    transmission_depth = .5,
+    specular_roughness = .035
+  ),
+  Wax = openpbr(
+    subsurface_weight = 1,
+    subsurface_color = "#ffe2b0",
+    subsurface_radius = .06,
+    specular_roughness = .3
+  )
+)
+scene = generate_ground(depth = 0, material = diffuse("#242732"))
+x = rep(c(-1.3, 0, 1.3), 2)
+z = rep(c(-.85, .85), each = 3)
+for (i in seq_along(materials)) {
+  scene = scene |>
+    add_object(cylinder(
+      x = x[i],
+      y = .06,
+      z = z[i],
+      radius = .52,
+      length = .12,
+      material = diffuse("#47505c")
+    )) |>
+    add_object(ellipsoid(
+      x = x[i],
+      y = .74,
+      z = z[i],
+      a = .44,
+      b = .62,
+      c = .44,
+      angle = c(0, 0, -10),
+      material = materials[[i]]
+    ))
+}
+scene = scene |>
+  add_infinite_light(disk_light(
+    direction = c(-1, 1, 1),
+    angular_diameter = 38,
+    intensity = 12,
+    name = "softbox"
+  )) |>
+  add_infinite_light(disk_light(
+    direction = c(1, .6, -1),
+    angular_diameter = 25,
+    intensity = 8,
+    color = "#b7d9ff",
+    name = "edge"
+  ))
+labels = screen_text(
+  names(materials),
+  x = x,
+  y = rep(c(1.65, .06), each = 3),
+  z = z + rep(c(0, .6), each = 3),
+  size = 15,
+  hjust = .5,
+  color = "white"
+)
+
+render_scene(
+  scene,
+  lookfrom = c(0, 4.5, 8),
+  lookat = c(0, 0.6, 0),
+  fov = 0,
+  ortho_dimensions = c(4.9, 3.9),
+  width = 500,
+  height = 400,
+  samples = 16,
+  denoise = TRUE,
+  screen_text = labels
+)
+\dontshow{\}) # examplesIf}
 }
 \references{
 OpenPBR Surface 1.1.1, \url{https://academysoftwarefoundation.github.io/OpenPBR/}.

@@ -70,9 +70,74 @@ There are no internal random-walk collisions. Atmospheric haze is excluded.
 Explicit \code{\link[=set_medium]{set_medium()}} attachments on the same object are an error.
 }
 \examples{
-milk = subsurface_diffusion(color = "white", radius = 0.02,
-                            refraction = 1.333, priority = 1)
-sphere(material = milk)
+\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
+# subsurface_diffusion(): a tasting flight of strawberry mochi.
+# Identical closed solids and body color isolate the diffusion radius: small
+# radii keep illumination local, while larger radii spread it around the surface.
+radii = c(.01, .08, .25)
+scene = generate_ground(depth = -.06, material = diffuse("#22252c")) |>
+  add_object(cylinder(
+    y = -.015,
+    radius = 1.9,
+    length = .08,
+    material = diffuse("#363b42")
+  ))
+for (i in 1:3) {
+  scene = add_object(
+    scene,
+    ellipsoid(
+      x = (i - 2) * 1.08,
+      y = .33,
+      a = .49,
+      b = .30,
+      c = .46,
+      material = subsurface_diffusion(
+        color = c(.94, .58, .53),
+        radius = radii[i],
+        refraction = 1.3,
+        roughness = .45
+      )
+    )
+  )
+}
+scene = scene |>
+  add_infinite_light(disk_light(
+    direction = c(-1, .65, -1),
+    angular_diameter = 28,
+    intensity = 30,
+    color = "#ffe0bc",
+    name = "backlight"
+  )) |>
+  add_infinite_light(disk_light(
+    direction = c(1, .5, 1),
+    angular_diameter = 40,
+    intensity = .5,
+    color = "#b6d9ff",
+    name = "fill"
+  ))
+labels = screen_text(
+  paste("radius", radii),
+  x = c(-1.08, 0, 1.08),
+  y = .03,
+  z = .7,
+  size = 15,
+  hjust = .5,
+  color = "white"
+)
+
+render_scene(
+  scene,
+  lookfrom = c(.8, 1.7, 6),
+  lookat = c(0, 0.2, 0),
+  fov = 0,
+  ortho_dimensions = c(4.5, 3.6),
+  width = 500,
+  height = 400,
+  samples = 16,
+  denoise = TRUE,
+  screen_text = labels
+)
+\dontshow{\}) # examplesIf}
 }
 \references{
 Christensen and Burley (2015), Approximate Reflectance Profiles
