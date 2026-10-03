@@ -38,7 +38,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   // bool has_texture = false;
   bool has_bump = false;
   unsigned char* mesh_material_data;
-  unsigned char* bump_texture_data;
+  std::shared_ptr<const HeightImage> bump_texture_data;
   if(strlen(texture_location.c_str()) > 0) {
     mesh_material_data = texCache.LookupChar(texture_location, nx, ny, nn, 4);
     nn = 4;
@@ -64,7 +64,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
   int nxb = 0, nyb = 0, nnb = 0;
   
   if(strlen(bump_text_location.c_str()) > 0) {
-    bump_texture_data = texCache.LookupChar(bump_text_location, nxb, nyb, nnb, 4);
+    bump_texture_data = texCache.LookupHeight(bump_text_location, nxb, nyb, nnb);
     has_bump = nxb != 0 && nyb != 0 && nnb != 0;
   } else {
     bump_texture_data = nullptr;

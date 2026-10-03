@@ -149,7 +149,7 @@ openpbr(
 
 \item{bump_texture}{Default \code{""}. Height-map filename, matrix, or array.}
 
-\item{bump_intensity}{Default \code{1}. Finite height-map strength in world units.}
+\item{bump_intensity}{Default \code{1}. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
 \item{roughness_texture}{Default \code{""}. Scalar image replacing specular_roughness, without gamma decoding.}
 
@@ -166,6 +166,9 @@ subsurface scattering, coat, fuzz, thin film, and emission.
 \details{
 Colors use rayrender's color convention (numeric RGB triples or R color names).
 Numeric colors are passed directly to the linear BSDF, as for diffuse().
+\code{base_color} and \code{specular_roughness} also accept composable \link{textures}.
+Each graph has its own coordinate mapping; legacy image arguments cannot
+be combined with a graph for the same input.
 subsurface_radius_scale is a numeric RGB distance multiplier, not a color.
 Geometry vectors default to the surface normal and UV tangent. Explicit vectors
 are in world coordinates. The coat uses the base frame unless overridden.

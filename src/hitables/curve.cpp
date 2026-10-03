@@ -10,17 +10,6 @@ inline point3f BlossomBezier(const point3f p[4], Float u0, Float u1, Float u2) {
   return(lerp(u2, b[0], b[1]));
 }
 
-// Adjusted function to accept precomputed a[3]
-inline point3f BlossomBezierPrecomputed(const point3f a[3], Float u1, Float u2) {
-    point3f b[2] = {
-        lerp(u1, a[0], a[1]),
-        lerp(u1, a[1], a[2])
-    };
-    return lerp(u2, b[0], b[1]);
-}
-
-
-
 static point3f EvalBezier(const point3f cp[4], Float u, vec3f *deriv = nullptr) {
   point3f cp1[3] = {lerp(u, cp[0], cp[1]), lerp(u, cp[1], cp[2]),
                     lerp(u, cp[2], cp[3])};
@@ -61,91 +50,67 @@ CurveCommon::CurveCommon(const point3f c[4], Float width0, Float width1,
   for (int i = 0; i < 4; ++i) {
     cpObj[i] = c[i];
   }
-  if (norm) {
+  normalAngle = invSinNormalAngle = 0;
+  if (norm && type == CurveType::Ribbon) {
     n[0] = convert_to_normal3(unit_vector(norm[0]));
     n[1] = convert_to_normal3(unit_vector(norm[1]));
-    normalAngle = std::acos(clamp(dot(n[0], n[1]), 0, 1));
-    invSinNormalAngle = 1.0 / std::sin(normalAngle);
+    normalAngle = std::acos(clamp(dot(n[0], n[1]), -1, 1));
+    invSinNormalAngle = normalAngle > 0 ? 1 / std::sin(normalAngle) : 0;
   }
 }
 
-bool curve::bounding_box(Float t0, Float t1, aabb& box) const {
-  // Compute object-space control points for curve segment, cpObj
-  point3f cpObj[4];
-  // Precompute aMin[3] for u0 = uMin
-  point3f aMin[3] = {
-      lerp(uMin, common->cpObj[0], common->cpObj[1]),
-      lerp(uMin, common->cpObj[1], common->cpObj[2]),
-      lerp(uMin, common->cpObj[2], common->cpObj[3])
-  };
-
-  // Precompute aMax[3] for u0 = uMax
-  point3f aMax[3] = {
-      lerp(uMax, common->cpObj[0], common->cpObj[1]),
-      lerp(uMax, common->cpObj[1], common->cpObj[2]),
-      lerp(uMax, common->cpObj[2], common->cpObj[3])
-  };
-  
-  cpObj[0] = BlossomBezierPrecomputed(aMin, uMin, uMin);
-  cpObj[1] = BlossomBezierPrecomputed(aMin, uMin, uMax);
-  cpObj[2] = BlossomBezierPrecomputed(aMin, uMax, uMax);
-  cpObj[3] = BlossomBezierPrecomputed(aMax, uMax, uMax);
-  box = surrounding_box(aabb(cpObj[0], cpObj[1]), aabb(cpObj[2], cpObj[3]));
-  Float width[2] = {lerp(uMin, common->width[0], common->width[1]),
-                    lerp(uMax, common->width[0], common->width[1])};
-  box = (*ObjectToWorld)(Expand(box, std::fmax(width[0], width[1]) * 0.5f));
-  return(true);
+void curve::CacheSegment() {
+  segmentPoints[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
+  segmentPoints[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
+  segmentPoints[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
+  segmentPoints[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
+  maxWidth = std::max(lerp(uMin, common->width[0], common->width[1]),
+                      lerp(uMax, common->width[0], common->width[1]));
 }
 
-const bool curve::hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const {
+bool curve::bounding_box(Float, Float, aabb& box) const {
+  box = surrounding_box(aabb(segmentPoints[0], segmentPoints[1]),
+                        aabb(segmentPoints[2], segmentPoints[3]));
+  box = (*ObjectToWorld)(Expand(box, maxWidth * .5f));
+  return true;
+}
+
+const bool curve::hit(const Ray& ray, Float tmin, Float tmax, hit_record& hit, random_gen&) const {
+  return Intersect(ray, tmin, tmax, hit);
+}
+const bool curve::hit(const Ray& ray, Float tmin, Float tmax, hit_record& hit, Sampler*) const {
+  return Intersect(ray, tmin, tmax, hit);
+}
+
+bool curve::Intersect(const Ray& r, Float tmin, Float tmax, hit_record& rec) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Curve");
-  
-  Ray r2 = (*WorldToObject)(r); 
-  
-  // Compute object-space control points for curve segment, cpObj
-  alignas(16) point3f cpObj[4];
-  alignas(16) point3f aMin[3] = {
-      lerp(uMin, common->cpObj[0], common->cpObj[1]),
-      lerp(uMin, common->cpObj[1], common->cpObj[2]),
-      lerp(uMin, common->cpObj[2], common->cpObj[3])
-  };
-
-  // Precompute aMax[3] for u0 = uMax
-  alignas(16) point3f aMax[3] = {
-      lerp(uMax, common->cpObj[0], common->cpObj[1]),
-      lerp(uMax, common->cpObj[1], common->cpObj[2]),
-      lerp(uMax, common->cpObj[2], common->cpObj[3])
-  };
-
-  cpObj[0] = BlossomBezierPrecomputed(aMin, uMin, uMin);
-  cpObj[1] = BlossomBezierPrecomputed(aMin, uMin, uMax);
-  cpObj[2] = BlossomBezierPrecomputed(aMin, uMax, uMax);
-  cpObj[3] = BlossomBezierPrecomputed(aMax, uMax, uMax);
-  
-  // Project curve control points to plane perpendicular to ray
-  vec3f unit_dir = unit_vector(r2.direction()); 
-  vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
-  if (dx.squared_length() == 0) {
-    // If the ray and the vector between the first and last control
-    // points are parallel, dx will be zero.  Generate an arbitrary xy
-    // orientation for the ray coordinate system so that intersection
-    // tests can proceed in this unusual case.
-    onb uvw;
-    uvw.build_from_w_normalized(unit_dir);
-    dx = uvw.v();
-  } else {
-    dx.make_unit_vector();
+  Ray r2 = (*WorldToObject)(r);
+  if (!(r2.direction().squared_length() > 0) || !(maxWidth > 0) || tmin > tmax)
+    return false;
+  const vec3f unit_dir = unit_vector(r2.direction());
+  vec3f up = cross(unit_dir, segmentPoints[3] - segmentPoints[0]);
+  if (up.squared_length() == 0) {
+    onb fallback;
+    fallback.build_from_w_normalized(unit_dir);
+    up = fallback.v();
+  } else up = unit_vector(up);
+  const vec3f right = unit_vector(cross(up, unit_dir));
+  up = cross(unit_dir, right);
+  // This is the orthonormal LookAt frame. Its inverse is its transpose, so no
+  // general matrix inverse or pair of 4x4 transforms is needed. Subtracting the
+  // origin first also avoids cancellation in the matrix translation term.
+  const onb rayFrame(right, up, unit_dir);
+  point3f cp[4];
+  for (int i = 0; i < 4; ++i) {
+    const vec3f local = rayFrame.world_to_local(segmentPoints[i] - r2.origin());
+    cp[i] = point3f(local[0], local[1], local[2]);
   }
-  Transform objectToRay = LookAt(r2.origin(), r2.origin() + unit_dir, dx);
-  point3f cp[4] = {objectToRay(cpObj[0]), objectToRay(cpObj[1]),
-                   objectToRay(cpObj[2]), objectToRay(cpObj[3])};
   // Before going any further, see if the ray's bounding box intersects
   // the curve's bounding box. We start with the y dimension, since the y
   // extent is generally the smallest (and is often tiny) due to our
   // careful orientation of the ray coordinate system above.
-  Float maxWidth = std::fmax(lerp(uMin, common->width[0], common->width[1]),
-                             lerp(uMax, common->width[0], common->width[1]));
+
   if (std::fmax(std::fmax(cp[0].xyz.y, cp[1].xyz.y), std::fmax(cp[2].xyz.y, cp[3].xyz.y)) +
       0.5f * maxWidth < 0 ||
       std::fmin(std::fmin(cp[0].xyz.y, cp[1].xyz.y), std::fmin(cp[2].xyz.y, cp[3].xyz.y)) -
@@ -196,103 +161,12 @@ const bool curve::hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, ran
   int r0 = Log2(1.41421356237f * 6.f * L0 / (8.f * eps)) / 2;
   int maxDepth = clamp(r0, 0, 10);
   return(recursiveIntersect(r2, tmin, tmax, rec, cp, uMin,
-                            uMax, maxDepth, Inverse(objectToRay)));
-}
-
-const bool curve::hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const {
-  SCOPED_CONTEXT("Hit");
-  SCOPED_TIMER_COUNTER("Curve");
-  
-  Ray r2 = (*WorldToObject)(r); 
-  
-  // Compute object-space control points for curve segment, cpObj
-  point3f cpObj[4];
-  cpObj[0] = BlossomBezier(common->cpObj, uMin, uMin, uMin);
-  cpObj[1] = BlossomBezier(common->cpObj, uMin, uMin, uMax);
-  cpObj[2] = BlossomBezier(common->cpObj, uMin, uMax, uMax);
-  cpObj[3] = BlossomBezier(common->cpObj, uMax, uMax, uMax);
-  
-  // Project curve control points to plane perpendicular to ray
-  vec3f unit_dir = unit_vector(r2.direction()); 
-  vec3f dx = cross(unit_dir, cpObj[3] - cpObj[0]);
-  if (dx.squared_length() == 0) {
-    // If the ray and the vector between the first and last control
-    // points are parallel, dx will be zero.  Generate an arbitrary xy
-    // orientation for the ray coordinate system so that intersection
-    // tests can proceed in this unusual case.
-    onb uvw;
-    uvw.build_from_w_normalized(unit_dir);
-    dx = uvw.v();
-  } else {
-    dx.make_unit_vector();
-  }
-
-  Transform objectToRay = LookAt(r2.origin(), r2.origin() + unit_dir, dx);
-
-  point3f cp[4] = {objectToRay(cpObj[0]), objectToRay(cpObj[1]),
-                   objectToRay(cpObj[2]), objectToRay(cpObj[3])};
-  // Before going any further, see if the ray's bounding box intersects
-  // the curve's bounding box. We start with the y dimension, since the y
-  // extent is generally the smallest (and is often tiny) due to our
-  // careful orientation of the ray coordinate system above.
-  Float maxWidth = std::fmax(lerp(uMin, common->width[0], common->width[1]),
-                             lerp(uMax, common->width[0], common->width[1]));
-  if (std::fmax(std::fmax(cp[0].xyz.y, cp[1].xyz.y), std::fmax(cp[2].xyz.y, cp[3].xyz.y)) +
-      0.5f * maxWidth < 0 ||
-      std::fmin(std::fmin(cp[0].xyz.y, cp[1].xyz.y), std::fmin(cp[2].xyz.y, cp[3].xyz.y)) -
-      0.5f * maxWidth > 0) {
-    return false;
-  }
-  
-  // Check for non-overlap in x.
-  if (std::fmax(std::fmax(cp[0].xyz.x, cp[1].xyz.x), std::fmax(cp[2].xyz.x, cp[3].xyz.x)) +
-      0.5f * maxWidth < 0 ||
-      std::fmin(std::fmin(cp[0].xyz.x, cp[1].xyz.x), std::fmin(cp[2].xyz.x, cp[3].xyz.x)) -
-      0.5f * maxWidth > 0) {
-    return false;
-  }
-  
-  // Check for non-overlap in z.
-  Float rayLength = r2.direction().length();
-  Float zMax = rayLength * tmax;
-  if (std::fmax(std::fmax(cp[0].xyz.z, cp[1].xyz.z), std::fmax(cp[2].xyz.z, cp[3].xyz.z)) +
-      0.5f * maxWidth < 0 ||
-      std::fmin(std::fmin(cp[0].xyz.z, cp[1].xyz.z), std::fmin(cp[2].xyz.z, cp[3].xyz.z)) -
-      0.5f * maxWidth > zMax) {
-    return false;
-  }
-  
-  // Compute refinement depth for curve, maxDepth
-  Float L0 = 0;
-  for (int i = 0; i < 2; ++i) {
-    L0 = std::fmax(
-      L0, std::fmax(
-          std::fmax(ffabs(cp[i].xyz.x - 2 * cp[i + 1].xyz.x + cp[i + 2].xyz.x),
-                    ffabs(cp[i].xyz.y - 2 * cp[i + 1].xyz.y + cp[i + 2].xyz.y)),
-                    ffabs(cp[i].xyz.z - 2 * cp[i + 1].xyz.z + cp[i + 2].xyz.z)));
-  }
-  
-  Float eps = std::fmax(common->width[0], common->width[1]) * .05f;  // width / 20
-  auto Log2 = [](float v) -> int {
-    if (v < 1) {
-      return 0;
-    }
-    uint32_t bits = FloatToBits(v);
-    // https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog
-    // (With an additional add so get round-to-nearest rather than
-    // round down.)
-    return (bits >> 23) - 127 + (bits & (1 << 22) ? 1 : 0);
-  };
-  // Compute log base 4 by dividing log2 in half.
-  int r0 = Log2(1.41421356237f * 6.f * L0 / (8.f * eps)) / 2;
-  int maxDepth = clamp(r0, 0, 10);
-  return(recursiveIntersect(r2, tmin, tmax, rec, cp, uMin,
-                            uMax, maxDepth, Inverse(objectToRay)));
+                            uMax, maxDepth, rayFrame));
 }
 
 bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record& rec, 
                                const point3f cp[4], Float u0, Float u1, int depth,
-                               const Transform &rayToObject) const {
+                               const onb &rayFrame) const {
   Float rayLength = r.direction().length();
 
   if (depth > 0) {
@@ -340,12 +214,14 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
         continue;
       }
 
-      hit |= recursiveIntersect(r, r.time(), tmax, rec, cps,
-                                u[seg], u[seg + 1], depth - 1, rayToObject);
-      // If we found an intersection and this is a shadow ray,
-      // we can exit out immediately.
-      if (hit && rec.t > tmin && rec.t < tmax) {
-        return(true);
+      hit_record candidate;
+      if (recursiveIntersect(r, tmin, tmax, candidate, cps,
+                             u[seg], u[seg + 1], depth - 1, rayFrame)) {
+        // Parameter order need not be depth order (a curve can double back).
+        // Keep the closest hit and prune the other child against that distance.
+        rec = candidate;
+        tmax = candidate.t;
+        hit = true;
       }
     }
     return(hit);
@@ -379,7 +255,7 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
       // Scale hitWidth based on ribbon orientation
       Float sin0 = std::sin((1 - u) * common->normalAngle) * common->invSinNormalAngle;
       Float sin1 = std::sin(u * common->normalAngle) * common->invSinNormalAngle;
-      if(!std::isnan(sin0) && !std::isnan(sin1)) {
+      if(common->normalAngle > 0 && std::isfinite(sin0) && std::isfinite(sin1)) {
         nHit = sin0 * common->n[0] + sin1 * common->n[1];
       } else {
         nHit = common->n[0];
@@ -389,6 +265,8 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
       flipped_n = dot(nHit, r.direction()) > 0;
     }
 
+    if (!(hitWidth > 0)) return false;
+
     // Test intersection point against curve width
     vec3f dpcdw;
     point3f pc = EvalBezier(cp, clamp(w, 0, 1), &dpcdw);
@@ -397,7 +275,7 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
       return(false);
     }
     Float zMax = rayLength * tmax;
-    if (pc.xyz.z < 0 || pc.xyz.z > zMax) {
+    if (pc.xyz.z < rayLength * tmin || pc.xyz.z > zMax) {
       return(false);
     }
 
@@ -415,16 +293,12 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
     EvalBezier(common->cpObj, u, &rec.dpdu);
     
     if (common->type == CurveType::Cylinder) {
-      // if(std::isnan(rayToObject.GetMatrix().m[0][0])) {
-      //   RcppThread::Rcout << rayToObject << "\n";
-      // }
-      //This occasionally singulars out
-      vec3f dpduPlane = (Inverse(rayToObject))(rec.dpdu);
+      vec3f dpduPlane = rayFrame.world_to_local(rec.dpdu);
       vec3f dpdvPlane = unit_vector(vec3f(-dpduPlane.xyz.y, dpduPlane.xyz.x, 0)) * hitWidth;
       Float theta = lerp(v, -90.0, 90.0);
       Transform rot = Rotate(theta, dpduPlane);
       dpdvPlane = rot(dpdvPlane);
-      rec.dpdv = rayToObject(dpdvPlane);
+      rec.dpdv = rayFrame.local_to_world(dpdvPlane);
       rec.normal = convert_to_normal3(unit_vector(-cross(rec.dpdu ,rec.dpdv)));
     } else if (common->type == CurveType::Ribbon) {
       rec.dpdv = unit_vector(cross(vec3f(nHit.xyz.x,nHit.xyz.y,nHit.xyz.z), rec.dpdu)) * hitWidth;
@@ -435,7 +309,9 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
       rec.dpdv = unit_vector(cross(rec.dpdu,-r.direction()));
       rec.normal = convert_to_normal3(unit_vector(-r.direction()));
     } 
+    if (!(rec.dpdu.squared_length() > 0)) return false;
     rec.dpdu.make_unit_vector();
+    if (reverseOrientation) rec.normal = -rec.normal;
     
     rec.u = u;
     rec.v = v;
@@ -444,9 +320,13 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
     rec.pError = vec3f(hitWidth, hitWidth, hitWidth);
     rec.p = r(rec.t);
     rec.geometric_normal = rec.normal;
-  rec.physical_shading_normal = normal3f(0);
+    rec.physical_shading_normal = normal3f(0);
     rec.shape = this;
     rec.alpha_miss = false;
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
+    rec.dndu = rec.dndv = normal3f(0);
+    rec.ComputeDifferentials(r);
     rec = (*ObjectToWorld)(rec);
 
     
@@ -470,4 +350,3 @@ Float curve::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float 
 Float curve::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
   return(0);
 }
-

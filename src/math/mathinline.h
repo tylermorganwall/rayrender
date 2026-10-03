@@ -836,7 +836,9 @@ inline std::array<point3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   // Compute $p=0$ attenuation at initial cylinder intersection
   Float cosGammaO = SafeSqrt(1 - h * h);
   Float cosTheta = cosThetaO * cosGammaO;
-  Float f = FrDielectric(cosTheta, 1.f, eta);
+  // At exact grazing the air-to-hair Fresnel limit is one. Avoid the legacy
+  // signed-cosine helper's 0/0 when its zero input flips the interface.
+  Float f = cosTheta == 0 ? Float(1) : FrDielectric(cosTheta, 1.f, eta);
   ap[0] = f;
   
   // Compute $p=1$ attenuation term
@@ -848,7 +850,12 @@ inline std::array<point3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   }
   
   // Compute attenuation term accounting for remaining orders of scattering
-  ap[pMax] = ap[pMax - 1] * f * T / (point3f(1.0f,1.0f,1.0f) + -T * f);
+  // At exact grazing incidence F=T=1 for white hair. No energy enters the
+  // cylinder, so the internal remainder is zero rather than the formal 0/0.
+  for (int channel = 0; channel < 3; ++channel) {
+    Float ratio = f * T[channel];
+    ap[pMax][channel] = ratio < 1 ? ap[pMax - 1][channel] * ratio / (1 - ratio) : 0;
+  }
   return(ap);
 }
 

@@ -19,7 +19,7 @@ inline Float luminance(point3f& color) {
 void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       std::vector<Rcpp::List > &shape_materials,
                       std::vector<unsigned char * > &obj_texture_data,
-                      std::vector<unsigned char * > &bump_texture_data,
+                      std::vector<std::shared_ptr<const HeightImage>> &bump_texture_data,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       std::shared_ptr<alpha_texture> alpha_default,
@@ -37,7 +37,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   //Need to ensure textures have full paths
   mesh_materials.reserve(total_materials+1);
   obj_texture_data.reserve(total_materials+1);
-  bump_texture_data.reserve(total_materials+1);
+  bump_texture_data.resize(total_materials+1);
   bump_textures.reserve(total_materials+1);
   alpha_textures.reserve(total_materials+1);
   material_is_light.reserve(total_materials+1);
@@ -157,9 +157,9 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         int nnb = 0;
         std::replace(bump_texname.begin(),bump_texname.end(), '\\', separator());
   
-        bump_texture_data[mat_num] = texCache.LookupChar(bump_texname, nxb, nyb, nnb, 1);
+        bump_texture_data[mat_num] = texCache.LookupHeight(bump_texname, nxb, nyb, nnb);
         // nn = 4;
-        texture_size += sizeof(unsigned char) * nxb * nyb * nnb;
+        texture_size += sizeof(Float) * nxb * nyb * nnb;
         if(nxb == 0 || nyb == 0 || nnb == 0) {
           throw std::runtime_error("Could not find " + bump_texname);
         }
@@ -169,7 +169,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         bump_intensity[mat_num] = bump_intensity_single;
         has_bump[mat_num] = true;
       } else {
-        bump_texture_data.push_back(nullptr);
+        bump_texture_data[mat_num] = nullptr;
         bump_intensity[mat_num] = 1.0f;
         has_bump[mat_num] = false;
       }
@@ -257,7 +257,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
 void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       std::vector<tinyobj::material_t > &materials,
                       std::vector<unsigned char * > &obj_texture_data,
-                      std::vector<unsigned char * > &bump_texture_data,
+                      std::vector<std::shared_ptr<const HeightImage>> &bump_texture_data,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::shared_ptr<alpha_texture> alpha_default,
@@ -269,7 +269,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       TextureCache &texCache, bool verbose, std::vector<bool>& material_is_light) {
   mesh_materials.reserve(materials.size()+1);
   obj_texture_data.reserve(materials.size()+1);
-  bump_texture_data.reserve(materials.size()+1);
+  bump_texture_data.resize(materials.size()+1);
   bump_textures.reserve(materials.size()+1);
   alpha_textures.reserve(materials.size()+1);
   material_is_light.reserve(materials.size()+1);
@@ -370,12 +370,9 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         std::replace(materials[i].bump_texname.begin(), materials[i].bump_texname.end(), '\\', separator());
         
         if(has_sep) {
-          bump_texture_data[i] = texCache.LookupChar(basedir + separator() + materials[i].bump_texname, 
-                                                     nx, ny, nn, 4);
-          nn = 4;
+          bump_texture_data[i] = texCache.LookupHeight(basedir + separator() + materials[i].bump_texname, nx, ny, nn);
         } else {
-          bump_texture_data[i] = texCache.LookupChar(materials[i].bump_texname, nx, ny, nn, 4);
-          nn = 4;
+          bump_texture_data[i] = texCache.LookupHeight(materials[i].bump_texname, nx, ny, nn);
         }
         texture_size += sizeof(unsigned char) * nx * ny * nn;
         if(nx == 0 || ny == 0 || nn == 0) {
@@ -391,7 +388,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
         has_bump[i] = true;
       } else {
-        bump_texture_data.push_back(nullptr);
+        bump_texture_data[i] = nullptr;
         bump_intensity[i] = 1.0f;
         has_bump[i] = false;
       }
@@ -690,7 +687,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
                            Rcpp::NumericMatrix texcoords,
                            Rcpp::NumericMatrix vertexcolors,
                            unsigned char * mesh_texture_data,
-                           unsigned char * bump_texture_data_,
+                           std::shared_ptr<const HeightImage> bump_texture_data_,
                            std::shared_ptr<alpha_texture> alpha,
                            std::shared_ptr<bump_texture> bump,
                            std::shared_ptr<material> default_material, 
@@ -1183,7 +1180,7 @@ size_t TriangleMesh::GetSize() {
     size += mesh_materials[i]->GetSize();
   }
   size += face_material_id.size()*sizeof(int);
-  size += sizeof(unsigned char *) * bump_texture_data.size();
+  size += sizeof(std::shared_ptr<const HeightImage>) * bump_texture_data.size();
   size += sizeof(unsigned char *) * obj_texture_data.size();
   size += sizeof(std::shared_ptr<alpha_texture>) * alpha_textures.size();
   size += sizeof(std::shared_ptr<bump_texture>)  * bump_textures.size();

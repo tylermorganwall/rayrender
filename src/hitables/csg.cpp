@@ -66,9 +66,16 @@ inline void populate_hit_record(const csg& object, const Ray& object_ray,
   rec.v = 0.5;
   rec.dpdu = 0.5;
   rec.dpdv = 0.5;
+  // This implicit surface currently has no differentiable UV chart.
+  rec.has_differentials = false;
+  rec.dpdx = rec.dpdy = vec3f(0);
+  rec.dudx = rec.dvdx = rec.dudy = rec.dvdy = 0;
+  rec.dndu = rec.dndv = normal3f(0);
   rec.mat_ptr = object.mat_ptr.get();
   rec.has_bump = false;
   rec.pError = vec3f(threshold,threshold,threshold);
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = rec.normal * (object.reverseOrientation ? -1 : 1);
   rec = (*object.ObjectToWorld)(rec);
   rec.normal *= object.reverseOrientation ? -1 : 1;
   rec.bump_normal *= object.reverseOrientation ? -1 : 1;

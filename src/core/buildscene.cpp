@@ -96,12 +96,13 @@ enum MaterialEnum {
   SPOTLIGHT = 8,
   HAIR = 9,
   MICROFACET_TRANSMISSION = 10,
-  OPENPBR = 11
+  OPENPBR = 11,
+  TRANSLUCENT = 12
 };
 
 void LoadTexture(std::string image_file, std::string alpha_file, std::string bump_file, std::string roughness_file,
                  std::vector<Float *> &textures, std::vector<unsigned char *> &alpha_textures,
-                 std::vector<unsigned char *> &bump_textures, std::vector<unsigned char *> &roughness_textures,
+                 std::vector<std::shared_ptr<const HeightImage>> &bump_textures, std::vector<unsigned char *> &roughness_textures,
                  int *nvec, int *nveca, int *nvecb, int *nvecr, NumericVector glossy_info, bool has_image,
                  bool has_alpha, bool has_bump, bool has_roughness, TextureCache &texCache,
                  bool raw_roughness = false) {
@@ -132,7 +133,7 @@ void LoadTexture(std::string image_file, std::string alpha_file, std::string bum
   }
   if (has_bump) {
     int nxb, nyb, nnb;
-    unsigned char *bump_data = texCache.LookupChar(bump_file, nxb, nyb, nnb, 1);
+    std::shared_ptr<const HeightImage> bump_data = texCache.LookupHeight(bump_file, nxb, nyb, nnb);
 
     nnb = 1;
     bump_textures.push_back(bump_data);
@@ -197,7 +198,7 @@ void LoadTexture(std::string image_file, std::string alpha_file, std::string bum
 
 std::shared_ptr<material>
 LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Float *> &textures,
-                   std::vector<unsigned char *> &alpha_textures, std::vector<unsigned char *> &bump_textures,
+                   std::vector<unsigned char *> &alpha_textures, std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
                    std::vector<unsigned char *> &roughness_textures, int *nvec, int *nveca, int *nvecb, int *nvecr,
                    bool &has_image, bool &has_alpha, bool &has_bump, bool &has_roughness, NumericVector tricolorinfo) {
   MaterialEnum type = static_cast<MaterialEnum>(as<int>(SingleMaterial["type"]));
@@ -243,6 +244,24 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
 
   std::shared_ptr<material> mat = nullptr;
   std::shared_ptr<texture> material_texture;
+  TextureGraphBuilder graph_builder(texCache);
+  std::shared_ptr<const TextureNode> color_graph, roughness_graph, roughness_graph_v;
+  bool graph_is_alpha = false;
+  if (SingleMaterial.containsElementNamed("texture_graphs")) {
+    List graphs = SingleMaterial["texture_graphs"];
+    if (graphs.containsElementNamed("color") && !Rf_isNull(graphs["color"]))
+      color_graph = graph_builder.Build(as<List>(graphs["color"]));
+    if (graphs.containsElementNamed("roughness") && !Rf_isNull(graphs["roughness"])) {
+      roughness_graph = graph_builder.Build(as<List>(graphs["roughness"]));
+      if (!roughness_graph->scalar) Rcpp::stop("Roughness requires a scalar texture.");
+    }
+    if (graphs.containsElementNamed("roughness_is_alpha"))
+      graph_is_alpha = as<bool>(graphs["roughness_is_alpha"]);
+    if (graphs.containsElementNamed("roughness_v") && !Rf_isNull(graphs["roughness_v"])) {
+      roughness_graph_v = graph_builder.Build(as<List>(graphs["roughness_v"]));
+      if (!roughness_graph_v->scalar) Rcpp::stop("Roughness requires a scalar texture.");
+    }
+  }
 
   bool is_tri_color = tricolorinfo.size() == 9;
 
@@ -252,7 +271,9 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
     roughness = std::make_shared<roughness_texture>(roughness_textures.back(), nvecr[0], nvecr[1], nvecr[2], offset[0], offset[1]);
   }
 
-  if (has_image) {
+  if (color_graph) {
+    material_texture = std::make_shared<graph_texture>(color_graph);
+  } else if (has_image) {
     const auto offset = material_texture_offset(SingleMaterial, "image");
     material_texture = std::make_shared<image_texture_float>(textures.back(), nvec[0], nvec[1], nvec[2],
                                                              image_repeat[0], image_repeat[1], 1.0, offset[0], offset[1]);
@@ -284,9 +305,24 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
 
   bool is_invisible;
   switch (type) {
+  case TRANSLUCENT: {
+    NumericVector color = SingleMaterial["transmittance"];
+    std::shared_ptr<texture> transmission = std::make_shared<constant_texture>(point3f(color[0], color[1], color[2]));
+    std::string file = as<std::string>(SingleMaterial["transmission_texture"]);
+    if (!file.empty()) {
+      int nx, ny, nn;
+      Float *data = texCache.LookupFloat(file, nx, ny, nn, 4);
+      NumericVector repeat = SingleMaterial["transmission_repeat"];
+      NumericVector offset = SingleMaterial["transmission_offset"];
+      transmission = std::make_shared<image_texture_float>(data, nx, ny, 4,
+          repeat[0], repeat[1], 1, offset[0], offset[1]);
+    }
+    mat = std::make_shared<translucent_material>(material_texture, transmission);
+    break;
+  }
   case OPENPBR: {
     mat = std::make_shared<OpenPBRMaterial>(as<List>(SingleMaterial["openpbr"]), material_texture, roughness,
-                                            has_roughness, point2f(image_repeat(0), image_repeat(1)));
+                                            has_roughness, point2f(image_repeat(0), image_repeat(1)), roughness_graph);
     break;
   }
   case DIFFUSE: {
@@ -326,6 +362,9 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
     }
     point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
     point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
     mat = std::make_shared<MicrofacetReflection>(material_texture, dist, eta, kappa);
     break;
   }
@@ -338,6 +377,9 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
     }
     point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
     point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
     mat = std::make_shared<glossy>(material_texture, dist, eta, kappa);
     break;
   }
@@ -368,6 +410,9 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
     }
     point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
     point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
     mat = std::make_shared<MicrofacetTransmission>(material_texture, dist, eta, kappa);
     break;
   }
@@ -381,7 +426,7 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
 
 std::shared_ptr<hitable>
 build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterclose, std::vector<Float *> &textures,
-            std::vector<unsigned char *> &alpha_textures, std::vector<unsigned char *> &bump_textures,
+            std::vector<unsigned char *> &alpha_textures, std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
             std::vector<unsigned char *> &roughness_textures, std::vector<std::shared_ptr<material>> *shared_materials,
             std::vector<std::shared_ptr<alpha_texture>> &alpha, std::vector<std::shared_ptr<bump_texture>> &bump,
             std::vector<std::shared_ptr<roughness_texture>> &roughness, int bvh_type, TransformCache &transformCache,
@@ -485,20 +530,38 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
 
     //`mat_idx` selects the index of the texture, in case there's a shared material.
     int mat_idx = texture_idx.back();
-    if (material_type == OPENPBR && as<double>(as<List>(SingleMaterial["openpbr"])["geometry_opacity"]) < 1) {
-      const Float opacity = as<Float>(as<List>(SingleMaterial["openpbr"])["geometry_opacity"]);
+    Float opacity = material_type == OPENPBR ?
+      as<Float>(as<List>(SingleMaterial["openpbr"])["geometry_opacity"]) : Float(1);
+    if (SingleMaterial.containsElementNamed("alpha_value")) {
+      Float shape_opacity = as<Float>(SingleMaterial["alpha_value"]);
+      if (!std::isfinite(shape_opacity) || shape_opacity < 0 || shape_opacity > 1)
+        Rcpp::stop("Shape alpha must be a finite value from zero to one.");
+      opacity *= shape_opacity;
+    }
+    if (has_alpha) {
+      const auto offset = material_texture_offset(SingleMaterial, "alpha");
+      NumericVector repeat = SingleMaterial.containsElementNamed("alpha_repeat") ?
+        as<NumericVector>(SingleMaterial["alpha_repeat"]) : NumericVector::create(1., 1.);
+      if (repeat.size() != 2 || !std::isfinite(repeat[0]) || !std::isfinite(repeat[1]) ||
+          repeat[0] <= 0 || repeat[1] <= 0)
+        Rcpp::stop("Alpha repeat must contain two positive finite values.");
+      auto mask = std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1],
+                                                nveca[2], offset[0], offset[1], repeat[0], repeat[1]);
+      mask->opacity = opacity;
+      alpha.push_back(mask);
+    } else if (opacity < 1) {
       alpha.push_back(std::make_shared<alpha_texture>(opacity));
       has_alpha = true;
-    } else if (has_alpha) {
-      const auto offset = material_texture_offset(SingleMaterial, "alpha");
-      alpha.push_back(std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1], nveca[2], offset[0], offset[1]));
     } else {
       alpha.push_back(nullptr);
     }
     if (has_bump) {
       const auto offset = material_texture_offset(SingleMaterial, "bump");
+      // Imported height maps may use a different UV scale from base color.
+      NumericVector bump_repeat = SingleMaterial.containsElementNamed("bump_repeat") ?
+        as<NumericVector>(SingleMaterial["bump_repeat"]) : image_repeat;
       bump.push_back(std::make_shared<bump_texture>(bump_textures[mat_idx], nvecb[0], nvecb[1], nvecb[2],
-                                                    bump_intensity, image_repeat[0], image_repeat[1], offset[0], offset[1]));
+                                                    bump_intensity, bump_repeat[0], bump_repeat[1], offset[0], offset[1]));
     } else {
       bump.push_back(nullptr);
     }
@@ -747,10 +810,22 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       n[1] = vec3f(normal_end(0), normal_end(1), normal_end(2));
 
       std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, n);
-      entry = std::make_shared<curve>(u_min, u_max, curve_data, shape_material, ObjToWorld, WorldToObj, is_flipped);
-      entry = finish_entry(entry);
-
-      list.add(entry);
+      int split_depth = shape_properties.containsElementNamed("split_depth") ?
+        as<int>(shape_properties["split_depth"]) : 3;
+      if (split_depth < 0 || split_depth > 10)
+        Rcpp::stop("Curve split_depth must be an integer from 0 to 10.");
+      // PBRT CPU CreateCurve: 2^splitdepth equal parameter intervals sharing
+      // the original control points, widths and ribbon normals. Only native
+      // BVH primitives expand; the user's R scene keeps one row per curve.
+      const int segments = 1 << split_depth;
+      for (int segment = 0; segment < segments; ++segment) {
+        Float start = lerp(Float(segment) / segments, u_min, u_max);
+        Float end = lerp(Float(segment + 1) / segments, u_min, u_max);
+        entry = std::make_shared<curve>(start, end, curve_data, shape_material,
+                                       ObjToWorld, WorldToObj, is_flipped);
+        entry = finish_entry(entry);
+        list.add(entry);
+      }
       break;
     }
     case CSG_OBJECT: {

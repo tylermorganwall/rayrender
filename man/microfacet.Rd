@@ -102,7 +102,7 @@ begins with value `gradient_color`.}
 \item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+\item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
 \item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a roughness map for the surface.}

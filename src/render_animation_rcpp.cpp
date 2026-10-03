@@ -321,7 +321,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   std::vector<Float* > textures;
   std::vector<unsigned char * > alpha_textures;
-  std::vector<unsigned char * > bump_textures;
+  std::vector<std::shared_ptr<const HeightImage>> bump_textures;
   std::vector<unsigned char * > roughness_textures;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;

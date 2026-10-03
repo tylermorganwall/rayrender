@@ -4,11 +4,31 @@
 #include "../math/mathinline.h"
 #include "../math/rng.h"
 #include "../math/vec2.h"
-#include "../materials/texture.h"
+#include "../materials/texturegraph.h"
 
 class MicrofacetDistribution {
 public:
   virtual ~MicrofacetDistribution() {}
+  std::shared_ptr<const TextureNode> roughness_graph;
+  std::shared_ptr<const TextureNode> roughness_graph_v;
+  bool graph_is_alpha = false;
+  point2f Resolve(const hit_record& hit) const;
+  virtual Float D(const vec3f &wh, point2f alphas) const = 0;
+  virtual vec3f Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const = 0;
+  // The visible-normal sampler is conditioned on the direction toward the
+  // previous vertex. Its density uses Smith G1, not the two-direction G term.
+  virtual Float Lambda(const vec3f &w, point2f alphas) const = 0;
+  Float VisibleNormalPdf(const vec3f &view, const vec3f &normal, point2f alphas) const {
+    if (view[2] == 0 || dot(view, normal) * view[2] <= 0) return 0;
+    return D(normal, alphas) * AbsDot(view, normal) /
+      (AbsCosTheta(view) * (1 + Lambda(view, alphas)));
+  }
+  Float SmithG(const vec3f &view, const vec3f &outgoing, point2f alphas) const {
+    return 1 / (1 + Lambda(view, alphas) + Lambda(outgoing, alphas));
+  }
+  Float Pdf(const vec3f &wo, const vec3f &wi, const vec3f &wh, point2f alphas) const {
+    return D(wh, alphas) * G(wo, wi, wh) * AbsDot(wo, wh) / AbsCosTheta(wo);
+  }
   virtual Float D(const vec3f &wh) const = 0;
   virtual Float Lambda(const vec3f &w) const = 0;
   virtual Float D(const vec3f &wh, Float u, Float v) const = 0;
@@ -64,6 +84,9 @@ public:
   }
   ~BeckmannDistribution() {}
   Float D(const vec3f &wh) const;
+  Float D(const vec3f &wh, point2f alphas) const override;
+  Float Lambda(const vec3f &w, point2f alphas) const override;
+  vec3f Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const override;
   Float GetAlpha(Float u, Float v) const;
   point2f GetAlphas(Float u, Float v) const;
   vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
@@ -97,6 +120,9 @@ public:
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
   }
   Float D(const vec3f &w) const;
+  Float D(const vec3f &wh, point2f alphas) const override;
+  Float Lambda(const vec3f &w, point2f alphas) const override;
+  vec3f Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const override;
   Float GetAlpha(Float u, Float v) const;
   point2f GetAlphas(Float u, Float v) const;
   vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;

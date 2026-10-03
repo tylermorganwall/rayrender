@@ -39,7 +39,7 @@ struct TriangleMesh {
                Rcpp::NumericMatrix texcoords,
                Rcpp::NumericMatrix vertexcolors,
                unsigned char * mesh_texture_data,
-               unsigned char * bump_texture_data,
+               std::shared_ptr<const HeightImage> bump_texture_data,
                std::shared_ptr<alpha_texture> alpha,
                std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
@@ -95,7 +95,7 @@ struct TriangleMesh {
   
   //Texture Data (from MTL)
   std::vector<unsigned char * > obj_texture_data;
-  std::vector<unsigned char * > bump_texture_data;
+  std::vector<std::shared_ptr<const HeightImage>> bump_texture_data;
   std::vector<std::shared_ptr<bump_texture> > bump_textures;
   std::vector<std::shared_ptr<alpha_texture> > alpha_textures;
   size_t texture_size;

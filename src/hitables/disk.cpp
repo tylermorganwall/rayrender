@@ -2,14 +2,16 @@
 #include "../utils/raylog.h"
 
 const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
-  
+
   Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().xyz.y / r2.direction().xyz.y;
   bool alpha_miss = false;
-  
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -19,8 +21,8 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, ra
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
-  
-  
+
+
   point3f p = r2(t);
   p.e[1] = 0;
 
@@ -31,52 +33,53 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, ra
     if(alpha_mask->value(u, v, rec.p) < rng.unif_rand()) {
       alpha_miss = true;
     }
-    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
-  } else {
-    rec.normal = normal3f(0,1,0);  
   }
+  // Coverage does not change the oriented geometric interface.
+  rec.normal = normal3f(0,1,0);
   rec.p = p;
-  
+
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
   rec.v = v;
 
   //Interaction information
-  rec.dpdu = vec3f(1, 0, 0);
-  rec.dpdv = vec3f(0, 0, 1);
+  rec.dpdu = vec3f(-2*radius, 0, 0);
+  rec.dpdv = vec3f(0, 0, 2*radius);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
-  
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-    rec.bump_normal.make_unit_vector();
 
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
   rec.pError = vec3f(0,0,0);
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
+  rec.normal *= flip_normal ? -1 : 1;
+  rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+  rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+  rec.bump_normal *= flip_normal ? -1 : 1;
   rec.geometric_normal = rec.normal;
-  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
-  
+
   return(true);
 }
 
 
 const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
-  
+
   Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().xyz.y / r2.direction().xyz.y;
   bool alpha_miss = false;
-  
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -86,8 +89,8 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
   if(radHit2 >= radius * radius || radHit2 <= inner_radius * inner_radius) {
     return(false);
   }
-  
-  
+
+
   point3f p = r2(t);
   p.e[1] = 0;
 
@@ -98,38 +101,38 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
     if(alpha_mask->value(u, v, rec.p) < sampler->Get1D()) {
       alpha_miss = true;
     }
-    rec.normal =  dot(r2.direction(),normal3f(0,1,0)) < 0 ? normal3f(0,1,0) : normal3f(0,-1,0);
-  } else {
-    rec.normal = normal3f(0,1,0);  
   }
+  // Coverage does not change the oriented geometric interface.
+  rec.normal = normal3f(0,1,0);
   rec.p = p;
 
   rec.t = t;
   rec.mat_ptr = mat_ptr.get();
   rec.u = u;
   rec.v = v;
-  
+
   //Interaction information
-  rec.dpdu = vec3f(1, 0, 0);
-  rec.dpdv = vec3f(0, 0, 1);
+  rec.dpdu = vec3f(-2*radius, 0, 0);
+  rec.dpdv = vec3f(0, 0, 2*radius);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
-  
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-    rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-    rec.bump_normal.make_unit_vector();
+
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
   rec.pError = vec3f(0,0,0);
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
-  if(!alpha_mask) {
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
-  }
+  rec.normal *= flip_normal ? -1 : 1;
+  rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+  rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+  rec.bump_normal *= flip_normal ? -1 : 1;
   rec.geometric_normal = rec.normal;
-  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
-  
+
   return(true);
 }
 
@@ -137,11 +140,11 @@ const bool disk::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sa
 bool disk::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
-  
+
   Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().xyz.y / r2.direction().xyz.y;
-  
+
   if(t < t_min || t > t_max) {
     return(false);
   }
@@ -158,11 +161,11 @@ bool disk::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
 bool disk::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Disk");
-  
+
   Ray r2 = (*WorldToObject)(r);
   // First we intersect with the plane containing the disk
   Float t = -r2.origin().xyz.y / r2.direction().xyz.y;
-  
+
   if(t < t_min || t > t_max) {
     return(false);
   }

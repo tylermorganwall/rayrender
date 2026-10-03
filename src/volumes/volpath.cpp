@@ -482,12 +482,14 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
 
     if (priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
 
@@ -498,7 +500,8 @@ Float primary_transparency(const Ray &input, VolumePathState state, hitable *wor
     if (h.mat_ptr && !h.infinite_area_hit)
       h.mat_ptr->emitted(ray, h, h.u, h.v, h.p, invisible);
     if (h.alpha_miss || invisible) {
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     return h.infinite_area_hit ? Float(tr.Average()) : 0;
@@ -790,17 +793,20 @@ RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *sur
     // connection. Boundary crossings update membership before continuing straight.
     if (priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
       // The next segment resolves pending haze before any selection change.
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     if (h.alpha_miss) {
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     flush_haze();
@@ -898,7 +904,8 @@ RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *su
       if (h.mat_ptr) h.mat_ptr->emitted(ray, h, h.u, h.v, h.p, invisible);
       if (!h.alpha_miss && !invisible) return RGB(0);
     }
-    ray = spawn(h, ray.d, ray.time(), state);
+    { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
   }
   const double denominator = rp.Average() * sample.pmf;
   return !cancelled(cancel) && denominator > 0
@@ -1409,7 +1416,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     const auto *pbr = dynamic_cast<const OpenPBRMaterial *>(h.mat_ptr);
     if (pbr && priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       subsurface_flight.reset();
       continue;
     }
@@ -1418,11 +1426,13 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     // without spending a bounce or changing the last real scattering proposal.
     if (h.medium_boundary && !h.medium_boundary->keep_surface) {
       state.Cross(h, ray.d);
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     if (h.alpha_miss) {
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
     flush_haze();
@@ -1438,7 +1448,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     }
     point3f le = h.mat_ptr ? h.mat_ptr->emitted(emission_ray, h, h.u, h.v, h.p, invisible) : point3f(0);
     if (invisible && !any_diffuse) {
-      ray = spawn(h, ray.d, ray.time(), state);
+      { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
       continue;
     }
 
@@ -1503,7 +1514,9 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         }
       }
       specular = sample.specular;
-      ray = spawn(h, unit_vector(sample.direction), ray.time(), state);
+      { Ray next=spawn(h,unit_vector(sample.direction),ray.time(),state);
+        if(sample.specular) PropagateRayDifferentials(ray,h,next,sample.transmission,std::sqrt(sample.eta_squared));
+        ray=next; }
       reconcile_surface_origin(scene, h, ray, state, cancel);
       subsurface_flight.reset();
       lighting_origin = ray.o;
@@ -1542,7 +1555,8 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       if (interface.Hidden()) {
         if (diffusion_transmitted_state) state = *diffusion_transmitted_state;
         else state.CrossDielectric(h, ray.d);
-        ray = spawn(h, ray.d, ray.time(), state);
+        { Ray next=spawn(h,ray.d,ray.time(),state);
+        PropagateRayDifferentials(ray,h,next,false,1,true); ray=next; }
         reconcile_surface_origin(scene, h, ray, state, cancel);
         if (state.Active() && state.Active()->boundary->medium->subsurface_diffusion)
           diffusion_entry = h;
@@ -1577,7 +1591,9 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         any_diffuse = true;
       }
       specular = sample.specular;
-      ray = spawn(h, sample.wi, ray.time(), state);
+      { Ray next=spawn(h,sample.wi,ray.time(),state);
+        if(sample.specular) PropagateRayDifferentials(ray,h,next,sample.transmission,Float(eta));
+        ray=next; }
       reconcile_surface_origin(scene, h, ray, state, cancel);
       if (state.Active() && state.Active()->boundary->medium->subsurface_diffusion)
         diffusion_entry = h;
@@ -1636,7 +1652,10 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         eta_scale *= eta2;
       }
       cross_if_transmitted(state, h, ray.d, s.specular_ray.d);
-      ray = spawn(h, unit_vector(s.specular_ray.d), ray.time(), state);
+      { Ray next=spawn(h,unit_vector(s.specular_ray.d),ray.time(),state);
+        if(h.mat_ptr->is_delta_specular() || s.is_passthrough)
+          PropagateRayDifferentials(ray,shading_hit,next,s.is_transmission,s.eta,s.is_passthrough);
+        ray=next; }
       if (!s.is_passthrough)
         specular = true;
     } else {

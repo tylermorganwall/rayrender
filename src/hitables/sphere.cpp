@@ -15,6 +15,8 @@ bool boundary_sphere_roots(const Ray& r, Float radius, EFloat& t_near, EFloat& t
 // #include "RcppThread.h"
 
 const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   vec3f oErr, dErr;
@@ -74,28 +76,24 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
-    Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.xyz.x * invZRadius;
-    Float sinPhi = rec.p.xyz.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
+    SetEllipsoidDerivatives(rec,vec3f(radius));
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -109,34 +107,30 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
-    Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.xyz.x * invZRadius;
-    Float sinPhi = rec.p.xyz.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
-    
+
     if(alpha_mask) {
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    SetEllipsoidDerivatives(rec,vec3f(radius));
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -148,6 +142,8 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
 
 
 const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Sphere");
   
@@ -202,29 +198,25 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
-    Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.xyz.x * invZRadius;
-    Float sinPhi = rec.p.xyz.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
+    SetEllipsoidDerivatives(rec,vec3f(radius));
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     
@@ -238,34 +230,30 @@ const bool sphere::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, 
     rec.normal = convert_to_normal3(rec.p) / radius;
     
     //Interaction information
-    Float zRadius = std::sqrt(rec.p.xyz.x * rec.p.xyz.x  + rec.p.xyz.z  * rec.p.xyz.z );
-    Float invZRadius = 1 / zRadius;
-    Float cosPhi = rec.p.xyz.x * invZRadius;
-    Float sinPhi = rec.p.xyz.z * invZRadius;
-    Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
-    rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
-    rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     get_sphere_uv(rec.normal, rec.u, rec.v);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal +  convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
-    
+
     if(alpha_mask) {
       rec.normal = -rec.normal;
       rec.bump_normal = -rec.bump_normal;
     }
+    SetEllipsoidDerivatives(rec,vec3f(radius));
     rec.pError = convert_to_vec3(gamma(5) * Abs(rec.p));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
     

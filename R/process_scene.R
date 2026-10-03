@@ -156,6 +156,31 @@ process_scene = function(
     }
   }
 
+  # Independent RGB transmission images use the same array orientation as color.
+  for (i in seq_len(nrow(scene))) {
+    input = materials[[i]]$transmission_texture
+    if (is.null(input)) {
+      next
+    }
+    if (is.array(input)) {
+      if (length(dim(input)) != 3L || !dim(input)[3] %in% c(3L, 4L)) {
+        stop("`transmission_texture` must be an RGB or RGBA array.")
+      }
+      file = tempfile("transmissiontemp", fileext = ".png")
+      png::writePNG(
+        fliplr(aperm(input[,, 1:3, drop = FALSE], c(2, 1, 3))),
+        file
+      )
+      materials[[i]]$transmission_texture = file
+    } else if (nzchar(input)) {
+      input = path.expand(input)
+      if (!file.exists(input)) {
+        stop("Cannot find transmission texture: ", input)
+      }
+      materials[[i]]$transmission_texture = input
+    }
+  }
+
   #displacement texture handler
   for (i in seq_len(nrow(scene))) {
     if (!scene$shape[[i]] %in% c(6, 13, 14)) {
@@ -204,7 +229,7 @@ process_scene = function(
     bump_tex_bool = is.array(bump_input)
     bump_is_filename = is.character(bump_input) && nchar(bump_input) > 0
     if (bump_tex_bool) {
-      bump_file = tempfile("bumptemp", fileext = ".png")
+      bump_file = tempfile("bumptemp", fileext = ".exr")
       bump_dims = dim(bump_input)
       if (length(bump_dims) == 2) {
         temp_array = array(0, dim = c(bump_dims, 3))
@@ -215,15 +240,25 @@ process_scene = function(
       } else {
         temp_array = bump_input
       }
+      # EXR writers require both image axes. Repeating a singleton axis keeps
+      # its height constant, including negative and sub-byte height values.
+      if (bump_dims[1] == 1) {
+        temp_array = temp_array[c(1, 1), , , drop = FALSE]
+      }
+      if (bump_dims[2] == 1) {
+        temp_array = temp_array[, c(1, 1), , drop = FALSE]
+      }
       if (bump_dims[3] == 4) {
-        png::writePNG(
+        rayimage::ray_write_image(
           fliplr(aperm(temp_array[,, 1:3], c(2, 1, 3))),
-          bump_file
+          bump_file,
+          write_linear = TRUE
         )
       } else if (bump_dims[3] == 3) {
-        png::writePNG(
+        rayimage::ray_write_image(
           fliplr(aperm(temp_array, c(2, 1, 3))),
-          bump_file
+          bump_file,
+          write_linear = TRUE
         )
       }
       materials[[i]]$bump_texture = bump_file

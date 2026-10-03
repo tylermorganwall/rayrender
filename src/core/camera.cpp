@@ -3,6 +3,60 @@
 #include "../math/quaternion.h"
 #include <cmath>
 
+Ray RayCamera::get_ray_differential(Float s, Float t, point3f lens, Float time, Float ds, Float dt,
+                                    Float scale) {
+  Ray ray = get_ray(s, t, lens, time);
+  const Ray x = get_ray(s + ds, t, lens, time), y = get_ray(s, t + dt, lens, time);
+  ray.rx_origin = x.o;
+  ray.ry_origin = y.o;
+  ray.rx_direction = x.d;
+  ray.ry_direction = y.d;
+  ray.has_differentials = true;
+  ray.ScaleDifferentials(scale);
+  for (int i = 0; i < 3; ++i) {
+    if (!std::isfinite(ray.rx_origin[i]) || !std::isfinite(ray.ry_origin[i]) ||
+        !std::isfinite(ray.rx_direction[i]) || !std::isfinite(ray.ry_direction[i]))
+      ray.has_differentials = false;
+  }
+  return ray;
+}
+
+Float RayCamera::GenerateRayDifferential(const CameraSample &sample, Ray *ray, Float ds, Float dt,
+                                         Float scale) const {
+  const Float weight = GenerateRay(sample, ray);
+  ray->has_differentials = false;
+  if (!(weight > 0))
+    return weight;
+  // Use the same lens/time samples so derivatives describe the pixel footprint,
+  // not changes in aperture or shutter position. Retry the opposite offset if
+  // an adjacent realistic-camera ray is blocked by the lens system.
+  Ray adjacent[2];
+  for (int axis = 0; axis < 2; ++axis) {
+    bool valid = false;
+    for (Float sign : {Float(1), Float(-1)}) {
+      auto shifted = sample;
+      shifted.pFilm.e[axis] += sign * (axis == 0 ? ds : dt);
+      if (!(GenerateRay(shifted, &adjacent[axis]) > 0))
+        continue;
+      if (sign < 0) {
+        adjacent[axis].o = ray->o + (ray->o - adjacent[axis].o);
+        adjacent[axis].d = ray->d + (ray->d - adjacent[axis].d);
+      }
+      valid = true;
+      break;
+    }
+    if (!valid)
+      return weight;
+  }
+  ray->rx_origin = adjacent[0].o;
+  ray->ry_origin = adjacent[1].o;
+  ray->rx_direction = adjacent[0].d;
+  ray->ry_direction = adjacent[1].d;
+  ray->has_differentials = true;
+  ray->ScaleDifferentials(scale);
+  return weight;
+}
+
 #ifdef NOT_CRAN
 #include <testthat.h>
 #endif
@@ -1500,6 +1554,42 @@ context("Camera shutter speed temporal mapping") {
     expect_true(ray.time() == Approx(3.f));
     expect_true(ray.origin().xyz.x == Approx(2.5f).epsilon(0.01));
     expect_true(same_exposure_weight == Approx(full_weight));
+    Ray footprint;
+    const CameraSample sample(point2f(.5,.5),point2f(.5,.5),1);
+    const Float differential_weight=cam.GenerateRayDifferential(sample,&footprint,.001,.001);
+    expect_true(differential_weight==Approx(same_exposure_weight));
+    expect_true(footprint.has_differentials);
+    Ray adjacent;
+    cam.GenerateRay(CameraSample(point2f(.501, .5), sample.pLens, sample.time), &adjacent);
+    expect_true((footprint.rx_direction - adjacent.d).squared_length() < 1e-10);
+    expect_true((footprint.rx_origin - adjacent.o).squared_length() < 1e-10);
+  }
+}
+#endif
+
+#ifdef NOT_CRAN
+context("Camera ray differentials") {
+  test_that("[all pinhole camera projections use shared lens and time samples]") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam :
+         {static_cast<RayCamera *>(&perspective), static_cast<RayCamera *>(&orthographic),
+          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      const point3f lens(.2, .3, 0);
+      Ray ray = cam->get_ray_differential(.4, .6, lens, .7, .001, .002, .5);
+      Ray center = cam->get_ray(.4, .6, lens, .7);
+      Ray x = cam->get_ray(.401, .6, lens, .7), y = cam->get_ray(.4, .602, lens, .7);
+      expect_true(ray.has_differentials);
+      expect_true(ray.time() == center.time());
+      expect_true((ray.o - center.o).squared_length() == 0);
+      expect_true((ray.d - center.d).squared_length() == 0);
+      expect_true((ray.rx_direction - (center.d + (x.d - center.d) * Float(.5))).squared_length() <
+                  1e-10);
+      expect_true((ray.ry_origin - (center.o + (y.o - center.o) * Float(.5))).squared_length() <
+                  1e-10);
+    }
   }
 }
 #endif

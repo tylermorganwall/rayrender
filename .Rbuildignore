@@ -62,3 +62,5 @@
 ^tools/openpbr($|/)
 ^tools/pbrt($|/)
 ^pbrt-v4-tests($|/)
+^vignettes/figures/composable-textures/.*-[0-9][0-9]\.png$
+^vignettes/figures/composable-textures/.*-timings\.csv$

@@ -14,31 +14,32 @@ class random_gen;
 class hitable_list;
 class alpha_texture;
 class bump_texture;
+struct HeightImage;
 class roughness_texture;
 
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
 
 std::shared_ptr<hitable> build_scene(List& scene,
                                      IntegerVector& shape,
-                                     Float shutteropen, 
+                                     Float shutteropen,
                                      Float shutterclose,
-                                     std::vector<Float* >& textures, 
-                                     std::vector<unsigned char * >& alpha_textures, 
-                                     std::vector<unsigned char * >& bump_textures, 
-                                     std::vector<unsigned char * >& roughness_textures,  
-                                     std::vector<std::shared_ptr<material> >* shared_materials, 
+                                     std::vector<Float* >& textures,
+                                     std::vector<unsigned char * >& alpha_textures,
+                                     std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
+                                     std::vector<unsigned char * >& roughness_textures,
+                                     std::vector<std::shared_ptr<material> >* shared_materials,
                                      std::vector<std::shared_ptr<alpha_texture> >& alpha,
                                      std::vector<std::shared_ptr<bump_texture> >& bump,
                                      std::vector<std::shared_ptr<roughness_texture> >& roughness,
                                      int bvh_type,
-                                     TransformCache& transformCache, 
+                                     TransformCache& transformCache,
                                      TextureCache& texCache,
                                      hitable_list& imp_sample_objects,
                                      std::vector<std::shared_ptr<hitable> >& instanced_objects,
                                      std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
                                      std::vector<int>& texture_idx,
                                      bool verbose,
-                                     random_gen& rng); 
+                                     random_gen& rng);
 
 
 #endif

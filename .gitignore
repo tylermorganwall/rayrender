@@ -52,3 +52,7 @@ pbrt-v4-tests/
 tools/pbrt/suite-preview/
 tools/pbrt/disney-preview/
 tools/pbrt/comparisons/
+dev/
+tools/openpbr/
+tools/pbrt
+.agents/skills/

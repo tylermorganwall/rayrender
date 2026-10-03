@@ -450,7 +450,7 @@ test_that("Disney texture imports retain base color, raw roughness, and bump amp
   expect_true(file.exists(material$image))
   roughness = png::readPNG(material$roughness_texture)
   expect_equal(as.numeric(roughness), c(.2, .8, .2, .8), tolerance = 1 / 255)
-  expect_equal(material$bump_intensity, .02, tolerance = 1e-4)
+  expect_equal(material$bump_intensity, 1, tolerance = 1e-4)
   expect_true(file.exists(material$bump_texture))
   expect_true(any(grepl(
     "roughness-map UV repeat",
@@ -568,9 +568,13 @@ test_that("PBRT displacement preserves signed bump amplitude", {
     'Shape "trianglemesh" "point3 P" [0 0 0 1 0 0 0 1 0] "integer indices" [0 1 2]'
   )))
   material = imported$scene$material[[1]]
-  expect_equal(material$bump_intensity, .05, tolerance = 1e-6)
+  expect_equal(material$bump_intensity, 1, tolerance = 1e-6)
   expect_true(file.exists(material$bump_texture))
-  expect_equal(range(png::readPNG(material$bump_texture)), c(0, 1))
+  expect_equal(
+    range(rayimage::ray_read_image(material$bump_texture)[,, 1:3]),
+    c(-.05, 0),
+    tolerance = 1e-6
+  )
 })
 
 test_that("PBRT PLY displacement moves the mesh along its normals", {
@@ -1353,4 +1357,26 @@ test_that("PBRT retains independent native offsets for color, bump, and roughnes
   expect_equal(material$texture_offsets$bump, c(-.3, .4))
   expect_equal(material$texture_offsets$roughness, c(.5, -.6))
   expect_false(any(grepl("udelta|vdelta", result$diagnostics$message)))
+})
+
+test_that("PBRT bump height retains independent mapping and constant displacement", {
+  image = tempfile(fileext = ".png")
+  png::writePNG(matrix(c(0, 1, 1, 0), 2, 2), image)
+  imported = read_pbrt(pbrt_test_file(c(
+    'WorldBegin',
+    sprintf(
+      'Texture "height" "float" "imagemap" "string filename" "%s" "float uscale" 2 "float vscale" 3',
+      image
+    ),
+    'Material "diffuse" "texture displacement" "height"',
+    'Shape "trianglemesh" "point3 P" [0 0 0 1 0 0 0 1 0] "integer indices" [0 1 2]',
+    'Material "diffuse" "float displacement" .000123',
+    'Translate 3 0 0 Shape "trianglemesh" "point3 P" [0 0 0 1 0 0 0 1 0] "integer indices" [0 1 2]'
+  )))
+  first = imported$scene$material[[1]]
+  expect_equal(first$bump_repeat, c(2, 3))
+  expect_equal(first$bump_intensity, 1)
+  second = imported$scene$material[[2]]
+  height = rayimage::ray_read_image(second$bump_texture)[,, 1:3]
+  expect_lt(max(abs(height - .000123)), 1e-10)
 })

@@ -25,11 +25,18 @@
 #include <filesystem>
 namespace fs = std::filesystem;
 
+struct DecodedTextureImage {
+  int width = 0, height = 0;
+  std::vector<point3f> pixels;
+};
 
 class TextureCache {
 public:
   TextureCache() = default;
   ~TextureCache();
+  std::shared_ptr<const DecodedTextureImage> LookupGraphImage(const std::string& filename,
+                                                            const std::string& encoding);
+  std::shared_ptr<const HeightImage> LookupHeight(const std::string& filename, int& nx, int& ny, int& nn);
   
   Float* LookupFloat(const std::string& filename,
                      int& nx, int& ny, int& nn, int desired_channels = 3);
@@ -38,6 +45,8 @@ public:
                              const std::string& variant = "");
 
 private:
+  std::unordered_map<std::string, std::shared_ptr<const DecodedTextureImage>> graphImages;
+  std::unordered_map<std::string, std::shared_ptr<const HeightImage>> heightImages;
   std::vector<float*> rawDataFloat;
   std::vector<unsigned char *> rawDataChar;
   

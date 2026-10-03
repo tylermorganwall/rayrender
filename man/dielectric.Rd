@@ -43,7 +43,7 @@ this will help with the convergence of the image.}
 \item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+\item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
 \item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for the bump texture, applied before wrapping.}
 }

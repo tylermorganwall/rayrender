@@ -50,13 +50,16 @@
 #' @param image_repeat Default `1`. One or two positive UV repeat factors.
 #' @param image_offset Default `c(0, 0)`. Finite length-two UV translation applied after repeat, before wrapping, to base-color, bump, and roughness textures.
 #' @param bump_texture Default `""`. Height-map filename, matrix, or array.
-#' @param bump_intensity Default `1`. Finite height-map strength in world units.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param roughness_texture Default `""`. Scalar image replacing specular_roughness, without gamma decoding.
 #' @param importance_sample Default `TRUE`. Include emissive surfaces in direct-light sampling.
 #'
 #' @details
 #' Colors use rayrender's color convention (numeric RGB triples or R color names).
 #' Numeric colors are passed directly to the linear BSDF, as for diffuse().
+#' `base_color` and `specular_roughness` also accept composable [textures].
+#' Each graph has its own coordinate mapping; legacy image arguments cannot
+#' be combined with a graph for the same input.
 #' subsurface_radius_scale is a numeric RGB distance multiplier, not a color.
 #' Geometry vectors default to the surface normal and UV tangent. Explicit vectors
 #' are in world coordinates. The coat uses the base frame unless overridden.
@@ -142,6 +145,39 @@ openpbr = function(
   roughness_texture = "",
   importance_sample = TRUE
 ) {
+  if (inherits(base_color, "ray_texture") && base_color$op == "constant") {
+    base_color = rep(base_color$value, length.out = 3L)
+  }
+  if (
+    inherits(specular_roughness, "ray_texture") &&
+      specular_roughness$op == "constant"
+  ) {
+    specular_roughness = texture_scalar(specular_roughness)$value
+  }
+  color_graph = if (inherits(base_color, "ray_texture")) base_color else NULL
+  roughness_graph = if (inherits(specular_roughness, "ray_texture")) {
+    texture_scalar(specular_roughness)
+  } else {
+    NULL
+  }
+  if (!is.null(color_graph)) {
+    if (!identical(image_texture, "")) {
+      stop(
+        "Choose a base-color graph or image_texture, not both.",
+        call. = FALSE
+      )
+    }
+    base_color = c(1, 1, 1)
+  }
+  if (!is.null(roughness_graph)) {
+    if (!identical(roughness_texture, "")) {
+      stop(
+        "Choose a roughness graph or roughness_texture, not both.",
+        call. = FALSE
+      )
+    }
+    specular_roughness = 0.3
+  }
   parameters = as.list(environment())[c(
     "base_weight",
     "base_color",
@@ -189,6 +225,12 @@ openpbr = function(
   # Validate the complete descriptor before allocating textures or attaching an interior.
   for (name in names(parameters)) {
     value = parameters[[name]]
+    if (inherits(value, "ray_texture")) {
+      stop(
+        sprintf("Texture graphs are not supported for `%s` yet.", name),
+        call. = FALSE
+      )
+    }
     if (name == "geometry_thin_walled") {
       if (
         !is.logical(value) ||
@@ -351,6 +393,10 @@ openpbr = function(
     importance_sample = importance_sample && emission_luminance > 0
   )
   out[[1]]$type = get_material_enum("openpbr")
+  out[[1]]$texture_graphs = list(
+    color = color_graph,
+    roughness = roughness_graph
+  )
   out[[1]]$openpbr = parameters
   out[[1]]$roughness_texture = check_image_texture(roughness_texture)
   if (owns_interior) {

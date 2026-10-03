@@ -1,10 +1,10 @@
-# Development version
+# rayrender 0.42.3.9000
 
 * Diffuse materials now always use the analytic normal-mapping model of
   Schuessler et al. (2017), including imported diffuse face materials and vertex
   colors. Removed the legacy diffuse bump implementation and the beta
   `normal_mapping` argument; ordinary `diffuse(bump_texture = ...)` uses the
-  updated model. Constant bump maps preserve smooth normals and UV scale.
+  updated model. Zero-height bump maps preserve smooth normals and UV scale.
 * Replaced the approximate Oren–Nayar BRDF with energy-preserving Oren–Nayar
   (EON). `sigma` maps to roughness as `min(sigma / 90, 1)`; zero remains
   Lambertian. EON includes color-dependent multiple scattering. Nonfinite,
@@ -14,9 +14,21 @@
 * Fixed the RNG triangle consistent-normal heuristic's dependence on ray length
   by matching the Sampler overload's normalized local direction.
 
-# rayrender 0.42.3.9000
-
 ## New features
+
+- `texture_mix()`, `texture_direction_mix()`, `texture_noise()`, `texture_checker()`,
+  `texture_gradient()`, and `texture_image()` build composable scalar/color textures
+  with independent UV, object, or world mappings. `diffuse()` and `microfacet()`
+  accept color graphs; `microfacet()` and `openpbr()` accept roughness graphs, and
+  `openpbr()` accepts base-color graphs. Images support explicit linear/sRGB decoding.
+- `read_pbrt()` Preserves `directionmix` textures on supported color and roughness
+  inputs, including nested image/constant inputs and anisotropic glass roughness.
+  PBRT roughness textures are remapped after evaluation instead of replaced by a constant.
+
+- `translucent()` Adds thin-sheet diffuse reflection and transmission with
+  independent colors and textures, without a volumetric walk. `read_pbrt()`
+  imports diffuse-transmission materials instead of replacing them with opaque
+  surfaces.
 
 - `read_pbrt()` Converts legacy PBRT Disney materials to OpenPBR, retaining
   base-color, bump, and roughness textures and mapping metallic, anisotropic
@@ -76,6 +88,54 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- Overall: Corrects bump-map slopes to use UV units and signed texture-repeat
+  scaling with PBRT-style filtered height differences and curved-surface normal
+  derivatives. Camera ray differentials propagate through transforms, reflection,
+  refraction, and priority-skipped interfaces to select bump footprints; diffuse
+  and volume scattering clear them. Height maps preserve floating-point precision
+  and signed values, including independently scaled PBRT bump maps. Existing bump
+  intensities may need adjustment.
+
+- Overall: Mirrored spheres, ellipsoids, cylinders, and disks combine transform
+  handedness with explicit normal reversal, correcting refraction through imported
+  PBRT glass. Cylinder cap normals are transformed once and texture normals follow
+  the same orientation.
+- `ellipsoid()` Applies the axis scaling to normals in scalar-vector builds.
+  `cylinder()` Correctly intersects cap-only axial rays and rays leaving a cap
+  from inside.
+- `microfacet()` Corrects rough-glass radiance scaling, Fresnel probabilities,
+  visible-normal PDFs, and reflection/transmission evaluation. Index-matched
+  transmission passes straight through without an undefined half-vector.
+
+- `texture_noise()` Keeps its noise field continuous across zero and negative
+  coordinate boundaries, removing seams from 3D procedural patterns.
+
+- `read_pbrt()` Preserves shape alpha textures and fractional opacity, including
+  independent UV scale and offset, so plant and flower meshes retain their cutout
+  silhouettes instead of rendering the whole polygon.
+  Rays passing through a cutout also continue through the remaining geometry
+  inside an object instance.
+
+- `hair()` Corrects directional sampling, PDF evaluation and projected scattering,
+  preventing extreme noise and brightness errors. Hair now provides a bounded
+  albedo guide to the denoiser and handles exactly grazing directions.
+
+- `bezier_curve()` Caches curve segments and avoids matrix inversion for ray
+  intersections. Correctly retains the nearest hit and respects ray intervals.
+  Adds `split_depth = 3L`, matching PBRT CPU subdivision; use zero to save memory
+  and setup time at the cost of more intersection work.
+
+- `read_pbrt()` Preserves curve subdivision and ribbon-chain endpoint normals.
+  Imported scenes start Russian roulette at bounce 5 to avoid tracing negligible
+  contributions through high-depth scenes.
+
+- `read_pbrt()` Preserves Film ISO exposure and uses PBRT's smooth default for
+  coated diffuse materials, correcting underexposure and overly dull coatings.
+
+- Meshes honor reversed orientation and mirrored transforms in geometric and
+  shading normals and area-light selection. PBRT `ReverseOrientation` now
+  points triangle emitters toward the intended side, fixing dark city windows.
 
 - Texture-capable materials accept `image_offset = c(0, 0)` for native UV
   translation of their image maps. `read_pbrt()` carries `udelta` and `vdelta`
@@ -330,7 +390,16 @@
   longer trace unused transparency or wait for the 64-sample alpha convergence
   minimum. Transparent renders retain their coverage estimator and minimum.
 
+## Documentation
+
+- Overall: Adds a composable-texture vignette with 26 rendered examples,
+  reproducible recipes, coordinate and image-mapping comparisons, and current
+  material-input and filtering limitations.
+
 ## Other
+
+- Overall: Speeds up scene-row assembly, including large PBRT imports, while
+  preserving descriptor data, names, metadata, and type compatibility checks.
 
 - Overall: Obtains GLM and the OpenPBR BSDF headers from the separate
   `glmheaders` and `openpbr` packages through `LinkingTo`, replacing bundled

@@ -37,7 +37,8 @@ class OpenPBRMaterial final : public dielectric {
 public:
   OpenPBRMaterial(const Rcpp::List& parameters, std::shared_ptr<texture> base,
                   std::shared_ptr<roughness_texture> roughness, bool has_roughness,
-                  point2f texture_repeat = point2f(1, 1));
+                  point2f texture_repeat = point2f(1, 1),
+                  std::shared_ptr<const TextureNode> roughness_graph = nullptr);
   ~OpenPBRMaterial() override;
   OpenPBRInteraction Prepare(const Ray&, const hit_record&, Float exterior_ior = 1) const;
   bool is_dielectric() const override;

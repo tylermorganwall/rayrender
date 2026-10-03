@@ -320,14 +320,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         hlist.volume_scene->atmosphere->DeferredHaze() ? -std::numeric_limits<Float>::infinity() : 0;
   };
 
-  auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, sample_method,
+  auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, ns, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
                              &render_cancelled, &render_pool, &display, &report_diffusion_interior] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler,
-                   nx, ny, s, sample_method,
+                   nx, ny, ns, s, sample_method,
                    &rngs, fov, &samplers,
                    cam, &world, &hlist,
                    clampval, sample_minimum, max_depth, roulette_active, integrator_type,
@@ -352,11 +352,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          Float v = (Float(j) + u2.xy.y) / Float(ny);
 
                          if(fov >= 0) {
-                           r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
-                                            samplers[index]->Get1D());
+                           r = cam->get_ray_differential(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
+                                            samplers[index]->Get1D(), 1.f/nx, 1.f/ny, std::max(Float(.125), Float(1/std::sqrt(double(ns)))));
                          } else {
                            CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
-                           weight = cam->GenerateRay(samp, &r);
+                           weight = cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny, std::max(Float(.125), Float(1/std::sqrt(double(ns)))));
                          }
                          r.pri_stack = &mat_stack;
                          Float alpha = 0;
@@ -443,11 +443,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                          Float v = (Float(j) + u2.xy.y) / Float(ny_small);
 
                          if(fov >= 0) {
-                           r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers_small[index]->Get2D())),
-                                            samplers_small[index]->Get1D());
+                           r = cam->get_ray_differential(u,v, convert_to_point3(rand_to_unit(samplers_small[index]->Get2D())),
+                                            samplers_small[index]->Get1D(), 1.f/nx_small, 1.f/ny_small, Float(.5));
                          } else {
                            CameraSample samp({1-u,1-v},samplers_small[index]->Get2D(), samplers_small[index]->Get1D());
-                           weight = cam->GenerateRay(samp, &r);
+                           weight = cam->GenerateRayDifferential(samp, &r, -1.f/nx_small, -1.f/ny_small, Float(.5));
                          }
                          r.pri_stack = &mat_stack;
                          Float alpha = 0;

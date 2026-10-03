@@ -26,12 +26,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         depth_into_scene = calculate_depth(r, &world, rng);
         rgb_output(i,j,0) = depth_into_scene;
@@ -51,12 +51,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         r.pri_stack = mat_stack;
         normal_map = calculate_normals(r, &world, max_depth, rng);
@@ -75,12 +75,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         uv_map = calculate_uv(r, &world, rng);
         rgb_output(i,j,0) = uv_map.xyz.x;
@@ -98,12 +98,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         Float bvh_intersections = debug_bvh(r, &world, rng);
         rgb_output(i,j,0) = bvh_intersections;
@@ -119,12 +119,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         vec3f dpd_val = calculate_dpduv(r, &world, rng, debug_channel == 6);
         rgb_output(i,j,0) = dpd_val.xyz.x;
@@ -141,12 +141,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
         if(fov >= 0) {
           Float u = (Float(i)) / Float(nx);
           Float v = (Float(j)) / Float(ny);
-          r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+          r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
         } else {
           point2f u(rng.unif_rand(),rng.unif_rand());
           point2f u2(rng.unif_rand(),rng.unif_rand());
           CameraSample samp(u, u2, rng.unif_rand());
-          cam->GenerateRay(samp, &r);
+          cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
         }
         r.pri_stack = mat_stack;
         point3f dpd_val = calculate_color(r, &world, rng);
@@ -171,12 +171,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = quick_render(r, &world, rng, light_dir, n_exp);
@@ -204,12 +204,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_position(r, &world, &hlist, max_depth, rng);
@@ -239,12 +239,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           cam->GenerateRay(samp, &r);
+                           cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                          }
                          r.pri_stack = mat_stack;
                          point3f qr = calculate_bounce_dir(r, &world, &hlist,
@@ -275,12 +275,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_time(r, &world, &hlist,
@@ -310,12 +310,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_shape(r, &world, &hlist,
@@ -346,12 +346,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           cam->GenerateRay(samp, &r);
+                           cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_pdf(r, &world, &hlist,
@@ -382,12 +382,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        Float qr = calculate_error(r, &world, &hlist,
@@ -418,12 +418,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           cam->GenerateRay(samp, &r);
+                           cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                          }
                          r.pri_stack = mat_stack;
                          Float qr = calculate_bounces(r, &world, &hlist,
@@ -455,12 +455,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                          if(fov >= 0) {
                            Float u = (Float(i)) / Float(nx);
                            Float v = (Float(j)) / Float(ny);
-                           r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                           r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                          } else {
                            point2f u(rng.unif_rand(),rng.unif_rand());
                            point2f u2(rng.unif_rand(),rng.unif_rand());
                            CameraSample samp(u, u2, rng.unif_rand());
-                           weight = cam->GenerateRay(samp, &r);
+                           weight = cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                          }
                          vec3f v2 = unit_vector(r.direction());
                          
@@ -552,11 +552,11 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                            if(fov >= 0) {
                              Float u = (Float(i)) / Float(nx);
                              Float v = (Float(j)) / Float(ny);
-                             r = cam->get_ray(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
-                                              samplers[index]->Get1D());
+                             r = cam->get_ray_differential(u,v, convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
+                                              samplers[index]->Get1D(), 1.f/nx, 1.f/ny);
                            } else {
                              CameraSample samp({1-u,1-v},samplers[index]->Get2D(), samplers[index]->Get1D());
-                             cam->GenerateRay(samp, &r);
+                             cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                            }
                            
                            point3f col = clamp_point(calculate_ao(r, &world, &hlist,
@@ -596,12 +596,12 @@ void debug_scene(size_t numbercores, size_t nx, size_t ny, size_t ns, int debug_
                        if(fov >= 0) {
                          Float u = (Float(i)) / Float(nx);
                          Float v = (Float(j)) / Float(ny);
-                         r = cam->get_ray(u,v, point3f(0,0,0), rng.unif_rand());
+                         r = cam->get_ray_differential(u,v, point3f(0,0,0), rng.unif_rand(), 1.f/nx, 1.f/ny);
                        } else {
                          point2f u(rng.unif_rand(),rng.unif_rand());
                          point2f u2(rng.unif_rand(),rng.unif_rand());
                          CameraSample samp(u, u2, rng.unif_rand());
-                         cam->GenerateRay(samp, &r);
+                         cam->GenerateRayDifferential(samp, &r, -1.f/nx, -1.f/ny);
                        }
                        r.pri_stack = mat_stack;
                        point3f qr = calculate_material(r, &world, &hlist,

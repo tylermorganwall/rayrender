@@ -30,8 +30,8 @@ class curve: public hitable {
     curve(Float uMin, Float uMax, 
           const std::shared_ptr<CurveCommon> common, std::shared_ptr<material> mat,
           Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
-      hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation), 
-      common(common), uMin(uMin), uMax(uMax) {};
+      hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation),
+      common(common), uMin(uMin), uMax(uMax) { CacheSegment(); };
     virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const Ray& r, Float tmin, Float tmax, hit_record& rec, Sampler* sampler) const;
     // virtual bool HitP(const ray &r, Float t_min, Float t_max, random_gen& rng) const;
@@ -55,12 +55,18 @@ class curve: public hitable {
       Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
     }
   private:
+    void CacheSegment();
+    bool Intersect(const Ray&, Float tmin, Float tmax, hit_record&) const;
     bool recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record& rec,
                             const point3f cp[4], Float u0, Float u1, int depth,
-                            const Transform &rayToObject) const;
+                            const onb &rayFrame) const;
 
     const std::shared_ptr<CurveCommon> common;
     Float uMin, uMax;
+    // Immutable control points for this BVH primitive, shared material/width data
+    // remain in CurveCommon. Avoid rebuilding the blossom per candidate ray.
+    point3f segmentPoints[4];
+    Float maxWidth = 0;
 };
 
 

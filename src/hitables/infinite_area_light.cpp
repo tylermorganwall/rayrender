@@ -96,6 +96,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
     // rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
     // rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.shape = this;
     rec.pError = vec3f(0,0,0);
@@ -124,6 +126,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
   //   Float theta = std::acos(clamp(rec.p.xyz.z / radius, -1, 1));
   //   rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
   //   rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.shape = this;
     rec.pError = vec3f(0,0,0);
@@ -171,6 +175,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
     // rec.dpdu = 2 * static_cast<Float>(M_PI) * vec3f(-rec.p.xyz.z, 0, rec.p.xyz.x);
     // rec.dpdv = 2 * static_cast<Float>(M_PI) * vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius * std::sin(theta));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.shape = this;
     rec.pError = vec3f(0,0,0);
@@ -200,6 +206,8 @@ const bool InfiniteAreaLight::hit(const Ray& r, Float t_min, Float t_max, hit_re
     //   vec3f(rec.p.xyz.z * cosPhi, rec.p.xyz.z * sinPhi, -radius *
     //   std::sin(theta));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.shape = this;
     rec.pError = vec3f(0,0,0);

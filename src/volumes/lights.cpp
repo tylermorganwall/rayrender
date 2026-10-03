@@ -466,8 +466,12 @@ struct VolumeLightSampler::Emitters {
       mat = t->mesh->mesh_materials[t->mesh->face_material_id[t->face_number]].get();
       // Vertex normals, alpha masks and consistent-normal interpolation can
       // change which side emits. Use an unrestricted cone in those cases.
-      if (!t->mesh->has_normals && !t->mesh->alpha_textures[t->mesh->face_material_id[t->face_number]])
+      if (!t->mesh->has_normals && !t->mesh->alpha_textures[t->mesh->face_material_id[t->face_number]]) {
         normal = convert_to_vec3(placement(convert_to_normal3(cross(b - a, c - a))));
+        // Match triangle::hit(): mesh vertices already include ObjectToWorld,
+        // while the additional placement uses an inverse-transpose normal.
+        if (t->reverseOrientation ^ t->transformSwapsHandedness) normal = -normal;
+      }
     } else if (dynamic_cast<xy_rect *>(entry.shape.get()) ||
                dynamic_cast<xz_rect *>(entry.shape.get()) ||
                dynamic_cast<yz_rect *>(entry.shape.get()) ||

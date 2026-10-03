@@ -104,6 +104,7 @@ struct OpenPBRMaterial::Impl {
   ref::OpenPBR_ResolvedInputs parameters;
   std::shared_ptr<texture> base;
   std::shared_ptr<roughness_texture> roughness;
+  std::shared_ptr<const TextureNode> roughness_graph;
   bool has_roughness;
   point2f texture_repeat{1, 1};
   // Optional world-space geometry overrides. Zero means use the hit geometry.
@@ -122,11 +123,12 @@ struct OpenPBRInteraction::Impl {
 
 OpenPBRMaterial::OpenPBRMaterial(const Rcpp::List& parameters, std::shared_ptr<texture> base,
                                std::shared_ptr<roughness_texture> roughness, bool has_roughness,
-                               point2f texture_repeat)
+                               point2f texture_repeat, std::shared_ptr<const TextureNode> roughness_graph)
     : dielectric(point3f(1), 1.5f, point3f(0), 0), impl(new Impl) {
   impl->parameters = inputs(parameters);
   impl->base = std::move(base);
   impl->roughness = std::move(roughness);
+  impl->roughness_graph = std::move(roughness_graph);
   impl->has_roughness = has_roughness;
   impl->texture_repeat = texture_repeat;
   ref_idx = impl->parameters.specular_ior;
@@ -158,7 +160,7 @@ bool OpenPBRMaterial::is_dielectric() const {
          (p.transmission_weight > 0 || p.subsurface_weight > 0);
 }
 point3f OpenPBRMaterial::get_albedo(const hit_record& h) const {
-  point3f value = impl->base->value(h.u, h.v, h.p);
+  point3f value = impl->base->value(h);
   for (int c = 0; c < 3; ++c)
     value[c] = std::isfinite(value[c]) ? std::clamp(value[c], Float(0), Float(1)) : 0;
   return value;
@@ -171,6 +173,8 @@ Float OpenPBRMaterial::EmissionEstimate() const {
 OpenPBRInteraction OpenPBRMaterial::Prepare(const Ray& ray, const hit_record& h, Float exterior_ior) const {
   auto p = impl->parameters;
   p.base_color = vector(get_albedo(h));
+  if (impl->roughness_graph)
+    p.specular_roughness = std::clamp(impl->roughness_graph->Evaluate(TextureEvalContext::FromHit(h))[0], Float(0), Float(1));
   if (impl->has_roughness)
     p.specular_roughness = impl->roughness->raw_value(
       h.u * impl->texture_repeat[0],

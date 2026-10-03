@@ -9,6 +9,8 @@ void cylinder::get_cylinder_uv(const point3f& p, Float& u, Float& v) const {
 };
 
 const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
@@ -22,8 +24,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float b = 2 * dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
-    return(false);
+  if (a == 0) {
+    // An axial ray has no side roots, but can still cross a cap.
+    if (!has_caps || c > 0) return false;
+    temp1 = temp2 = std::numeric_limits<Float>::infinity();
+  } else if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return false;
   }
   bool is_hit = true;
   bool second_is_hit = true;
@@ -80,29 +86,31 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, -length, 0);
-    if (mat_ptr->physical_normal_mapping()) {
+    {
       // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
       // Its metric frame must be the same for both hit overloads and roots.
       rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
       rec.dpdv = vec3f(0, length, 0);
     }
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = convert_to_normal3(cross(rec.dpdu - bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                              rec.dpdv + bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-      rec.bump_normal.make_unit_vector();
-      rec.has_bump = true;
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.alpha_miss = alpha_miss;
       
@@ -117,7 +125,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
   Float radHit2 = x*x + z*z;
-  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && (t_cyl2 <= t_min || t_cyl < t_cyl2) &&
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     point3f p = r2(t_cyl);
     p.e[1] = length/2;
@@ -136,25 +144,30 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
-    rec.dpdu = vec3f(1, 0, 0);
-    rec.dpdv = vec3f(0, 0, 1);
+    rec.dpdu = vec3f(-2*radius, 0, 0);
+    rec.dpdv = vec3f(0, 0, 2*radius);
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
-      rec.bump_normal.make_unit_vector(); 
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     return(true);
   }
@@ -182,24 +195,29 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
-    rec.dpdu = vec3f(1, 0, 0);
-    rec.dpdv = vec3f(0, 0, 1);
+    rec.dpdu = vec3f(-2*radius, 0, 0);
+    rec.dpdv = vec3f(0, 0, 2*radius);
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
 
     return(true);
@@ -223,30 +241,32 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
-    if (mat_ptr->physical_normal_mapping()) {
+    {
       // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
       // Its metric frame must be the same for both hit overloads and roots.
       rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
       rec.dpdv = vec3f(0, length, 0);
     }
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                              rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-      rec.bump_normal.make_unit_vector();
-      rec.has_bump = true;
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal;
     rec = (*ObjectToWorld)(rec);
     rec.normal.make_unit_vector();
     rec.alpha_miss = alpha_miss;
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -256,6 +276,8 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
 
 
 const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
+  // Mirrored parameterizations reverse orientation, independently of explicit flipping.
+  const bool flip_normal = reverseOrientation ^ transformSwapsHandedness;
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("Cylinder");
   
@@ -269,8 +291,12 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float b = 2 * dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
-    return(false);
+  if (a == 0) {
+    // An axial ray has no side roots, but can still cross a cap.
+    if (!has_caps || c > 0) return false;
+    temp1 = temp2 = std::numeric_limits<Float>::infinity();
+  } else if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return false;
   }
   bool is_hit = true;
   bool second_is_hit = true;
@@ -326,29 +352,33 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-temppoint.xyz.z,0,  temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
-    if (mat_ptr->physical_normal_mapping()) {
+    {
       // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
       // Its metric frame must be the same for both hit overloads and roots.
       rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
       rec.dpdv = vec3f(0, length, 0);
     }
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u, rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
-      rec.bump_normal *= dot(temppoint, dir) > 0 ? -1 : 1;
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -361,7 +391,7 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
   Float radHit2 = x*x + z*z;
-  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && (t_cyl2 <= t_min || t_cyl < t_cyl2) &&
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     point3f p = r2(t_cyl);
     p.e[1] = length/2;
@@ -380,24 +410,29 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
-    rec.dpdu = vec3f(1, 0, 0);
-    rec.dpdv = vec3f(0, 0, 1);
+    rec.dpdu = vec3f(-2*radius, 0, 0);
+    rec.dpdv = vec3f(0, 0, 2*radius);
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     
     return(true);
@@ -426,26 +461,30 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec.mat_ptr = mat_ptr.get();
     rec.u = u;
     rec.v = v;
-    rec.dpdu = vec3f(1, 0, 0);
-    rec.dpdv = vec3f(0, 0, 1);
+    rec.dpdu = vec3f(-2*radius, 0, 0);
+    rec.dpdv = vec3f(0, 0, 2*radius);
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv);
-      rec.bump_normal.make_unit_vector();
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.normal.make_unit_vector();
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     
-    rec.normal = !reverseOrientation ? (*ObjectToWorld)(rec.normal) : -(*ObjectToWorld)(rec.normal);
     return(true);
   }
   temppoint = r2(temp2);
@@ -467,27 +506,31 @@ const bool cylinder::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     //Interaction information
     rec.dpdu = vec3f(-phi_max * temppoint.xyz.z, 0,  phi_max * temppoint.xyz.x);
     rec.dpdv = vec3f(0, length, 0);
-    if (mat_ptr->physical_normal_mapping()) {
+    {
       // get_cylinder_uv uses u=1-(phi+pi)/(2*pi), v=(y+L/2)/L.
       // Its metric frame must be the same for both hit overloads and roots.
       rec.dpdu = 2 * Float(M_PI) * vec3f(temppoint[2], 0, -temppoint[0]);
       rec.dpdv = vec3f(0, length, 0);
     }
+    rec.dndu = rec.dndv = normal3f(0);
+    if (std::abs(rec.normal[1]) < Float(.5))
+      rec.dndu = convert_to_normal3(rec.dpdu / radius);
     rec.has_bump = bump_tex ? true : false;
-    
-    if(bump_tex) {
-      point3f bvbu = bump_tex->value(rec.u,rec.v, rec.p);
-      rec.bump_normal = rec.normal + convert_to_normal3(bvbu.xyz.x * rec.dpdu + bvbu.xyz.y * rec.dpdv); 
-      rec.bump_normal.make_unit_vector();
-      rec.bump_normal = (*ObjectToWorld)(rec.bump_normal);
+
+    if (bump_tex) {
+      rec.bump_normal = rec.normal;
     }
     rec.pError = gamma(3) * Abs(vec3f(rec.p.xyz.x, 0, rec.p.xyz.z));
     
+    rec.texture_object_p = rec.p;
+    rec.texture_object_normal = rec.normal * (flip_normal ? -1 : 1);
     rec = (*ObjectToWorld)(rec);
-    rec.normal *= reverseOrientation  ? -1 : 1;
-    rec.bump_normal *= reverseOrientation  ? -1 : 1;
+    rec.normal *= flip_normal ? -1 : 1;
+    rec.dndu = rec.dndu * (flip_normal ? -1 : 1);
+    rec.dndv = rec.dndv * (flip_normal ? -1 : 1);
+    rec.bump_normal *= flip_normal  ? -1 : 1;
     rec.geometric_normal = rec.normal;
-    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get());
+    SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
     rec.shape = this;
     rec.mat_ptr = mat_ptr.get();
     return(true);
@@ -510,8 +553,12 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   Float b = 2 * dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
-    return(false);
+  if (a == 0) {
+    // An axial ray has no side roots, but can still cross a cap.
+    if (!has_caps || c > 0) return false;
+    temp1 = temp2 = std::numeric_limits<Float>::infinity();
+  } else if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return false;
   }
   bool is_hit = true;
   bool second_is_hit = true;
@@ -530,7 +577,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
   Float radHit2 = x*x + z*z;
-  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && (t_cyl2 <= t_min || t_cyl < t_cyl2) &&
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     return(true);
   }
@@ -568,8 +615,12 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   Float b = 2 * dot(oc, dir); 
   Float c = dot(oc, oc) - radius * radius;
   Float temp1, temp2;
-  if (!quadratic(a, b, c, &temp1, &temp2)) {
-    return(false);
+  if (a == 0) {
+    // An axial ray has no side roots, but can still cross a cap.
+    if (!has_caps || c > 0) return false;
+    temp1 = temp2 = std::numeric_limits<Float>::infinity();
+  } else if (!quadratic(a, b, c, &temp1, &temp2)) {
+    return false;
   }
   bool is_hit = true;
   bool second_is_hit = true;
@@ -588,7 +639,7 @@ bool cylinder::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   Float phi2 = atan2(z,x);
   phi2 = phi2 < 0 ? phi2 + 2 * static_cast<Float>(M_PI) : phi2;
   Float radHit2 = x*x + z*z;
-  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && t_cyl < t_cyl2 && 
+  if(has_caps && t_cyl < temp2 && t_cyl > t_min && t_cyl < t_max && (t_cyl2 <= t_min || t_cyl < t_cyl2) &&
      radHit2 <= radius * radius && phi2 <= phi_max && phi2 >= phi_min) {
     return(true);
   }

@@ -107,6 +107,18 @@ class Ray {
     
     point3f o;
     vec3f d;
+    // Adjacent camera samples share time and lens position. Newly scattered
+    // rays start without derivatives unless a deterministic event propagates them.
+    bool has_differentials = false;
+    point3f rx_origin{0}, ry_origin{0};
+    vec3f rx_direction{0}, ry_direction{0};
+    void ScaleDifferentials(Float scale) {
+      if (!has_differentials) return;
+      rx_origin = o + (rx_origin-o)*scale;
+      ry_origin = o + (ry_origin-o)*scale;
+      rx_direction = d + (rx_direction-d)*scale;
+      ry_direction = d + (ry_direction-d)*scale;
+    }
     vec3f inv_dir_pad;
     uint8_t inv_dir_is_neg[3];
 

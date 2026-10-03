@@ -21,8 +21,8 @@
 #' orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
 #' bilinear patches (triangulated), cubic Bezier curves, diffuse area lights,
 #' point/spot lights, uniform and equal-area image infinite lights,
-#' RGB diffuse/conductor/dielectric/hair materials, OpenPBR
-#' approximations of coated and Disney materials, constant/image/UV checker textures, and
+#' RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
+#' approximations of coated and Disney materials, constant/image/UV checker/direction-mix textures, and
 #' homogeneous, uniform-grid, and NanoVDB interior media. Material displacement
 #' becomes a bump map; PLY displacement uses rayvertex with simple subdivision.
 #' PBRT v4 is the target; common v3 spellings are
@@ -57,11 +57,24 @@
 #' scattering and an internal-reflection IOR of 1.4; the requested surface IOR
 #' is retained. Different IORs, roughnesses, and thin geometry remain approximate.
 #' Random walks may need a larger `max_depth` than PBRT's diffusion BSSRDF.
+#' Imported render arguments start Russian roulette at bounce 5; override
+#' `roulette_active_depth` to change this without reducing `max_depth`.
+#' Curves preserve PBRT's `splitdepth` (default 3) as native BVH subdivisions.
+#' Shape alpha masks retain their own UV scale/offset and use rayrender's native
+#' 8-bit coverage lookup rather than PBRT's mipmapped filtering. Curve alpha
+#' masks remain unsupported and are diagnosed.
+#' Direction-mix graphs retain their declaration-time direction transform and
+#' geometric-normal weighting on supported color inputs and dielectric/conductor
+#' roughness. Roughness conversion follows texture evaluation. Procedural roughness
+#' on layered or subsurface materials is still diagnosed as unsupported.
 #'
 #' PBRT's world coordinates are preserved. Its camera transform maps world to
 #' camera and is inverted for rayrender. PBRT's field of view applies to the
 #' shorter image dimension; rayrender's applies to image height. This conversion
 #' adjusts portrait fields of view and retains the original framing.
+#' Film ISO is preserved. Diffuse transmission uses [translucent()] with
+#' independent reflection/transmission colors and textures; bump maps on this
+#' material are diagnosed and omitted. Combined energy above one is normalized.
 #' Animated cameras return a two-pose [camera()] with `mode = "image"` and
 #' motion blur enabled. Camera transform times differing from the shutter
 #' interval require manual adjustment. Spatial media retain their definition
@@ -128,6 +141,7 @@ read_pbrt = function(
   context$coordinates = list()
   context$materials = list()
   context$textures = list()
+  context$alpha_images = new.env(hash = TRUE, parent = emptyenv())
   context$media = list()
   context$settings = list()
   state = list(
@@ -297,13 +311,20 @@ pbrt_render_arguments = function(context) {
     ambient_light = FALSE,
     backgroundhigh = "black",
     backgroundlow = "black",
-    integrator_type = "nee"
+    integrator_type = "nee",
+    # PBRT path integrators use roulette. Avoid carrying negligible paths all
+    # the way to an imported high maxdepth; callers can override this argument.
+    roulette_active_depth = 5L
   )
   if (!is.null(settings$Film)) {
     p = pbrt_parameters(settings$Film, context)
     result$width = pbrt_get(p, "xresolution", 1280L, 1L)
     result$height = pbrt_get(p, "yresolution", 720L, 1L)
     result$film_size = pbrt_get(p, "diagonal", 35, 1L)
+    result$iso = pbrt_get(p, "iso", 100, 1L)
+    if (!is.finite(result$iso) || result$iso < 0) {
+      pbrt_error(settings$Film, "Film iso must be finite and nonnegative.")
+    }
     pbrt_get(p, "filename") # Never adopt a source file's output destination.
     if (!settings$Film$args[1] %in% c("rgb", "image")) {
       pbrt_note(
@@ -1123,7 +1144,17 @@ pbrt_get = function(p, name, default = NULL, size = NULL) {
       pbrt_error(p$command, paste("Undefined texture for", name))
     }
     texture = p$context$textures[[value]]
-    if (is.null(texture$image)) {
+    if (!is.null(texture$graph)) {
+      pbrt_note(
+        p$context,
+        p$command,
+        paste(
+          "Procedural texture replaced by its constant default for unsupported input:",
+          name
+        )
+      )
+      value = default
+    } else if (is.null(texture$image)) {
       value = texture$value
     } else {
       pbrt_note(
@@ -1369,6 +1400,8 @@ pbrt_material = function(command, state, context) {
   } else {
     command$args[1]
   }
+  roughness = NULL
+  color = NULL
   interface = type %in% c("", "none", "interface")
   material = diffuse(color = rep(.5, 3))
   bump_name = if ("displacement" %in% names(p$values)) {
@@ -1377,32 +1410,20 @@ pbrt_material = function(command, state, context) {
     "bumpmap"
   }
   bump = pbrt_texture_parameter(p, bump_name, 0, context)
-  bump_scale = 1
-  if (!is.null(bump$image)) {
-    image = rayimage::ray_read_image(bump$image, convert_to_array = TRUE)
-    image = image[,, 1]
-    # Height offsets do not change normals. Encode the range into the byte
-    # image and restore its amplitude through bump_intensity, including signed
-    # and small-amplitude displacement textures.
-    bump_scale = diff(range(image))
-    image = if (bump_scale > 0) (image - min(image)) / bump_scale else image * 0
+  if (is.null(bump$image) && any(bump$value != 0)) {
     bump$image = pbrt_write_asset(
-      image,
-      ".png",
+      array(mean(bump$value), c(2, 2, 3)),
+      ".exr",
       context
     )
   }
+  # Texture evaluation has already decoded and scaled the height into linear
+  # EXR. Preserve its precision and absolute values: PBRT's curved-surface
+  # tangent construction also uses height * dndu/dndv, not only height slopes.
   bump_args = if (!is.null(bump$image)) {
-    list(bump_texture = bump$image, bump_intensity = bump_scale)
+    list(bump_texture = bump$image, bump_intensity = 1)
   } else {
     list()
-  }
-  if (!is.null(bump$image) && any(bump$uv_repeat != 1)) {
-    pbrt_note(
-      context,
-      command,
-      "Bump-map UV repeat is not transferred independently of base color."
-    )
   }
   if (
     type %in% c("diffuse", "matte", "coateddiffuse", "plastic", "substrate")
@@ -1411,7 +1432,8 @@ pbrt_material = function(command, state, context) {
       p,
       if (type %in% c("matte", "plastic", "substrate")) "Kd" else "reflectance",
       rep(.5, 3),
-      context
+      context,
+      allow_graph = TRUE
     )
     color_args = if (!is.null(color$image)) {
       list(
@@ -1440,7 +1462,7 @@ pbrt_material = function(command, state, context) {
         )
       )
     } else {
-      roughness = pbrt_roughness(p, .1)
+      roughness = pbrt_roughness(p, if (type == "coateddiffuse") 0 else .1)
       eta = pbrt_get(p, "eta", 1.5, 1L)
       pbrt_note(
         context,
@@ -1460,6 +1482,77 @@ pbrt_material = function(command, state, context) {
           color_args,
           bump_args
         )
+      )
+    }
+  } else if (type == "diffusetransmission") {
+    reflection = pbrt_texture_parameter(p, "reflectance", rep(.25, 3), context)
+    transmission = pbrt_texture_parameter(
+      p,
+      "transmittance",
+      rep(.25, 3),
+      context
+    )
+    scale = pbrt_get(p, "scale", 1, 1L)
+    if (!is.finite(scale) || scale < 0) {
+      pbrt_error(
+        command,
+        "Diffuse transmission scale must be finite and nonnegative."
+      )
+    }
+    # Bake only scalar radiometric scaling, retaining each texture's independent
+    # UV repeat/offset for native lookup. The two BSDF lobes remain independent.
+    lobes = list(reflection, transmission)
+    for (i in seq_along(lobes)) {
+      if (!is.null(lobes[[i]]$image) && scale != 1) {
+        image = rayimage::ray_read_image(lobes[[i]]$image)[,, 1:3, drop = FALSE]
+        lobes[[i]]$image = pbrt_write_asset(
+          pmin(pmax(image * scale, 0), 1),
+          ".exr",
+          context
+        )
+      }
+      lobes[[i]]$value = pmin(
+        pmax(rep(lobes[[i]]$value, length.out = 3L) * scale, 0),
+        1
+      )
+    }
+    reflection = lobes[[1]]
+    transmission = lobes[[2]]
+    if (!is.null(reflection$image)) {
+      reflection$value = rep(0, 3)
+    }
+    if (!is.null(transmission$image)) {
+      transmission$value = rep(0, 3)
+    }
+    total = reflection$value + transmission$value
+    if (any(total > 1)) {
+      pbrt_note(
+        context,
+        command,
+        "Diffuse reflection plus transmission exceeds one; combined energy is normalized per channel."
+      )
+      reflection$value = reflection$value / pmax(total, 1)
+      transmission$value = transmission$value / pmax(total, 1)
+    }
+    material = translucent(
+      reflectance = reflection$value,
+      transmittance = transmission$value,
+      image_texture = if (is.null(reflection$image)) "" else reflection$image,
+      transmission_texture = if (is.null(transmission$image)) {
+        ""
+      } else {
+        transmission$image
+      },
+      image_repeat = reflection$uv_repeat,
+      image_offset = reflection$uv_offset
+    )
+    material[[1]]$transmission_repeat = transmission$uv_repeat
+    material[[1]]$transmission_offset = transmission$uv_offset
+    if (!is.null(bump$image)) {
+      pbrt_note(
+        context,
+        command,
+        "Diffuse transmission uses geometric normals; its bump map is omitted."
       )
     }
   } else if (type == "disney") {
@@ -1616,8 +1709,38 @@ pbrt_material = function(command, state, context) {
       paste("Unsupported material replaced by neutral diffuse:", type)
     )
   }
+  if (!is.null(color$graph)) {
+    material[[1]]$texture_graphs$color = color$graph
+  }
+  alpha_graphs = attr(roughness, "alpha_graphs")
+  if (!is.null(alpha_graphs)) {
+    if (type %in% c("dielectric", "glass", "conductor", "metal")) {
+      material[[1]]$texture_graphs$roughness = alpha_graphs[[1]]
+      material[[1]]$texture_graphs$roughness_v = alpha_graphs[[2]]
+      material[[1]]$texture_graphs$roughness_is_alpha = TRUE
+    } else if (type == "thindielectric") {
+      # OpenPBR uses perceptual roughness; anisotropic thin-glass import keeps
+      # the existing mean approximation and reports that limitation.
+      material[[1]]$texture_graphs$roughness = texture_node(
+        "power",
+        "scalar",
+        child = texture_mix(alpha_graphs[[1]], alpha_graphs[[2]]),
+        exponent = .5
+      )
+    } else {
+      pbrt_note(
+        context,
+        command,
+        paste(
+          "Procedural roughness is not yet supported for PBRT material:",
+          type
+        )
+      )
+    }
+  }
   if (!is.null(bump$image)) {
     material[[1]]$texture_offsets$bump = bump$uv_offset
+    material[[1]]$bump_repeat = bump$uv_repeat
   }
   pbrt_unused(p)
   list(material = material, interface = interface)
@@ -1640,7 +1763,31 @@ pbrt_texture = function(command, state, context) {
   if (!command$args[2] %in% c("float", "spectrum", "color")) {
     pbrt_error(command, "Unknown texture value type.")
   }
-  if (type == "constant") {
+  if (type == "directionmix") {
+    default = if (command$args[2] == "float") 0 else rep(0, 3)
+    a = pbrt_texture_parameter(p, "tex1", default, context, allow_graph = TRUE)
+    b = pbrt_texture_parameter(
+      p,
+      "tex2",
+      default + 1,
+      context,
+      allow_graph = TRUE
+    )
+    direction = as.vector(
+      state$transform[1:3, 1:3] %*% pbrt_get(p, "dir", c(0, 1, 0), 3L)
+    )
+    result$graph = texture_direction_mix(
+      pbrt_texture_graph(
+        a,
+        if (command$args[2] == "float") "scalar" else "color"
+      ),
+      pbrt_texture_graph(
+        b,
+        if (command$args[2] == "float") "scalar" else "color"
+      ),
+      direction = direction
+    )
+  } else if (type == "constant") {
     result = pbrt_texture_parameter(
       p,
       "value",
@@ -1648,8 +1795,11 @@ pbrt_texture = function(command, state, context) {
       context
     )
   } else if (type == "scale") {
-    result = pbrt_texture_parameter(p, "tex", 1, context)
+    result = pbrt_texture_parameter(p, "tex", 1, context, allow_graph = TRUE)
     scale = pbrt_get(p, "scale", 1, 1L)
+    if (!is.null(result$graph)) {
+      result$graph = texture_scale(result$graph, scale)
+    }
     result$value = result$value * scale
     if (!is.null(result$image)) {
       image = rayimage::ray_read_image(result$image, convert_to_array = TRUE)
@@ -1713,6 +1863,15 @@ pbrt_texture = function(command, state, context) {
     }
     # Decode once to linear EXR, avoiding rayrender's approximate LDR gamma
     # decoder and allowing both PBRT's explicit linear and sRGB encodings.
+    # PBRT float imagemaps use a nontrivial alpha channel when present. RGB
+    # float maps are averaged when consumed as an opacity mask below.
+    if (
+      command$args[2] == "float" && dim(image)[3] == 4L && any(image[,, 4] != 1)
+    ) {
+      for (channel in 1:3) {
+        image[,, channel] = image[,, 4]
+      }
+    }
     result$image = pbrt_write_asset(
       image[,, 1:3, drop = FALSE] * scale,
       ".exr",
@@ -1728,20 +1887,41 @@ pbrt_texture = function(command, state, context) {
         "Checkerboard is baked as a 2D UV checker texture."
       )
     }
-    a = pbrt_texture_parameter(p, "tex1", rep(1, 3), context)
-    b = pbrt_texture_parameter(p, "tex2", rep(0, 3), context)
-    if (!is.null(a$image) || !is.null(b$image)) {
-      pbrt_note(
-        context,
-        command,
-        "Nested checker images replaced by their constant fallback values."
-      )
-    }
+    a = pbrt_texture_parameter(
+      p,
+      "tex1",
+      rep(1, 3),
+      context,
+      allow_graph = TRUE
+    )
+    b = pbrt_texture_parameter(
+      p,
+      "tex2",
+      rep(0, 3),
+      context,
+      allow_graph = TRUE
+    )
+    nested = !is.null(a$image) ||
+      !is.null(b$image) ||
+      !is.null(a$graph) ||
+      !is.null(b$graph)
     uscale = pbrt_get(p, "uscale", 1, 1L)
     vscale = pbrt_get(p, "vscale", 1, 1L)
     udelta = pbrt_get(p, "udelta", 0, 1L)
     vdelta = pbrt_get(p, "vdelta", 0, 1L)
     pbrt_get(p, "aamode")
+    if (nested) {
+      output_type = if (command$args[2] == "float") "scalar" else "color"
+      result$graph = texture_checker(
+        pbrt_texture_graph(a, output_type),
+        pbrt_texture_graph(b, output_type),
+        coordinates = texture_coordinates(
+          "uv",
+          scale = c(uscale, vscale, 1),
+          offset = c(udelta, vdelta, 0)
+        )
+      )
+    }
     # Bake the unit UV square at a fixed 256 pixels. This bounds asset size;
     # fractional offsets and negative scales are included before sampling.
     uv = (seq_len(256) - .5) / 256
@@ -2039,12 +2219,28 @@ pbrt_shape = function(command, state, context) {
     )
     pbrt_unused(area)
   }
-  alpha = pbrt_get(p, "alpha", 1, 1L)
-  if (alpha == 0) {
-    return(NULL)
-  }
-  if (alpha != 1) {
-    pbrt_note(context, command, "Partial shape alpha is omitted.")
+  if (!is.null(p$values$alpha)) {
+    alpha = pbrt_texture_parameter(p, "alpha", 1, context)
+    if (is.null(alpha$image)) {
+      if (length(alpha$value) != 1L || !is.finite(alpha$value)) {
+        pbrt_error(
+          command,
+          "Shape alpha must be a finite scalar or float texture."
+        )
+      }
+      if (alpha$value <= 0) return(NULL)
+    }
+    if (type == "curve") {
+      if (!is.null(alpha$image) || alpha$value < 1) {
+        pbrt_note(
+          context,
+          command,
+          "Curve alpha masks are not supported; mask omitted."
+        )
+      }
+    } else {
+      material = pbrt_alpha_material(material, alpha, context)
+    }
   }
   local = diag(4)
   flipped = state$reverse
@@ -2143,15 +2339,19 @@ pbrt_shape = function(command, state, context) {
       pbrt_get(p, "width0", width, 1L),
       pbrt_get(p, "width1", width, 1L)
     )
+    split_depth = pbrt_get(p, "splitdepth", 3L, 1L)
     curve_type = pbrt_get(p, "type", "flat", 1L)
     if (!curve_type %in% c("flat", "cylinder", "ribbon")) {
       pbrt_error(command, "Invalid curve type.")
     }
     normals = pbrt_get(p, "N")
-    if (curve_type == "ribbon" && length(normals) != 6) {
-      pbrt_error(command, "Ribbon curves require two endpoint normals.")
-    }
     count = (nrow(points) - 1L) / 3L
+    if (curve_type == "ribbon" && length(normals) != 3L * (count + 1L)) {
+      pbrt_error(
+        command,
+        "Ribbon curves require one normal at each chain endpoint."
+      )
+    }
     rows = vector("list", count)
     for (i in seq_len(count)) {
       args = list(
@@ -2159,14 +2359,13 @@ pbrt_shape = function(command, state, context) {
         width = widths[1] + diff(widths) * (i - 1) / count,
         width_end = widths[1] + diff(widths) * i / count,
         type = curve_type,
+        split_depth = split_depth,
         material = material,
         flipped = flipped
       )
       if (curve_type == "ribbon") {
-        args$normal = normals[1:3] +
-          (normals[4:6] - normals[1:3]) * (i - 1) / count
-        args$normal_end = normals[1:3] +
-          (normals[4:6] - normals[1:3]) * i / count
+        args$normal = normals[3L * (i - 1L) + 1:3]
+        args$normal_end = normals[3L * i + 1:3]
       }
       rows[[i]] = do.call(bezier_curve, args)
     }
@@ -2185,7 +2384,11 @@ pbrt_shape = function(command, state, context) {
   if (
     type %in%
       c("sphere", "disk", "cylinder") &&
-      (nzchar(material[[1]]$image) || nzchar(material[[1]]$bump_texture))
+      (nzchar(material[[1]]$image) ||
+        nzchar(material[[1]]$alphaimage) ||
+        nzchar(material[[1]]$bump_texture) ||
+        (!is.null(material[[1]]$transmission_texture) &&
+          nzchar(material[[1]]$transmission_texture)))
   ) {
     pbrt_note(
       context,
@@ -2236,6 +2439,35 @@ pbrt_shape = function(command, state, context) {
   rows
 }
 
+#' @param material Shape-local material copy.
+#' @param alpha Constant/image opacity descriptor with its own UV mapping.
+#' @param context Import resources and opacity image cache.
+#' @return Material carrying an opacity scalar or a cached linear PNG mask.
+#' @keywords internal
+#' @noRd
+pbrt_alpha_material = function(material, alpha, context) {
+  if (is.null(alpha$image)) {
+    material[[1]]$alpha_value = min(max(alpha$value, 0), 1)
+    return(material)
+  }
+  # Native alpha textures read the PNG alpha channel as coverage, without a
+  # color transfer function. Convert decoded linear values once per texture,
+  # not once per shape/instance, and leave UV scaling/translation to lookup.
+  filename = context$alpha_images[[alpha$image]]
+  if (is.null(filename)) {
+    image = rayimage::ray_read_image(alpha$image, convert_to_array = TRUE)
+    coverage = pmin(pmax((image[,, 1] + image[,, 2] + image[,, 3]) / 3, 0), 1)
+    mask = array(1, c(dim(image)[1:2], 4L))
+    mask[,, 4] = coverage
+    filename = pbrt_write_asset(mask, ".png", context)
+    context$alpha_images[[alpha$image]] = filename
+  }
+  material[[1]]$alphaimage = filename
+  material[[1]]$alpha_repeat = alpha$uv_repeat
+  material[[1]]$texture_offsets$alpha = alpha$uv_offset
+  material
+}
+
 #' @param p Parameter reader.
 #' @param name Parameter name.
 #' @param default Fallback numeric value.
@@ -2272,15 +2504,30 @@ pbrt_spectrum = function(p, name, default) {
 #' @param name Parameter name.
 #' @param default Constant fallback value.
 #' @param context Import resources.
+#' @param allow_graph Default `FALSE`. Whether this consumer supports procedural graphs.
 #' @return Constant/image descriptor, resolving named textures.
 #' @keywords internal
 #' @noRd
-pbrt_texture_parameter = function(p, name, default, context) {
+pbrt_texture_parameter = function(
+  p,
+  name,
+  default,
+  context,
+  allow_graph = FALSE
+) {
   if (!is.null(p$values[[name]]) && p$values[[name]]$type == "texture") {
     reference = pbrt_get(p, name, size = 1L)
     result = context$textures[[reference]]
     if (is.null(result)) {
       pbrt_error(p$command, paste("Undefined texture:", reference))
+    }
+    if (!is.null(result$graph) && !allow_graph) {
+      pbrt_note(
+        context,
+        p$command,
+        paste("Procedural texture is not supported for this input:", name)
+      )
+      return(list(value = default, uv_repeat = c(1, 1), uv_offset = c(0, 0)))
     }
     return(result)
   }
@@ -2296,6 +2543,31 @@ pbrt_texture_parameter = function(p, name, default, context) {
     uv_repeat = c(1, 1),
     uv_offset = c(0, 0)
   )
+}
+
+#' @param descriptor Imported constant, image, or procedural texture.
+#' @param type Expected scalar or color output.
+#' @return Public texture graph retaining independent UV mapping.
+#' @keywords internal
+#' @noRd
+pbrt_texture_graph = function(descriptor, type) {
+  if (!is.null(descriptor$graph)) {
+    node = descriptor$graph
+  } else if (!is.null(descriptor$image)) {
+    node = texture_image(
+      descriptor$image,
+      type = type,
+      encoding = "linear",
+      coordinates = texture_coordinates(
+        "uv",
+        scale = c(descriptor$uv_repeat, 1),
+        offset = c(descriptor$uv_offset, 0)
+      )
+    )
+  } else {
+    node = texture_constant(descriptor$value)
+  }
+  if (type == "scalar") texture_scalar(node) else node
 }
 
 #' @param filename Image file path.
@@ -2416,10 +2688,67 @@ pbrt_rgb = function(value, p) {
 #' @param p Parameter reader.
 #' @param default Default roughness in PBRT units.
 #' @param prefix Default `""`. Layer prefix for coated conductor parameters.
-#' @return Two rayrender roughness values whose squared values are GGX alpha.
+#' @return Two legacy roughness values, optionally carrying native alpha graphs.
 #' @keywords internal
 #' @noRd
 pbrt_roughness = function(p, default, prefix = "") {
+  names = paste0(prefix, c("roughness", "uroughness", "vroughness"))
+  textured = any(vapply(
+    names,
+    function(name) {
+      entry = p$values[[name]]
+      if (is.null(entry) || entry$type != "texture") {
+        return(FALSE)
+      }
+      descriptor = p$context$textures[[entry$value]]
+      !is.null(descriptor$graph) || !is.null(descriptor$image)
+    },
+    logical(1)
+  ))
+  if (textured) {
+    base = pbrt_texture_parameter(
+      p,
+      names[1],
+      default,
+      p$context,
+      allow_graph = TRUE
+    )
+    u = if (is.null(p$values[[names[2]]])) {
+      base
+    } else {
+      pbrt_texture_parameter(
+        p,
+        names[2],
+        default,
+        p$context,
+        allow_graph = TRUE
+      )
+    }
+    v = if (is.null(p$values[[names[3]]])) {
+      base
+    } else {
+      pbrt_texture_parameter(
+        p,
+        names[3],
+        default,
+        p$context,
+        allow_graph = TRUE
+      )
+    }
+    remap = pbrt_get(p, "remaproughness", TRUE, 1L)
+    graphs = lapply(list(u, v), function(x) {
+      node = texture_scalar(pbrt_texture_graph(x, "scalar"))
+      texture_node(
+        "power",
+        "scalar",
+        child = node,
+        exponent = if (remap) 0.5 else 1
+      )
+    })
+    # Nonzero placeholders select a rough BSDF. Native evaluation uses the
+    # complete graph; these numbers never replace its spatial variation.
+    return(structure(c(.3, .3), alpha_graphs = graphs))
+  }
   roughness = pbrt_get(p, paste0(prefix, "roughness"), default, 1L)
   roughness = c(
     pbrt_get(p, paste0(prefix, "uroughness"), roughness, 1L),

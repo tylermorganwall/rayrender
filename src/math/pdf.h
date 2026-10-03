@@ -38,7 +38,7 @@ public:
   micro_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
             Float uu, Float vv) : distribution(distribution),  u(uu), v(vv) {
     uvw.build_from_w_normalized(w);
-    wi = -unit_vector(uvw.world_to_local(wi_));;
+    wi = -unit_vector(uvw.world_to_local(wi_)); alphas = distribution->GetAlphas(u,v);
   }
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
   virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
@@ -48,6 +48,7 @@ public:
   vec3f wi;
   MicrofacetDistribution *distribution;
   Float u,v;
+  point2f alphas;
   
 };
 
@@ -64,6 +65,10 @@ public:
   Float eta;
   MicrofacetDistribution *distribution;
   Float u,v;
+  point2f alphas;
+private:
+  Float Value(const vec3f &direction) const;
+  vec3f Generate(Float u1, Float u2, Float branch) const;
 };
 
 class glossy_pdf : public pdf {
@@ -71,7 +76,7 @@ public:
   glossy_pdf(const normal3f& w, const vec3f& wi_, MicrofacetDistribution* distribution, 
              Float uu, Float vv) : distribution(distribution), u(uu), v(vv) {
     uvw.build_from_w_normalized(w);
-    wi = -unit_vector(uvw.world_to_local(wi_));;
+    wi = -unit_vector(uvw.world_to_local(wi_)); alphas = distribution->GetAlphas(u,v);
   }
   virtual Float value(const vec3f& direction, random_gen& rng, Float time = 0);
   virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
@@ -81,16 +86,16 @@ public:
   vec3f wi;
   MicrofacetDistribution *distribution;
   Float u,v;
+  point2f alphas;
   
 };
 
 class hair_pdf : public pdf {
   public:
-    hair_pdf(const onb uvw_, const vec3f& wi_, const vec3f& wo_, 
+    hair_pdf(const onb uvw_, const vec3f& wo_,
              Float eta_, Float h_, Float gammaO_, Float s_, point3f sigma_a_,
              const Float cos2kAlpha_[3], const Float sin2kAlpha_[3], const Float v_[pMax + 1]) {
       uvw = uvw_;
-      wi = wi_;
       wo = wo_;
       for (int i = 0; i < 3; ++i) {
         sin2kAlpha[i] = sin2kAlpha_[i];
@@ -111,12 +116,13 @@ class hair_pdf : public pdf {
     virtual vec3f generate(random_gen& rng, bool& diffuse_bounce, Float time = 0);
     virtual vec3f generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0);
     onb uvw;
-    vec3f wi;
     vec3f wo;
     Float eta, h, gammaO, s;
     point3f sigma_a;
     Float sin2kAlpha[3], cos2kAlpha[3];
   private:
+    Float Value(const vec3f& direction) const;
+    vec3f Generate(const vec2f& sample) const;
     std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO) const;
     Float v[pMax + 1];
     

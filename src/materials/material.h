@@ -119,7 +119,25 @@ private:
   normalmap::DiffuseChild child;
 };
 // Metric bump input for diffuse analytic primitives.
-void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump);
+void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump, const Ray& ray);
+
+// A thin sheet with independent Lambertian reflection and transmission lobes.
+// It has no refractive interior and uses geometric normals on both sides.
+class translucent_material final : public material {
+public:
+  translucent_material(std::shared_ptr<texture> reflection, std::shared_ptr<texture> transmission)
+    : reflection(std::move(reflection)), transmission(std::move(transmission)) {}
+  bool scatter(const Ray&, const hit_record&, scatter_record&, random_gen&) override;
+  bool scatter(const Ray&, const hit_record&, scatter_record&, Sampler*) override;
+  point3f f(const Ray&, const hit_record&, const vec3f&) const override;
+  point3f get_albedo(const hit_record&) const override;
+  const std::string GetName() override { return "translucent"; }
+  size_t GetSize() override { return sizeof(*this); }
+private:
+  std::array<point3f, 2> colors(const hit_record&) const;
+  bool prepare(const Ray&, const hit_record&, scatter_record&) const;
+  std::shared_ptr<texture> reflection, transmission;
+};
 
 class metal : public material {
   public:
@@ -275,6 +293,7 @@ public:
   };
   
 private:
+  bool Scatter(const Ray& ray, const hit_record& hit, scatter_record& result);
   std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
   Float eta;
@@ -323,24 +342,31 @@ class hair : public material {
       for (int p = 3; p <= pMax; ++p) {
         v[p] = v[2];
       }
+      // Invert PBRT's empirical reflectance-to-absorption fit once. This is
+      // a view-independent denoising guide, not an extra transport multiplier.
+      Float fit = 5.969f - .215f * beta_n + 2.532f * Sqr(beta_n) -
+        10.73f * Pow<3>(beta_n) + 5.574f * Pow<4>(beta_n) + .245f * Pow<5>(beta_n);
+      for (int channel = 0; channel < 3; ++channel)
+        albedo[channel] = std::exp(-std::sqrt(sigma_a[channel]) * fit);
       // Compute azimuthal logistic scale factor from $\beta_n$
       s = SqrtPiOver8 *(0.265f * beta_n + 1.194f * Sqr(beta_n) + 5.372f * Pow<22>(beta_n));
 
       // Compute $\alpha$ terms for hair scales
       sin2kAlpha[0] = std::sin(mpi_over_180 * alpha);
-      cos2kAlpha[0] = SafeSqrt(1 - Sqr(sin2kAlpha[0]));
+      cos2kAlpha[0] = std::cos(mpi_over_180 * alpha);
       for (int i = 1; i < 3; ++i) {
         sin2kAlpha[i] = 2 * cos2kAlpha[i - 1] * sin2kAlpha[i - 1];
         cos2kAlpha[i] = Sqr(cos2kAlpha[i - 1]) - Sqr(sin2kAlpha[i - 1]);
       }
     }
     ~hair() {}
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    point3f get_albedo(const hit_record&) const override;
+    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) override;
+    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) override;
     
-    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-    size_t GetSize();
-    const std::string GetName() {
+    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const override;
+    size_t GetSize() override;
+    const std::string GetName() override {
       return(std::string("hair"));
     };
     
@@ -349,7 +375,8 @@ class hair : public material {
     Float beta_m, beta_n;
     Float alpha;
   private:
-    std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO, Float h) const;
+    bool Scatter(const Ray&, const hit_record&, scatter_record&);
+    point3f albedo;
     Float v[pMax + 1];
     Float s;
     Float sin2kAlpha[3], cos2kAlpha[3];

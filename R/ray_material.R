@@ -33,7 +33,8 @@ print.ray_material = function(x, ...) {
       "spotlight" = cli::col_yellow,
       "hair" = cli::col_black,
       "mf-t" = cli::col_br_blue,
-      "openpbr" = cli::col_green
+      "openpbr" = cli::col_green,
+      "translucent" = cli::col_cyan
     )
     mat_col(sprintf("%s", x))
   }
@@ -84,7 +85,8 @@ format_pillar = function(x) {
       "spotlight" = cli::col_yellow,
       "hair" = cli::col_black,
       "mf-t" = cli::col_br_blue,
-      "openpbr" = cli::col_green
+      "openpbr" = cli::col_green,
+      "translucent" = cli::col_cyan
     )
     mat_col(sprintf("<%s>", x_char))
   }

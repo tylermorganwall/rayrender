@@ -1,3 +1,4 @@
+#include "../hitables/hitable.h"
 #include "../materials/microfacetdist.h"
 
 
@@ -248,12 +249,15 @@ point2f TrowbridgeReitzDistribution::GetAlphas(Float u, Float v) const {
 //Texture roughness
 
 Float TrowbridgeReitzDistribution::D(const vec3f &normal, Float u, Float v) const {
+  return D(normal, GetAlphas(u,v));
+}
+
+Float TrowbridgeReitzDistribution::D(const vec3f &normal, point2f alphas) const {
   const Float tan2Theta = Tan2Theta(normal);
   if(std::isinf(tan2Theta)) {
     return(0.0);
   }
   const Float cos4Theta = Cos2Theta(normal) * Cos2Theta(normal);
-  point2f alphas = GetAlphas(u,v);
   Float e = tan2Theta * (Cos2Phi(normal) / (alphas.xy.x * alphas.xy.x) + 
     Sin2Phi(normal) / (alphas.xy.y * alphas.xy.y));
   return(1.0/(static_cast<Float>(M_PI) * alphas.xy.x * alphas.xy.y * cos4Theta * (1.0+e) * (1.0+e)));
@@ -271,10 +275,18 @@ Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, Float u, Float v) cons
   return((-1 + std::sqrt(static_cast<Float>(1) + alpha2Tan2Theta)) / 2);
 }
 
+Float TrowbridgeReitzDistribution::Lambda(const vec3f &w, point2f alphas) const {
+  if (w[2] == 0) return std::numeric_limits<Float>::infinity();
+  Float slope2 = (Sqr(alphas[0] * w[0]) + Sqr(alphas[1] * w[1])) / Sqr(w[2]);
+  return (std::sqrt(1 + slope2) - 1) / 2;
+}
 
-vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi,
-                                             const Float u1, const Float u2, Float u, Float v) const {
-  point2f alphas = GetAlphas(u,v);
+
+vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const {
+  return Sample_wh(wi, u1, u2, GetAlphas(u,v));
+}
+
+vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const {
   bool flip = wi.xyz.z < 0;
   vec3f wh = TrowbridgeReitzSample(flip ? -wi : wi, alphas.xy.x, alphas.xy.y, u1, u2);
   if (flip) {
@@ -285,7 +297,10 @@ vec3f TrowbridgeReitzDistribution::Sample_wh(const vec3f &wi,
 
 
 Float BeckmannDistribution::D(const vec3f &wh, Float u, Float v) const {
-  point2f alphas = GetAlphas(u,v);
+  return D(wh, GetAlphas(u,v));
+}
+
+Float BeckmannDistribution::D(const vec3f &wh, point2f alphas) const {
   
   Float tan2Theta = Tan2Theta(wh);
   if(std::isinf(tan2Theta)) {
@@ -311,9 +326,22 @@ Float BeckmannDistribution::Lambda(const vec3f &w, Float u, Float v) const {
   return((1 - 1.259f * a + 0.396f * a * a) / (3.535f * a + 2.181f * a * a));
 }
 
+Float BeckmannDistribution::Lambda(const vec3f &w, point2f alphas) const {
+  if (w[2] == 0) return std::numeric_limits<Float>::infinity();
+  Float slope = std::sqrt(Sqr(alphas[0] * w[0]) + Sqr(alphas[1] * w[1]));
+  if (slope == 0) return 0;
+  Float a = std::abs(w[2]) / slope;
+  // Same Smith approximation used by the Beckmann visible-normal sampler.
+  if (a >= 1.6f) return 0;
+  return (1 - 1.259f * a + .396f * a * a) / (3.535f * a + 2.181f * a * a);
+}
+
 
 vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const {
-  point2f alphas = GetAlphas(u,v);
+  return Sample_wh(wi, u1, u2, GetAlphas(u,v));
+}
+
+vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const {
   
   // Sample visible area of normals for Beckmann distribution
   bool flip = wi.xyz.z < 0;
@@ -322,4 +350,21 @@ vec3f BeckmannDistribution::Sample_wh(const vec3f &wi, const Float u1, const Flo
     wh = -wh;
   }
   return(wh);
+}
+
+// Constants preserve the existing public microfacet conversion. PBRT import
+// supplies alpha explicitly, after evaluating and remapping raw PBRT roughness.
+point2f MicrofacetDistribution::Resolve(const hit_record& h) const {
+  if (!roughness_graph) return GetAlphas(h.u, h.v);
+  const auto context = TextureEvalContext::FromHit(h);
+  Float value = std::clamp(roughness_graph->Evaluate(context)[0], Float(0), Float(1));
+  Float alpha;
+  if (graph_is_alpha) alpha = value;
+  else {
+    Float mapped = roughness_texture::RoughnessToAlpha(value * value);
+    alpha = mapped * mapped;
+  }
+  Float alpha_v = graph_is_alpha && roughness_graph_v ?
+    std::clamp(roughness_graph_v->Evaluate(context)[0], Float(0), Float(1)) : alpha;
+  return point2f(std::max(alpha, Float(1e-6)), std::max(alpha_v, Float(1e-6)));
 }

@@ -37,7 +37,7 @@ private:
 }
 
 point3f diffuse_material::get_albedo(const hit_record& h) const {
-  point3f a = albedo->value(h.u,h.v,h.p);
+  point3f a = albedo->value(h);
   // Physical reflectance domain, including HDR images and procedural textures.
   // Invalid/nonfinite channels absorb. R validates constant input colors too.
   for (int i=0;i<3;++i) a[i] = std::isfinite(a[i]) ? std::clamp(a[i],Float(0),Float(1)) : 0;
@@ -69,14 +69,16 @@ bool diffuse_material::scatter(const Ray& ray, const hit_record& h, scatter_reco
   return true;
 }
 
-void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump) {
-  h.physical_shading_normal = normal3f(0);
-  if (!mat || !mat->physical_normal_mapping()) return;
-  h.physical_shading_normal = h.geometric_normal;
-  if (!bump) return;
-  auto slope = bump->value(h.u,h.v,h.p);
-  auto n = normalmap::perturb(vector(h.geometric_normal),vector(h.dpdu),vector(h.dpdv),
-                             slope[0],slope[1]);
-  h.physical_shading_normal = normal3f(n[0],n[1],n[2]);
-  h.bump_normal = h.physical_shading_normal;
+void SetPhysicalBump(hit_record &h, const material *mat, const bump_texture *bump, const Ray &ray) {
+  h.ComputeDifferentials(ray);
+  h.physical_shading_normal =
+      mat && mat->physical_normal_mapping() ? h.geometric_normal : normal3f(0);
+  if (!bump)
+    return;
+  const TextureFootprint footprint{h.dudx, h.dvdx, h.dudy, h.dvdy, h.has_differentials};
+  h.bump_normal = bump->perturb(h.u, h.v, h.p, unit_vector(h.geometric_normal), h.dpdu, h.dpdv,
+                                h.dndu, h.dndv, footprint);
+  h.has_bump = true;
+  if (mat && mat->physical_normal_mapping())
+    h.physical_shading_normal = h.bump_normal;
 }

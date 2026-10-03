@@ -104,42 +104,149 @@ point3f image_texture_char::value(Float u, Float v, const point3f& p) const {
 
 Float alpha_texture::value(Float u, Float v, const point3f& p) const {
   if (!data) return opacity;
-  u = wrap_texture_coordinate(u, 1, offsetu);
-  v = wrap_texture_coordinate(v, 1, offsetv);
+  u = wrap_texture_coordinate(u, repeatu, offsetu);
+  v = wrap_texture_coordinate(v, repeatv, offsetv);
   int i = u * nx;
   int j = (1-v) * ny;
   if (i < 0) i = 0;
   if (j < 0) j = 0;
   if (i > nx-1) i = nx-1;
   if (j > ny-1) j = ny-1;
-  return(static_cast<Float>(data[channels*i + channels*nx*j + channels-1]) * rescale);
+  return(opacity * static_cast<Float>(data[channels*i + channels*nx*j + channels-1]) * rescale);
 }
 
-
-Float bump_texture::raw_value(Float u, Float v, const point3f& p) const {
-  u = std::fmod(wrap_texture_coordinate(u, repeatu, offsetu), Float(1));
-  v = std::fmod(wrap_texture_coordinate(v, repeatv, offsetv), Float(1));
-  int i = u * (nx-1);
-  int j = (1-v) * (ny-1);
-  if (i < 1) i = 1;
-  if (j < 1) j = 1;
-  if (i > nx-2) i = nx-2;
-  if (j > ny-2) j = ny-2;
-  return((Float)data[channels*i + channels*nx*j] * rescale);
+HeightImage::HeightImage(int width, int height, std::vector<Float> pixels) {
+  if (width < 1 || height < 1 || pixels.size() != size_t(width) * height)
+    throw std::invalid_argument("Invalid height image dimensions");
+  // PBRT-style power-of-two pyramid. Upsample non-power-of-two dimensions with
+  // a separable radius-two windowed sinc, then box-filter successive levels.
+  // Heights are signed data: unlike color resampling, never clamp them to zero.
+  auto power2 = [](int n) {
+    int v = 1;
+    while (v < n)
+      v *= 2;
+    return v;
+  };
+  const int out_width = power2(width), out_height = power2(height);
+  auto resize_axis = [](const std::vector<Float> &source, int w, int h, int target,
+                        bool horizontal) {
+    const int old = horizontal ? w : h, nw = horizontal ? target : w, nh = horizontal ? h : target;
+    std::vector<Float> result(size_t(nw) * nh);
+    for (int j = 0; j < nh; ++j)
+      for (int i = 0; i < nw; ++i) {
+        const double center = ((horizontal ? i : j) + .5) * old / target;
+        const int first = int(std::floor(center - 1.5));
+        double sum = 0, weight_sum = 0;
+        for (int k = 0; k < 4; ++k) {
+          const double d = first + k + .5 - center;
+          auto sinc = [](double x) {
+            return std::abs(x) < 1e-8 ? 1.0 : std::sin(M_PI * x) / (M_PI * x);
+          };
+          const double weight = std::abs(d) > 2 ? 0 : sinc(d) * sinc(d / 2);
+          const int tap = ((first + k) % old + old) % old;
+          sum += weight * source[horizontal ? size_t(j) * w + tap : size_t(tap) * w + i];
+          weight_sum += weight;
+        }
+        result[size_t(j) * nw + i] = Float(sum / weight_sum);
+      }
+    return result;
+  };
+  if (out_width != width) {
+    pixels = resize_axis(pixels, width, height, out_width, true);
+    width = out_width;
+  }
+  if (out_height != height) {
+    pixels = resize_axis(pixels, width, height, out_height, false);
+    height = out_height;
+  }
+  levels.push_back({width, height, std::move(pixels)});
+  while (width > 1 || height > 1) {
+    const auto &previous = levels.back();
+    const int nw = std::max(1, width / 2), nh = std::max(1, height / 2);
+    std::vector<Float> next(size_t(nw) * nh);
+    for (int j = 0; j < nh; ++j)
+      for (int i = 0; i < nw; ++i) {
+        const int x = 2 * i, y = 2 * j, x1 = std::min(x + 1, width - 1),
+                  y1 = std::min(y + 1, height - 1);
+        next[size_t(j) * nw + i] =
+            Float(.25) *
+            (previous.pixels[size_t(y) * width + x] + previous.pixels[size_t(y) * width + x1] +
+             previous.pixels[size_t(y1) * width + x] + previous.pixels[size_t(y1) * width + x1]);
+      }
+    levels.push_back({nw, nh, std::move(next)});
+    width = nw;
+    height = nh;
+  }
 }
 
-point3f bump_texture::value(Float u, Float v, const point3f& p) const {
-  u = std::fmod(wrap_texture_coordinate(u, repeatu, offsetu), Float(1));
-  v = std::fmod(wrap_texture_coordinate(v, repeatv, offsetv), Float(1));
-  int i = u * (nx-1);
-  int j = (1-v) * (ny-1);
-  if (i < 1) i = 1;
-  if (j < 1) j = 1;
-  if (i > nx-2) i = nx-2;
-  if (j > ny-2) j = ny-2;
-  Float bu = Float(data[channels*(i+1) + channels*nx*j] - data[channels*(i-1) + channels*nx*j])/2 * rescale;
-  Float bv = Float(data[channels*i + channels*nx*(j+1)] - data[channels*i + channels*nx*(j-1)])/2 * rescale;
-  return(point3f(intensity*bu,intensity*bv,0));
+Float bump_texture::raw_value(Float u, Float v, const point3f &, TextureFootprint footprint) const {
+  const HeightLevel *level = nullptr;
+  int width = nx, height = ny;
+  if (image) {
+    size_t lod = 0;
+    if (footprint.valid) {
+      const Float extent =
+          2 * std::max({std::abs(repeatu * footprint.dudx), std::abs(repeatu * footprint.dudy),
+                        std::abs(repeatv * footprint.dvdx), std::abs(repeatv * footprint.dvdy)});
+      const Float l = Float(image->levels.size() - 1) + std::log2(std::max(extent, Float(1e-8)));
+      lod = size_t(std::clamp(std::floor(l), Float(0), Float(image->levels.size() - 1)));
+    }
+    level = &image->levels[lod];
+    width = level->width;
+    height = level->height;
+  }
+  // PBRT's bilinear texel-center convention, with repeat addressing applied to
+  // each tap. Interpolate across periodic seams rather than clamp at the edge.
+  const Float s = u * repeatu + offsetu, t = v * repeatv + offsetv;
+  const Float x = (s - std::floor(s)) * width - Float(.5);
+  const Float y = (1 - (t - std::floor(t))) * height - Float(.5);
+  const int ix = int(std::floor(x)), iy = int(std::floor(y));
+  const Float fx = x - ix, fy = y - iy;
+  auto texel = [&](int i, int j) {
+    i = (i % width + width) % width;
+    j = (j % height + height) % height;
+    const size_t index = size_t(i) + size_t(width) * j;
+    return level ? level->pixels[index] : Float(data[size_t(channels) * index]) * rescale;
+  };
+  const Float a = (1 - fx) * texel(ix, iy) + fx * texel(ix + 1, iy);
+  const Float b = (1 - fx) * texel(ix, iy + 1) + fx * texel(ix + 1, iy + 1);
+  return (1 - fy) * a + fy * b;
+}
+
+point3f bump_texture::value(Float u, Float v, const point3f &p, TextureFootprint footprint) const {
+  // PBRT v4 BumpMap: absent ray differentials, du=dv=.0005 in source UV
+  // coordinates. Repeat's chain rule is implicit in evaluating shifted UVs.
+  Float du =
+      footprint.valid ? Float(.5) * (std::abs(footprint.dudx) + std::abs(footprint.dudy)) : 0;
+  Float dv =
+      footprint.valid ? Float(.5) * (std::abs(footprint.dvdx) + std::abs(footprint.dvdy)) : 0;
+  if (du == 0)
+    du = .0005;
+  if (dv == 0)
+    dv = .0005;
+  const Float height = raw_value(u, v, p, footprint);
+  const Float bu = (raw_value(u + du, v, p, footprint) - height) / du;
+  const Float bv = (raw_value(u, v + dv, p, footprint) - height) / dv;
+  // Keep the established image-down convention at the legacy slope API.
+  return point3f(intensity * bu, -intensity * bv, 0);
+}
+
+normal3f bump_texture::perturb(Float u, Float v, const point3f &p, normal3f n, vec3f &dpdu,
+                               vec3f &dpdv, normal3f dndu, normal3f dndv,
+                               TextureFootprint footprint) const {
+  const auto slope = value(u, v, p, footprint);
+  const Float height = intensity * raw_value(u, v, p, footprint);
+  const vec3f du = dpdu + slope[0] * convert_to_vec3(n) + height * convert_to_vec3(dndu);
+  const vec3f dv = dpdv - slope[1] * convert_to_vec3(n) + height * convert_to_vec3(dndv);
+  const auto crossed = cross(du, dv);
+  if (!(crossed.squared_length() > 0) || !std::isfinite(crossed.squared_length()))
+    return n;
+  auto bumped = convert_to_normal3(unit_vector(crossed));
+  // Preserve orientation for mirrored UV charts and reverseOrientation.
+  bumped = Faceforward(bumped, n);
+  dpdu = du;
+  dpdv = dv;
+  return bumped;
 }
 
 point2f roughness_texture::raw_value(Float u, Float v) const {
@@ -174,6 +281,57 @@ Float roughness_texture::RoughnessToAlpha(Float roughness) {
 #include <testthat.h>
 
 context("Image texture interpolation") {
+  test_that("[filtered height derivatives use UV units and signed repeats]") {
+    const point3f p(0);
+    for (int size : {8, 32})
+      for (int axis : {0, 1}) {
+        std::vector<Float> pixels(size * size);
+        for (int j = 0; j < size; ++j)
+          for (int i = 0; i < size; ++i)
+            pixels[i + size * j] = (Float(axis == 0 ? i : j) + Float(.5)) / size;
+        auto image = std::make_shared<HeightImage>(size, size, pixels);
+        for (Float repeat : {Float(-2), Float(.5), Float(3)}) {
+          // Keep the lookup and forward difference inside the linear ramp.
+          bump_texture bump(image, size, size, 1, .012, repeat, repeat, .5 - .4 * repeat,
+                            .5 - .4 * repeat);
+          auto slope = bump.value(.4, .4, p);
+          expect_true(std::abs(slope[0] - (axis == 0 ? Float(.012) * repeat : 0)) < 1e-5);
+          expect_true(std::abs(slope[1] - (axis == 1 ? Float(.012) * repeat : 0)) < 1e-5);
+        }
+      }
+  }
+  test_that("[height pyramids preserve signed constants and filter small features]") {
+    for (int nx : {1, 2, 5})
+      for (int ny : {1, 2, 7}) {
+        auto image = std::make_shared<HeightImage>(nx, ny, std::vector<Float>(nx * ny, -.012345));
+        bump_texture bump(image, nx, ny, 1, 1);
+        for (Float uv : {Float(-1), Float(0), Float(.999), Float(2)}) {
+          expect_true(bump.value(uv, uv, point3f(0)).squared_length() < 1e-8);
+          expect_true(bump.raw_value(uv, uv, point3f(0)) == Approx(-.012345));
+        }
+      }
+    std::vector<Float> pixels(64);
+    for (int j = 0; j < 8; ++j)
+      for (int i = 0; i < 8; ++i)
+        pixels[i + 8 * j] = (i + j) % 2;
+    auto image = std::make_shared<HeightImage>(8, 8, pixels);
+    bump_texture bump(image, 8, 8, 1, 1);
+    TextureFootprint footprint;
+    footprint.valid = true;
+    footprint.dudx = footprint.dvdy = 1;
+    expect_true(bump.raw_value(.123, .456, point3f(0), footprint) == Approx(.5));
+    expect_true(bump.value(.123, .456, point3f(0), footprint).squared_length() == 0);
+  }
+  test_that("[bump construction retains the normal derivative height term]") {
+    auto image = std::make_shared<HeightImage>(1, 1, std::vector<Float>{.1});
+    bump_texture bump(image, 1, 1, 1, 1);
+    vec3f du(2, 0, 0), dv(0, 3, 0);
+    auto n = bump.perturb(.5, .5, point3f(0), normal3f(0, 0, 1), du, dv, normal3f(1, 0, 0),
+                          normal3f(0, 2, 0));
+    expect_true(du[0] == Approx(2.1));
+    expect_true(dv[1] == Approx(3.2));
+    expect_true(n[2] == Approx(1));
+  }
   test_that("[UV offsets translate lookups after scaling without resampling]") {
     Float pixels[8 * 8 * 3];
     unsigned char bytes[8 * 8 * 3];
@@ -213,8 +371,10 @@ context("Image texture interpolation") {
       const Float s = Float(.17) * Float(1.5) + du, t = Float(.41) * Float(2.3) + dv;
       expect_true(bump.raw_value(.17, .41, p) == Approx(bump_base.raw_value(s, t, p)));
       const auto b = bump.value(.17, .41, p), b0 = bump_base.value(s, t, p);
-      expect_true(b[0] == Approx(b0[0]));
-      expect_true(b[1] == Approx(b0[1]));
+      // Float height subtraction at a .0005 UV step amplifies rounding by
+      // about 2000. Bound that numerical error in the chain-rule comparison.
+      expect_true(std::abs(b[0]-Float(1.5)*b0[0]) < 5e-4);
+      expect_true(std::abs(b[1]-Float(2.3)*b0[1]) < 5e-4);
     }
   }
   test_that("[floating-point textures interpolate between texels]") {

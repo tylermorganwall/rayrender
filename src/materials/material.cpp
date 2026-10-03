@@ -1,3 +1,4 @@
+#include "rough_dielectric.h"
 #include "../materials/material.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
@@ -42,7 +43,7 @@ bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sre
   point3f offset_p = offset_ray(hrec.p-r_in.o, hrec.normal) + r_in.o;
   
   srec.specular_ray = Ray(offset_p, reflected + fuzz * rng.random_in_unit_sphere(), r_in.pri_stack, r_in.time());
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
+  srec.attenuation = albedo->value(hrec) * FrCond(cosine, eta, k);
   srec.is_specular = true;
   srec.pdf_ptr = 0;
 
@@ -63,7 +64,7 @@ bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sre
   point3f offset_p = offset_ray(hrec.p-r_in.o, hrec.normal) + r_in.o;
   
   srec.specular_ray = Ray(offset_p, reflected + fuzz * rand_to_unit(sampler->Get2D()), r_in.pri_stack, r_in.time());
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p) * FrCond(cosine, eta, k);
+  srec.attenuation = albedo->value(hrec) * FrCond(cosine, eta, k);
   srec.is_specular = true;
   srec.pdf_ptr = 0;
 
@@ -71,7 +72,7 @@ bool metal::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sre
 }
 
 point3f metal::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
+  return(albedo->value(rec));
 }
 
 size_t metal::GetSize()  {
@@ -325,7 +326,7 @@ point3f diffuse_light::emitted(const Ray& r_in, const hit_record& rec, Float u, 
 }
 
 point3f diffuse_light::get_albedo(const hit_record& rec) const {
-  return(emit->value(rec.u, rec.v, rec.p));
+  return(emit->value(rec));
 }
 
 size_t diffuse_light::GetSize()  {
@@ -361,7 +362,7 @@ Float spot_light::falloff(const vec3f &w) const {
 }
 
 point3f spot_light::get_albedo(const hit_record& rec) const {
-  return(emit->value(rec.u, rec.v, rec.p) * intensity);
+  return(emit->value(rec) * intensity);
 }
 
 size_t spot_light::GetSize()  {
@@ -378,7 +379,7 @@ bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& 
   
   srec.is_specular = true;
   srec.specular_ray = Ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
-  srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
+  srec.attenuation = albedo->value(rec);
   return(true);
 }
 bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
@@ -387,7 +388,7 @@ bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& 
   
   srec.is_specular = true;
   srec.specular_ray = Ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
-  srec.attenuation = albedo->value(rec.u,rec.v,rec.p);
+  srec.attenuation = albedo->value(rec);
   return(true);
 }
 
@@ -395,10 +396,10 @@ point3f isotropic::f(const Ray& r_in, const hit_record& rec, const vec3f& scatte
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Isotropic F");
   
-  return(albedo->value(rec.u,rec.v,rec.p) * static_cast<Float>(0.25) * static_cast<Float>(M_1_PI));
+  return(albedo->value(rec) * static_cast<Float>(0.25) * static_cast<Float>(M_1_PI));
 }
 point3f isotropic::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
+  return(albedo->value(rec));
 }
 
 size_t isotropic::GetSize()  {
@@ -415,11 +416,13 @@ bool MicrofacetReflection::scatter(const Ray& r_in, const hit_record& hrec, scat
   SCOPED_TIMER_COUNTER("MicrofacetReflection Scatter");
   
   srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  srec.attenuation = albedo->value(hrec);
   if(!hrec.has_bump) {
     srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<micro_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   } else {
     srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<micro_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   }
   return(true);
 }
@@ -429,11 +432,13 @@ bool MicrofacetReflection::scatter(const Ray& r_in, const hit_record& hrec, scat
   SCOPED_TIMER_COUNTER("MicrofacetReflection Scatter");
   
   srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  srec.attenuation = albedo->value(hrec);
   if(!hrec.has_bump) {
     srec.pdf_ptr = new micro_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<micro_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   } else {
     srec.pdf_ptr = new micro_pdf(hrec.bump_normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<micro_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   }
   return(true);
 }
@@ -462,12 +467,12 @@ point3f MicrofacetReflection::f(const Ray& r_in, const hit_record& rec, const ve
   }
   point3f F = FrCond(cosThetaO, eta, k);
   Float G = distribution->G(wo,wi,normal);
-  Float D = distribution->D(normal, rec.u, rec.v);
-  return(albedo->value(rec.u, rec.v, rec.p) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
+  Float D = distribution->D(normal, distribution->Resolve(rec));
+  return(albedo->value(rec) * F * G * D  * cosThetaI / (4 * CosTheta(wo) * CosTheta(wi) ));
 }
 
 point3f MicrofacetReflection::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
+  return(albedo->value(rec));
 }
 
 size_t MicrofacetReflection::GetSize()  {
@@ -480,90 +485,68 @@ size_t MicrofacetReflection::GetSize()  {
 //MicrofacetTransmission
 //
 
-bool MicrofacetTransmission::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool MicrofacetTransmission::Scatter(const Ray& ray, const hit_record& hit,
+                                     scatter_record& result) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission Scatter");
-  
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-  if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
+  const normal3f normal = hit.has_bump ? hit.bump_normal : hit.normal;
+  result.attenuation = albedo->value(hit);
+  if (eta == 1) {
+    // Index-matched roughness cannot change direction. Handle this as a delta
+    // event instead of attempting to reconstruct a zero transmission half-vector.
+    result.is_specular = true;
+    result.is_transmission = true;
+    result.eta = 1;
+    if (dot(ray.direction(), normal) > 0) {
+      Float distance = (hit.p - ray(0)).length();
+      result.attenuation *= point3f(std::exp(-distance * k[0]),
+        std::exp(-distance * k[1]), std::exp(-distance * k[2]));
+    }
+    result.specular_ray = Ray(OffsetRayOrigin(hit.p, hit.pError, hit.normal,
+      ray.direction()), ray.direction(), ray.pri_stack, ray.time());
   } else {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
+    result.is_specular = false;
+    auto density = new micro_transmission_pdf(normal, ray.direction(), distribution,
+      eta, hit.u, hit.v);
+    density->alphas = distribution->Resolve(hit);
+    result.pdf_ptr = density;
   }
-  return(true);
+  return true;
 }
 
-bool MicrofacetTransmission::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("MicrofacetTransmission Scatter");
-
-  srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
-
-  if(!hrec.has_bump) {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
-  } else {
-    srec.pdf_ptr = new micro_transmission_pdf(hrec.bump_normal, r_in.direction(), distribution, eta, hrec.u, hrec.v);
-  }
-  return(true);
+bool MicrofacetTransmission::scatter(const Ray& ray, const hit_record& hit,
+                                    scatter_record& result, random_gen&) {
+  return Scatter(ray, hit, result);
 }
 
-point3f MicrofacetTransmission::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
+bool MicrofacetTransmission::scatter(const Ray& ray, const hit_record& hit,
+                                    scatter_record& result, Sampler*) {
+  return Scatter(ray, hit, result);
+}
+
+point3f MicrofacetTransmission::f(const Ray& ray, const hit_record& hit,
+                                const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("MicrofacetTransmission F");
-  
-  onb uvw;
-  if(!rec.has_bump) {
-    uvw.build_from_w_normalized(rec.normal);
-  } else {
-    uvw.build_from_w_normalized(rec.bump_normal);
+  if (!(scattered.squared_length() > 0)) return point3f(0);
+  onb frame;
+  frame.build_from_w_normalized(hit.has_bump ? hit.bump_normal : hit.normal);
+  const vec3f view = -unit_vector(frame.world_to_local(ray.direction()));
+  const vec3f outgoing = unit_vector(frame.world_to_local(scattered));
+  auto result = EvaluateRoughDielectric(view, outgoing, eta, *distribution,
+    distribution->Resolve(hit));
+  if (!result.transmission) return point3f(result.f_cos);
+  point3f attenuation(1);
+  if (view[2] < 0) {
+    Float distance = (hit.p - ray(0)).length();
+    attenuation = point3f(std::exp(-distance * k[0]), std::exp(-distance * k[1]),
+      std::exp(-distance * k[2]));
   }
-  
-  vec3f wi = -unit_vector(uvw.world_to_local(r_in.direction()));
-  vec3f wo = unit_vector(uvw.world_to_local(scattered));
-  bool entering = CosTheta(wi) > 0;
-  Float cosThetaO = CosTheta(wo);
-  Float cosThetaI = CosTheta(wi);
-  if (cosThetaI == 0 || cosThetaO == 0) return point3f(0);
-  bool reflect = cosThetaI * cosThetaO > 0;
-  
-  // Compute $\wh$ from $\wo$ and $\wi$ for microfacet transmission
-  //From pbrt: etaA is incident (etaI) direction if entering, otherwise etaB is
-  // Float eta = CosTheta(wo) > 0 ? (etaB / etaA) : (etaA / etaB); 
-  Float eta2 = 1;
-  if (!reflect) {
-    eta2 = entering ? (1.0/eta) : (eta);
-  }
-  vec3f wh = unit_vector(wi * eta2 + wo);
-  wh = Faceforward(wh, normal3f(0, 0, 1));
-  Float F = FrDielectric(-dot(wo,wh), eta);
-  Float G = distribution->G(wo,wi,wh);
-  Float D = distribution->D(wh, rec.u, rec.v);
-  
-  Float distance = (rec.p-r_in(0)).length();
-  
-  point3f atten = !entering ? point3f(std::exp(-distance * k.xyz.x),
-                                      std::exp(-distance * k.xyz.y),
-                                      std::exp(-distance * k.xyz.z)) :
-    point3f(1.0);
-  
-  // Same side?
-  if (reflect) {
-    return(F * G * D / (4  * AbsDot(wo,wh)) );
-  }
-
-  Float sqrtDenom = dot(wi, wh)  + dot(wo, wh)* eta2 ;
-  return (static_cast<Float>(1.0 - F) *
-          albedo->value(rec.u, rec.v, rec.p) * atten *
-          D * G * AbsCosTheta(wo) *
-        std::fabs(eta2 * eta2 *
-       dot(wi, wh) * dot(wo, wh)) /
-      (std::fabs(cosThetaI * cosThetaO) * sqrtDenom * sqrtDenom));
+  return result.f_cos * albedo->value(hit) * attenuation;
 }
 
 point3f MicrofacetTransmission::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
+  return(albedo->value(rec));
 }
 
 point3f MicrofacetTransmission::SchlickFresnel(Float cosTheta) const {
@@ -585,8 +568,9 @@ bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sr
   SCOPED_TIMER_COUNTER("Glossy Scatter");
   
   srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  srec.attenuation = albedo->value(hrec);
   srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<glossy_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   return(true);
 }
 
@@ -595,8 +579,9 @@ bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sr
   SCOPED_TIMER_COUNTER("Glossy Scatter");
   
   srec.is_specular = false;
-  srec.attenuation = albedo->value(hrec.u, hrec.v, hrec.p);
+  srec.attenuation = albedo->value(hrec);
   srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+    static_cast<glossy_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   return(true);
 }
 
@@ -614,7 +599,7 @@ point3f glossy::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered
   vec3f wo = unit_vector(uvw.world_to_local(scattered));
   
   auto pow5 = [](Float v) { return (v * v) * (v * v) * v; };
-  point3f diffuse = static_cast<Float>(28.0 / (23.0 * static_cast<Float>(M_PI))) * Rd * albedo->value(rec.u, rec.v,rec.p) *
+  point3f diffuse = static_cast<Float>(28.0 / (23.0 * static_cast<Float>(M_PI))) * Rd * albedo->value(rec) *
     (point3f(1.0) + -Rs) *
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wi))) *
     static_cast<Float>(1.0 - pow5(1 - 0.5f * AbsCosTheta(wo)));
@@ -626,7 +611,7 @@ point3f glossy::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered
   if(cosine < 0 || !SameHemisphere(wi,wo)) {
     return(point3f(0));
   }
-  point3f specular = distribution->D(wh, rec.u, rec.v) /
+  point3f specular = distribution->D(wh, distribution->Resolve(rec)) /
       (4 * AbsDot(wi, wh) *
       std::fmax(AbsCosTheta(wi), AbsCosTheta(wo))) *
       SchlickFresnel(dot(wo, wh));
@@ -639,7 +624,7 @@ point3f glossy::SchlickFresnel(Float cosTheta) const {
 }
 
 point3f glossy::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec.u, rec.v, rec.p));
+  return(albedo->value(rec));
 }
 
 
@@ -651,195 +636,63 @@ size_t glossy::GetSize()  {
 //Hair
 //
 
-std::array<Float, pMax + 1> hair::ComputeApPdf(Float cosThetaO, Float h) const {
-  // Compute array of $A_p$ values for _cosThetaO_
-  Float sinThetaO = SafeSqrt(1 - cosThetaO * cosThetaO);
-  
-  // Compute $\cos \thetat$ for refracted ray
-  Float sinThetaT = sinThetaO / eta;
-  Float cosThetaT = SafeSqrt(1 - Sqr(sinThetaT));
-  
-  // Compute $\gammat$ for refracted ray
-  Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
-  Float sinGammaT = h / etap;
-  Float cosGammaT = SafeSqrt(1 - Sqr(sinGammaT));
-  
-  // Compute the transmittance _T_ of a single path through the cylinder
-  point3f T = Exp(-sigma_a * (2 * cosGammaT / cosThetaT));
-  std::array<point3f, pMax + 1> ap = Ap(cosThetaO, eta, h, T);
-  
-  // Compute $A_p$ PDF from individual $A_p$ terms
-  std::array<Float, pMax + 1> apPdf;
-  Float sumY = std::accumulate(ap.begin(), ap.end(), Float(0),
-                               [](Float s, const point3f &ap) { return s + ap.xyz.y; });
-  for (int i = 0; i <= pMax; ++i) {
-    apPdf[i] = ap[i].xyz.y / sumY;
-  }
-  return(apPdf);
+
+namespace {
+// Hair scattering uses the longitudinal tangent as x. Curve derivatives carry
+// width/parameter scale and flat-curve normals need not be perpendicular to it.
+onb HairFrame(const hit_record& hit) {
+  vec3f tangent = hit.dpdu;
+  if (!(tangent.squared_length() > 0)) tangent = vec3f(1, 0, 0);
+  tangent = unit_vector(tangent);
+  vec3f normal = convert_to_vec3(hit.normal);
+  normal = normal - dot(normal, tangent) * tangent;
+  if (normal.squared_length() < 1e-12f) {
+    onb fallback;
+    fallback.build_from_w(tangent);
+    normal = fallback.v();
+  } else normal = unit_vector(normal);
+  return onb::FromXZ(tangent, normal);
+}
 }
 
-bool hair::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) {
+bool hair::Scatter(const Ray& incoming, const hit_record& hit, scatter_record& scattering) {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair Scatter");
-  
-  onb uvw(hrec.dpdu, hrec.dpdv, hrec.normal);
-  vec3f wo = unit_vector(uvw.world_to_local(r_in.direction()));
-
-  Float sinThetaO = wo.xyz.x;
-  Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
-  Float h = -1 + 2 * hrec.v;
-  Float gammaO = SafeASin(h);
-  
-  // Derive four random samples from _u2_
-  vec2f u2 = vec2f(rng.unif_rand(),rng.unif_rand());
-  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
-  
-  // Determine which term $p$ to sample for hair scattering
-  std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO, h);
-  int p;
-  for (p = 0; p < pMax; ++p) {
-    if (u[0].e[0] < apPdf[p]) break;
-    u[0].e[0] -= apPdf[p];
-  }
-  
-  // Rotate $\sin \thetao$ and $\cos \thetao$ to account for hair scale tilt
-  Float sinThetaOp, cosThetaOp;
-  if (p == 0) {
-    sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
-    cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
-  } else if (p == 1) {
-    sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
-    cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
-  } else if (p == 2) {
-    sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
-    cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
-  } else {
-    sinThetaOp = sinThetaO;
-    cosThetaOp = cosThetaO;
-  }
-  
-  // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
-  Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
-  Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
-  Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
-  Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
-  
-  // Sample $N_p$ to compute $\Delta\phi$
-  
-  // Compute $\gammat$ for refracted ray
-  Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
-  Float sinGammaT = h / etap;
-  Float gammaT = SafeASin(sinGammaT);
-  Float dphi;
-  if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
-  } else {
-    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
-  }
-  
-  // Compute _wi_ from sampled hair scattering angles
-  Float phiI = phiO + dphi;
-  vec3f wi(sinThetaI, cosThetaI * std::cos(phiI),
-          cosThetaI * std::sin(phiI));
-  srec.is_specular = false;
-  srec.attenuation = point3f(1,1,1);
-  
-  srec.pdf_ptr = new hair_pdf(uvw, wi, wo, 
-                              eta, h, gammaO,  s, sigma_a,
-                              cos2kAlpha, sin2kAlpha, v);
-  return(true);
+  const onb frame = HairFrame(hit);
+  // Both directions point away from the interaction, as in PBRT HairBxDF.
+  const vec3f outgoing = -unit_vector(frame.world_to_local(incoming.direction()));
+  const Float h = clamp(-1 + 2 * hit.v, Float(-1), Float(1));
+  scattering.is_specular = false;
+  scattering.attenuation = point3f(1);
+  scattering.pdf_ptr = new hair_pdf(frame, outgoing, eta, h, SafeASin(h), s,
+                                   sigma_a, cos2kAlpha, sin2kAlpha, v);
+  return true;
 }
 
-
-bool hair::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Hair Scatter");
-  
-  onb uvw(hrec.dpdu, hrec.dpdv, hrec.normal);
-  vec3f wo = unit_vector(uvw.world_to_local(r_in.direction()));
-  
-  Float sinThetaO = wo.xyz.x;
-  Float cosThetaO = SafeSqrt(1 - Sqr(sinThetaO));
-  Float phiO = std::atan2(wo.xyz.z, wo.xyz.y);
-  Float h = -1 + 2 * hrec.v;
-  Float gammaO = SafeASin(h);
-  
-  // Derive four random samples from _u2_
-  vec2f u2 = vec2f(sampler->Get1D(),sampler->Get1D());
-  vec2f u[2] = {DemuxFloat(u2.e[0]), DemuxFloat(u2.e[1])};
-  
-  // Determine which term $p$ to sample for hair scattering
-  std::array<Float, pMax + 1> apPdf = ComputeApPdf(cosThetaO, h);
-  int p;
-  for (p = 0; p < pMax; ++p) {
-    if (u[0].e[0] < apPdf[p]) break;
-    u[0].e[0] -= apPdf[p];
-  }
-  
-  // Rotate $\sin \thetao$ and $\cos \thetao$ to account for hair scale tilt
-  Float sinThetaOp, cosThetaOp;
-  if (p == 0) {
-    sinThetaOp = sinThetaO * cos2kAlpha[1] - cosThetaO * sin2kAlpha[1];
-    cosThetaOp = cosThetaO * cos2kAlpha[1] + sinThetaO * sin2kAlpha[1];
-  } else if (p == 1) {
-    sinThetaOp = sinThetaO * cos2kAlpha[0] + cosThetaO * sin2kAlpha[0];
-    cosThetaOp = cosThetaO * cos2kAlpha[0] - sinThetaO * sin2kAlpha[0];
-  } else if (p == 2) {
-    sinThetaOp = sinThetaO * cos2kAlpha[2] + cosThetaO * sin2kAlpha[2];
-    cosThetaOp = cosThetaO * cos2kAlpha[2] - sinThetaO * sin2kAlpha[2];
-  } else {
-    sinThetaOp = sinThetaO;
-    cosThetaOp = cosThetaO;
-  }
-  
-  // Sample $M_p$ to compute $\thetai$
-  u[1].e[0] = std::fmax(u[1].e[0], Float(1e-5));
-  Float cosTheta = 1 + v[p] * std::log(u[1].e[0] + (1 - u[1].e[0]) * std::exp(-2 / v[p]));
-  Float sinTheta = SafeSqrt(1 - Sqr(cosTheta));
-  Float cosPhi = std::cos(2 * static_cast<Float>(M_PI) * u[1].e[1]);
-  Float sinThetaI = -cosTheta * sinThetaOp + sinTheta * cosPhi * cosThetaOp;
-  Float cosThetaI = SafeSqrt(1 - Sqr(sinThetaI));
-  
-  // Sample $N_p$ to compute $\Delta\phi$
-  
-  // Compute $\gammat$ for refracted ray
-  Float etap = std::sqrt(eta * eta - Sqr(sinThetaO)) / cosThetaO;
-  Float sinGammaT = h / etap;
-  Float gammaT = SafeASin(sinGammaT);
-  Float dphi;
-  if (p < pMax) {
-    dphi = Phi(p, gammaO, gammaT) + SampleTrimmedLogistic(u[0].e[1], s, -static_cast<Float>(M_PI), static_cast<Float>(M_PI));
-  } else {
-    dphi = 2 * static_cast<Float>(M_PI) * u[0].e[1];
-  }
-  
-  // Compute _wi_ from sampled hair scattering angles
-  Float phiI = phiO + dphi;
-  vec3f wi(sinThetaI, cosThetaI * std::cos(phiI),
-          cosThetaI * std::sin(phiI));
-  srec.is_specular = false;
-  srec.attenuation = point3f(1,1,1);
-  
-  srec.pdf_ptr = new hair_pdf(uvw, wi, wo, 
-                              eta, h, gammaO,  s, sigma_a,
-                              cos2kAlpha, sin2kAlpha, v);
-  return(true);
+bool hair::scatter(const Ray& incoming, const hit_record& hit,
+                   scatter_record& scattering, random_gen&) {
+  return Scatter(incoming, hit, scattering);
 }
 
+bool hair::scatter(const Ray& incoming, const hit_record& hit,
+                   scatter_record& scattering, Sampler*) {
+  return Scatter(incoming, hit, scattering);
+}
+
+point3f hair::get_albedo(const hit_record&) const {
+  return albedo;
+}
 
 point3f hair::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
   SCOPED_CONTEXT("Material");
   SCOPED_TIMER_COUNTER("Hair F");
   
-  onb uvw(rec.dpdu, rec.dpdv, rec.normal);
+  onb uvw = HairFrame(rec);
   vec3f wo = -unit_vector(uvw.world_to_local(r_in.direction()));
   
   vec3f wi = unit_vector(uvw.world_to_local(scattered));
   
-  Float h = -1 + 2 * rec.v;
+  Float h = clamp(-1 + 2 * rec.v, Float(-1), Float(1));
   Float gammaO = SafeASin(h);
   
   Float sinThetaO = wo.xyz.x;
@@ -896,31 +749,11 @@ point3f hair::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) 
   
   // Compute contribution of remaining terms after _pMax_
   fsum += Mp(cosThetaI, cosThetaO, sinThetaI, sinThetaO, v[pMax]) * ap[pMax] * ONE_OVER_2_PI;
-  if (AbsCosTheta(wi) > 0) {
-    fsum /= AbsCosTheta(wi);
-  }
+  // rayrender consumes projected scattering (f * abs(cos)), whereas PBRT
+  // returns raw f and applies this cosine in its integrator. Do not divide.
   return(fsum);
 }
 
 size_t hair::GetSize()  {
   return(sizeof(*this));
 }
-
-// vec3f hair::SigmaAFromConcentration(Float ce, Float cp) {
-//   vec3f sigma_a;
-//   Float eumelaninSigmaA[3] = {0.419f, 0.697f, 1.37f};
-//   Float pheomelaninSigmaA[3] = {0.187f, 0.4f, 1.05f};
-//   for (int i = 0; i < 3; ++i)
-//     sigma_a.e[i] = (ce * eumelaninSigmaA[i] + cp * pheomelaninSigmaA[i]);
-//   return(sigma_a);
-// }
-// 
-// vec3f hair::SigmaAFromReflectance(const vec3f &c, Float beta_n) {
-//   vec3f sigma_a;
-//   for (int i = 0; i < 3; ++i)
-//     sigma_a.e[i] = Sqr(std::log(c.e[i]) /
-//       (5.969f - 0.215f * beta_n + 2.532f * Sqr(beta_n) -
-//         10.73f * Pow<3>(beta_n) + 5.574f * Pow<4>(beta_n) +
-//         0.245f * Pow<5>(beta_n)));
-//   return(sigma_a);
-// }

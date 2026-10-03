@@ -1731,9 +1731,13 @@ arrow = function(
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
 #' Note: emissive objects may not currently function correctly when scaled.
+#'
+#' @param split_depth Default `3L`. Subdivide into `2^split_depth` native BVH primitives,
+#' matching PBRT's CPU default. Zero disables subdivision; maximum 10. More
+#' subdivisions use more memory but can speed up long or densely packed curves.
+#' @return Single row of a tibble describing the curve in the scene.
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the cube in the scene.
 #' @export
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
@@ -1809,8 +1813,19 @@ bezier_curve = function(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  split_depth = 3L
 ) {
+  if (
+    !is.numeric(split_depth) ||
+      length(split_depth) != 1L ||
+      !is.finite(split_depth) ||
+      split_depth != floor(split_depth) ||
+      split_depth < 0 ||
+      split_depth > 10
+  ) {
+    stop("`split_depth` must be an integer from 0 to 10.", call. = FALSE)
+  }
   if (inherits(p1, "list")) {
     stopifnot(length(p1) == 4 && all(lapply(p1, (function(x) length(x) == 3))))
     p1 = do.call(rbind, p1)
@@ -1829,7 +1844,15 @@ bezier_curve = function(
   if (is.na(width_end)) {
     width_end = width
   }
-  stopifnot(u_min < u_max)
+  stopifnot(
+    length(u_min) == 1L,
+    length(u_max) == 1L,
+    is.finite(u_min),
+    is.finite(u_max),
+    u_min >= 0,
+    u_max <= 1,
+    u_min < u_max
+  )
   stopifnot(length(width) == 1 && is.numeric(width))
   stopifnot(length(width_end) == 1 && is.numeric(width_end))
 
@@ -1840,8 +1863,23 @@ bezier_curve = function(
     stopifnot(length(normal) == 3 && is.numeric(normal))
     stopifnot(length(normal_end) == 3 && is.numeric(normal_end))
   }
-  if (material[[1]]$type == "hair") {
-    type = "flat"
+  stopifnot(
+    is.finite(width),
+    is.finite(width_end),
+    width >= 0,
+    width_end >= 0,
+    max(width, width_end) > 0
+  )
+  for (point in list(p1, p2, p3, p4)) {
+    stopifnot(is.numeric(point), length(point) == 3L, all(is.finite(point)))
+  }
+  type = match.arg(tolower(type), c("cylinder", "flat", "ribbon"))
+  if (type == "ribbon") {
+    stopifnot(
+      all(is.finite(c(normal, normal_end))),
+      sum(normal^2) > 0,
+      sum(normal_end^2) > 0
+    )
   }
   if (all(is.na(normal)) || type == "cylinder" || type == "flat") {
     normal = c(0, 0, 0)
@@ -1870,6 +1908,7 @@ bezier_curve = function(
         width_end = width_end,
         u_min = u_min,
         u_max = u_max,
+        split_depth = as.integer(split_depth),
         curvetype = curvetype,
         normal = normal,
         normal_end = normal_end

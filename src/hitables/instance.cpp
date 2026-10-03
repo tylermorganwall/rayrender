@@ -19,9 +19,9 @@ const bool instance::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     rec = (*ObjectToWorld)(rec);
     rec.light_placement = light_placements.Resolve(rec.light_placement);
     if(rec.boundary_id != 0) rec.boundary_id += boundary_id_offset;
-    if(rec.alpha_miss) {
-      return(false);
-    }
+    // Return alpha misses to the integrator, just like the Sampler overload.
+    // It advances past this surface and can hit another surface in the same
+    // instance; returning false here incorrectly discards the entire instance.
     return(true);
   }
   return(false);

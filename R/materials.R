@@ -31,7 +31,7 @@
 #' be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
 #' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param sigma Default `NULL`. Nonnegative finite roughness control in degrees
@@ -114,6 +114,14 @@ diffuse = function(
   sigma = NULL,
   importance_sample = FALSE
 ) {
+  if (inherits(color, "ray_texture") && color$op == "constant") {
+    color = rep(color$value, length.out = 3L)
+  }
+  color_graph = if (inherits(color, "ray_texture")) color else NULL
+  if (!is.null(color_graph)) {
+    texture_check_legacy(image_texture, checkercolor, noise, gradient_color)
+    color = c(1, 1, 1)
+  }
   if (
     !is.null(sigma) &&
       (!is.numeric(sigma) ||
@@ -191,7 +199,8 @@ diffuse = function(
     glossyinfo = list(NA),
     bump_texture = bump_texture,
     bump_intensity = bump_intensity,
-    roughness_texture = ""
+    roughness_texture = "",
+    texture_graphs = list(color = color_graph)
   ))
 }
 
@@ -233,7 +242,7 @@ diffuse = function(
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -398,7 +407,7 @@ metal = function(
 #' this will help with the convergence of the image.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #'
 #' @return Single row of a tibble describing the dielectric material.
 #' @export
@@ -550,7 +559,7 @@ dielectric = function(
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
@@ -650,6 +659,31 @@ microfacet = function(
   roughness_flip = FALSE,
   importance_sample = FALSE
 ) {
+  if (inherits(color, "ray_texture") && color$op == "constant") {
+    color = rep(color$value, length.out = 3L)
+  }
+  if (inherits(roughness, "ray_texture") && roughness$op == "constant") {
+    roughness = texture_scalar(roughness)$value
+  }
+  color_graph = if (inherits(color, "ray_texture")) color else NULL
+  roughness_graph = if (inherits(roughness, "ray_texture")) {
+    texture_scalar(roughness)
+  } else {
+    NULL
+  }
+  if (!is.null(color_graph)) {
+    texture_check_legacy(image_texture, checkercolor, noise, gradient_color)
+    color = c(1, 1, 1)
+  }
+  if (!is.null(roughness_graph)) {
+    if (!identical(roughness_texture, "")) {
+      stop(
+        "Choose a roughness graph or roughness_texture, not both.",
+        call. = FALSE
+      )
+    }
+    roughness = 0.3
+  }
   microtype = switch(microfacet, "tbr" = 1, "beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
   roughness[roughness > 1] = 1
@@ -729,6 +763,12 @@ microfacet = function(
     roughness_range,
     roughness_flip
   ))
+  if (alphax == 0 && alphay == 0 && transmission && !is.null(color_graph)) {
+    stop(
+      "Color graphs require nonzero roughness on transmitting microfacet materials.",
+      call. = FALSE
+    )
+  }
   if (alphax == 0 && alphay == 0) {
     if (!transmission) {
       ray_material(list(
@@ -756,7 +796,8 @@ microfacet = function(
         glossyinfo = glossyinfo,
         bump_texture = bump_texture,
         bump_intensity = bump_intensity,
-        roughness_texture = ""
+        roughness_texture = "",
+        texture_graphs = list(color = color_graph, roughness = roughness_graph)
       ))
     } else {
       ray_material(list(
@@ -784,7 +825,8 @@ microfacet = function(
         glossyinfo = glossyinfo,
         bump_texture = bump_texture,
         bump_intensity = bump_intensity,
-        roughness_texture = ""
+        roughness_texture = "",
+        texture_graphs = list(color = color_graph, roughness = roughness_graph)
       ))
     }
   } else {
@@ -818,7 +860,8 @@ microfacet = function(
       glossyinfo = glossyinfo,
       bump_texture = bump_texture,
       bump_intensity = bump_intensity,
-      roughness_texture = roughness_texture
+      roughness_texture = roughness_texture,
+      texture_graphs = list(color = color_graph, roughness = roughness_graph)
     ))
   }
 }
@@ -1031,7 +1074,7 @@ light = function(
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
@@ -1233,9 +1276,9 @@ SigmaAFromReflectance = function(c, beta_n) {
 #' @param red_pigment Default `0`.Concentration of the pheomelanin pigment in the hair. Pheomelanin makes red hair red.
 #' @param color Default `NA`. Approximate color. Overrides `pigment`/`redness` arguments.
 #' @param sigma_a Default `NA`. Attenuation. Overrides `color` and `pigment`/`redness` arguments.
-#' @param eta Default `1.55`. Index of refraction of the hair medium.
-#' @param beta_m Default `0.3`. Longitudinal roughness of the hair. Should be between 0 and 1. This roughness controls the size and shape of the hair highlight.
-#' @param beta_n Default `0.3`. Azimuthal roughness of the hair. Should be between 0 and 1.
+#' @param eta Default `1.55`. Index of refraction of the hair medium, greater than 1.
+#' @param beta_m Default `0.3`. Longitudinal roughness of the hair. Must be in `(0, 1]`. This roughness controls the size and shape of the hair highlight.
+#' @param beta_n Default `0.3`. Azimuthal roughness of the hair. Must be in `(0, 1]`.
 #' @param alpha Default `2`. Angle of scales on the hair surface, in degrees.
 #'
 #' @return Single row of a tibble describing the hair material.
@@ -1304,6 +1347,31 @@ hair = function(
   beta_n = 0.3,
   alpha = 2
 ) {
+  for (roughness in list(beta_m, beta_n)) {
+    if (
+      !is.numeric(roughness) ||
+        length(roughness) != 1L ||
+        !is.finite(roughness) ||
+        roughness <= 0 ||
+        roughness > 1
+    ) {
+      stop("Hair roughness beta_m and beta_n must be in (0, 1].", call. = FALSE)
+    }
+  }
+  if (
+    !is.numeric(eta) ||
+      length(eta) != 1L ||
+      !is.finite(eta) ||
+      eta <= 1 ||
+      !is.numeric(alpha) ||
+      length(alpha) != 1L ||
+      !is.finite(alpha)
+  ) {
+    stop(
+      "Hair requires a finite eta greater than 1 and a finite alpha.",
+      call. = FALSE
+    )
+  }
   if (!all(is.na(sigma_a))) {
     if (
       !is.numeric(sigma_a) ||
@@ -1412,6 +1480,7 @@ get_material_enum = function(material) {
     "hair" = 9L,
     "mf-t" = 10L,
     "openpbr" = 11L,
+    "translucent" = 12L,
     stop(sprintf("Material type `%s` not found", material))
   )
 }
@@ -1430,7 +1499,8 @@ get_material_name = function(material) {
     "spotlight",
     "hair",
     "mf-t",
-    "openpbr"
+    "openpbr",
+    "translucent"
   )[material]
 }
 

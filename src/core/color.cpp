@@ -82,6 +82,8 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
           wrote_albedo = true;
         }
         if (srec.is_specular) { // returns specular ray
+          if (hrec.mat_ptr->is_delta_specular() || srec.is_passthrough)
+            PropagateRayDifferentials(r2,hrec,srec.specular_ray,srec.is_transmission,srec.eta,srec.is_passthrough);
           r2 = srec.specular_ray;
           throughput *= srec.attenuation;
           continue;
@@ -210,6 +212,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
           wrote_albedo = true;
         }
         if (srec.is_specular) { // returns specular ray
+          if (hrec.mat_ptr->is_delta_specular() || srec.is_passthrough)
+            PropagateRayDifferentials(r2,hrec,srec.specular_ray,srec.is_transmission,srec.eta,srec.is_passthrough);
           r2 = srec.specular_ray;
           throughput *= srec.attenuation;
           continue;

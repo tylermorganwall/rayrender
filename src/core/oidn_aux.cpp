@@ -158,6 +158,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
                                       current_ray.direction(),
                                       base_stack,
                                       current_ray.time());
+        PropagateRayDifferentials(current_ray,hrec,pass_ray,false,1,true);
         return TraceOidnFeature(pass_ray,
                                 world,
                                 rng,
@@ -192,6 +193,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
         Ray next = MakeFeatureRay(OffsetRayOrigin(hrec.p, hrec.pError,
                                                    hrec.normal, direction),
                                   direction, stack, current_ray.time());
+        PropagateRayDifferentials(current_ray,hrec,next,dot(direction,hrec.normal)*dot(current_ray.d,hrec.normal)>0,1/ni_over_nt);
         return TraceOidnFeature(next, world, rng, options, depth + 1,
                                 dielectric_splits + 1, cancel);
       };
@@ -243,6 +245,7 @@ OidnFeature TraceOidnFeature(const Ray& ray,
                                          reflected,
                                          reflected_stack,
                                          current_ray.time());
+      PropagateRayDifferentials(current_ray,hrec,reflected_ray,false,1);
       OidnFeature reflected_feature = TraceOidnFeature(reflected_ray,
                                                        world,
                                                        rng,
@@ -340,6 +343,8 @@ void render_oidn_aux_features(std::size_t numbercores,
   // Guide images use the same completion-driven scheduling as the beauty
   // render, with one worker pool for all feature samples.
   RcppThread::ThreadPool pool(numbercores);
+  const Float differential_scale = std::max(Float(.125),
+    Float(1 / std::sqrt(double(render_options.samples))));
 
   for(std::size_t s = 0; s < render_options.samples; s++) {
     render_cancelled.store(false, std::memory_order_relaxed);
@@ -369,15 +374,15 @@ void render_oidn_aux_features(std::size_t numbercores,
           Float v = (static_cast<Float>(j) + pixel_sample.xy.y) /
             static_cast<Float>(ny);
           if(fov >= 0) {
-            ray = cam->get_ray(u,
+            ray = cam->get_ray_differential(u,
                                v,
                                convert_to_point3(rand_to_unit(samplers[index]->Get2D())),
-                               samplers[index]->Get1D());
+                               samplers[index]->Get1D(), 1.f/nx, 1.f/ny, differential_scale);
           } else {
             CameraSample camera_sample({1 - u, 1 - v},
                                        samplers[index]->Get2D(),
                                        samplers[index]->Get1D());
-            cam->GenerateRay(camera_sample, &ray);
+            cam->GenerateRayDifferential(camera_sample, &ray, -1.f/nx, -1.f/ny, differential_scale);
           }
 
           std::vector<dielectric*> priority_stack;

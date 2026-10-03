@@ -67,6 +67,10 @@ class RayCamera {
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
       return(0.0);
     };
+    Ray get_ray_differential(Float s, Float t, point3f lens, Float time,
+                             Float ds, Float dt, Float scale = 1);
+    Float GenerateRayDifferential(const CameraSample& sample, Ray* ray,
+                                  Float ds, Float dt, Float scale = 1) const;
     virtual vec3f get_w() = 0;
     virtual vec3f get_u() = 0;
     virtual vec3f get_v() = 0;

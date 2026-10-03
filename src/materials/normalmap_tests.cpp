@@ -237,7 +237,9 @@ context("Analytic diffuse normal mapping") {
   double reverse=mat->f(Ray(point3f(0),-wi),d,wo)[0]/wo[2];
   expect_true(std::abs(forward-reverse)<2e-6);
   // Texture storage is owned here, not by bump_texture (same cache lifetime as production).
-  unsigned char pixels[16];std::fill(pixels,pixels+16,127);
+  // Zero displacement is neutral; a nonzero constant height also changes
+  // curved shading tangents through PBRT's height * normal-derivative term.
+  unsigned char pixels[16];std::fill(pixels,pixels+16,0);
   auto bump=std::make_shared<bump_texture>(pixels,4,4,1,1,1,1);
   mesh.bump_textures[0]=bump;
   expect_true(tri.hit(Ray(point3f(0,0,1),vec3f(0,0,-1)),0,10,b,rng));

@@ -32,8 +32,8 @@ includes (relative to the main file, as in PBRT), object instances, perspective
 orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
 bilinear patches (triangulated), cubic Bezier curves, diffuse area lights,
 point/spot lights, uniform and equal-area image infinite lights,
-RGB diffuse/conductor/dielectric/hair materials, OpenPBR
-approximations of coated and Disney materials, constant/image/UV checker textures, and
+RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
+approximations of coated and Disney materials, constant/image/UV checker/direction-mix textures, and
 homogeneous, uniform-grid, and NanoVDB interior media. Material displacement
 becomes a bump map; PLY displacement uses rayvertex with simple subdivision.
 PBRT v4 is the target; common v3 spellings are
@@ -68,11 +68,24 @@ color for OpenPBR's van de Hulst parameterization. This fit assumes isotropic
 scattering and an internal-reflection IOR of 1.4; the requested surface IOR
 is retained. Different IORs, roughnesses, and thin geometry remain approximate.
 Random walks may need a larger \code{max_depth} than PBRT's diffusion BSSRDF.
+Imported render arguments start Russian roulette at bounce 5; override
+\code{roulette_active_depth} to change this without reducing \code{max_depth}.
+Curves preserve PBRT's \code{splitdepth} (default 3) as native BVH subdivisions.
+Shape alpha masks retain their own UV scale/offset and use rayrender's native
+8-bit coverage lookup rather than PBRT's mipmapped filtering. Curve alpha
+masks remain unsupported and are diagnosed.
+Direction-mix graphs retain their declaration-time direction transform and
+geometric-normal weighting on supported color inputs and dielectric/conductor
+roughness. Roughness conversion follows texture evaluation. Procedural roughness
+on layered or subsurface materials is still diagnosed as unsupported.
 
 PBRT's world coordinates are preserved. Its camera transform maps world to
 camera and is inverted for rayrender. PBRT's field of view applies to the
 shorter image dimension; rayrender's applies to image height. This conversion
 adjusts portrait fields of view and retains the original framing.
+Film ISO is preserved. Diffuse transmission uses \code{\link[=translucent]{translucent()}} with
+independent reflection/transmission colors and textures; bump maps on this
+material are diagnosed and omitted. Combined energy above one is normalized.
 Animated cameras return a two-pose \code{\link[=camera]{camera()}} with \code{mode = "image"} and
 motion blur enabled. Camera transform times differing from the shutter
 interval require manual adjustment. Spatial media retain their definition

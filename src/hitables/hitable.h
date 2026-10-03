@@ -48,10 +48,13 @@ void get_sphere_uv(const normal3f& p, Float& u, Float& v);
 
 void get_sphere_uv_z(const vec3f &p, Float &u, Float &v);
 void get_sphere_uv_z(const normal3f &p, Float &u, Float &v);
+void SetEllipsoidDerivatives(hit_record& hit, const vec3f& axes);
 
 struct alignas(16) hit_record {
   hit_record() : has_bump(false), alpha_miss(false), infinite_area_hit(false) {};
   point3f p; //PBRT: In Interaction
+  point3f texture_object_p{0};
+  normal3f texture_object_normal{0, 1, 0};
   Float t; //PBRT: In Interaction
   // Ordered medium crossings can be closer than one Float ULP. Keep the
   // computed distance for nearest-hit selection instead of rounding away
@@ -77,6 +80,11 @@ struct alignas(16) hit_record {
   Float bvh_nodes;
 #endif
   vec3f dpdu, dpdv; //PBRT: In SurfaceInteraction
+  normal3f dndu{0}, dndv{0};
+  vec3f dpdx{0}, dpdy{0};
+  Float dudx = 0, dvdx = 0, dudy = 0, dvdy = 0;
+  bool has_differentials = false;
+  void ComputeDifferentials(const Ray& ray);
   vec3f pError; //PBRT: In Interaction
   Float u; //PBRT: In SurfaceInteraction
   Float v; //PBRT: In SurfaceInteraction
@@ -103,6 +111,11 @@ struct alignas(16) hit_record {
   //const Primitive *primitive (recording the primitive)
   //int faceIndex (for ptex lookups)
 };
+
+// Deterministic surface events preserve a first-order beam. Diffuse/rough or
+// volume scattering must clear it rather than reuse unrelated incoming UVs.
+void PropagateRayDifferentials(const Ray& incoming, const hit_record& hit, Ray& outgoing,
+                              bool transmission, Float eta, bool passthrough = false);
 
 class hitable {
   public:
