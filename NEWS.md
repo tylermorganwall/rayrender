@@ -111,6 +111,9 @@
 
 ## Bugfixes
 
+- Overall: Resolves package-check warnings and notes for missing C++ override
+  declarations, R utility calls, and example lines truncated in the PDF manual.
+
 - `ply_model()` Reads supplied vertex normals from PLY files.
 
 - Overall: Corrects PLY vertex, normal, and UV element counts, preventing excess

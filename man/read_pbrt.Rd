@@ -168,33 +168,38 @@ for (x in c(-.72, -.24, .24, .72)) {
 }
 lines = c(
   lines,
-  'AttributeBegin Translate -1.2 2.4 0 Rotate -28 0 0 1 Translate 0 -2.4 0 ObjectInstance "pendulum" AttributeEnd',
+  'AttributeBegin Translate -1.2 2.4 0 Rotate -28 0 0 1',
+  'Translate 0 -2.4 0 ObjectInstance "pendulum" AttributeEnd',
   'Material "diffuse" "rgb reflectance" [.16 .36 .42]'
 )
 for (z in c(-.4, .4)) {
   lines = c(
     lines,
     sprintf(
-      'AttributeBegin Translate -2 2.4 \%g Rotate 90 0 1 0 Shape "cylinder" "float radius" .055 "float zmax" 3.4 AttributeEnd',
+      'AttributeBegin Translate -2 2.4 \%g Rotate 90 0 1 0',
       z
-    )
+    ),
+    'Shape "cylinder" "float radius" .055 "float zmax" 3.4 AttributeEnd'
   )
   for (x in c(-2, 1.4)) {
     lines = c(
       lines,
       sprintf(
-        'AttributeBegin Translate \%g 0 \%g Rotate -90 1 0 0 Shape "cylinder" "float radius" .055 "float zmax" 2.4 AttributeEnd',
+        'AttributeBegin Translate \%g 0 \%g Rotate -90 1 0 0',
         x,
         z
-      )
+      ),
+      'Shape "cylinder" "float radius" .055 "float zmax" 2.4 AttributeEnd'
     )
   }
 }
 lines = c(
   lines,
   'Material "diffuse" "rgb reflectance" [.3 .25 .18]',
-  'Shape "trianglemesh" "point3 P" [-100 0 4 100 0 4 100 100 4 -100 100 4] "integer indices" [0 2 1 0 3 2]',
-  'Shape "trianglemesh" "point3 P" [-100 0 -100 100 0 -100 100 0 100 -100 0 100] "integer indices" [0 2 1 0 3 2]'
+  'Shape "trianglemesh" "point3 P" [-100 0 4 100 0 4 100 100 4 -100 100 4]',
+  '"integer indices" [0 2 1 0 3 2]',
+  'Shape "trianglemesh" "point3 P" [-100 0 -100 100 0 -100 100 0 100 -100 0 100]',
+  '"integer indices" [0 2 1 0 3 2]'
 )
 writeLines(lines, file)
 imported = read_pbrt(file)

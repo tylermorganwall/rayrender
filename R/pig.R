@@ -38,7 +38,10 @@
 #' @return A scene tibble containing mesh objects and, for a hairy spider, curves.
 #' @export
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
-#' sky_light_hosek = sky_light_image(40,-74,datetime = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York"))
+#' sky_light_hosek = sky_light_image(
+#'   40, -74,
+#'   datetime = as.POSIXct("2026-06-21 18:00:00", tz = "America/New_York")
+#' )
 #' generate_ground(depth = -0.6) |>
 #'   add_object(pig()) |>
 #'   add_infinite_light(sky_light_hosek) |>

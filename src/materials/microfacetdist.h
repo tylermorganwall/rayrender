@@ -82,18 +82,18 @@ public:
     alphax_constant *= alphax_constant;
     alphay_constant *= alphay_constant;
   }
-  ~BeckmannDistribution() {}
-  Float D(const vec3f &wh) const;
+  ~BeckmannDistribution() override {}
+  Float D(const vec3f &wh) const override;
   Float D(const vec3f &wh, point2f alphas) const override;
   Float Lambda(const vec3f &w, point2f alphas) const override;
   vec3f Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const override;
-  Float GetAlpha(Float u, Float v) const;
-  point2f GetAlphas(Float u, Float v) const;
-  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
-  Float D(const vec3f &wh, Float u, Float v) const;
-  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const;
-  Float Lambda(const vec3f &w) const;
-  Float Lambda(const vec3f &w, Float u, Float v) const;
+  Float GetAlpha(Float u, Float v) const override;
+  point2f GetAlphas(Float u, Float v) const override;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const override;
+  Float D(const vec3f &wh, Float u, Float v) const override;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const override;
+  Float Lambda(const vec3f &w) const override;
+  Float Lambda(const vec3f &w, Float u, Float v) const override;
 private:
   
   Float alphax_constant, alphay_constant;
@@ -112,25 +112,25 @@ public:
     alphax_constant *= alphax_constant;
     alphay_constant *= alphay_constant;
   }
-  ~TrowbridgeReitzDistribution() {}
+  ~TrowbridgeReitzDistribution() override {}
   static Float RoughnessToAlpha(Float roughness) {
     roughness = std::fmax(roughness, (Float)0.0001550155);
     Float x = std::log(roughness);
     return(1.62142f + 0.819955f * x + 0.1734f * x * x +
            0.0171201f * x * x * x + 0.000640711f * x * x * x * x );
   }
-  Float D(const vec3f &w) const;
+  Float D(const vec3f &w) const override;
   Float D(const vec3f &wh, point2f alphas) const override;
   Float Lambda(const vec3f &w, point2f alphas) const override;
   vec3f Sample_wh(const vec3f &wi, Float u1, Float u2, point2f alphas) const override;
-  Float GetAlpha(Float u, Float v) const;
-  point2f GetAlphas(Float u, Float v) const;
-  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const;
+  Float GetAlpha(Float u, Float v) const override;
+  point2f GetAlphas(Float u, Float v) const override;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2) const override;
   
-  Float D(const vec3f &wh, Float u, Float v) const;
-  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const;
-  Float Lambda(const vec3f &w) const;
-  Float Lambda(const vec3f &w, Float u, Float v) const;
+  Float D(const vec3f &wh, Float u, Float v) const override;
+  vec3f Sample_wh(const vec3f &wi, const Float u1, const Float u2, Float u, Float v) const override;
+  Float Lambda(const vec3f &w) const override;
+  Float Lambda(const vec3f &w, Float u, Float v) const override;
 
 private:
   Float alphax_constant, alphay_constant;

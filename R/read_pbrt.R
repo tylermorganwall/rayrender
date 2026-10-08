@@ -152,33 +152,38 @@
 #' }
 #' lines = c(
 #'   lines,
-#'   'AttributeBegin Translate -1.2 2.4 0 Rotate -28 0 0 1 Translate 0 -2.4 0 ObjectInstance "pendulum" AttributeEnd',
+#'   'AttributeBegin Translate -1.2 2.4 0 Rotate -28 0 0 1',
+#'   'Translate 0 -2.4 0 ObjectInstance "pendulum" AttributeEnd',
 #'   'Material "diffuse" "rgb reflectance" [.16 .36 .42]'
 #' )
 #' for (z in c(-.4, .4)) {
 #'   lines = c(
 #'     lines,
 #'     sprintf(
-#'       'AttributeBegin Translate -2 2.4 %g Rotate 90 0 1 0 Shape "cylinder" "float radius" .055 "float zmax" 3.4 AttributeEnd',
+#'       'AttributeBegin Translate -2 2.4 %g Rotate 90 0 1 0',
 #'       z
-#'     )
+#'     ),
+#'     'Shape "cylinder" "float radius" .055 "float zmax" 3.4 AttributeEnd'
 #'   )
 #'   for (x in c(-2, 1.4)) {
 #'     lines = c(
 #'       lines,
 #'       sprintf(
-#'         'AttributeBegin Translate %g 0 %g Rotate -90 1 0 0 Shape "cylinder" "float radius" .055 "float zmax" 2.4 AttributeEnd',
+#'         'AttributeBegin Translate %g 0 %g Rotate -90 1 0 0',
 #'         x,
 #'         z
-#'       )
+#'       ),
+#'       'Shape "cylinder" "float radius" .055 "float zmax" 2.4 AttributeEnd'
 #'     )
 #'   }
 #' }
 #' lines = c(
 #'   lines,
 #'   'Material "diffuse" "rgb reflectance" [.3 .25 .18]',
-#'   'Shape "trianglemesh" "point3 P" [-100 0 4 100 0 4 100 100 4 -100 100 4] "integer indices" [0 2 1 0 3 2]',
-#'   'Shape "trianglemesh" "point3 P" [-100 0 -100 100 0 -100 100 0 100 -100 0 100] "integer indices" [0 2 1 0 3 2]'
+#'   'Shape "trianglemesh" "point3 P" [-100 0 4 100 0 4 100 100 4 -100 100 4]',
+#'   '"integer indices" [0 2 1 0 3 2]',
+#'   'Shape "trianglemesh" "point3 P" [-100 0 -100 100 0 -100 100 0 100 -100 0 100]',
+#'   '"integer indices" [0 2 1 0 3 2]'
 #' )
 #' writeLines(lines, file)
 #' imported = read_pbrt(file)
@@ -388,7 +393,7 @@ pbrt_execute_file = function(filename, state, context, continuation = list()) {
     )
   }
   context$include_stack = c(context$include_stack, filename)
-  on.exit(context$include_stack <- head(context$include_stack, -1L))
+  on.exit(context$include_stack <- utils::head(context$include_stack, -1L))
   share_placements = context$world &&
     is.null(context$object) &&
     !length(continuation) &&
@@ -407,7 +412,7 @@ pbrt_execute_file = function(filename, state, context, continuation = list()) {
     # Repeated small includes benefit from caching, but retaining the parsed
     # commands of production geometry duplicates much of the converted scene.
     # Keep an import-wide 32 MiB LRU cache, shared by nested Import contexts.
-    bytes = as.numeric(object.size(commands))
+    bytes = as.numeric(utils::object.size(commands))
     budget = 32 * 1024^2
     if (bytes <= budget) {
       while (context$parse_cache$bytes + bytes > budget) {
@@ -616,11 +621,11 @@ pbrt_share_placement_file = function(filename, commands, state, context) {
       } else {
         'TransformBegin'
       }
-      if (!length(scopes) || tail(scopes, 1) != expected) {
+      if (!length(scopes) || utils::tail(scopes, 1) != expected) {
         eligible = FALSE
         break
       }
-      scopes = head(scopes, -1L)
+      scopes = utils::head(scopes, -1L)
     } else if (name == 'ObjectInstance') {
       count = count + 1L
       names = union(names, command$args[1])
@@ -1149,7 +1154,7 @@ pbrt_parse_file = function(filename) {
         "[",
         as.character(values),
         "]",
-        tail(t, -3L)
+        utils::tail(t, -3L)
       )
     }
     n = unname(arity[command$name])
@@ -1457,12 +1462,13 @@ pbrt_execute = function(command, state, context) {
       ObjectEnd = "ObjectBegin"
     )
     if (
-      !length(context$stack) || tail(context$stack, 1)[[1]]$kind != expected
+      !length(context$stack) ||
+        utils::tail(context$stack, 1)[[1]]$kind != expected
     ) {
       pbrt_error(command, paste("Unmatched", name))
     }
-    saved = tail(context$stack, 1)[[1]]$state
-    context$stack = head(context$stack, -1L)
+    saved = utils::tail(context$stack, 1)[[1]]$state
+    context$stack = utils::head(context$stack, -1L)
     if (name == "TransformEnd") {
       state$transform = saved$transform
       state$end_transform = saved$end_transform

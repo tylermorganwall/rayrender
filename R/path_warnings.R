@@ -21,7 +21,7 @@ save_path_warnings = function(diagnostics, filename) {
     paste("Terminated paths:", diagnostics$terminated_paths),
     "Accumulated light was retained; missing contributions can bias the image.",
     "Counts include all failures. Examples are bounded per failure category.",
-    capture.output(dput(diagnostics))
+    utils::capture.output(dput(diagnostics))
   )
   write_log = function(path) {
     tryCatch(
