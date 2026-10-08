@@ -179,7 +179,13 @@ HeightImage::HeightImage(int width, int height, std::vector<Float> pixels) {
   }
 }
 
-Float bump_texture::raw_value(Float u, Float v, const point3f &, TextureFootprint footprint) const {
+Float bump_texture::raw_value(Float u, Float v, const point3f &p, TextureFootprint footprint) const {
+  if (height_texture) {
+    TextureEvalContext context;
+    context.p = context.object_p = p;
+    context.u = u; context.v = v; context.footprint = footprint;
+    return height_texture->value(context)[0];
+  }
   const HeightLevel *level = nullptr;
   int width = nx, height = ny;
   if (image) {
@@ -233,9 +239,29 @@ point3f bump_texture::value(Float u, Float v, const point3f &p, TextureFootprint
 
 normal3f bump_texture::perturb(Float u, Float v, const point3f &p, normal3f n, vec3f &dpdu,
                                vec3f &dpdv, normal3f dndu, normal3f dndv,
-                               TextureFootprint footprint) const {
-  const auto slope = value(u, v, p, footprint);
-  const Float height = intensity * raw_value(u, v, p, footprint);
+                               TextureFootprint footprint, const TextureEvalContext* context) const {
+  point3f slope;
+  Float height;
+  if (height_texture) {
+    TextureEvalContext h = context ? *context : TextureEvalContext();
+    h.u = u; h.v = v; h.p = p; h.footprint = footprint;
+    h.geometric_normal = n;
+    Float du = footprint.valid ? Float(.5) * (std::abs(footprint.dudx) + std::abs(footprint.dudy)) : 0;
+    Float dv = footprint.valid ? Float(.5) * (std::abs(footprint.dvdx) + std::abs(footprint.dvdy)) : 0;
+    if (du == 0) du = .0005;
+    if (dv == 0) dv = .0005;
+    height = intensity * height_texture->value(h)[0];
+    auto shifted_u = h, shifted_v = h;
+    shifted_u.u += du; shifted_u.p += du * dpdu;
+    shifted_v.v += dv; shifted_v.p += dv * dpdv;
+    shifted_u.geometric_normal = unit_vector(n + du * dndu);
+    shifted_v.geometric_normal = unit_vector(n + dv * dndv);
+    slope = point3f((intensity * height_texture->value(shifted_u)[0] - height) / du,
+                   -(intensity * height_texture->value(shifted_v)[0] - height) / dv, 0);
+  } else {
+    slope = value(u, v, p, footprint);
+    height = intensity * raw_value(u, v, p, footprint);
+  }
   const vec3f du = dpdu + slope[0] * convert_to_vec3(n) + height * convert_to_vec3(dndu);
   const vec3f dv = dpdv - slope[1] * convert_to_vec3(n) + height * convert_to_vec3(dndv);
   const auto crossed = cross(du, dv);
@@ -281,6 +307,25 @@ Float roughness_texture::RoughnessToAlpha(Float roughness) {
 #include <testthat.h>
 
 context("Image texture interpolation") {
+  test_that("[graph bump heights preserve face context and UV units]") {
+    class FaceRamp final : public texture {
+    public:
+      point3f value(Float, Float, const point3f&) const override { return point3f(0); }
+      point3f value(const TextureEvalContext& h) const override {
+        return point3f(h.face_index == 7 ? Float(.3) * h.u : 0);
+      }
+    };
+    bump_texture bump(std::make_shared<FaceRamp>(), 1);
+    TextureEvalContext context;
+    context.face_index = 7;
+    context.footprint = {Float(.03), 0, 0, Float(.02), true};
+    vec3f du(2, 0, 0), dv(0, 2, 0);
+    const auto actual = bump.perturb(.5, .5, point3f(0), normal3f(0, 0, 1), du, dv,
+                                     normal3f(0), normal3f(0), context.footprint, &context);
+    const auto expected = unit_vector(normal3f(-.15, 0, 1));
+    expect_true((actual - expected).length() < 1e-5);
+    expect_true(std::abs(du[2] - Float(.3)) < 1e-5);
+  }
   test_that("[filtered height derivatives use UV units and signed repeats]") {
     const point3f p(0);
     for (int size : {8, 32})

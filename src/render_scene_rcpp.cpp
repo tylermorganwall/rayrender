@@ -1299,5 +1299,6 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
 
   PRINT_CURRENT_MEMORY("After cleanup");
   
+  texCache.ReportPtex(verbose);
   return(final_image);
 }

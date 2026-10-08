@@ -802,6 +802,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
+  texCache.ReportPtex(verbose);
   if(output_frame_index < output_frames.size()) {
     List trimmed_output_frames(output_frame_index);
     for(int i = 0; i < output_frame_index; i++) {

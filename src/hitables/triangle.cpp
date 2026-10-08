@@ -289,6 +289,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.dndv = -rec.dndv;
     }
   }
+  rec.shape = this;
+  rec.texture_object_p = (*WorldToObject)(rec.p);
+  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
   rec.ComputeDifferentials(r);
   if (bump_tex) {
     const auto ns=rec.physical_shading_normal;
@@ -303,15 +306,17 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
         CoordinateSystem(convert_to_vec3(ns), &rec.dpdu, &rec.dpdv);
     }
     const TextureFootprint footprint{rec.dudx, rec.dvdx, rec.dudy, rec.dvdy, rec.has_differentials};
+    TextureEvalContext context;
+    if (bump_tex->height_texture) {
+      context = TextureEvalContext::FromHit(rec);
+      context.u = uvHit[0]; context.v = uvHit[1];
+    }
     rec.bump_normal = bump_tex->perturb(uvHit[0], uvHit[1], rec.p, ns, rec.dpdu, rec.dpdv, rec.dndu,
-                                        rec.dndv, footprint);
+                                        rec.dndv, footprint, bump_tex->height_texture ? &context : nullptr);
     rec.physical_shading_normal=rec.bump_normal;
     rec.has_bump = true;
   }
 
-  rec.texture_object_p = (*WorldToObject)(rec.p);
-  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
-  rec.shape = this;
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   return(true);
 }
@@ -531,6 +536,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.dndv = -rec.dndv;
     }
   }
+  rec.shape = this;
+  rec.texture_object_p = (*WorldToObject)(rec.p);
+  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
   rec.ComputeDifferentials(r);
   if (bump_tex) {
     const auto ns=rec.physical_shading_normal;
@@ -545,8 +553,13 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
         CoordinateSystem(convert_to_vec3(ns), &rec.dpdu, &rec.dpdv);
     }
     const TextureFootprint footprint{rec.dudx, rec.dvdx, rec.dudy, rec.dvdy, rec.has_differentials};
+    TextureEvalContext context;
+    if (bump_tex->height_texture) {
+      context = TextureEvalContext::FromHit(rec);
+      context.u = uvHit[0]; context.v = uvHit[1];
+    }
     rec.bump_normal = bump_tex->perturb(uvHit[0], uvHit[1], rec.p, ns, rec.dpdu, rec.dpdv, rec.dndu,
-                                        rec.dndv, footprint);
+                                        rec.dndv, footprint, bump_tex->height_texture ? &context : nullptr);
     rec.physical_shading_normal=rec.bump_normal;
     rec.has_bump = true;
   }
@@ -555,9 +568,6 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
-  rec.texture_object_p = (*WorldToObject)(rec.p);
-  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
-  rec.shape = this;
   
   return(true);
 }

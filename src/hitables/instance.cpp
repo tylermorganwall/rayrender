@@ -3,9 +3,8 @@
 
 instance::instance(hitable* scene, 
                    Transform* ObjectToWorld, 
-                   Transform* WorldToObject,
                    hitable_list* imp_list, uint64_t boundary_offset) :
-  hitable(ObjectToWorld, WorldToObject, nullptr, false), 
+  hitable(ObjectToWorld, nullptr, nullptr, false),
   original_scene(scene), importance_sampled_objects(imp_list),
   boundary_id_offset(boundary_offset) {
 }
@@ -14,7 +13,7 @@ const bool instance::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   
-  Ray r2 = (*WorldToObject)(r);
+  Ray r2 = Inverse(*ObjectToWorld)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, rng)) {
     rec = (*ObjectToWorld)(rec);
     rec.light_placement = light_placements.Resolve(rec.light_placement);
@@ -31,7 +30,7 @@ const bool instance::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   
-  Ray r2 = (*WorldToObject)(r);
+  Ray r2 = Inverse(*ObjectToWorld)(r);
   if(original_scene->hit(r2, t_min, t_max, rec, sampler)) {
     rec = (*ObjectToWorld)(rec);
     rec.light_placement = light_placements.Resolve(rec.light_placement);
@@ -45,7 +44,7 @@ bool instance::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) con
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   
-  Ray r2 = (*WorldToObject)(r);
+  Ray r2 = Inverse(*ObjectToWorld)(r);
   return(original_scene->HitP(r2, t_min, t_max, rng));
 }
 
@@ -53,7 +52,7 @@ bool instance::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) co
   SCOPED_CONTEXT("MultiHit");
   SCOPED_TIMER_COUNTER("Instance");
   
-  Ray r2 = (*WorldToObject)(r);
+  Ray r2 = Inverse(*ObjectToWorld)(r);
   return(original_scene->HitP(r2, t_min, t_max, sampler));
 }
 
@@ -65,21 +64,21 @@ bool instance::bounding_box(Float t0, Float t1, aabb& box) const {
 
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, random_gen& rng, Float time) {
-  Ray r2 = (*WorldToObject)(Ray(o,v));
+  Ray r2 = Inverse(*ObjectToWorld)(Ray(o,v));
   return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), rng, time));
 }
 
 Float instance::pdf_value(const point3f& o, const vec3f& v, Sampler* sampler, Float time) {
-  Ray r2 = (*WorldToObject)(Ray(o,v));
+  Ray r2 = Inverse(*ObjectToWorld)(Ray(o,v));
   return(importance_sampled_objects->pdf_value(r2.origin(),r2.direction(), sampler, time));
 }
 
 vec3f instance::random(const point3f& o, random_gen& rng, Float time) {
-  return((*ObjectToWorld)(importance_sampled_objects->random((*WorldToObject)(o), rng, time)));
+  return((*ObjectToWorld)(importance_sampled_objects->random(Inverse(*ObjectToWorld)(o), rng, time)));
 }
 
 vec3f instance::random(const point3f& o, Sampler* sampler, Float time) {
-  return((*ObjectToWorld)(importance_sampled_objects->random((*WorldToObject)(o), sampler, time)));
+  return((*ObjectToWorld)(importance_sampled_objects->random(Inverse(*ObjectToWorld)(o), sampler, time)));
 }
 
 size_t instance::GetSize() {

@@ -76,8 +76,13 @@ void SetPhysicalBump(hit_record &h, const material *mat, const bump_texture *bum
   if (!bump)
     return;
   const TextureFootprint footprint{h.dudx, h.dvdx, h.dudy, h.dvdy, h.has_differentials};
+  TextureEvalContext context;
+  if (bump->height_texture) {
+    context = TextureEvalContext::FromHit(h);
+    context.face_index = -1; // Analytic primitives have no Ptex source face.
+  }
   h.bump_normal = bump->perturb(h.u, h.v, h.p, unit_vector(h.geometric_normal), h.dpdu, h.dpdv,
-                                h.dndu, h.dndv, footprint);
+                                h.dndu, h.dndv, footprint, bump->height_texture ? &context : nullptr);
   h.has_bump = true;
   if (mat && mat->physical_normal_mapping())
     h.physical_shading_normal = h.bump_normal;

@@ -119,6 +119,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
     CalculateNormals(mesh.get());
   }
   size_t n = mesh->nTriangles * 3;
+  triangles.objects.reserve(mesh->nTriangles);
   // mesh->ValidateMesh();
   
   mesh->texture_size += sizeof(unsigned char) * (nx * ny * nn + nxb * nyb * nnb) ;
@@ -131,8 +132,9 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
     
-  mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
-  triangles.objects.clear();
+  mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+  // Transfer ownership to the BVH; retain no empty construction buffer.
+  std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
 }
 
 const bool mesh3d::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const {

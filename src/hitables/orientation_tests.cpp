@@ -72,8 +72,7 @@ context("Analytic primitive orientation") {
       // Instance placement transforms the already oriented child interaction;
       // it must not apply primitive handedness a second time.
       Transform placement = Translate(vec3f(-4,2,1)) * RotateY(31) * Scale(-1,1,1);
-      Transform undo = Inverse(placement);
-      instance placed(&ball,&placement,&undo,nullptr);
+      instance placed(&ball,&placement,nullptr);
       Ray ray(transform(point3f(3,.1f,.2f)),transform(vec3f(-1,0,0)));
       hit_record child, a, b;
       expect_true(ball.hit(ray,.0001f,100,child,rng));

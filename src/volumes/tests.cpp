@@ -453,11 +453,11 @@ context("Deterministic volume picking") {
         grid_description(Rcpp::NumericVector::create(0, 2), 1, 1, 2));
     s.Add(medium, 1);
     Transform transform = Translate(vec3f(4, 0, 0)) * Scale(1, 1, 3);
-    Transform inverse = Inverse(transform), end = Translate(vec3f(0, 2, 0));
+    Transform end = Translate(vec3f(0, 2, 0));
     AnimatedTransform motion(&s.identity, 0, &end, 1);
     hitable_list lights, world;
     std::shared_ptr<hitable> placed = std::make_shared<instance>(
-        &s.world, &transform, &inverse, &lights, 0);
+        &s.world, &transform, &lights, 0);
     auto animated = std::make_shared<AnimatedHitable>(placed, motion);
     world.add(animated);
     VolumeScene scene;
@@ -487,7 +487,7 @@ context("Participating media geometry and sampling") {
     hitable_list lights;
     VolumeScene reference;
     reference.boundaries.add(std::make_shared<instance>(
-        direct.scene.boundary_bvh.get(), &direct.identity, &direct.identity, &lights, 0));
+        direct.scene.boundary_bvh.get(), &direct.identity, &lights, 0));
     reference.Finish(0, 1);
     bool same = true;
     for (Float x : {-4.f, -3.f, -2.9999998f, -1.f, -.99999994f, 0.f,
@@ -568,7 +568,7 @@ context("Participating media geometry and sampling") {
     expect_true(scene.BoundaryCount() == maximum);
   }
   test_that("shared nested boundaries have distinct IDs in render and containment traversal") {
-    Transform identity, larger = Scale(2, 2, 2), larger_inverse = Inverse(larger);
+    Transform identity, larger = Scale(2, 2, 2);
     Transform side = Translate(vec3f(0, 8, 0)), side_inverse = Inverse(side);
     auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto medium = std::make_shared<Medium>(medium_description());
@@ -587,11 +587,10 @@ context("Participating media geometry and sampling") {
     branch_world.add(side_boundary);
     for (int i = 0; i < 2; ++i) {
       Transform *transform = i == 0 ? &larger : &identity;
-      Transform *inverse = i == 0 ? &larger_inverse : &identity;
       uint64_t offset = branch.ReserveBoundaryIds(leaf.BoundaryCount());
-      branch_world.add(std::make_shared<instance>(&leaf_world, transform, inverse, &lights, offset));
+      branch_world.add(std::make_shared<instance>(&leaf_world, transform, &lights, offset));
       branch.boundaries.add(std::make_shared<instance>(leaf.boundary_bvh.get(), transform,
-                                                       inverse, &lights, offset));
+                                                       &lights, offset));
     }
     branch.Finish(0, 1);
     Transform far_transform = Translate(vec3f(30, 0, 0)), far_inverse = Inverse(far_transform);
@@ -601,15 +600,14 @@ context("Participating media geometry and sampling") {
     scene.boundaries.add(far_boundary);
     world.add(far_boundary);
     Transform placement[2] = {Translate(vec3f(-5, 0, 0)), Translate(vec3f(5, 0, 0))};
-    Transform inverse[2] = {Inverse(placement[0]), Inverse(placement[1])};
     Transform motion_end = Translate(vec3f(0, 2, 0));
     AnimatedTransform motion(&identity, 0, &motion_end, 1);
     for (int i = 0; i < 2; ++i) {
       uint64_t offset = scene.ReserveBoundaryIds(branch.BoundaryCount());
       std::shared_ptr<hitable> render_instance = std::make_shared<instance>(
-          &branch_world, &placement[i], &inverse[i], &lights, offset);
+          &branch_world, &placement[i], &lights, offset);
       std::shared_ptr<hitable> probe_instance = std::make_shared<instance>(
-          branch.boundary_bvh.get(), &placement[i], &inverse[i], &lights, offset);
+          branch.boundary_bvh.get(), &placement[i], &lights, offset);
       world.add(std::make_shared<AnimatedHitable>(render_instance, motion));
       scene.boundaries.add(std::make_shared<AnimatedHitable>(probe_instance, motion));
     }
@@ -653,7 +651,7 @@ context("Participating media geometry and sampling") {
       expect_true(*ids.rbegin() == 7);
     }
     // An ordinary surface must keep the zero sentinel even with an ID offset.
-    instance ordinary(geometry.get(), &identity, &identity, &lights, 100);
+    instance ordinary(geometry.get(), &identity, &lights, 100);
     Ray ray(point3f(0, 0, -3), vec3f(0, 0, 1));
     ray.segment_absorption = true;
     hit_record h;
@@ -1190,7 +1188,7 @@ context("Explicit emitter sampling") {
     lights.add(std::make_shared<sphere>(2, material, nullptr, nullptr, &identity, &identity, false));
     lights.add(std::make_shared<InfiniteAreaLight>(4, 2, 100, point3f(0), texture,
                                                   material, &identity, &identity, false));
-    lights.add(std::make_shared<instance>(&empty, &identity, &identity, &empty));
+    lights.add(std::make_shared<instance>(&empty, &identity, &empty));
     VolumeLightSampler sampler(lights);
     VolumeLightSampler::Context ctx{point3f(0), normal3f(0), 0};
     double sum = 0;
@@ -1211,18 +1209,17 @@ context("Explicit emitter sampling") {
 
   test_that("shared emitters retain distinct nested, mirrored and animated placement IDs") {
     Transform identity, left = Translate(vec3f(-2, 0, 0)), right = Translate(vec3f(2, 0, 0));
-    Transform left_inv = Inverse(left), right_inv = Inverse(right);
     auto emission = std::make_shared<diffuse_light>(
         std::make_shared<constant_texture>(point3f(1)), 2, false);
     auto lamp = std::make_shared<sphere>(.25, emission, nullptr, nullptr, &identity, &identity, false);
     hitable_list leaf(lamp), inner;
-    inner.add(std::make_shared<instance>(&leaf, &left, &left_inv, &leaf));
-    inner.add(std::make_shared<instance>(&leaf, &right, &right_inv, &leaf));
+    inner.add(std::make_shared<instance>(&leaf, &left, &leaf));
+    inner.add(std::make_shared<instance>(&leaf, &right, &leaf));
     Transform upper = Translate(vec3f(0, 3, 0)) * Scale(-1, 1.4, 1);
-    Transform lower = Translate(vec3f(0, -3, 0)), upper_inv = Inverse(upper), lower_inv = Inverse(lower);
+    Transform lower = Translate(vec3f(0, -3, 0));
     hitable_list lights;
-    lights.add(std::make_shared<instance>(&inner, &upper, &upper_inv, &inner));
-    std::shared_ptr<hitable> moving = std::make_shared<instance>(&inner, &lower, &lower_inv, &inner);
+    lights.add(std::make_shared<instance>(&inner, &upper, &inner));
+    std::shared_ptr<hitable> moving = std::make_shared<instance>(&inner, &lower, &inner);
     Transform end = Translate(vec3f(.4, 0, 0));
     lights.add(std::make_shared<AnimatedHitable>(moving, AnimatedTransform(&identity, 0, &end, 1)));
     // Rebuilding the sampler must rebuild the intern table consistently as well.

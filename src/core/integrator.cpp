@@ -18,6 +18,7 @@
 #include "../utils/raylog.h"
 
 #include <atomic>
+#include <chrono>
 #include <cstdlib>
 #include <future>
 #include <limits>
@@ -186,6 +187,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   reset_sampler_state(nx, ny, seeds, rngs, samplers);
   reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
   random_gen rng_interactive(next_seed());
+  // Opt-in plain-text progress for supervised headless development renders.
+  // Read/log only on the R thread; leave sampling and the terminal bar unchanged.
+  const char* progress_log = std::getenv("RAYRENDER_PROGRESS_LOG");
+  const bool log_sample_progress = progress_log && std::string(progress_log) == "1";
+  const auto tracing_started = std::chrono::steady_clock::now();
 
 #ifdef HAS_OIDN
   auto make_oidn_aux_options = [sample_method,
@@ -722,6 +728,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 #endif
       } else {
         rendered_sample = render_fast_preview_sample(s);
+      }
+      if(log_sample_progress && !display.preview && rendered_sample) {
+        const double elapsed = std::chrono::duration<double>(
+          std::chrono::steady_clock::now() - tracing_started).count();
+        Rcpp::Rcout << "Completed sample " << s + 1 << "/" << ns
+                    << " after " << elapsed << " tracing seconds\n";
       }
       if(display.PollCloseEvent()) {
         finish_preview_termination(s + (rendered_sample ? 1 : 0));

@@ -26,6 +26,18 @@
 #include "../math/transformcache.h"
 #include "../utils/raylog.h"
 #include "../volumes/boundary.h"
+#include <unordered_map>
+
+// Scoped to one build, so geometry never escapes the renderer resources that
+// own its textures, materials and transforms. R keeps the input scene alive
+// throughout construction; shared original_scene SEXPs identify prototypes.
+struct InstanceBuildCache {
+  struct Prototype {
+    std::shared_ptr<hitable> geometry;
+    std::shared_ptr<hitable_list> lights;
+  };
+  std::unordered_map<SEXP, Prototype> prototypes;
+};
 
 namespace {
 // Public materials share one offset across maps. Imported PBRT textures may
@@ -245,12 +257,14 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
   std::shared_ptr<material> mat = nullptr;
   std::shared_ptr<texture> material_texture;
   TextureGraphBuilder graph_builder(texCache);
-  std::shared_ptr<const TextureNode> color_graph, roughness_graph, roughness_graph_v;
+  std::shared_ptr<const TextureNode> color_graph, roughness_graph, roughness_graph_v, transmission_graph;
   bool graph_is_alpha = false;
   if (SingleMaterial.containsElementNamed("texture_graphs")) {
     List graphs = SingleMaterial["texture_graphs"];
     if (graphs.containsElementNamed("color") && !Rf_isNull(graphs["color"]))
       color_graph = graph_builder.Build(as<List>(graphs["color"]));
+    if (graphs.containsElementNamed("transmission") && !Rf_isNull(graphs["transmission"]))
+      transmission_graph = graph_builder.Build(as<List>(graphs["transmission"]));
     if (graphs.containsElementNamed("roughness") && !Rf_isNull(graphs["roughness"])) {
       roughness_graph = graph_builder.Build(as<List>(graphs["roughness"]));
       if (!roughness_graph->scalar) Rcpp::stop("Roughness requires a scalar texture.");
@@ -317,6 +331,7 @@ LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Floa
       transmission = std::make_shared<image_texture_float>(data, nx, ny, 4,
           repeat[0], repeat[1], 1, offset[0], offset[1]);
     }
+    if (transmission_graph) transmission = std::make_shared<graph_texture>(transmission_graph);
     mat = std::make_shared<translucent_material>(material_texture, transmission);
     break;
   }
@@ -433,7 +448,10 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
             TextureCache &texCache, hitable_list &imp_sample_objects,
             std::vector<std::shared_ptr<hitable>> &instanced_objects,
             std::vector<std::shared_ptr<hitable_list>> &instance_importance_sampled, std::vector<int> &texture_idx,
-            bool verbose, random_gen &rng) {
+            bool verbose, random_gen &rng, InstanceBuildCache *instance_cache) {
+  InstanceBuildCache local_instance_cache;
+  if (!instance_cache)
+    instance_cache = &local_instance_cache;
   auto nvec = std::make_unique<int[]>(3);
   auto nveca = std::make_unique<int[]>(3);
   auto nvecb = std::make_unique<int[]>(3);
@@ -555,7 +573,15 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     } else {
       alpha.push_back(nullptr);
     }
-    if (has_bump) {
+    List material_graphs = SingleMaterial.containsElementNamed("texture_graphs") ?
+      as<List>(SingleMaterial["texture_graphs"]) : List();
+    if (material_graphs.containsElementNamed("bump") && !Rf_isNull(material_graphs["bump"])) {
+      TextureGraphBuilder builder(texCache);
+      auto height = builder.Build(as<List>(material_graphs["bump"]));
+      if (!height->scalar) Rcpp::stop("Bump mapping requires a scalar texture.");
+      bump.push_back(std::make_shared<bump_texture>(std::make_shared<graph_texture>(height), bump_intensity));
+      has_bump = true;
+    } else if (has_bump) {
       const auto offset = material_texture_offset(SingleMaterial, "bump");
       // Imported height maps may use a different UV scale from base color.
       NumericVector bump_repeat = SingleMaterial.containsElementNamed("bump_repeat") ?
@@ -787,6 +813,53 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       break;
     }
     case CURVE: {
+      // Packed PBRT curves share row-level state, but keep their own geometry
+      // and the same insertion/subdivision order as individual scene rows.
+      auto append_curve = [&](const point3f p[4], const vec3f normals[2], Float width,
+                              Float width_end, Float u_min, Float u_max,
+                              CurveType curvetype, int split_depth) {
+        if (split_depth < 0 || split_depth > 10)
+          Rcpp::stop("Curve split_depth must be an integer from 0 to 10.");
+        auto curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, normals);
+        // PBRT CPU CreateCurve subdivides parameter intervals, retaining the
+        // original control points, tapered widths and ribbon normals.
+        const int segments = 1 << split_depth;
+        for (int segment = 0; segment < segments; ++segment) {
+          Float start = lerp(Float(segment) / segments, u_min, u_max);
+          Float end = lerp(Float(segment + 1) / segments, u_min, u_max);
+          entry = std::make_shared<curve>(start, end, curve_data, shape_material,
+                                         ObjToWorld, WorldToObj, is_flipped);
+          entry = finish_entry(entry);
+          list.add(entry);
+        }
+      };
+      if (shape_properties.containsElementNamed("curve_data")) {
+        if (importance_sample || has_medium || isvolume)
+          Rcpp::stop("Packed curves cannot be importance-sampled emitters or medium boundaries.");
+        NumericMatrix curves = as<NumericMatrix>(shape_properties["curve_data"]);
+        if (curves.nrow() != 24 || curves.ncol() == 0)
+          Rcpp::stop("Packed curve data must be a nonempty matrix with 24 rows.");
+        for (int column = 0; column < curves.ncol(); ++column) {
+          if ((column & 1023) == 0) Rcpp::checkUserInterrupt();
+          const double *v = &curves(0, column);
+          for (int component = 0; component < 24; ++component)
+            if (!std::isfinite(v[component]) || !std::isfinite(static_cast<Float>(v[component])))
+              Rcpp::stop("Packed curve data must contain finite, representable values.");
+          if (v[12] < 0 || v[13] < 0 || std::max(v[12], v[13]) <= 0 ||
+              v[14] < 0 || v[15] > 1 || v[14] >= v[15] ||
+              v[16] != std::floor(v[16]) || v[16] < 0 || v[16] > 10 ||
+              v[17] != std::floor(v[17]) || v[17] < 1 || v[17] > 3)
+            Rcpp::stop("Invalid packed curve widths, parameter interval, subdivision depth or type.");
+          point3f p[4] = {point3f(v[0], v[1], v[2]), point3f(v[3], v[4], v[5]),
+                          point3f(v[6], v[7], v[8]), point3f(v[9], v[10], v[11])};
+          vec3f normals[2] = {vec3f(v[18], v[19], v[20]), vec3f(v[21], v[22], v[23])};
+          if (v[17] == 3 && (normals[0].squared_length() == 0 || normals[1].squared_length() == 0))
+            Rcpp::stop("Packed ribbon curves require nonzero endpoint normals.");
+          append_curve(p, normals, v[12], v[13], v[14], v[15],
+                       static_cast<CurveType>(static_cast<int>(v[17])), static_cast<int>(v[16]));
+        }
+        break;
+      }
       NumericVector p1 = as<NumericVector>(shape_properties["p1"]);
       NumericVector p2 = as<NumericVector>(shape_properties["p2"]);
       NumericVector p3 = as<NumericVector>(shape_properties["p3"]);
@@ -809,23 +882,9 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       n[0] = vec3f(normal(0), normal(1), normal(2));
       n[1] = vec3f(normal_end(0), normal_end(1), normal_end(2));
 
-      std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, n);
       int split_depth = shape_properties.containsElementNamed("split_depth") ?
         as<int>(shape_properties["split_depth"]) : 3;
-      if (split_depth < 0 || split_depth > 10)
-        Rcpp::stop("Curve split_depth must be an integer from 0 to 10.");
-      // PBRT CPU CreateCurve: 2^splitdepth equal parameter intervals sharing
-      // the original control points, widths and ribbon normals. Only native
-      // BVH primitives expand; the user's R scene keeps one row per curve.
-      const int segments = 1 << split_depth;
-      for (int segment = 0; segment < segments; ++segment) {
-        Float start = lerp(Float(segment) / segments, u_min, u_max);
-        Float end = lerp(Float(segment + 1) / segments, u_min, u_max);
-        entry = std::make_shared<curve>(start, end, curve_data, shape_material,
-                                       ObjToWorld, WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-      }
+      append_curve(p, n, width, width_end, u_min, u_max, curvetype, split_depth);
       break;
     }
     case CSG_OBJECT: {
@@ -843,9 +902,12 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
       bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
 
+      bool consistent_normals = shape_properties.containsElementNamed("calculate_consistent_normals") &&
+        as<bool>(shape_properties["calculate_consistent_normals"]);
+
       entry = std::make_shared<plymesh>(plyfilename, plybasename, shape_material, alpha[mat_idx], bump[mat_idx],
                                         scale_ply, subdivision_levels, recalculate_normals, verbose, shutteropen,
-                                        shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped);
+                                        shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped, consistent_normals);
       if (entry == nullptr) {
         continue;
       }
@@ -906,39 +968,67 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       NumericVector scale_y = as<NumericVector>(shape_properties["scale_y"]);
       NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
       IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
-      auto instance_importance_sample_list = std::make_shared<hitable_list>();
-      if (volume_scene) {
-        instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
-        instance_importance_sample_list->volume_scene->medium_cache = volume_scene->medium_cache;
-        volume_scene->children.push_back(instance_importance_sample_list->volume_scene);
-      }
-      std::shared_ptr<hitable> instance_scene = build_scene(
+      const SEXP prototype_key = original_scene;
+      auto cached = instance_cache->prototypes.find(prototype_key);
+      std::shared_ptr<hitable_list> instance_importance_sample_list;
+      std::shared_ptr<hitable> instance_scene;
+      if (cached == instance_cache->prototypes.end()) {
+        instance_importance_sample_list = std::make_shared<hitable_list>();
+        if (volume_scene) {
+          instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
+          instance_importance_sample_list->volume_scene->medium_cache = volume_scene->medium_cache;
+        }
+        instance_scene = build_scene(
           original_scene, shape_vec, shutteropen, shutterclose, textures, alpha_textures, bump_textures,
           roughness_textures, shared_materials, alpha, bump, roughness, bvh_type, transformCache, texCache,
-          (*instance_importance_sample_list), instanced_objects, instance_importance_sampled, texture_idx, false, rng);
-      instanced_objects.push_back(instance_scene);
+          (*instance_importance_sample_list), instanced_objects, instance_importance_sampled, texture_idx, false, rng,
+          instance_cache);
+        instance_cache->prototypes.emplace(prototype_key,
+            InstanceBuildCache::Prototype{instance_scene, instance_importance_sample_list});
+        instanced_objects.push_back(instance_scene);
+        // Instances hold raw light-list pointers, even for empty light lists.
+        instance_importance_sampled.push_back(instance_importance_sample_list);
+      } else {
+        instance_scene = cached->second.geometry;
+        instance_importance_sample_list = cached->second.lights;
+      }
       auto child_volumes = instance_importance_sample_list->volume_scene;
       if (volume_scene && child_volumes) {
+        volume_scene->children.push_back(child_volumes);
         volume_scene->has_media |= child_volumes->has_media;
         volume_scene->has_emission |= child_volumes->has_emission;
       }
       bool any_importance_sampled = instance_importance_sample_list->size() > 0;
-      if (any_importance_sampled) {
-        instance_importance_sampled.push_back(instance_importance_sample_list);
-      }
 
-      for (size_t ii = 0; ii < (size_t)x_values.size(); ii++) {
-        vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
-        NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
-
-        Transform InstanceTransform = GroupTransform * Translate(center_instance) *
-                                      rotation_order_matrix(angle_instance, order_rotation) *
-                                      Scale(scale_x(ii), scale_y(ii), scale_z(ii));
+      const bool packed = shape_properties.containsElementNamed("instance_transforms");
+      NumericMatrix placements = packed ? as<NumericMatrix>(shape_properties["instance_transforms"])
+                                        : NumericMatrix(16, 0);
+      if (placements.nrow() != 16)
+        Rcpp::stop("Instance transforms must have 16 rows (column-major 4x4 matrices).");
+      const size_t placement_count = packed ? placements.ncol() : x_values.size();
+      for (size_t ii = 0; ii < placement_count; ii++) {
+        if ((ii & 4095) == 0) Rcpp::checkUserInterrupt();
+        Transform InstanceTransform;
+        if (packed) {
+          Float matrix[4][4];
+          for (int column = 0; column < 4; ++column)
+            for (int row = 0; row < 4; ++row) {
+              const double value = placements(row + 4 * column, ii);
+              if (!std::isfinite(value)) Rcpp::stop("Instance transforms must be finite.");
+              matrix[row][column] = value;
+            }
+          InstanceTransform = GroupTransform * Transform(matrix);
+        } else {
+          vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
+          NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
+          InstanceTransform = GroupTransform * Translate(center_instance) *
+                              rotation_order_matrix(angle_instance, order_rotation) *
+                              Scale(scale_x(ii), scale_y(ii), scale_z(ii));
+        }
         Transform *ObjToWorldInst = transformCache.Lookup(InstanceTransform);
-        Transform *WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
         const uint64_t boundary_offset =
             volume_scene ? volume_scene->ReserveBoundaryIds(child_volumes->BoundaryCount()) : 0;
-        auto world_instance = std::make_shared<instance>(instance_scene.get(), ObjToWorldInst, WorldToObjInst,
+        auto world_instance = std::make_shared<instance>(instance_scene.get(), ObjToWorldInst,
                                                          instance_importance_sample_list.get(), boundary_offset);
         std::shared_ptr<hitable> placed = world_instance;
         if (is_animated)
@@ -951,7 +1041,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
             ValidateMediumTransform(*EndAnim);
           }
           auto boundary_instance =
-              std::make_shared<instance>(child_volumes->boundary_bvh.get(), ObjToWorldInst, WorldToObjInst,
+              std::make_shared<instance>(child_volumes->boundary_bvh.get(), ObjToWorldInst,
                                          instance_importance_sample_list.get(), boundary_offset);
           std::shared_ptr<hitable> boundary_placement = boundary_instance;
           if (is_animated)

@@ -4,7 +4,12 @@
 \alias{read_pbrt}
 \title{Read a PBRT Scene}
 \usage{
-read_pbrt(filename, strict = TRUE, asset_dir = tempfile("rayrender-pbrt-"))
+read_pbrt(
+  filename,
+  strict = TRUE,
+  asset_dir = tempfile("rayrender-pbrt-"),
+  mesh_storage = c("memory", "ply")
+)
 }
 \arguments{
 \item{filename}{Path to a PBRT scene, optionally compressed with gzip.}
@@ -14,9 +19,16 @@ warn and return a diagnostic for each approximation or omitted feature.
 Invalid syntax, missing assets, and undefined references always stop.}
 
 \item{asset_dir}{Default \code{tempfile("rayrender-pbrt-")}. Directory for generated
-texture and environment images. Choose a permanent directory before saving
+texture, environment, and mesh assets. Choose a permanent directory before saving
 the returned scene for use in another R session. Existing assets are not
 overwritten.}
+
+\item{mesh_storage}{Default \code{c("memory", "ply")}. With \code{"ply"}, store compatible
+inline surface meshes as binary PLY assets under \code{asset_dir}, retaining only
+lazy file references in R. Native geometry is still built at render time.
+Supplied normals and UVs are preserved; attributes use PLY float32 precision.
+Other meshes keep their in-memory representation. Keep the generated assets
+for as long as the returned scene is needed.}
 }
 \value{
 A list with \code{scene}, \code{render_args}, \code{diagnostics}, \code{source_files}, and
@@ -28,21 +40,37 @@ conversion use a PEGTL grammar and R scene translation.
 }
 \details{
 Supports static and animated affine transforms, attribute scopes, named coordinate systems,
-includes (relative to the main file, as in PBRT), object instances, perspective
+includes and serial imports (relative to the main file, as in PBRT), object instances, perspective
 orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
-bilinear patches (triangulated), cubic Bezier curves, diffuse area lights,
+bilinear patches (triangulated), cubic Bezier and uniform B-spline curves, diffuse area lights,
 point/spot lights, uniform and equal-area image infinite lights,
 RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
-approximations of coated and Disney materials, constant/image/UV checker/direction-mix textures, and
+approximations of coated and Disney materials, constant/image/Ptex/UV checker/direction-mix textures, and
 homogeneous, uniform-grid, and NanoVDB interior media. Material displacement
 becomes a bump map; PLY displacement uses rayvertex with simple subdivision.
 PBRT v4 is the target; common v3 spellings are
 accepted, including \code{WorldEnd}, \code{TransformBegin}, and \code{matte}/\code{glass}/\code{metal}.
 Environment images always use the v4 equal-area convention; legacy v3
 latitude-longitude maps must first be converted to equal-area maps.
+Imported files inherit graphics state without exporting subsequent changes.
+Object references can resolve after later files are read, including forward and
+sibling-import references; repeated placements share prepared geometry.
+Large adjacent compatible diffuse meshes may be batched into multi-shape
+meshes, and repeated restoring placement-only files use nested instances.
+Large adjacent sets of compatible nonemissive curves use packed numeric
+descriptors, retaining each span's control points, widths, normals, parameter
+interval and subdivision depth. Emissive and medium-bearing curves remain separate.
+These optimizations preserve geometry but may reduce the number of scene rows.
+Large static populations are stored as packed affine transforms on instance
+rows; small populations and animated placements retain individual rows.
+Parsed-file caching is bounded, but individual files are still parsed in full
+and the converted scene must fit in memory.
 Image textures are decoded to linear EXR assets. UV checkerboards are baked
 at 256 by 256 pixels. Image environments retain the input height and use
 twice that width; their light transforms are baked into the resampling.
+Ptex textures use the \pkg{ptex} runtime package. Source face IDs
+survive batching, instances, and lazy PLY storage. See \code{\link[=texture_ptex]{texture_ptex()}} for
+encoding, filtering, cache controls, and the required face-local UV layout.
 
 This is a scene converter, not a PBRT renderer. RGB values are linear;
 rayrender's sampler, integrator, reconstruction filter, and tone mapping are
@@ -74,6 +102,10 @@ Curves preserve PBRT's \code{splitdepth} (default 3) as native BVH subdivisions.
 Shape alpha masks retain their own UV scale/offset and use rayrender's native
 8-bit coverage lookup rather than PBRT's mipmapped filtering. Curve alpha
 masks remain unsupported and are diagnosed.
+Constant-zero-alpha area emitters use \code{\link[=light]{light()}} with \code{invisible = TRUE},
+preserving illumination and camera/specular invisibility. Unlike PBRT's
+fully invisible emitters, diffuse rays may still intersect these lights;
+this approximation requires \code{strict = FALSE}.
 Direction-mix graphs retain their declaration-time direction transform and
 geometric-normal weighting on supported color inputs and dielectric/conductor
 roughness. Roughness conversion follows texture evaluation. Procedural roughness

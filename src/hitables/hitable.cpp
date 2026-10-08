@@ -304,14 +304,13 @@ context("Ray differential transport") {
 context("Primitive differential geometry") {
   test_that("[analytic UV footprints agree with neighboring intersections]") {
     Transform identity, scaled = Translate(vec3f(.1, .2, .3)) * Scale(1.3, .7, 1.2);
-    Transform inverse = Inverse(scaled);
     auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     sphere ball(1, mat, nullptr, nullptr, &identity, &identity, false);
     ellipsoid oval(point3f(0), 1, vec3f(2, 1, 3), mat, nullptr, nullptr, &identity, &identity,
                    false);
     cylinder tube(1, 2, 0, 2 * M_PI, true, mat, nullptr, nullptr, &identity, &identity, false);
     xy_rect plane(-2, 2, -3, 3, 0, mat, nullptr, nullptr, &identity, &identity, false);
-    instance placed(&ball, &scaled, &inverse, nullptr, 0);
+    instance placed(&ball, &scaled, nullptr, 0);
     random_gen rng(22);
     for (hitable *shape : {static_cast<hitable *>(&ball), static_cast<hitable *>(&oval),
                            static_cast<hitable *>(&tube), static_cast<hitable *>(&plane),

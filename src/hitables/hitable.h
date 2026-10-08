@@ -141,6 +141,9 @@ class hitable {
     }
 
     virtual OpaqueShadowType ShadowType() const { return OpaqueShadowType::Unsupported; }
+    // Queried only when constructing a texture context; ordinary intersections
+    // need neither a larger hit record nor another per-hit assignment.
+    virtual int TextureFaceIndex() const { return -1; }
     virtual bool OpaqueHit(const Ray&, Float, Float, random_gen&) const { return false; }
 
 

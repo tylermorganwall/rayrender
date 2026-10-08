@@ -11,8 +11,9 @@ public:
   Transform* Lookup(const Transform &t);
   void Clear();
 private:
-  void Insert(std::shared_ptr<Transform> tNew);
   void Grow();
+  static size_t FindSlot(const Transform &t,
+                        const std::vector<std::shared_ptr<Transform>> &table);
   static uint64_t Hash(const Transform &t);
   // TransformCache Private Data
   std::vector<std::shared_ptr<Transform> > hashTable;

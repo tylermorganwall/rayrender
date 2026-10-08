@@ -1,4 +1,5 @@
 #include "texturegraph.h"
+#include "ptextexture.h"
 #include "../hitables/hitable.h"
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,7 @@ TextureEvalContext TextureEvalContext::FromHit(const hit_record& h) {
   result.footprint={h.dudx,h.dvdx,h.dudy,h.dvdy,h.has_differentials};
   result.object_p = h.texture_object_p;
   result.object_normal = h.texture_object_normal;
+  result.face_index = h.shape ? h.shape->TextureFaceIndex() : -1;
   return result;
 }
 
@@ -55,6 +57,38 @@ class Constant final : public TextureNode {
 public:
   Constant(bool scalar, point3f value) : TextureNode(scalar), value(value) {}
   point3f Evaluate(const TextureEvalContext&) const override { return value; }
+};
+
+class PtexNode final : public TextureNode {
+  std::shared_ptr<const PtexTextureResource> resource;
+  int filter;
+  std::string encoding;
+  Float gamma;
+  bool quantize;
+public:
+  PtexNode(const Rcpp::List& p, TextureCache& cache, bool scalar)
+    : TextureNode(scalar), resource(cache.LookupPtex(Rcpp::as<std::string>(p["filename"]))),
+      filter(Rcpp::as<int>(p["filter"])), encoding(Rcpp::as<std::string>(p["encoding"])),
+      gamma(Rcpp::as<Float>(p["gamma"])), quantize(Rcpp::as<bool>(p["pbrt_encoding"])) {
+    if (filter < PTEX_POINT || filter > PTEX_MITCHELL ||
+        (encoding != "linear" && encoding != "srgb" && encoding != "gamma") ||
+        !std::isfinite(gamma) || gamma <= 0)
+      Rcpp::stop("Invalid Ptex filter or encoding.");
+  }
+  point3f Evaluate(const TextureEvalContext& context) const override {
+    point3f result = resource->Sample(context, filter);
+    if (encoding != "linear") {
+      for (int c = 0; c < 3; ++c) {
+        Float x = result[c];
+        // PBRT v4 decodes filtered Ptex through an 8-bit color-encoding table.
+        // The public constructor keeps full precision; the importer opts in.
+        if (quantize) x = std::floor(std::clamp(x * 255 + Float(.5), Float(0), Float(255))) / 255;
+        result[c] = encoding == "gamma" ? std::pow(std::max(Float(0), x), gamma) :
+          x <= Float(.04045) ? x / Float(12.92) : std::pow((x + Float(.055)) / Float(1.055), Float(2.4));
+      }
+    }
+    return scalar ? point3f((result[0] + result[1] + result[2]) / 3) : result;
+  }
 };
 
 class Mix final : public TextureNode {
@@ -247,6 +281,7 @@ std::shared_ptr<const TextureNode> TextureGraphBuilder::Build(const Rcpp::List& 
   } else if (op == "checker") node = std::make_shared<Pattern>(p, child("a"), child("b"));
   else if (op == "gradient" || op == "noise") node = std::make_shared<Pattern>(p);
   else if (op == "image") node = std::make_shared<Image>(p, images, scalar);
+  else if (op == "ptex") node = std::make_shared<PtexNode>(p, images, scalar);
   else Rcpp::stop("Unknown texture graph operation: " + op);
   if (node->scalar != scalar) Rcpp::stop("Texture graph output type does not match its children.");
   nodes.emplace(p, node);

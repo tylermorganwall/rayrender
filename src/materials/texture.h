@@ -27,6 +27,7 @@ struct TextureEvalContext {
   vec3f dpdx{0}, dpdy{0};
   TextureFootprint footprint;
   bool has_derivatives = false;
+  int face_index = -1; // Ptex source face, not the triangulated primitive index.
   static TextureEvalContext FromHit(const hit_record& hit);
 };
 
@@ -200,6 +201,9 @@ public:
 class bump_texture {
 public:
   bump_texture() {}
+  bump_texture(std::shared_ptr<const texture> height_texture, Float intensity) :
+    height_texture(std::move(height_texture)), nx(0), ny(0), channels(0), intensity(intensity),
+    repeatu(1), repeatv(1) {}
   bump_texture(unsigned char *pixels, int A, int B, int nn, Float intensity,
                Float repeatu = 1.f, Float repeatv = 1.f, Float offsetu = 0.f, Float offsetv = 0.f) :
     data(pixels), nx(A), ny(B), channels(nn), intensity(intensity),
@@ -215,10 +219,11 @@ public:
   normal3f perturb(Float u, Float v, const point3f& p, normal3f n,
                    vec3f& dpdu, vec3f& dpdv,
                    normal3f dndu = normal3f(0), normal3f dndv = normal3f(0),
-                   TextureFootprint footprint = {}) const;
+                   TextureFootprint footprint = {}, const TextureEvalContext* context = nullptr) const;
 
   unsigned char *data = nullptr;
   std::shared_ptr<const HeightImage> image;
+  std::shared_ptr<const texture> height_texture;
   int nx, ny, channels;
   Float intensity;
   Float repeatu, repeatv;

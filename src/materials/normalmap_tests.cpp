@@ -2,6 +2,7 @@
 #include "normalmap.h"
 #include "material.h"
 #include "../hitables/triangle.h"
+#include "../math/loopsubdiv.h"
 #include "../hitables/sphere.h"
 #include "../hitables/cylinder.h"
 #include "../math/animatedtransform.h"
@@ -212,6 +213,34 @@ context("Analytic diffuse normal mapping") {
   auto v=normalmap::normalized(Vector(wi[0],wi[1],wi[2]));
   expect_true(std::abs(mat.f(ray,h,wi)[0]-m.eval_raw(v,normalmap::DiffuseChild(.8))*v[2])<2e-6);
  }
+test_that("raw mesh arrays count vectors rather than scalar components") {
+ Transform id;
+ float vertices[] = {0,0,0, 1,0,0, 0,1,0};
+ float normals[] = {0,0,1, 0,0,1, 0,0,1};
+ float uv[] = {0,0, 1,0, 0,1};
+ int indices[] = {0,1,2};
+ auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
+ for (bool attributes : {false, true}) {
+   TriangleMesh mesh(vertices, indices, attributes ? normals : nullptr,
+                     attributes ? uv : nullptr, 3, 3, nullptr, nullptr,
+                     mat, &id, &id, false);
+   expect_true(mesh.nVertices == 3);
+   expect_true(mesh.nNormals == (attributes ? 3 : 0));
+   expect_true(mesh.nTex == (attributes ? 3 : 0));
+   expect_true(mesh.nTriangles == 1);
+   expect_true(mesh.p[2][1] == 1);
+   if (attributes) {
+     expect_true(mesh.n[2][2] == 1);
+     expect_true(mesh.uv[2][1] == 1);
+   }
+   mesh.ValidateMesh();
+   LoopSubdivide(&mesh, 1, false);
+   expect_true(mesh.nVertices == 6);
+   expect_true(mesh.nTriangles == 4);
+   expect_true(mesh.nNormals == 6);
+   mesh.ValidateMesh();
+ }
+}
  test_that("triangle raw input is reciprocal across hit overloads, ray lengths, bump limits and transforms") {
   Transform id;
   float vertices[]={-2,-2,0, 2,-2,0, 0,2,0};int indices[]={0,1,2};

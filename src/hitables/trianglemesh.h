@@ -57,7 +57,7 @@ struct TriangleMesh {
                std::shared_ptr<material> default_material, 
                Transform* ObjectToWorld, 
                Transform* WorldToObject, 
-               bool reverseOrientation);
+               bool reverseOrientation, bool calculate_consistent_normals = false);
   TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_consistent_normals,
                bool override_material, bool flip_transmittance,
                std::shared_ptr<alpha_texture> alpha,
@@ -69,6 +69,7 @@ struct TriangleMesh {
                bool reverseOrientation);
   
   ~TriangleMesh();
+  void CalculateConsistentNormals();
   size_t GetSize();
   void ValidateMesh();
     
@@ -78,6 +79,7 @@ struct TriangleMesh {
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
+  std::vector<int> ptex_face_indices;
 
   std::unique_ptr<point3f[]>  p;
   std::unique_ptr<normal3f[]> n;

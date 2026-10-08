@@ -9,29 +9,51 @@
 #'   warn and return a diagnostic for each approximation or omitted feature.
 #'   Invalid syntax, missing assets, and undefined references always stop.
 #' @param asset_dir Default `tempfile("rayrender-pbrt-")`. Directory for generated
-#'   texture and environment images. Choose a permanent directory before saving
+#'   texture, environment, and mesh assets. Choose a permanent directory before saving
 #'   the returned scene for use in another R session. Existing assets are not
 #'   overwritten.
+#' @param mesh_storage Default `c("memory", "ply")`. With `"ply"`, store compatible
+#'   inline surface meshes as binary PLY assets under `asset_dir`, retaining only
+#'   lazy file references in R. Native geometry is still built at render time.
+#'   Supplied normals and UVs are preserved; attributes use PLY float32 precision.
+#'   Other meshes keep their in-memory representation. Keep the generated assets
+#'   for as long as the returned scene is needed.
 #' @return A list with `scene`, `render_args`, `diagnostics`, `source_files`, and
 #'   `assets`. Render with `do.call(render_scene, c(list(scene = x$scene),
 #'   x$render_args))`. Camera and render arguments can be edited before rendering.
 #' @details
 #' Supports static and animated affine transforms, attribute scopes, named coordinate systems,
-#' includes (relative to the main file, as in PBRT), object instances, perspective
+#' includes and serial imports (relative to the main file, as in PBRT), object instances, perspective
 #' orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
-#' bilinear patches (triangulated), cubic Bezier curves, diffuse area lights,
+#' bilinear patches (triangulated), cubic Bezier and uniform B-spline curves, diffuse area lights,
 #' point/spot lights, uniform and equal-area image infinite lights,
 #' RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
-#' approximations of coated and Disney materials, constant/image/UV checker/direction-mix textures, and
+#' approximations of coated and Disney materials, constant/image/Ptex/UV checker/direction-mix textures, and
 #' homogeneous, uniform-grid, and NanoVDB interior media. Material displacement
 #' becomes a bump map; PLY displacement uses rayvertex with simple subdivision.
 #' PBRT v4 is the target; common v3 spellings are
 #' accepted, including `WorldEnd`, `TransformBegin`, and `matte`/`glass`/`metal`.
 #' Environment images always use the v4 equal-area convention; legacy v3
 #' latitude-longitude maps must first be converted to equal-area maps.
+#' Imported files inherit graphics state without exporting subsequent changes.
+#' Object references can resolve after later files are read, including forward and
+#' sibling-import references; repeated placements share prepared geometry.
+#' Large adjacent compatible diffuse meshes may be batched into multi-shape
+#' meshes, and repeated restoring placement-only files use nested instances.
+#' Large adjacent sets of compatible nonemissive curves use packed numeric
+#' descriptors, retaining each span's control points, widths, normals, parameter
+#' interval and subdivision depth. Emissive and medium-bearing curves remain separate.
+#' These optimizations preserve geometry but may reduce the number of scene rows.
+#' Large static populations are stored as packed affine transforms on instance
+#' rows; small populations and animated placements retain individual rows.
+#' Parsed-file caching is bounded, but individual files are still parsed in full
+#' and the converted scene must fit in memory.
 #' Image textures are decoded to linear EXR assets. UV checkerboards are baked
 #' at 256 by 256 pixels. Image environments retain the input height and use
 #' twice that width; their light transforms are baked into the resampling.
+#' Ptex textures use the \pkg{ptex} runtime package. Source face IDs
+#' survive batching, instances, and lazy PLY storage. See [texture_ptex()] for
+#' encoding, filtering, cache controls, and the required face-local UV layout.
 #'
 #' This is a scene converter, not a PBRT renderer. RGB values are linear;
 #' rayrender's sampler, integrator, reconstruction filter, and tone mapping are
@@ -63,6 +85,10 @@
 #' Shape alpha masks retain their own UV scale/offset and use rayrender's native
 #' 8-bit coverage lookup rather than PBRT's mipmapped filtering. Curve alpha
 #' masks remain unsupported and are diagnosed.
+#' Constant-zero-alpha area emitters use [light()] with `invisible = TRUE`,
+#' preserving illumination and camera/specular invisibility. Unlike PBRT's
+#' fully invisible emitters, diffuse rays may still intersect these lights;
+#' this approximation requires `strict = FALSE`.
 #' Direction-mix graphs retain their declaration-time direction transform and
 #' geometric-normal weighting on supported color inputs and dielectric/conductor
 #' roughness. Roughness conversion follows texture evaluation. Procedural roughness
@@ -180,7 +206,8 @@
 read_pbrt = function(
   filename,
   strict = TRUE,
-  asset_dir = tempfile("rayrender-pbrt-")
+  asset_dir = tempfile("rayrender-pbrt-"),
+  mesh_storage = c("memory", "ply")
 ) {
   if (!is.character(filename) || length(filename) != 1L || is.na(filename)) {
     stop("`filename` must be a single file path.", call. = FALSE)
@@ -196,6 +223,7 @@ read_pbrt = function(
   ) {
     stop("`asset_dir` must be a nonempty directory path.", call. = FALSE)
   }
+  mesh_storage = match.arg(mesh_storage)
   filename = normalizePath(path.expand(filename), mustWork = TRUE)
   # This environment owns only import-wide resources. Graphics state is a value
   # copied by the attribute stack, so scopes cannot mutate their parents.
@@ -204,6 +232,21 @@ read_pbrt = function(
   context$strict = strict
   context$asset_dir = path.expand(asset_dir)
   context$assets = character()
+  context$mesh_cache = if (mesh_storage == 'ply') {
+    cache = new.env(parent = emptyenv())
+    cache$directory = tempfile('meshes-', tmpdir = context$asset_dir)
+    cache
+  } else {
+    NULL
+  }
+  on.exit(
+    {
+      if (!complete && !is.null(context$mesh_cache)) {
+        unlink(context$mesh_cache$directory, recursive = TRUE)
+      }
+    },
+    add = TRUE
+  )
   complete = FALSE
   on.exit(
     if (!complete && length(context$assets)) unlink(context$assets),
@@ -211,10 +254,17 @@ read_pbrt = function(
   )
   context$diagnostics = pbrt_row_buffer()
   context$parsed = new.env(parent = emptyenv())
+  context$parse_cache = new.env(parent = emptyenv())
+  context$parse_cache$bytes = 0
+  context$parse_cache$order = character()
   context$source_files = character()
   context$include_stack = character()
-  context$objects = list()
-  context$rows = pbrt_row_buffer()
+  context$objects = new.env(hash = TRUE, parent = emptyenv())
+  context$placement_files = new.env(hash = TRUE, parent = emptyenv())
+  # Inline meshes use an outer rayrender material. Keep their valid default
+  # rayvertex material shared instead of rebuilding it for every small mesh.
+  context$mesh_material = rayvertex::material_list()
+  context$rows = pbrt_row_buffer(context$mesh_cache)
   context$lights = pbrt_row_buffer()
   context$point_lights = pbrt_row_buffer()
   context$stack = list()
@@ -246,7 +296,7 @@ read_pbrt = function(
   if (length(context$stack) || !is.null(context$object)) {
     stop("Unclosed PBRT attribute, transform, or object scope.", call. = FALSE)
   }
-  rows = pbrt_buffer_rows(context$rows)
+  rows = pbrt_resolve_instances(pbrt_buffer_rows(context$rows), context)
   scene = if (length(rows)) {
     vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ])
   } else {
@@ -300,17 +350,25 @@ read_pbrt = function(
     render_args = render_args,
     diagnostics = diagnostics,
     source_files = context$source_files,
-    assets = context$assets
+    assets = c(
+      context$assets,
+      if (!is.null(context$mesh_cache)) {
+        list.files(context$mesh_cache$directory, full.names = TRUE)
+      }
+    )
   )
 }
 
+#' @param mesh_cache Default `NULL`. Shared lazy-mesh asset directory.
 #' @return An import-local buffer of bounded lists, preserving insertion order.
 #' @keywords internal
 #' @noRd
-pbrt_row_buffer = function() {
+pbrt_row_buffer = function(mesh_cache = NULL) {
   buffer = new.env(hash = TRUE, parent = emptyenv())
+  buffer$mesh_cache = mesh_cache
   buffer$pending = list()
   buffer$chunks = 0L
+  buffer$new_instances = 0L
   buffer
 }
 
@@ -331,11 +389,45 @@ pbrt_execute_file = function(filename, state, context, continuation = list()) {
   }
   context$include_stack = c(context$include_stack, filename)
   on.exit(context$include_stack <- head(context$include_stack, -1L))
-  if (!exists(filename, context$parsed, inherits = FALSE)) {
-    assign(filename, pbrt_parse_file(filename), context$parsed)
-    context$source_files = c(context$source_files, filename)
+  share_placements = context$world &&
+    is.null(context$object) &&
+    !length(continuation) &&
+    identical(state$active, "All") &&
+    identical(state$transform, state$end_transform)
+  if (
+    share_placements &&
+      pbrt_share_placement_file(filename, NULL, state, context)
+  ) {
+    context$source_files = unique(c(context$source_files, filename))
+    return(state)
   }
-  commands = get(filename, context$parsed, inherits = FALSE)
+  if (!exists(filename, context$parsed, inherits = FALSE)) {
+    commands = pbrt_parse_file(filename)
+    context$source_files = unique(c(context$source_files, filename))
+    # Repeated small includes benefit from caching, but retaining the parsed
+    # commands of production geometry duplicates much of the converted scene.
+    # Keep an import-wide 32 MiB LRU cache, shared by nested Import contexts.
+    bytes = as.numeric(object.size(commands))
+    budget = 32 * 1024^2
+    if (bytes <= budget) {
+      while (context$parse_cache$bytes + bytes > budget) {
+        oldest = context$parse_cache$order[1]
+        context$parse_cache$bytes = context$parse_cache$bytes -
+          get(oldest, context$parsed, inherits = FALSE)$bytes
+        rm(list = oldest, envir = context$parsed)
+        context$parse_cache$order = context$parse_cache$order[-1]
+      }
+      assign(filename, list(commands = commands, bytes = bytes), context$parsed)
+      context$parse_cache$bytes = context$parse_cache$bytes + bytes
+      context$parse_cache$order = c(context$parse_cache$order, filename)
+    }
+  } else {
+    commands = get(filename, context$parsed, inherits = FALSE)$commands
+    context$parse_cache$order = c(
+      setdiff(context$parse_cache$order, filename),
+      filename
+    )
+  }
   if (length(continuation)) {
     # Include is textual substitution. A parent may finish the final included
     # directive's parameter list. Modify this invocation, not the cached parse:
@@ -359,10 +451,361 @@ pbrt_execute_file = function(filename, state, context, continuation = list()) {
       continuation[setdiff(names(continuation), duplicates)]
     )
   }
+  if (
+    share_placements &&
+      pbrt_share_placement_file(filename, commands, state, context)
+  ) {
+    return(state)
+  }
+  if (
+    share_placements && pbrt_pack_placement_blocks(commands, state, context)
+  ) {
+    return(state)
+  }
   for (command in commands) {
     state = pbrt_execute(command, state, context)
   }
+  if (is.null(context$object) && context$rows$new_instances >= 65536L) {
+    # Lower completed populations at file boundaries, rather than retaining
+    # tens of millions of reference records until the root file finishes.
+    # Unknown forward references stay deferred, with their source locations.
+    rows = pbrt_resolve_instances(
+      pbrt_buffer_rows(context$rows),
+      context,
+      partial = TRUE
+    )
+    rm(list = ls(context$rows, all.names = TRUE), envir = context$rows)
+    context$rows$chunks = 0L
+    context$rows$pending = list()
+    context$rows$new_instances = 0L
+    for (row in rows) {
+      pbrt_buffer_append(context$rows, row)
+    }
+    # Retained forward references were just checked. Revisit them after new
+    # instances accumulate, not after every unrelated mesh/curve include.
+    context$rows$new_instances = 0L
+  }
   state
+}
+
+#' @param commands Parsed file directives.
+#' @param state Static world graphics state, restored after every block.
+#' @param context Import resources and output buffer.
+#' @return Whether the complete file was handled as independent placements.
+#' @keywords internal
+#' @noRd
+pbrt_pack_placement_blocks = function(commands, state, context) {
+  count = length(commands)
+  pattern = c(
+    'AttributeBegin',
+    'ConcatTransform',
+    'ObjectInstance',
+    'AttributeEnd'
+  )
+  if (
+    count < 256L ||
+      count %% 4L ||
+      !identical(vapply(commands[1:4], `[[`, character(1), 'name'), pattern)
+  ) {
+    return(FALSE)
+  }
+  names = matrix(vapply(commands, `[[`, character(1), 'name'), nrow = 4L)
+  if (!all(names == pattern)) {
+    return(FALSE)
+  }
+  instances = seq.int(3L, count, 4L)
+  objects = vapply(
+    commands[instances],
+    function(command) command$args[1],
+    character(1)
+  )
+  if (
+    !all(vapply(
+      unique(objects),
+      pbrt_instance_ready,
+      logical(1),
+      context = context
+    ))
+  ) {
+    return(FALSE)
+  }
+  # Validate every local matrix through the ordinary transform implementation.
+  # Compute precisely the same product once, instead of maintaining two equal
+  # graphics-state matrices and a deferred reference for each static placement.
+  transforms = vapply(
+    commands[instances - 1L],
+    function(command) {
+      as.vector(state$transform %*% pbrt_transform(command))
+    },
+    numeric(16)
+  )
+  groups = split(seq_along(instances), objects)
+  rows = vector('list', length(instances))
+  for (indices in groups) {
+    prototype = pbrt_instance_prototype(
+      commands[[instances[indices[1]]]],
+      context
+    )
+    if (!nrow(prototype)) {
+      next
+    }
+    if (length(indices) >= 64L) {
+      prototype$shape_info[[
+        1
+      ]]$shape_properties$instance_transforms = transforms[,
+        indices,
+        drop = FALSE
+      ]
+      rows[[indices[1]]] = prototype
+    } else {
+      for (i in indices) {
+        local = state
+        local$transform = local$end_transform = matrix(transforms[, i], 4L, 4L)
+        rows[[i]] = pbrt_place(prototype, local, diag(4), context)
+      }
+    }
+  }
+  for (row in rows) {
+    if (!is.null(row)) {
+      pbrt_buffer_append(context$rows, row)
+    }
+  }
+  TRUE
+}
+
+#' @param filename Resolved input filename.
+#' @param commands Parsed commands, or NULL for a cached-prototype lookup.
+#' @param state Current static graphics state.
+#' @param context Import resources and output buffer.
+#' @return Whether a shared placement prototype was appended.
+#' @keywords internal
+#' @noRd
+pbrt_share_placement_file = function(filename, commands, state, context) {
+  entry = context$placement_files[[filename]]
+  if (is.null(commands)) {
+    if (is.null(entry) || is.null(entry$prototype)) {
+      return(FALSE)
+    }
+    pbrt_buffer_append(
+      context$rows,
+      pbrt_place(entry$prototype, state, diag(4), context)
+    )
+    return(TRUE)
+  }
+  if (is.null(entry)) {
+    context$placement_files[[filename]] = list(eligible = NA, prototype = NULL)
+    return(FALSE)
+  }
+  if (identical(entry$eligible, FALSE)) {
+    return(FALSE)
+  }
+  # Only restoring relative-transform scopes can be compiled independently of
+  # the caller. Absolute transforms, resource definitions and graphics changes
+  # retain normal textual execution. Never cache unresolved forward references.
+  scopes = character()
+  names = character()
+  count = 0L
+  eligible = TRUE
+  for (command in commands) {
+    name = command$name
+    if (name %in% c('AttributeBegin', 'TransformBegin')) {
+      scopes = c(scopes, name)
+    } else if (name %in% c('AttributeEnd', 'TransformEnd')) {
+      expected = if (name == 'AttributeEnd') {
+        'AttributeBegin'
+      } else {
+        'TransformBegin'
+      }
+      if (!length(scopes) || tail(scopes, 1) != expected) {
+        eligible = FALSE
+        break
+      }
+      scopes = head(scopes, -1L)
+    } else if (name == 'ObjectInstance') {
+      count = count + 1L
+      names = union(names, command$args[1])
+    } else if (
+      !(name %in% c('ConcatTransform', 'Translate', 'Scale', 'Rotate')) ||
+        !length(scopes)
+    ) {
+      eligible = FALSE
+      break
+    }
+  }
+  if (!eligible || length(scopes) || count < 64L) {
+    context$placement_files[[filename]] = list(
+      eligible = FALSE,
+      prototype = NULL
+    )
+    return(FALSE)
+  }
+  if (!all(vapply(names, pbrt_instance_ready, logical(1), context = context))) {
+    return(FALSE)
+  }
+  child = list2env(as.list(context, all.names = TRUE), parent = emptyenv())
+  child$rows = pbrt_row_buffer(child$mesh_cache)
+  child$stack = list()
+  local = state
+  local$transform = local$end_transform = diag(4)
+  for (command in commands) {
+    local = pbrt_execute(command, local, child)
+  }
+  rows = pbrt_resolve_instances(pbrt_buffer_rows(child$rows), child)
+  prototype = if (length(rows)) {
+    create_instances(vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ]))
+  } else {
+    sphere()[FALSE, ]
+  }
+  context$placement_files[[filename]] = list(
+    eligible = TRUE,
+    prototype = prototype
+  )
+  pbrt_buffer_append(
+    context$rows,
+    pbrt_place(prototype, state, diag(4), context)
+  )
+  TRUE
+}
+
+#' @param rows Geometry rows and deferred instance references.
+#' @param context Import resources with the complete object registry.
+#' @param partial Default `FALSE`. Leave unresolved forward references for a later file.
+#' @return Geometry rows with shared, prepared instance prototypes.
+#' @keywords internal
+#' @noRd
+pbrt_resolve_instances = function(rows, context, partial = FALSE) {
+  ready = new.env(parent = emptyenv())
+  references = which(vapply(
+    rows,
+    inherits,
+    logical(1),
+    "pbrt_instance_reference"
+  ))
+  for (i in references) {
+    name = rows[[i]]$command$args[1]
+    if (is.null(ready[[name]])) {
+      ready[[name]] = !partial || pbrt_instance_ready(name, context)
+    }
+  }
+  static = which(vapply(
+    rows,
+    function(row) {
+      inherits(row, "pbrt_instance_reference") &&
+        ready[[row$command$args[1]]] &&
+        identical(row$transform, row$end_transform)
+    },
+    logical(1)
+  ))
+  groups = split(
+    static,
+    vapply(rows[static], function(row) row$command$args[1], character(1))
+  )
+  for (indices in groups) {
+    # Keep small scenes individually editable. Large repeated populations need
+    # one matrix per placement, not a full set of scene columns per placement.
+    if (length(indices) < 64L) {
+      next
+    }
+    prototype = pbrt_instance_prototype(rows[[indices[1]]]$command, context)
+    if (nrow(prototype)) {
+      transforms = vapply(
+        rows[indices],
+        function(row) as.vector(row$transform),
+        numeric(16)
+      )
+      prototype$shape_info[[
+        1
+      ]]$shape_properties$instance_transforms = transforms
+    }
+    rows[indices] = list(NULL)
+    rows[[indices[1]]] = prototype
+  }
+  for (i in seq_along(rows)) {
+    reference = rows[[i]]
+    if (!inherits(reference, "pbrt_instance_reference")) {
+      next
+    }
+    if (!ready[[reference$command$args[1]]]) {
+      next
+    }
+    prototype = pbrt_instance_prototype(reference$command, context)
+    placement_context = list(settings = list(TransformTimes = reference$times))
+    rows[[i]] = pbrt_place(
+      prototype,
+      reference,
+      diag(4),
+      placement_context
+    )
+  }
+  Filter(
+    function(row) {
+      inherits(row, "pbrt_instance_reference") ||
+        (!is.null(row) && nrow(row) > 0L)
+    },
+    rows
+  )
+}
+
+#' @param name Object name to check before incremental instance lowering.
+#' @param context Import resources and object definitions.
+#' @param ancestors Default `character()`. Definitions currently being checked.
+#' @return Whether this definition and its nested instances can be resolved now.
+#' @keywords internal
+#' @noRd
+pbrt_instance_ready = function(name, context, ancestors = character()) {
+  if (!exists(name, context$objects, inherits = FALSE)) {
+    return(FALSE)
+  }
+  # Let the strict resolver report cycles with the original directive location.
+  if (name %in% ancestors) {
+    return(TRUE)
+  }
+  definition = get(name, context$objects, inherits = FALSE)
+  if (!is.null(definition$prototype)) {
+    return(TRUE)
+  }
+  references = Filter(
+    function(row) inherits(row, "pbrt_instance_reference"),
+    definition$rows
+  )
+  all(vapply(
+    references,
+    function(row) {
+      pbrt_instance_ready(row$command$args[1], context, c(ancestors, name))
+    },
+    logical(1)
+  ))
+}
+
+#' @param command Deferred ObjectInstance directive, for name and error location.
+#' @param context Import resources with the complete object registry.
+#' @return One prepared instance row, or an empty scene for an empty definition.
+#' @keywords internal
+#' @noRd
+pbrt_instance_prototype = function(command, context) {
+  name = command$args[1]
+  if (!exists(name, context$objects, inherits = FALSE)) {
+    pbrt_error(command, paste("Undefined object:", name))
+  }
+  definition = get(name, context$objects, inherits = FALSE)
+  if (definition$resolving) {
+    pbrt_error(command, paste("Cyclic object instance:", name))
+  }
+  if (is.null(definition$prototype)) {
+    definition$resolving = TRUE
+    geometry = pbrt_resolve_instances(definition$rows, context)
+    definition$prototype = if (length(geometry)) {
+      create_instances(
+        vctrs::list_unchop(geometry, ptype = geometry[[1]][FALSE, ]),
+        x = 0
+      )
+    } else {
+      sphere()[FALSE, ]
+    }
+    definition$resolving = FALSE
+    definition$rows = NULL
+  }
+  definition$prototype
 }
 
 #' @param buffer An import-local row buffer.
@@ -375,7 +818,13 @@ pbrt_buffer_rows = function(buffer) {
     envir = buffer,
     inherits = FALSE
   )
-  chunks[[length(chunks) + 1L]] = buffer$pending
+  chunks = c(
+    chunks,
+    list(pbrt_store_mesh_rows(
+      pbrt_batch_curve_rows(buffer$pending),
+      buffer$mesh_cache
+    ))
+  )
   unlist(chunks, recursive = FALSE, use.names = FALSE)
 }
 
@@ -681,9 +1130,24 @@ pbrt_parse_file = function(filename) {
         t[1] == "[" &&
         startsWith(t[2], "@array:")
     ) {
+      values = arrays[[as.integer(substring(t[2], 8L))]]
+      if (is.numeric(values)) {
+        # Placement-heavy files contain millions of these matrices. Keep the
+        # lexer's doubles rather than allocating sixteen strings per matrix.
+        # pbrt_transform() performs the same finite/affine checks at execution.
+        if (length(values) != 16L) {
+          pbrt_error(command, "Transform requires 16 bracketed numbers.")
+        }
+        if (length(t) != 3L) {
+          pbrt_error(command, "Unexpected extra operands or parameters.")
+        }
+        command$args = values
+        commands[[i]] = command
+        next
+      }
       t = c(
         "[",
-        as.character(arrays[[as.integer(substring(t[2], 8L))]]),
+        as.character(values),
         "]",
         tail(t, -3L)
       )
@@ -917,11 +1381,10 @@ pbrt_execute = function(command, state, context) {
     ))
   }
   if (name == "Import") {
-    pbrt_note(
-      context,
-      command,
-      "Import is not supported; use Include for explicit textual inclusion."
-    )
+    if (!context$world) {
+      pbrt_error(command, "Import must follow WorldBegin.")
+    }
+    pbrt_import_file(pbrt_asset(args[1], context, command), state, context)
     return(state)
   }
   if (
@@ -975,12 +1438,12 @@ pbrt_execute = function(command, state, context) {
       if (!is.null(context$object)) {
         pbrt_error(command, "Nested ObjectBegin is not supported.")
       }
-      if (args[1] %in% names(context$objects)) {
+      if (exists(args[1], context$objects, inherits = FALSE)) {
         pbrt_error(command, paste("Duplicate object:", args[1]))
       }
       context$object = args[1]
       context$outer_rows = context$rows
-      context$rows = pbrt_row_buffer()
+      context$rows = pbrt_row_buffer(context$mesh_cache)
     }
     context$stack[[length(context$stack) + 1L]] = list(
       kind = name,
@@ -1008,15 +1471,11 @@ pbrt_execute = function(command, state, context) {
       state = saved
     }
     if (name == "ObjectEnd") {
-      # Bind an object definition once, not again for every ObjectInstance.
-      rows = pbrt_buffer_rows(context$rows)
-      context$objects[context$object] = list(
-        if (length(rows)) {
-          vctrs::list_unchop(rows, ptype = rows[[1]][FALSE, ])
-        } else {
-          sphere()[FALSE, ]
-        }
-      )
+      definition = new.env(parent = emptyenv())
+      definition$rows = pbrt_buffer_rows(context$rows)
+      definition$resolving = FALSE
+      definition$prototype = NULL
+      assign(context$object, definition, context$objects)
       context$rows = context$outer_rows
       context$object = NULL
     }
@@ -1170,15 +1629,19 @@ pbrt_execute = function(command, state, context) {
       pbrt_error(command, paste(name, "must follow WorldBegin."))
     }
     if (name == "ObjectInstance") {
-      if (!args[1] %in% names(context$objects)) {
-        pbrt_error(command, paste("Undefined object:", args[1]))
-      }
-      original = context$objects[[args[1]]]
-      if (!nrow(original)) {
-        return(state)
-      }
-      rows = create_instances(original, x = 0)
-      rows = pbrt_place(rows, state, diag(4), context)
+      # PBRT resolves names after all imports finish, including references to
+      # objects in sibling imports. Keep only placement state until then.
+      reference = structure(
+        list(
+          command = command,
+          transform = state$transform,
+          end_transform = state$end_transform,
+          times = context$settings$TransformTimes
+        ),
+        class = "pbrt_instance_reference"
+      )
+      pbrt_buffer_append(context$rows, reference)
+      return(state)
     } else {
       rows = pbrt_shape(command, state, context)
     }
@@ -1189,6 +1652,34 @@ pbrt_execute = function(command, state, context) {
     pbrt_note(context, command, paste("Unsupported directive omitted:", name))
   }
   state
+}
+
+#' @param filename Resolved imported PBRT file.
+#' @param state Graphics state inherited at the Import directive.
+#' @param context Parent import resources and output buffers.
+#' @return Nothing; appends geometry and lights without changing parent state.
+#' @keywords internal
+#' @noRd
+pbrt_import_file = function(filename, state, context) {
+  # Import inherits graphics state without exporting subsequent changes.
+  # Object definitions belong to the shared scene and resolve after parsing;
+  # other translator symbol tables retain their existing lexical behavior.
+  child = list2env(as.list(context, all.names = TRUE), parent = emptyenv())
+  child$stack = list()
+  on.exit(
+    {
+      # Retain provenance and ownership even on failure, so read_pbrt's cleanup
+      # removes assets generated in nested imports as well as the parent file.
+      context$source_files = unique(c(context$source_files, child$source_files))
+      context$assets = unique(c(context$assets, child$assets))
+    },
+    add = TRUE
+  )
+  pbrt_execute_file(filename, state, child)
+  if (length(child$stack) || !identical(child$object, context$object)) {
+    stop("Unclosed PBRT scope in imported file: ", filename, call. = FALSE)
+  }
+  invisible(NULL)
 }
 #' @param command Parsed directive.
 #' @param context Import resources.
@@ -1271,15 +1762,462 @@ pbrt_get = function(p, name, default = NULL, size = NULL) {
 #' @keywords internal
 #' @noRd
 pbrt_buffer_append = function(buffer, row) {
+  if (is.null(row)) {
+    return(invisible(NULL))
+  }
+  if (inherits(row, "pbrt_instance_reference")) {
+    buffer$new_instances = buffer$new_instances + 1L
+  }
   # Environment-bound list updates copy their container. Bound that work to a
   # small chunk; completed chunks live in separate bindings and never grow.
-  buffer$pending[[length(buffer$pending) + 1L]] = row
+  # A fresh shallow container also avoids [[<- recursively scanning a shared
+  # instance graph to rule out a cycle. The child objects stay shared.
+  buffer$pending = c(buffer$pending, list(row))
   if (length(buffer$pending) == 256L) {
     buffer$chunks = buffer$chunks + 1L
-    buffer[[as.character(buffer$chunks)]] = buffer$pending
+    buffer[[as.character(buffer$chunks)]] = pbrt_store_mesh_rows(
+      pbrt_batch_curve_rows(buffer$pending),
+      buffer$mesh_cache
+    )
     buffer$pending = list()
   }
   invisible(NULL)
+}
+
+#' @param rows Bounded scene fragments.
+#' @param cache Shared asset directory, or NULL for in-memory storage.
+#' @return Scene fragments retaining lazy references to eligible inline meshes.
+#' @keywords internal
+#' @noRd
+pbrt_store_mesh_rows = function(rows, cache) {
+  rows = pbrt_batch_mesh_rows(rows, file_backed = !is.null(cache))
+  if (is.null(cache)) {
+    return(rows)
+  }
+  lapply(rows, function(row) {
+    if (
+      !inherits(row, 'ray_scene') ||
+        nrow(row) != 1L ||
+        !identical(row$shape, 'raymesh')
+    ) {
+      return(row)
+    }
+    info = row$shape_info[[1]]
+    settings = info$shape_properties
+    mat = row$material[[1]]
+    # Keep transport boundaries, per-face materials and topology operations on
+    # their existing path. This cache changes storage, not material semantics.
+    if (
+      !isTRUE(settings$override_material) ||
+        isTRUE(settings$importance_sample_lights) ||
+        !identical(settings$subdivision_levels, 1) ||
+        !identical(settings$displacement_texture, '') ||
+        isTRUE(settings$recalculate_normals) ||
+        !is.null(info$medium) ||
+        !is.null(mat$subsurface) ||
+        isTRUE(mat$fog) ||
+        isTRUE(mat$implicit_sample) ||
+        (!is.null(mat$openpbr) && mat$openpbr$emission_luminance != 0) ||
+        !(mat$type %in% c(1L, 4L, 11L, 12L))
+    ) {
+      return(row)
+    }
+    mesh = info$mesh_info[[1]]
+    normals = vapply(
+      mesh$shapes,
+      function(x) all(x$has_vertex_normals),
+      logical(1)
+    )
+    uv = vapply(mesh$shapes, function(x) all(x$has_vertex_tex), logical(1))
+    if (!length(normals) || any(normals != normals[1]) || any(uv != uv[1])) {
+      return(row)
+    }
+    for (i in seq_along(mesh$shapes)) {
+      shape = mesh$shapes[[i]]
+      count = nrow(mesh$vertices[[i]])
+      if (
+        any(shape$has_vertex_normals) != normals[i] ||
+          any(shape$has_vertex_tex) != uv[i] ||
+          (normals[i] &&
+            (nrow(mesh$normals[[i]]) != count ||
+              !identical(shape$indices, shape$norm_indices))) ||
+          (uv[i] &&
+            (nrow(mesh$texcoords[[i]]) != count ||
+              !identical(shape$indices, shape$tex_indices)))
+      ) {
+        return(row)
+      }
+    }
+    if (
+      !dir.exists(cache$directory) &&
+        !dir.create(cache$directory, recursive = TRUE)
+    ) {
+      stop('Unable to create PBRT mesh cache.', call. = FALSE)
+    }
+    filename = tempfile(
+      'mesh-',
+      normalizePath(cache$directory),
+      fileext = '.ply'
+    )
+    pbrt_write_mesh_ply(mesh, filename, normals[1], uv[1])
+    # Keep material, transforms, animation, orientation and row metadata intact.
+    # Only the geometry payload and its loader settings change.
+    row$shape = 'ply'
+    info$mesh_info = list(NA)
+    info$fileinfo = filename
+    info$shape_properties = list(
+      scale_ply = 1,
+      basename = dirname(filename),
+      subdivision_levels = 1,
+      recalculate_normals = FALSE,
+      calculate_consistent_normals = settings$calculate_consistent_normals
+    )
+    row$shape_info[[1]] = info
+    row
+  })
+}
+
+#' @param mesh Uniformly indexed, compatible mesh shapes.
+#' @param filename Destination PLY file.
+#' @param normals Whether every shape supplies normals.
+#' @param uv Whether every shape supplies texture coordinates.
+#' @return NULL after atomically writing a binary PLY asset.
+#' @keywords internal
+#' @noRd
+pbrt_write_mesh_ply = function(mesh, filename, normals, uv) {
+  vertex_counts = vapply(mesh$vertices, nrow, integer(1))
+  face_counts = vapply(mesh$shapes, function(x) nrow(x$indices), integer(1))
+  has_ptex = any(vapply(
+    mesh$shapes,
+    function(x) !is.null(x$ptex_face_indices),
+    logical(1)
+  ))
+  if (sum(vertex_counts) > .Machine$integer.max) {
+    stop('PLY mesh exceeds signed 32-bit index range.', call. = FALSE)
+  }
+  temporary = paste0(filename, '.partial')
+  output = file(temporary, 'wb')
+  on.exit({
+    if (!is.null(output)) {
+      close(output)
+    }
+    unlink(temporary)
+  })
+  header = c(
+    'ply',
+    'format binary_little_endian 1.0',
+    paste('element vertex', sum(vertex_counts)),
+    paste('property float', c('x', 'y', 'z')),
+    if (normals) paste('property float', c('nx', 'ny', 'nz')),
+    if (uv) paste('property float', c('u', 'v')),
+    paste('element face', sum(face_counts)),
+    'property list uchar int vertex_indices',
+    if (has_ptex) 'property int face_indices',
+    'end_header'
+  )
+  writeBin(charToRaw(paste0(paste(header, collapse = '\n'), '\n')), output)
+  # Bound temporary interleaving buffers, including a single very large shape.
+  # PLY's float attributes match the native loader's Float32 input conversion.
+  for (i in seq_along(vertex_counts)) {
+    for (begin in seq.int(1L, vertex_counts[i], by = 65536L)) {
+      selected = seq.int(begin, min(vertex_counts[i], begin + 65535L))
+      values = mesh$vertices[[i]][selected, , drop = FALSE]
+      if (normals) {
+        values = cbind(values, mesh$normals[[i]][selected, , drop = FALSE])
+      }
+      if (uv) {
+        values = cbind(values, mesh$texcoords[[i]][selected, , drop = FALSE])
+      }
+      writeBin(as.double(t(values)), output, size = 4L, endian = 'little')
+    }
+  }
+  offset = 0L
+  for (i in seq_along(face_counts)) {
+    for (begin in seq.int(1L, face_counts[i], by = 65536L)) {
+      selected = seq.int(begin, min(face_counts[i], begin + 65535L))
+      indices = mesh$shapes[[i]]$indices[selected, , drop = FALSE] + offset
+      bytes = writeBin(
+        as.integer(t(indices)),
+        raw(),
+        size = 4L,
+        endian = 'little'
+      )
+      # Each face is one uchar count followed by three little-endian int32s.
+      records = rbind(as.raw(3L), matrix(bytes, nrow = 12L))
+      if (has_ptex) {
+        face_indices = mesh$shapes[[i]]$ptex_face_indices
+        values = if (is.null(face_indices)) {
+          rep(0L, length(selected))
+        } else {
+          face_indices[selected]
+        }
+        face_bytes = writeBin(
+          as.integer(values),
+          raw(),
+          size = 4L,
+          endian = 'little'
+        )
+        records = rbind(records, matrix(face_bytes, nrow = 4L))
+      }
+      writeBin(as.vector(records), output)
+    }
+    offset = offset + vertex_counts[i]
+  }
+  close(output)
+  output = NULL
+  if (!file.rename(temporary, filename)) {
+    stop('Unable to finish PBRT mesh asset.', call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+#' @param rows A bounded list of imported scene rows or diagnostics.
+#' @return Rows with adjacent compatible nonemissive curves packed numerically.
+#' @keywords internal
+#' @noRd
+pbrt_batch_curve_rows = function(rows) {
+  inputs = lapply(rows, pbrt_curve_batch_input)
+  result = list()
+  begin = 1L
+  while (begin <= length(rows)) {
+    input = inputs[[begin]]
+    end = begin
+    count = if (is.null(input)) 0L else ncol(input$values)
+    if (!is.null(input)) {
+      while (end < length(rows)) {
+        next_input = inputs[[end + 1L]]
+        if (
+          is.null(next_input) ||
+            !identical(input$common, next_input$common) ||
+            count + ncol(next_input$values) > 4096L
+        ) {
+          break
+        }
+        count = count + ncol(next_input$values)
+        end = end + 1L
+      }
+    }
+    if (count >= 16L) {
+      row = rows[[begin]][1L, ]
+      values = do.call(cbind, lapply(inputs[begin:end], `[[`, 'values'))
+      row$shape_info[[1]]$shape_properties = list(curve_data = values)
+      result = c(result, list(row))
+    } else {
+      result = c(result, rows[begin:end])
+    }
+    begin = end + 1L
+  }
+  result
+}
+
+#' @param row An imported scene fragment, possibly a multi-span curve chain.
+#' @return Common row settings and a 24-by-span descriptor matrix, or NULL when ineligible.
+#' @keywords internal
+#' @noRd
+pbrt_curve_batch_input = function(row) {
+  if (!inherits(row, 'ray_scene') || !nrow(row) || !all(row$shape == 'curve')) {
+    return(NULL)
+  }
+  materials = vctrs::vec_data(row$material)
+  # Diffuse/rough diffuse, hair, OpenPBR and translucent surfaces only. Keep
+  # other transport families and all emitting/medium-bearing rows independent.
+  eligible = vapply(
+    materials,
+    function(material) {
+      material$type %in%
+        c(1L, 4L, 9L, 11L, 12L) &&
+        !material$fog &&
+        !material$implicit_sample &&
+        is.null(material$subsurface) &&
+        (is.null(material$openpbr) || material$openpbr$emission_luminance == 0)
+    },
+    logical(1)
+  )
+  if (!all(eligible)) {
+    return(NULL)
+  }
+  info = vctrs::vec_data(row$shape_info)
+  if (any(vapply(info, function(x) !is.null(x$medium), logical(1)))) {
+    return(NULL)
+  }
+  # Drop only per-span geometry before checking every remaining scene field.
+  # In particular, chain rows may not silently inherit another row's transform,
+  # animation, material, flip, texture or medium settings.
+  properties = lapply(info, `[[`, 'shape_properties')
+  for (i in seq_along(info)) {
+    info[[i]]$shape_properties = list()
+  }
+  common = row
+  common$shape_info = vctrs::vec_restore(info, row$shape_info)
+  if (nrow(common) > 1L) {
+    common = vctrs::vec_unique(common)
+  }
+  if (nrow(common) != 1L) {
+    return(NULL)
+  }
+  fields = c(
+    'p1',
+    'p2',
+    'p3',
+    'p4',
+    'width',
+    'width_end',
+    'u_min',
+    'u_max',
+    'split_depth',
+    'curvetype',
+    'normal',
+    'normal_end'
+  )
+  if (
+    !all(vapply(
+      properties,
+      function(x) {
+        identical(names(x), fields) || identical(names(x), 'curve_data')
+      },
+      logical(1)
+    ))
+  ) {
+    return(NULL)
+  }
+  # Column-major schema shared with native CURVE construction: control points
+  # 1:12, widths 13:14, parameter bounds 15:16, depth/type 17:18, normals 19:24.
+  values = do.call(
+    cbind,
+    lapply(properties, function(x) {
+      if (!is.null(x$curve_data)) {
+        return(x$curve_data)
+      }
+      matrix(as.numeric(unlist(x[fields], use.names = FALSE)), nrow = 24L)
+    })
+  )
+  list(common = common, values = values)
+}
+
+#' @param rows A bounded list of scene rows or diagnostics.
+#' @param file_backed Default `FALSE`. Also batch compatible OpenPBR/translucent surfaces.
+#' @return Rows with adjacent compatible diffuse triangle meshes batched.
+#' @keywords internal
+#' @noRd
+pbrt_batch_mesh_rows = function(rows, file_backed = FALSE) {
+  if (length(rows) < 16L) {
+    return(rows)
+  }
+  result = list()
+  begin = 1L
+  while (begin <= length(rows)) {
+    row = rows[[begin]]
+    end = begin
+    compatible = NULL
+    if (
+      inherits(row, 'ray_scene') &&
+        nrow(row) == 1L &&
+        identical(row$shape, 'raymesh')
+    ) {
+      info = row$shape_info[[1]]
+      settings = info$shape_properties
+      mat = row$material[[1]]
+      mesh = info$mesh_info[[1]]
+      normal_mode = vapply(
+        mesh$shapes,
+        function(shape) {
+          if (all(shape$has_vertex_normals)) {
+            1L
+          } else if (!any(shape$has_vertex_normals)) {
+            0L
+          } else {
+            -1L
+          }
+        },
+        integer(1)
+      )
+      # Keep transport boundaries and topology-changing operations separate.
+      # Mixing complete and missing normals would disable the consistency table
+      # on formerly smooth meshes, so each batch has one normal-coverage mode.
+      if (
+        mat$type %in%
+          c(
+            get_material_enum('diffuse'),
+            get_material_enum('oren-nayar'),
+            if (file_backed) {
+              c(get_material_enum('openpbr'), get_material_enum('translucent'))
+            }
+          ) &&
+          is.null(mat$subsurface) &&
+          is.null(info$medium) &&
+          !isTRUE(mat$fog) &&
+          !isTRUE(mat$implicit_sample) &&
+          (is.null(mat$openpbr) || mat$openpbr$emission_luminance == 0) &&
+          isTRUE(settings$override_material) &&
+          !isTRUE(settings$importance_sample_lights) &&
+          identical(settings$subdivision_levels, 1) &&
+          identical(settings$displacement_texture, '') &&
+          !isTRUE(settings$recalculate_normals) &&
+          length(normal_mode) &&
+          all(normal_mode == normal_mode[1]) &&
+          normal_mode[1] >= 0L
+      ) {
+        shape_count = length(mesh$shapes)
+        compatible = row
+        compatible$shape_info[[1]]$mesh_info = list(NULL)
+        while (end < length(rows)) {
+          next_row = rows[[end + 1L]]
+          if (
+            !inherits(next_row, 'ray_scene') ||
+              nrow(next_row) != 1L ||
+              !identical(next_row$shape, 'raymesh')
+          ) {
+            break
+          }
+          next_mesh = next_row$shape_info[[1]]$mesh_info[[1]]
+          if (shape_count + length(next_mesh$shapes) > 256L) {
+            break
+          }
+          next_row$shape_info[[1]]$mesh_info = list(NULL)
+          if (!identical(compatible, next_row)) {
+            break
+          }
+          same_normals = all(vapply(
+            next_mesh$shapes,
+            function(shape) {
+              if (normal_mode[1] == 1L) {
+                all(shape$has_vertex_normals)
+              } else {
+                !any(shape$has_vertex_normals)
+              }
+            },
+            logical(1)
+          ))
+          if (!same_normals) {
+            break
+          }
+          shape_count = shape_count + length(next_mesh$shapes)
+          end = end + 1L
+        }
+      }
+    }
+    if (end - begin + 1L >= 16L) {
+      meshes = lapply(rows[begin:end], function(x) {
+        x$shape_info[[1]]$mesh_info[[1]]
+      })
+      combined = meshes[[1]]
+      # Concatenate each container once; retain separate vertices and indices.
+      # No welding, reindexing, per-shape material changes or repeated rbind.
+      for (field in names(combined)) {
+        combined[[field]] = vctrs::list_unchop(lapply(meshes, `[[`, field))
+      }
+      attr(combined, 'material_hashes') = unlist(
+        lapply(meshes, attr, 'material_hashes'),
+        use.names = FALSE
+      )
+      row$shape_info[[1]]$mesh_info[[1]] = combined
+    } else {
+      end = begin
+    }
+    result = c(result, list(row))
+    begin = end + 1L
+  }
+  result
 }
 
 #' @param context Import resources.
@@ -1492,8 +2430,8 @@ pbrt_material = function(command, state, context) {
   } else {
     "bumpmap"
   }
-  bump = pbrt_texture_parameter(p, bump_name, 0, context)
-  if (is.null(bump$image) && any(bump$value != 0)) {
+  bump = pbrt_texture_parameter(p, bump_name, 0, context, allow_graph = TRUE)
+  if (is.null(bump$image) && is.null(bump$graph) && any(bump$value != 0)) {
     bump$image = pbrt_write_asset(
       array(mean(bump$value), c(2, 2, 3)),
       ".exr",
@@ -1568,12 +2506,19 @@ pbrt_material = function(command, state, context) {
       )
     }
   } else if (type == "diffusetransmission") {
-    reflection = pbrt_texture_parameter(p, "reflectance", rep(.25, 3), context)
+    reflection = pbrt_texture_parameter(
+      p,
+      "reflectance",
+      rep(.25, 3),
+      context,
+      allow_graph = TRUE
+    )
     transmission = pbrt_texture_parameter(
       p,
       "transmittance",
       rep(.25, 3),
-      context
+      context,
+      allow_graph = TRUE
     )
     scale = pbrt_get(p, "scale", 1, 1L)
     if (!is.finite(scale) || scale < 0) {
@@ -1631,7 +2576,19 @@ pbrt_material = function(command, state, context) {
     )
     material[[1]]$transmission_repeat = transmission$uv_repeat
     material[[1]]$transmission_offset = transmission$uv_offset
-    if (!is.null(bump$image)) {
+    if (!is.null(reflection$graph)) {
+      material[[1]]$texture_graphs$color = texture_scale(
+        reflection$graph,
+        scale
+      )
+    }
+    if (!is.null(transmission$graph)) {
+      material[[1]]$texture_graphs$transmission = texture_scale(
+        transmission$graph,
+        scale
+      )
+    }
+    if (!is.null(bump$image) || !is.null(bump$graph)) {
       pbrt_note(
         context,
         command,
@@ -1825,6 +2782,10 @@ pbrt_material = function(command, state, context) {
     material[[1]]$texture_offsets$bump = bump$uv_offset
     material[[1]]$bump_repeat = bump$uv_repeat
   }
+  if (!is.null(bump$graph) && type != "diffusetransmission") {
+    material[[1]]$texture_graphs$bump = texture_scalar(bump$graph)
+    material[[1]]$bump_intensity = 1
+  }
   pbrt_unused(p)
   list(material = material, interface = interface)
 }
@@ -1846,7 +2807,18 @@ pbrt_texture = function(command, state, context) {
   if (!command$args[2] %in% c("float", "spectrum", "color")) {
     pbrt_error(command, "Unknown texture value type.")
   }
-  if (type == "directionmix") {
+  if (type == "ptex") {
+    filename = pbrt_asset(pbrt_get(p, "filename", "", 1L), context, command)
+    encoding = pbrt_get(p, "encoding", "gamma 2.2", 1L)
+    scale = pbrt_get(p, "scale", 1, 1L)
+    node = texture_ptex(
+      filename,
+      type = if (command$args[2] == "float") "scalar" else "color",
+      encoding = encoding
+    )
+    node$pbrt_encoding = TRUE
+    result$graph = texture_scale(node, scale)
+  } else if (type == "directionmix") {
     default = if (command$args[2] == "float") 0 else rep(0, 3)
     a = pbrt_texture_parameter(p, "tex1", default, context, allow_graph = TRUE)
     b = pbrt_texture_parameter(
@@ -2311,7 +3283,29 @@ pbrt_shape = function(command, state, context) {
           "Shape alpha must be a finite scalar or float texture."
         )
       }
-      if (alpha$value <= 0) return(NULL)
+      if (alpha$value <= 0) {
+        if (alpha$value != 0 || is.null(state$area)) {
+          return(NULL)
+        }
+        # PBRT treats constant zero alpha on an area emitter specially: the
+        # surface disappears but still contributes sampled illumination.
+        # rayrender's existing invisible light retains that illumination and
+        # primary/specular invisibility, with different diffuse-ray visibility.
+        material = light(
+          color = if (intensity > 0) radiance / intensity else rep(0, 3),
+          intensity = intensity,
+          invisible = TRUE
+        )
+        alpha$value = 1
+        pbrt_note(
+          context,
+          command,
+          paste(
+            "Constant-zero-alpha area emitter converted to an invisible light;",
+            "it may still be intersected after a diffuse bounce."
+          )
+        )
+      }
     }
     if (type == "curve") {
       if (!is.null(alpha$image) || alpha$value < 1) {
@@ -2404,15 +3398,15 @@ pbrt_shape = function(command, state, context) {
     basis = pbrt_get(p, "basis", "bezier", 1L)
     if (
       degree != 3 ||
-        basis != "bezier" ||
+        !basis %in% c("bezier", "bspline") ||
         length(points) %% 3 ||
         length(points) < 12 ||
-        (length(points) / 3 - 1) %% 3
+        (basis == "bezier" && (length(points) / 3 - 1) %% 3)
     ) {
       pbrt_note(
         context,
         command,
-        "Only cubic Bezier curve chains are supported; curve omitted."
+        "Only cubic Bezier and uniform B-spline curve chains are supported; curve omitted."
       )
       return(NULL)
     }
@@ -2428,7 +3422,11 @@ pbrt_shape = function(command, state, context) {
       pbrt_error(command, "Invalid curve type.")
     }
     normals = pbrt_get(p, "N")
-    count = (nrow(points) - 1L) / 3L
+    count = if (basis == "bezier") {
+      (nrow(points) - 1L) / 3L
+    } else {
+      nrow(points) - 3L
+    }
     if (curve_type == "ribbon" && length(normals) != 3L * (count + 1L)) {
       pbrt_error(
         command,
@@ -2437,8 +3435,21 @@ pbrt_shape = function(command, state, context) {
     }
     rows = vector("list", count)
     for (i in seq_len(count)) {
+      if (basis == "bezier") {
+        control = points[seq.int(3L * (i - 1L) + 1L, length.out = 4L), ]
+      } else {
+        # Exact uniform cubic B-spline conversion, as in PBRT's
+        # CubicBSplineToBezier. Adjacent spans share position and tangent.
+        control = points[seq.int(i, length.out = 4L), ]
+        control = rbind(
+          (control[1, ] + 4 * control[2, ] + control[3, ]) / 6,
+          (2 * control[2, ] + control[3, ]) / 3,
+          (control[2, ] + 2 * control[3, ]) / 3,
+          (control[2, ] + 4 * control[3, ] + control[4, ]) / 6
+        )
+      }
       args = list(
-        p1 = points[seq.int(3L * (i - 1L) + 1L, length.out = 4L), ],
+        p1 = control,
         width = widths[1] + diff(widths) * (i - 1) / count,
         width_end = widths[1] + diff(widths) * i / count,
         type = curve_type,
@@ -3365,7 +4376,28 @@ pbrt_mesh = function(p, type, material, flipped) {
   ) {
     pbrt_error(p$command, "Invalid zero-based mesh indices.")
   }
-  indices = matrix(indices, ncol = arity, byrow = TRUE)
+  # Validated indices are bounded by an R matrix dimension, so they fit in an
+  # integer. This also avoids repeated native coercions of each index channel.
+  indices = matrix(as.integer(indices), ncol = arity, byrow = TRUE)
+  face_indices = pbrt_get(p, "faceIndices")
+  if (!is.null(face_indices)) {
+    if (
+      !is.numeric(face_indices) ||
+        length(face_indices) != nrow(indices) ||
+        any(
+          !is.finite(face_indices) |
+            face_indices < 0 |
+            face_indices > .Machine$integer.max |
+            face_indices != floor(face_indices)
+        )
+    ) {
+      pbrt_error(
+        p$command,
+        "faceIndices must contain one nonnegative integer per source face."
+      )
+    }
+    face_indices = as.integer(face_indices)
+  }
   if (type == "bilinearmesh") {
     # PBRT patch order is p00,p10,p01,p11, not a perimeter quad order.
     a = vertices[indices[, 2] + 1, , drop = FALSE] -
@@ -3395,6 +4427,7 @@ pbrt_mesh = function(p, type, material, flipped) {
       indices[, c(1, 2, 4), drop = FALSE],
       indices[, c(1, 4, 3), drop = FALSE]
     )
+    if (!is.null(face_indices)) face_indices = rep(face_indices, 2L)
   }
   normals = pbrt_get(p, "N")
   if (!is.null(normals)) {
@@ -3428,14 +4461,33 @@ pbrt_mesh = function(p, type, material, flipped) {
       pbrt_error(p$command, "Subdivision levels must be a nonnegative integer.")
     }
   }
-  mesh = rayvertex::construct_mesh(
+  mesh = pbrt_uniform_mesh(
     vertices = vertices,
     indices = indices,
     normals = normals,
-    norm_indices = if (!is.null(normals)) indices else NULL,
-    texcoords = uv,
-    tex_indices = if (!is.null(uv)) indices else NULL
+    uv = uv,
+    context = p$context
   )
+  if (!is.null(face_indices)) {
+    mesh$shapes[[1]]$ptex_face_indices = face_indices
+  }
+  if (type == "bilinearmesh" && is.null(uv)) {
+    # Two triangles retain one default patch chart, rather than each receiving
+    # the default triangle chart. UV indices need not equal vertex indices.
+    patches = nrow(indices) %/% 2L
+    mesh$texcoords[[1]] = rbind(c(0, 0), c(1, 0), c(0, 1), c(1, 1))
+    mesh$shapes[[1]]$tex_indices = rbind(
+      matrix(rep(c(0L, 1L, 3L), patches), ncol = 3L, byrow = TRUE),
+      matrix(rep(c(0L, 3L, 2L), patches), ncol = 3L, byrow = TRUE)
+    )
+    mesh$shapes[[1]]$has_vertex_tex = rep(TRUE, nrow(indices))
+  }
+  if (!is.null(face_indices) && type == "loopsubdiv" && levels > 0) {
+    pbrt_error(
+      p$command,
+      "Subdivision of Ptex-addressed meshes is not supported."
+    )
+  }
   if (type == "loopsubdiv" && levels <= 1) {
     # rayrender's lazy subdivision uses level one to mean 'disabled'. Use the
     # mesh API here so an explicitly requested single refinement is retained.
@@ -3453,4 +4505,48 @@ pbrt_mesh = function(p, type, material, flipped) {
     validate_mesh = FALSE,
     importance_sample_lights = material[[1]]$type == 5L
   )
+}
+
+#' @param vertices Validated PBRT vertex matrix.
+#' @param indices Validated, zero-based triangle indices.
+#' @param normals One normal per vertex, or NULL.
+#' @param uv One UV pair per vertex, or NULL.
+#' @param context Import resources and shared mesh template.
+#' @return A rayvertex mesh with uniform attribute coverage.
+#' @keywords internal
+#' @noRd
+pbrt_uniform_mesh = function(vertices, indices, normals, uv, context) {
+  if (is.null(context$mesh_template)) {
+    # Derive containers and material metadata from the public constructor.
+    # PBRT's validation above guarantees uniform attribute coverage, so avoid
+    # rechecking every face and rehashing the same material for every patch.
+    context$mesh_template = rayvertex::construct_mesh(
+      vertices = matrix(numeric(), 0L, 3L),
+      indices = matrix(integer(), 0L, 3L),
+      material = context$mesh_material
+    )
+  }
+  mesh = context$mesh_template
+  mesh$vertices[[1]] = vertices
+  if (!is.null(normals)) {
+    mesh$normals[[1]] = normals
+  }
+  if (!is.null(uv)) {
+    mesh$texcoords[[1]] = uv
+  }
+  faces = nrow(indices)
+  missing_indices = if (is.null(normals) || is.null(uv)) {
+    matrix(-1, faces, 3L)
+  } else {
+    NULL
+  }
+  shape = mesh$shapes[[1]]
+  shape$indices = indices
+  shape$norm_indices = if (is.null(normals)) missing_indices else indices
+  shape$tex_indices = if (is.null(uv)) missing_indices else indices
+  shape$material_ids = rep(0, faces)
+  shape$has_vertex_tex = rep(!is.null(uv), faces)
+  shape$has_vertex_normals = rep(!is.null(normals), faces)
+  mesh$shapes[[1]] = shape
+  mesh
 }

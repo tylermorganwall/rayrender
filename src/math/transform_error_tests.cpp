@@ -1,6 +1,7 @@
 #ifdef NOT_CRAN
 #include <Rcpp.h>
 #include "transform.h"
+#include "transformcache.h"
 #include <cmath>
 #include <testthat.h>
 
@@ -31,6 +32,38 @@ context("Transform error bounds across translation units") {
       expect_true(propagated_point_error[axis] >= minimum_error[axis]);
       expect_true(propagated_vector_error[axis] >= minimum_error[axis]);
     }
+  }
+}
+
+context("Transform cache probing and growth") {
+  test_that("cached pointers survive collisions and multiple table growths") {
+    TransformCache cache;
+    std::vector<Transform> transforms;
+    std::vector<Transform *> pointers;
+    size_t missed_before_growth = 0, missed_after_growth = 0;
+    for (int i = 0; i < 2000; ++i) {
+      transforms.push_back(Translate(vec3f(i * .125f, (i % 17) * .25f, -i * .375f)));
+      pointers.push_back(cache.Lookup(transforms.back()));
+      if (i == 199) {
+        for (size_t j = 0; j < pointers.size(); ++j)
+          missed_before_growth += cache.Lookup(transforms[j]) != pointers[j];
+      }
+    }
+    for (size_t i = 0; i < pointers.size(); ++i) {
+      missed_after_growth += cache.Lookup(transforms[i]) != pointers[i];
+      expect_true(*pointers[i] == transforms[i]);
+    }
+    expect_true(missed_before_growth == 0);
+    expect_true(missed_after_growth == 0);
+    cache.Clear();
+    Transform *fresh = cache.Lookup(transforms.back());
+    expect_true(*fresh == transforms.back());
+    expect_true(cache.Lookup(transforms.back()) == fresh);
+    Float signed_zeros[4][4] = {};
+    for (int row = 0; row < 4; ++row)
+      for (int column = 0; column < 4; ++column)
+        signed_zeros[row][column] = row == column ? Float(1) : -Float(0);
+    expect_true(cache.Lookup(Transform()) == cache.Lookup(Transform(signed_zeros)));
   }
 }
 #endif

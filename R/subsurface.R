@@ -273,9 +273,15 @@ prepare_subsurface = function(scene) {
     }
     original = info$shape_properties$original_scene
     if (!is.null(original)) {
-      info$shape_properties$original_scene[[1]] = prepare_subsurface(original[[
-        1
-      ]])
+      prepared = prepare_subsurface(original[[1]])
+      # Unchanged nested prototypes must retain their identity: native instance
+      # construction uses it to share geometry. Assignment alone copies parents
+      # even when their children contain no auto-owned subsurface interiors.
+      if (!identical(prepared, original[[1]])) {
+        info$shape_properties$original_scene[[1]] = prepared
+      } else if (is.null(body) && !owned) {
+        next
+      }
     }
     shape_info[[i]] = info
     changed = TRUE

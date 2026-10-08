@@ -19,7 +19,8 @@ class plymesh : public hitable {
           Float scale, int subdivision_levels, bool recalculate_normals,
           bool verbose,
           Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-          Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
+          Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation,
+          bool calculate_consistent_normals = false);
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
   virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
@@ -53,4 +54,3 @@ class plymesh : public hitable {
 
 
 #endif
-

@@ -3189,7 +3189,40 @@ raymesh_model = function(
     stop("mesh must be of class 'ray_mesh': actual class is ", class(mesh))
   }
   if (validate_mesh) {
+    # Ptex face IDs belong to rayrender's texture interface. Validate the
+    # underlying rayvertex schema separately, then restore this extra channel.
+    ptex_faces = lapply(mesh$shapes, function(shape) shape$ptex_face_indices)
+    has_ptex = any(!vapply(ptex_faces, is.null, logical(1)))
+    if (has_ptex) {
+      for (i in seq_along(mesh$shapes)) {
+        ids = ptex_faces[[i]]
+        if (
+          !is.null(ids) &&
+            (!is.numeric(ids) ||
+              length(ids) != nrow(mesh$shapes[[i]]$indices) ||
+              any(
+                !is.finite(ids) |
+                  ids < 0 |
+                  ids > .Machine$integer.max |
+                  ids != floor(ids)
+              ))
+        ) {
+          stop(
+            "Ptex face IDs must contain one nonnegative integer per triangle.",
+            call. = FALSE
+          )
+        }
+        mesh$shapes[[i]]$ptex_face_indices = NULL
+      }
+    }
     raymesh = rayvertex::validate_mesh(mesh)
+    if (has_ptex) {
+      for (i in seq_along(raymesh$shapes)) {
+        if (!is.null(ptex_faces[[i]])) {
+          raymesh$shapes[[i]]$ptex_face_indices = as.integer(ptex_faces[[i]])
+        }
+      }
+    }
   } else {
     raymesh = mesh
   }

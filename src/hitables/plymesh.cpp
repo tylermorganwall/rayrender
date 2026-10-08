@@ -32,6 +32,7 @@ struct TriMesh {
   // Per-index data
   int* indices        = nullptr; // has numIndices elements.
   uint32_t numIndices = 0; // number of indices = 3 times the number of faces.
+  std::vector<int> ptex_face_indices;
   
   Topology topology  = Topology::Soup; // How to interpret the indices.
   bool hasTerminator = false;          // Only applies when topology != Soup.
@@ -75,6 +76,10 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
       trimesh->numVerts = reader.num_rows();
       trimesh->pos = new float[trimesh->numVerts * 3];
       reader.extract_properties(indexes, 3, miniply::PLYPropertyType::Float, trimesh->pos);
+      if (reader.find_normal(indexes)) {
+        trimesh->normal = new float[trimesh->numVerts * 3];
+        reader.extract_properties(indexes, 3, miniply::PLYPropertyType::Float, trimesh->normal);
+      }
       if (reader.find_texcoord(indexes)) {
         trimesh->uv = new float[trimesh->numVerts * 2];
         reader.extract_properties(indexes, 2, miniply::PLYPropertyType::Float, trimesh->uv);
@@ -94,6 +99,24 @@ static TriMesh* parse_file_with_miniply(const char* filename, bool assumeTriangl
         trimesh->numIndices = reader.num_rows() * 3;
         trimesh->indices = new int[trimesh->numIndices];
         reader.extract_list_property(indexes[0], miniply::PLYPropertyType::Int, trimesh->indices);
+      }
+      const uint32_t face_property = reader.find_property("face_indices");
+      if (face_property != miniply::kInvalidIndex) {
+        std::vector<int> source_faces(reader.num_rows());
+        if (!reader.extract_properties(&face_property, 1, miniply::PLYPropertyType::Int, source_faces.data())) {
+          delete trimesh;
+          Rcpp::stop("Cannot read PLY face_indices.");
+        }
+        const uint32_t* counts = reader.get_list_counts(indexes[0]);
+        trimesh->ptex_face_indices.reserve(trimesh->numIndices / 3);
+        for (size_t i = 0; i < source_faces.size(); ++i) {
+          if (source_faces[i] < 0 || counts[i] < 3) {
+            delete trimesh;
+            Rcpp::stop("Invalid PLY face_indices or polygon size.");
+          }
+          // miniply emits each source polygon's n-2 triangles contiguously.
+          trimesh->ptex_face_indices.insert(trimesh->ptex_face_indices.end(), counts[i] - 2, source_faces[i]);
+        }
       }
       gotFaces = true;
     }
@@ -119,9 +142,10 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                  Float scale, int subdivision_levels, bool recalculate_normals,
                  bool verbose,
                  Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
-                 Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) :
+                 Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation,
+                 bool calculate_consistent_normals) :
   hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation) {
-  TriMesh* tri = parse_file_with_miniply(inputfile.c_str(), false);
+  std::unique_ptr<TriMesh> tri(parse_file_with_miniply(inputfile.c_str(), false));
 
   if(tri == nullptr) {
     std::string err = inputfile;
@@ -132,7 +156,12 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                                         tri->numVerts, tri->numIndices,
                                                         alpha, bump, 
                                                         mat,
-                                                        ObjectToWorld, WorldToObject, reverseOrientation));
+                                                        ObjectToWorld, WorldToObject, reverseOrientation,
+                                                        calculate_consistent_normals));
+
+  mesh->ptex_face_indices = std::move(tri->ptex_face_indices);
+  // TriangleMesh copied the parser arrays; release them before refinement/BVH.
+  tri.reset();
 
   //Loop subdivision automatically calculates new normals
   if(subdivision_levels > 1) {
@@ -144,6 +173,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   }
   
   size_t n = mesh->nTriangles * 3;
+  triangles.objects.reserve(mesh->nTriangles);
   
   // mesh->ValidateMesh();
   
@@ -154,10 +184,10 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
-  ply_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
+  ply_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
   // ply_mesh_bvh->validate_bvh();
-  triangles.objects.clear();
-  delete tri;
+  // Transfer ownership to the BVH; retain no empty construction buffer.
+  std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
 };
 
 

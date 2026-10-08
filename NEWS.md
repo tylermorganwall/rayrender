@@ -16,6 +16,28 @@
 
 ## New features
 
+- `texture_ptex()` Adds filtered per-face textures through the required `ptex`
+  runtime package, using its installed headers through `LinkingTo` without
+  bundling the Ptex implementation in rayrender. `read_pbrt()` preserves Ptex
+  face IDs in memory and lazy PLY assets, imports color/roughness and material
+  bump maps, and matches PBRT's texture encoding. A shared bounded cache avoids
+  loading all texels into R.
+
+- `read_pbrt()` Adds optional `mesh_storage = "ply"` to keep compatible inline
+  meshes in file-backed assets instead of retaining their geometry arrays in R.
+
+- `read_pbrt()` Supports serial PBRT `Import`, forward and cross-import object
+  references, and exact conversion of uniform cubic B-splines to Bezier curves.
+
+- `read_pbrt()` Reduces memory use and conversion overhead for large instanced
+  scenes through shared prototypes, bounded parsed-file caching, and compact
+  storage for compatible placements, meshes, and curves. Geometry attributes
+  are preserved, and transform values remain numeric throughout parsing.
+
+- `read_pbrt()` Retains illumination from constant-zero-alpha area emitters
+  using invisible lights instead of discarding them. Visibility after diffuse
+  bounces differs from PBRT and is explicitly diagnosed with `strict = FALSE`.
+
 - `texture_mix()`, `texture_direction_mix()`, `texture_noise()`, `texture_checker()`,
   `texture_gradient()`, and `texture_image()` build composable scalar/color textures
   with independent UV, object, or world mappings. `diffuse()` and `microfacet()`
@@ -88,6 +110,24 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `ply_model()` Reads supplied vertex normals from PLY files.
+
+- Overall: Corrects PLY vertex, normal, and UV element counts, preventing excess
+  allocation and phantom vertices in refinement. Mesh construction transfers
+  temporary triangle storage into the BVH and releases parser/build buffers
+  when they are no longer needed. OBJ consistent-normal arrays use face counts.
+
+- Overall: Fixes transform-cache lookup and growth so collisions do not lose
+  existing entries or allocate duplicate transforms. Signed zeros hash
+  consistently with matrix equality.
+
+- Overall: Reuses shared instance geometry and its BVH within each render while
+  retaining independent placement transforms, emitter identities and medium
+  boundary offsets. Large static PBRT populations use packed affine transforms.
+  Instances reuse the inverse matrix already stored in their forward transform
+  instead of allocating a second transform. Subsurface preparation preserves
+  unchanged nested prototypes so ordinary instanced geometry remains shared.
 
 - `dielectric()` Transmits direct illumination through ordinary glass when the
   priority-selected IORs match, preserving colored absorption and surface tint.

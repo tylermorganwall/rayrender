@@ -30,10 +30,15 @@ struct DecodedTextureImage {
   std::vector<point3f> pixels;
 };
 
+class PtexRuntime;
+class PtexTextureResource;
+
 class TextureCache {
 public:
   TextureCache() = default;
   ~TextureCache();
+  std::shared_ptr<const PtexTextureResource> LookupPtex(const std::string& filename);
+  void ReportPtex(bool verbose);
   std::shared_ptr<const DecodedTextureImage> LookupGraphImage(const std::string& filename,
                                                             const std::string& encoding);
   std::shared_ptr<const HeightImage> LookupHeight(const std::string& filename, int& nx, int& ny, int& nn);
@@ -45,6 +50,8 @@ public:
                              const std::string& variant = "");
 
 private:
+  std::shared_ptr<PtexRuntime> ptexRuntime;
+  std::unordered_map<std::string, std::shared_ptr<const PtexTextureResource>> ptexTextures;
   std::unordered_map<std::string, std::shared_ptr<const DecodedTextureImage>> graphImages;
   std::unordered_map<std::string, std::shared_ptr<const HeightImage>> heightImages;
   std::vector<float*> rawDataFloat;

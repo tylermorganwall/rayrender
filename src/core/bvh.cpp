@@ -126,7 +126,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
         bool reverseOrientation) : 
         hitable(ObjectToWorld, WorldToObject, nullptr, reverseOrientation), 
         maxPrimsInNode(std::min(255, maxPrimsInNode)),
-        primitives(prims)
+        primitives(std::move(prims))
         { 
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
@@ -157,6 +157,9 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
+    // Construction-only arrays are no longer needed during BVH flattening.
+    std::vector<std::shared_ptr<hitable>>().swap(orderedPrims);
+    std::vector<BVHPrimitive>().swap(bvhPrimitives);
     classifyOpaqueShadow();
 
 #ifndef RAYSIMD
@@ -175,7 +178,7 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                            float t_min, float t_max, 
                            int maxPrimsInNode, bool sah) :
                                 maxPrimsInNode(std::min(255, maxPrimsInNode)),
-                                primitives(prims) { 
+                                primitives(std::move(prims)) {
     SCOPED_CONTEXT("Initialization");
     SCOPED_TIMER_COUNTER("BVH Build");
     ScopedBVHBuildTiming build_timing;
@@ -206,6 +209,9 @@ BVHAggregate::BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                           &orderedPrimsOffset, 
                           orderedPrims);
     primitives.swap(orderedPrims);
+    // Construction-only arrays are no longer needed during BVH flattening.
+    std::vector<std::shared_ptr<hitable>>().swap(orderedPrims);
+    std::vector<BVHPrimitive>().swap(bvhPrimitives);
     classifyOpaqueShadow();
 #ifndef RAYSIMD
     nodes.reset(new LinearBVHNode[totalNodes]);

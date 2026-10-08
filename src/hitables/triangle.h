@@ -20,6 +20,10 @@ public:
   virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
 
   OpaqueShadowType ShadowType() const;
+  int TextureFaceIndex() const override {
+    // PBRT defaults to face zero when faceIndices is absent.
+    return mesh->ptex_face_indices.empty() ? 0 : mesh->ptex_face_indices[face_number];
+  }
   bool OpaqueHit(const Ray&, Float, Float, random_gen&) const;
 
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;

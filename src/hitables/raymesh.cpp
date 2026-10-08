@@ -69,6 +69,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                  displacement_vector);
   }
   size_t n = mesh->nTriangles * 3;
+  triangles.objects.reserve(mesh->nTriangles);
   
 #ifdef FULL_DEBUG
   mesh->ValidateMesh();
@@ -87,11 +88,12 @@ raymesh::raymesh(Rcpp::List raymesh_list,
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
 #ifdef FULL_DEBUG
     tri_mesh_bvh->validate_bvh();
 #endif
-    triangles.objects.clear();
+    // Transfer ownership to the BVH; retain no empty construction buffer.
+    std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
   } else {
     throw std::runtime_error("raymesh object not loaded (no triangles)");
   }

@@ -30,6 +30,7 @@
 void PrintClassSizes() {
   Rcpp::Rcout << "hitable                  : " << sizeof(hitable) << "\n";
   Rcpp::Rcout << "---sphere                : " << sizeof(sphere) << "\n";
+  Rcpp::Rcout << "---instance              : " << sizeof(instance) << "\n";
   Rcpp::Rcout << "---xy_rect               : " << sizeof(xy_rect) << "\n";
   Rcpp::Rcout << "---xz_rect               : " << sizeof(xz_rect) << "\n";
   Rcpp::Rcout << "---yz_rect               : " << sizeof(yz_rect) << "\n";

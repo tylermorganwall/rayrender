@@ -61,6 +61,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
 
   // mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
+  triangles.objects.reserve(mesh->nTriangles);
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
@@ -72,8 +73,9 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
-    triangles.objects.clear();
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+    // Transfer ownership to the BVH; retain no empty construction buffer.
+    std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
   } else {
     throw std::runtime_error(inputfile + ": No triangles loaded.");
   }

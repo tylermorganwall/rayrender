@@ -98,10 +98,9 @@ template <> struct action<number> {
   template <typename Input> static void apply(const Input &in, State &s) {
     if ((++s.values_seen & 65535) == 0)
       Rcpp::checkUserInterrupt();
-    // Transform operands remain textual until R's operand validation; preserve
-    // their spelling and full precision rather than double -> text rounding.
-    if (s.in_array && s.numeric && s.directive_name != "Transform" &&
-        s.directive_name != "ConcatTransform")
+    // Keep numeric arrays numeric, including transform matrices. R consumes
+    // matrix operands directly, without a precision-losing text round trip.
+    if (s.in_array && s.numeric)
       // Match R's numeric conversion exactly, including extreme exponents.
       s.numbers.push_back(R_strtod(in.string().c_str(), nullptr));
     else

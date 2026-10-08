@@ -1,86 +1,56 @@
 #include "../math/transformcache.h"
 
-
-void TransformCache::Insert(std::shared_ptr<Transform> tNew) {
-  if (++hashTableOccupancy == hashTable.size() / 2) {
-    Grow();
-  }
-  
-  int baseOffset = Hash(*tNew) & (hashTable.size() - 1);
-  for (int nProbes = 0;; ++nProbes) {
-    // Quadratic probing.
-    int offset = (baseOffset + nProbes/2 + nProbes*nProbes/2) & (hashTable.size() - 1);
-    if (hashTable[offset] == nullptr) {
-      hashTable[offset] = tNew;
-      return;
-    }
-  }
+size_t TransformCache::FindSlot(
+    const Transform &t, const std::vector<std::shared_ptr<Transform>> &table) {
+  const size_t mask = table.size() - 1;
+  size_t offset = Hash(t) & mask;
+  // Triangular probing visits every slot in a power-of-two table. Lookup,
+  // insertion and growth must use exactly the same sequence and table mask.
+  for (size_t step = 1; table[offset] && *table[offset] != t; ++step)
+    offset = (offset + step) & mask;
+  return offset;
 }
 
 void TransformCache::Grow() {
-  std::vector<std::shared_ptr<Transform> > newTable(2 * hashTable.size());
-  // LOG(INFO) << "Growing transform cache hash table to " << newTable.size();
-  
-  // Insert current elements into newTable.
-  for (std::shared_ptr<Transform>&  tEntry : hashTable) {
-    if (!tEntry) {
-      continue;
-    }
-    
-    int baseOffset = Hash(*tEntry.get()) & (hashTable.size() - 1);
-    for (int nProbes = 0;; ++nProbes) {
-      // Quadratic probing.
-      int offset = (baseOffset + nProbes/2 + nProbes*nProbes/2) & (hashTable.size() - 1);
-      if (newTable[offset] == nullptr) {
-        newTable[offset] = tEntry;
-        break;
-      }
-    }
-  }
-  std::swap(hashTable, newTable);
+  std::vector<std::shared_ptr<Transform>> enlarged(2 * hashTable.size());
+  for (const auto &entry : hashTable)
+    if (entry) enlarged[FindSlot(*entry, enlarged)] = entry;
+  hashTable.swap(enlarged);
 }
 
-Transform* TransformCache::Lookup(const Transform &t) {
-  int offset = Hash(t) & (hashTable.size() - 1);
-  int step = 1;
-  while (true) {
-    // Keep looking until we find the Transform or determine that
-    // it's not present.
-    if (!hashTable[offset] || *hashTable[offset] == t)
-      break;
-    // Advance using quadratic probing.
-    offset = (offset + step * step) & (hashTable.size() - 1);
-    ++step;
+Transform *TransformCache::Lookup(const Transform &t) {
+  size_t offset = FindSlot(t, hashTable);
+  if (!hashTable[offset]) {
+    if (hashTableOccupancy + 1 >= hashTable.size() / 2) {
+      Grow();
+      offset = FindSlot(t, hashTable);
+    }
+    hashTable[offset] = std::make_shared<Transform>(t);
+    ++hashTableOccupancy;
   }
-  Transform* tCached = hashTable[offset].get();
-  std::shared_ptr<Transform> tCached_new;
-  if (tCached) {
-    //Do nothing
-  } else {
-    std::shared_ptr<Transform> tCached_new = std::make_shared<Transform>(t);
-    Insert(tCached_new);
-    tCached = tCached_new.get();
-  }
-  return tCached;
+  return hashTable[offset].get();
 }
 
 void TransformCache::Clear() {
-  // transformCacheBytes += arena.TotalAllocated() + hashTable.size() * sizeof(Transform *);
   hashTable.clear();
   hashTable.resize(512);
   hashTableOccupancy = 0;
-  // arena.Reset();
 }
 
 uint64_t TransformCache::Hash(const Transform &t) {
-  const char *ptr = (const char *)(&t.GetMatrix());
-  size_t size = sizeof(Matrix4x4);
   uint64_t hash = 14695981039346656037ull;
-  while (size > 0) {
-    hash ^= *ptr;
-    hash *= 1099511628211ull;
-    ++ptr;
-    --size;
+  for (int row = 0; row < 4; ++row) {
+    for (int column = 0; column < 4; ++column) {
+      // Matrix equality treats signed zeros as equal, so their hashes must
+      // agree as well. Other finite values retain their bit representation.
+      const Float original = t.GetMatrix().m[row][column];
+      const Float value = original == 0 ? Float(0) : original;
+      const auto *bytes = reinterpret_cast<const unsigned char *>(&value);
+      for (size_t i = 0; i < sizeof(Float); ++i) {
+        hash ^= bytes[i];
+        hash *= 1099511628211ull;
+      }
+    }
   }
   return hash;
 }
