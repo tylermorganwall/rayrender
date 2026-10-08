@@ -49,4 +49,4 @@ Config/testthat/edition: 3
 Config/build/compilation-database: true
 Config/roxygen2/version: 8.0.0
 VignetteBuilder: knitr
-Remotes: tylermorganwall/ptexr, tylermorganwall/glmheaders, tylermorganwall/openpbr
+Remotes: tylermorganwall/ptexr, tylermorganwall/glmheaders, tylermorganwall/openpbr, tylermorganwall/rayvertex
