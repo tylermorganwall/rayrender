@@ -6,7 +6,7 @@
 
 PtexRuntime::PtexRuntime() {
   Rcpp::Environment base = Rcpp::Environment::base_env();
-  Rcpp::Environment provider = Rcpp::Environment::namespace_env("ptex");
+  Rcpp::Environment provider = Rcpp::Environment::namespace_env("ptexr");
   Rcpp::Function get_api = provider["ptex_api"];
   api_handle = get_api();
   api = ptex_api_from_R_v1(api_handle);

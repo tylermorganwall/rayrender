@@ -30,7 +30,7 @@ example, localized weathering on an irregular sculpture or
 a different painted pattern on each panel of a patchwork object. Ptex gives
 each mesh face its own image, avoiding the need to unwrap and pack the whole
 mesh into a UV atlas. This function reads those images from a Ptex file made
-for the mesh, using the \pkg{ptex} package.
+for the mesh, using the \pkg{ptexr} package.
 }
 \details{
 Face images can have different resolutions, letting an artist allocate more
@@ -86,7 +86,7 @@ warm[,, 1] = .8
 warm[,, 2] = .15 + .5 * grid
 cool[,, 2] = .3 + .5 * grid
 cool[,, 3] = .7
-ptex::ptex_write(file, list(warm, cool))
+ptexr::ptex_write(file, list(warm, cool))
 mesh = rayvertex::construct_mesh(
   vertices = rbind(c(-1, -1, 0), c(0, -1, 0), c(0, 1, 0), c(-1, 1, 0),
                    c(0, -1, 0), c(1, -1, 0), c(1, 1, 0), c(0, 1, 0)),

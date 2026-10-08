@@ -68,7 +68,7 @@ and the converted scene must fit in memory.
 Image textures are decoded to linear EXR assets. UV checkerboards are baked
 at 256 by 256 pixels. Image environments retain the input height and use
 twice that width; their light transforms are baked into the resampling.
-Ptex textures use the \pkg{ptex} runtime package. Source face IDs
+Ptex textures use the \pkg{ptexr} runtime package. Source face IDs
 survive batching, instances, and lazy PLY storage. See \code{\link[=texture_ptex]{texture_ptex()}} for
 encoding, filtering, cache controls, and the required face-local UV layout.
 

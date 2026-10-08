@@ -6,7 +6,7 @@
 #' a different painted pattern on each panel of a patchwork object. Ptex gives
 #' each mesh face its own image, avoiding the need to unwrap and pack the whole
 #' mesh into a UV atlas. This function reads those images from a Ptex file made
-#' for the mesh, using the \pkg{ptex} package.
+#' for the mesh, using the \pkg{ptexr} package.
 #'
 #' @param filename Existing Ptex file containing one or three channels.
 #' @param type Default `"color"`. Output type, either `"color"` or `"scalar"`.
@@ -62,7 +62,7 @@
 #' Verbose rendering reports cache statistics. The provider stays loaded for
 #' the render; do not explicitly unload its DLL while rendering.
 #' @return A composable `ray_texture` descriptor.
-#' @importFrom ptex ptex_api
+#' @importFrom ptexr ptex_api
 #' @export
 #' @md
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
@@ -74,7 +74,7 @@
 #' warm[,, 2] = .15 + .5 * grid
 #' cool[,, 2] = .3 + .5 * grid
 #' cool[,, 3] = .7
-#' ptex::ptex_write(file, list(warm, cool))
+#' ptexr::ptex_write(file, list(warm, cool))
 #' mesh = rayvertex::construct_mesh(
 #'   vertices = rbind(c(-1, -1, 0), c(0, -1, 0), c(0, 1, 0), c(-1, 1, 0),
 #'                    c(0, -1, 0), c(1, -1, 0), c(1, 1, 0), c(0, 1, 0)),

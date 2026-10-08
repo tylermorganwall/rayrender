@@ -56,7 +56,7 @@ test_that("Ptex source faces survive memory, PLY, batching and instancing", {
   faces = lapply(colors, function(color) {
     array(rep(color, each = 64), c(8, 8, 3))
   })
-  ptex::ptex_write(file, faces)
+  ptexr::ptex_write(file, faces)
   path = file.path(root, "scene.pbrt")
   shape = paste(
     'Shape "trianglemesh" "point3 P" [-1 -1 0 1 -1 0 1 1 0 -1 1 0]',
@@ -101,7 +101,7 @@ test_that("Ptex imports match PBRT encoding, scalar averaging and scale", {
   on.exit(unlink(root, recursive = TRUE))
   color = c(.502, .302, .702)
   file = file.path(root, "color.ptx")
-  ptex::ptex_write(file, list(array(rep(color, each = 16), c(4, 4, 3))))
+  ptexr::ptex_write(file, list(array(rep(color, each = 16), c(4, 4, 3))))
   path = file.path(root, "scene.pbrt")
   for (type in c("spectrum", "float")) {
     writeLines(
@@ -137,7 +137,7 @@ test_that("Ptex preserves face-local UVs without an image v flip", {
   face[,, 1] = (row(face[,, 1]) - .5) / size
   face[,, 2] = (col(face[,, 2]) - .5) / size
   face[,, 3] = .25
-  ptex::ptex_write(file.path(root, "uv.ptx"), list(face))
+  ptexr::ptex_write(file.path(root, "uv.ptx"), list(face))
   path = file.path(root, "uv.pbrt")
   writeLines(
     c(
@@ -165,7 +165,7 @@ test_that("ray differentials filter Ptex detail at a distance", {
   on.exit(unlink(file))
   face = array(0, c(64, 64, 1))
   face[,, 1] = (row(face[,, 1]) + col(face[,, 1])) %% 2
-  ptex::ptex_write(file, list(face))
+  ptexr::ptex_write(file, list(face))
   indices = rbind(c(0, 1, 2), c(0, 2, 3))
   mesh = rayvertex::construct_mesh(
     vertices = rbind(c(-1, -1, 0), c(1, -1, 0), c(1, 1, 0), c(-1, 1, 0)),
@@ -190,7 +190,7 @@ test_that("PLY polygon triangulation retains the source Ptex face", {
   dir.create(root)
   on.exit(unlink(root, recursive = TRUE))
   file = file.path(root, "faces.ptx")
-  ptex::ptex_write(file, list(array(.1, c(4, 4, 1)), array(.7, c(4, 4, 1))))
+  ptexr::ptex_write(file, list(array(.1, c(4, 4, 1)), array(.7, c(4, 4, 1))))
   ply = file.path(root, "quad.ply")
   writeLines(
     c(
@@ -232,7 +232,7 @@ test_that("Ptex colors reach both diffuse-transmission lobes", {
   dir.create(root)
   on.exit(unlink(root, recursive = TRUE))
   color = c(.2, .4, .6)
-  ptex::ptex_write(
+  ptexr::ptex_write(
     file.path(root, "leaf.ptx"),
     list(array(rep(color, each = 16), c(4, 4, 3)))
   )
@@ -259,7 +259,7 @@ test_that("Ptex bump maps affect shading equally through memory and lazy PLY", {
   dir.create(root)
   on.exit(unlink(root, recursive = TRUE))
   height = array(rep(seq(0, .3, length.out = 32), 32), c(32, 32, 1))
-  ptex::ptex_write(file.path(root, "height.ptx"), list(height))
+  ptexr::ptex_write(file.path(root, "height.ptx"), list(height))
   path = file.path(root, "bump.pbrt")
   writeLines(
     c(
@@ -289,7 +289,7 @@ test_that("Ptex bump maps affect shading equally through memory and lazy PLY", {
 test_that("Ptex failure warnings are aggregated after worker completion", {
   file = tempfile(fileext = ".ptx")
   on.exit(unlink(file))
-  ptex::ptex_write(file, list(array(.5, c(4, 4, 1))))
+  ptexr::ptex_write(file, list(array(.5, c(4, 4, 1))))
   mesh = rayvertex::construct_mesh(
     vertices = rbind(c(-1, -1, 0), c(1, -1, 0), c(1, 1, 0), c(-1, 1, 0)),
     indices = rbind(c(0, 1, 2), c(0, 2, 3))

@@ -16,7 +16,7 @@
 
 ## New features
 
-- `texture_ptex()` Adds filtered per-face textures through the required `ptex`
+- `texture_ptex()` Adds filtered per-face textures through the required `ptexr`
   runtime package, using its installed headers through `LinkingTo` without
   bundling the Ptex implementation in rayrender. `read_pbrt()` preserves Ptex
   face IDs in memory and lazy PLY assets, imports color/roughness and material
