@@ -45,6 +45,7 @@ context("Rough dielectric radiance transport") {
         integrated[cosine*side < 0] += density.value(d,rng)*4*M_PI/(nz*nphi);
       }
       bool bounce=false; Float largest_weight=0;
+      int invalid_pdfs=0, mismatched_pdfs=0;
       for(int i=0;i<samples;++i) {
         vec3f d=i%2 ? density.generate(rng,bounce) : density.generate(&sampler,bounce);
         if (!(d.squared_length()>0)) continue;
@@ -52,12 +53,14 @@ context("Rough dielectric radiance transport") {
         Float pdf=density.value(d,rng);
         auto f=EvaluateRoughDielectric(density.wi,unit_vector(density.uvw.world_to_local(d)),
           1.5f,*dist,alpha);
-        expect_true((std::isfinite(pdf) && pdf>0));
-        expect_true(std::abs(pdf-density.value(d,&sampler)) < 1e-6f);
+        invalid_pdfs+=!(std::isfinite(pdf) && pdf>0);
+        mismatched_pdfs+=!(std::abs(pdf-density.value(d,&sampler)) < 1e-6f);
         Float weight=f.f_cos/pdf;
         if(f.transmission) weight /= Sqr(side>0 ? 1/1.5f : 1.5f);
         largest_weight=std::max(largest_weight,weight);
       }
+      expect_true(invalid_pdfs==0);
+      expect_true(mismatched_pdfs==0);
       expect_true(largest_weight <= 1.0001f);
       expect_true(std::abs(integrated[0]-observed[0]/samples) < .008);
       expect_true(std::abs(integrated[1]-observed[1]/samples) < .008);

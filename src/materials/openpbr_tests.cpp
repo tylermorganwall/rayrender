@@ -41,23 +41,30 @@ context("OpenPBR BSDF integration") {
         Ray ray(point3f(0, 0, side), unit_vector(vec3f(.3, 0, -side)));
         auto bsdf = material.Prepare(ray, h);
         int valid = 0;
+        int invalid_pdfs = 0, invalid_directions = 0, mismatched_pdfs = 0;
+        int invalid_weights = 0, mismatched_weights = 0;
         for (int i = 0; i < 1000; ++i) {
           Float branch = rng.unif_rand(), u = rng.unif_rand(), v = rng.unif_rand();
           auto sample = bsdf.Sample(branch, u, v);
           if (sample.pdf == 0) continue;
           ++valid;
-          expect_true(std::isfinite(sample.pdf));
-          expect_true(std::abs(sample.direction.length() - 1) < 1e-5);
+          invalid_pdfs += !std::isfinite(sample.pdf);
+          invalid_directions += !(std::abs(sample.direction.length() - 1) < 1e-5);
           if (sample.specular) continue;
           Float density = bsdf.Pdf(sample.direction);
           auto value = bsdf.Evaluate(sample.direction);
-          expect_true(std::abs(density / sample.pdf - 1) < .003);
+          mismatched_pdfs += !(std::abs(density / sample.pdf - 1) < .003);
           for (int c = 0; c < 3; ++c) {
-            expect_true((std::isfinite(sample.weight[c]) && sample.weight[c] >= 0));
-            expect_true(std::abs(value[c] / sample.pdf - sample.weight[c]) <
-                        .003 * std::max(Float(1), sample.weight[c]));
+            invalid_weights += !(std::isfinite(sample.weight[c]) && sample.weight[c] >= 0);
+            mismatched_weights += !(std::abs(value[c] / sample.pdf - sample.weight[c]) <
+                                     .003 * std::max(Float(1), sample.weight[c]));
           }
         }
+        expect_true(invalid_pdfs == 0);
+        expect_true(invalid_directions == 0);
+        expect_true(mismatched_pdfs == 0);
+        expect_true(invalid_weights == 0);
+        expect_true(mismatched_weights == 0);
         expect_true(valid > 500);
       }
     }

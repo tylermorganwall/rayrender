@@ -103,6 +103,8 @@ jobs:
         run: |
           install.packages(".", repos = NULL, type = "source", INSTALL_opts = "--preclean")
           library(rayrender)
+          # CI logs need a summary and failure details, without terminal redraws.
           testthat::test_local(".", load_package = "installed",
             filter = "media|cpp|integrator|render-animation|render-cancellation|preview-snapshot",
+            reporter = "check",
             stop_on_failure = TRUE)

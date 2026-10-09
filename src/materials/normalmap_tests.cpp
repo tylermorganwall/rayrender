@@ -166,14 +166,19 @@ context("Analytic diffuse normal mapping") {
     energy+=m.eval_raw(wi,child)*wi[2]*2/normalmap::inv_pi/(nz*np);
    }
    int count=160000;double nullmass=0;
+   // Check every sample, but report once per configuration: run_cpp_tests()
+   // turns each successful C++ assertion into an individual R expectation.
+   int invalid_pdfs=0;
    for(int k=0;k<count;k++) {
     auto wi=m.sample(uniform(rng),uniform(rng),uniform(rng),uniform(rng));
     if(!normalmap::valid(wi)){nullmass+=1./count;continue;}
-    expect_true(m.pdf(wi)>0);
+    const double pdf=m.pdf(wi);
+    invalid_pdfs+=!(pdf>0);
     int bin=(wi[0]>0)+2*(wi[1]>0)+4*(wi[2]>.5);
     observed[bin]+=1./count;
-    estimate+=m.eval_raw(wi,child)*wi[2]/m.pdf(wi)/count;
+    estimate+=m.eval_raw(wi,child)*wi[2]/pdf/count;
    }
+   expect_true(invalid_pdfs==0);
    double mass=nullmass;
    for(int k=0;k<8;k++){expect_true(std::abs(bins[k]-observed[k])<.006);mass+=bins[k];}
    expect_true(std::abs(mass-1)<.006);
@@ -200,12 +205,14 @@ context("Analytic diffuse normal mapping") {
    expect_true(rng.unif_rand()==copy.unif_rand());
   }
   double means[2]={},nulls[2]={};
+  int invalid_diffuse_flags=0;
   for(int i=0;i<40000;i++) {
    bool da=false,db=false;auto va=a.pdf_ptr->generate(rng,da);auto vb=b.pdf_ptr->generate(&sampler,db);
-   expect_true((da&&db));
+   invalid_diffuse_flags+=!(da&&db);
    means[0]+=va[2]/40000.;means[1]+=vb[2]/40000.;
    nulls[0]+=(va.squared_length()==0)/40000.;nulls[1]+=(vb.squared_length()==0)/40000.;
   }
+  expect_true(invalid_diffuse_flags==0);
   expect_true(std::abs(means[0]-means[1])<.012);
   expect_true(std::abs(nulls[0]-nulls[1])<.012);
   expect_true(a.pdf_ptr->value(wi,rng)==density);
