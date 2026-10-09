@@ -5,3 +5,10 @@ tiles.nvdb contains two constant 8-cubed blocks, at index coordinates 0 and
 against allocating or iterating over the enormous empty bounding box.
 double.nvdb is a deliberately unsupported double-precision density grid.
 Both files are uncompressed, generated fixtures with no external asset license.
+
+`transformed.vdb`, `transformed-zip.nvdb` and `transformed-blosc.nvdb` are generated
+by `tools/make-vdb-fixtures.cpp` using the upstream OpenVDB/NanoVDB APIs bundled
+with openvdbr 13.1.0-2. They contain the same nonuniform float density field
+(with translation, rotation and an inactive nonzero voxel) and a temperature
+field with a different transform. Seeded renders must agree across all three
+formats. These generated fixtures have no external asset license.

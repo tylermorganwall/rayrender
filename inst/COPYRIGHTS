@@ -13,3 +13,19 @@ URL: https://github.com/AcademySoftwareFoundation/openvdb/tree/v12.1.1
 File: src/volumes/cie.h
 Copyright: 1998-2020 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
 URL: https://github.com/mmp/pbrt-v4
+
+ Additional bundled code and installed notices:
+  src/ext/tinyobj/earcut.hpp: Copyright 2015 Mapbox, ISC; licenses/earcut-ISC.txt.
+  src/ext/stb/*: Copyright Sean Barrett, MIT option; licenses/stb-MIT.txt.
+  src/ext/lodepng/*: Copyright Lode Vandevenne, zlib license; licenses/LodePNG.txt.
+  src/ext/tinyobj/tinyexr.h: Syoyo Fujita and contributors, with Industrial
+    Light & Magic OpenEXR-derived code (2002 and 2004) and Christian Rouet
+    algorithm credit. BSD 3-clause notices: licenses/TinyEXR-BSD.txt.
+  src/ext/common_defs.h and libdeflate.h: Eric Biggers, Google LLC and
+    contributors, MIT; licenses/libdeflate-MIT.txt.
+  src/math/noise.cpp and src/volumes/cie.h: Matt Pharr, Wenzel Jakob and
+    Greg Humphreys, Apache-2.0; licenses/Apache-2.0.txt.
+  src/ext/nanovdb/nanovdb/*: OpenVDB contributors, Apache-2.0;
+    licenses/Apache-2.0.txt.
+  tools/config.R: Kevin Ushey, MIT; licenses/configure-MIT.txt.
+  tinyobjloader and miniply: licenses/tinyobj-MIT.txt and licenses/miniply-MIT.txt.

@@ -1380,3 +1380,102 @@ test_that("PBRT bump height retains independent mapping and constant displacemen
   height = rayimage::ray_read_image(second$bump_texture)[,, 1:3]
   expect_lt(max(abs(height - .000123)), 1e-10)
 })
+
+test_that("PBRT cameras preserve reflected and ordinary raster handedness", {
+  # PBRT's camera +X maps to image right; LookAt(0,0,-4 -> origin) has +X
+  # along world +X. A red marker at negative X must appear on the left.
+  for (projection in c('perspective', 'orthographic')) {
+    for (reflected in c(FALSE, TRUE)) {
+      file = pbrt_test_file(c(
+        if (reflected) 'Scale -1 1 1' else '',
+        'LookAt 0 0 -4 0 0 0 0 1 0',
+        sprintf('Camera "%s"', projection),
+        'WorldBegin',
+        'Material "diffuse" "rgb reflectance" [0 0 0]',
+        'AreaLightSource "diffuse" "rgb L" [1 0 0]',
+        'Translate -.55 .2 0 Shape "sphere" "float radius" .2'
+      ))
+      imported = read_pbrt(file)
+      args = imported$render_args
+      expect_identical(args$camera_flip_x, !reflected)
+      args[c(
+        'width',
+        'height',
+        'samples',
+        'denoise',
+        'plot_scene',
+        'progress',
+        'mode'
+      )] =
+        list(40L, 40L, 4L, FALSE, FALSE, FALSE, 'image')
+      set.seed(711)
+      image = do.call(render_scene, c(list(scene = imported$scene), args))
+      red = image[,, 1]
+      center = sum(col(red) * red) / sum(red)
+      expect_true(if (reflected) center > 20.5 else center < 20.5)
+      expect_lt(sum(row(red) * red) / sum(red), 20.5)
+    }
+  }
+})
+
+test_that("PBRT flat coefficient spectra and blackbody units are retained", {
+  file = pbrt_test_file(c(
+    'WorldBegin MakeNamedMedium "fire" "string type" "uniformgrid"',
+    '"spectrum sigma_a" [200 10 900 10] "spectrum sigma_s" [200 0 900 0]',
+    '"integer nx" 1 "integer ny" 1 "integer nz" 1 "float density" [1]',
+    '"float temperature" [40] "float temperaturescale" 100 "float temperatureoffset" 1',
+    '"float Lescale" [5]',
+    'Material "interface" MediumInterface "fire" "" Shape "sphere"'
+  ))
+  imported = read_pbrt(file)
+  medium = imported$scene$shape_info[[1]]$medium
+  expect_equal(medium$sigma_a, rep(10, 3))
+  expect_equal(medium$sigma_s, rep(0, 3))
+  expect_equal(medium$emission_scale, 5 * 106.856895)
+  expect_equal(as.vector(medium$temperature), 40)
+  expect_equal(medium$temperature_scale, 100)
+  expect_equal(medium$temperature_offset, 1)
+  text = readLines(file)
+  text = sub('200 10 900 10', '200 10 900 20', text, fixed = TRUE)
+  expect_error(read_pbrt(pbrt_test_file(text)), 'Spectral parameter')
+})
+
+test_that("PBRT environment imports use EXR primaries without adapting white", {
+  file = tempfile(fileext = '.exr')
+  on.exit(unlink(file))
+  # Untagged images default to sRGB in PBRT, not ACEScg.
+  libopenexr::write_exr(
+    file,
+    r = matrix(.4, 2, 2),
+    g = matrix(.5, 2, 2),
+    b = matrix(.6, 2, 2),
+    a = matrix(1, 2, 2)
+  )
+  expect_equal(
+    as.vector(pbrt_read_environment(file)[1, 1, ]),
+    c(.4, .5, .6),
+    tolerance = .001
+  )
+  # AP0/D60 white is slightly warm when viewed by PBRT's unbalanced XYZ film
+  # and converted to sRGB/D65. Adapting D60 to D65 would incorrectly give 1,1,1.
+  libopenexr::write_exr(
+    file,
+    r = matrix(1, 2, 2),
+    g = matrix(1, 2, 2),
+    b = matrix(1, 2, 2),
+    a = matrix(1, 2, 2),
+    metadata = list(
+      chromaticities = list(
+        red = c(.7347, .2653),
+        green = c(0, 1),
+        blue = c(.0001, -.077),
+        white = c(.32168, .33767)
+      )
+    )
+  )
+  expect_equal(
+    as.vector(pbrt_read_environment(file)[1, 1, ]),
+    c(1.0471, .9945, .9153),
+    tolerance = .001
+  )
+})

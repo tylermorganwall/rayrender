@@ -427,3 +427,16 @@ test_that("print.ray_camera summarizes animated cameras", {
   expect_true(any(grepl("last lookfrom:", output, fixed = TRUE)))
   expect_true(any(grepl("output: orbit_%04d.png", output, fixed = TRUE)))
 })
+
+test_that("camera film reflection is validated and survives camera metadata", {
+  cam = camera(camera_flip_x = TRUE)
+  expect_true(camera_frame_args(cam)$camera_flip_x)
+  expect_true(camera_batch_metadata(cam)$camera_flip_x)
+  expect_false(camera_batch_metadata_compatible(list(cam, camera())))
+  old = camera()
+  old$camera_flip_x = NULL
+  expect_false(camera_frame_args(old)$camera_flip_x)
+  for (value in list(NA, NULL, 1, 'yes', c(TRUE, FALSE))) {
+    expect_error(camera(camera_flip_x = value), 'camera_flip_x')
+  }
+})

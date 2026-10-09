@@ -310,3 +310,77 @@ test_that("grid emission multipliers retain scalar fields without RGB expansion"
   )
   expect_error(homogeneous_medium(emission_scale = scale), 'emission_scale')
 })
+
+test_that('OpenVDB and compressed NanoVDB preserve transforms and emitted light', {
+  images = lapply(
+    c('transformed.vdb', 'transformed-zip.nvdb', 'transformed-blosc.nvdb'),
+    function(file) {
+      medium = vdb_medium(
+        test_path('fixtures', 'volumes', file),
+        sigma_a = 0.3,
+        sigma_s = 0.4,
+        temperature_grid = 'temperature',
+        emission_scale = 0.1
+      )
+      set.seed(412)
+      medium_test_render(set_medium(cube(width = 2), medium), samples = 16)
+    }
+  )
+  expect_identical(nanovdb_medium, vdb_medium)
+  expect_true(all(is.finite(images[[1]])))
+  expect_gt(max(images[[1]][,, 1:3]), 0)
+  expect_equal(
+    as.numeric(images[[1]]),
+    as.numeric(images[[2]]),
+    tolerance = 1e-7
+  )
+  expect_equal(
+    as.numeric(images[[1]]),
+    as.numeric(images[[3]]),
+    tolerance = 1e-7
+  )
+})
+
+test_that('OpenVDB rendering validates field type, class and density', {
+  file = tempfile(fileext = '.vdb')
+  on.exit(unlink(file))
+  openvdbr::vdb_write(openvdbr::vdb_sphere(name = 'density'), file)
+  expect_error(
+    medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+    'level set'
+  )
+  for (grid in list(
+    openvdbr::vdb_grid(type = 'double'),
+    openvdbr::vdb_grid(background = 1)
+  )) {
+    openvdbr::vdb_write(grid, file, overwrite = TRUE)
+    expect_error(
+      medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+      'float grid|background'
+    )
+  }
+  grid = openvdbr::vdb_grid()
+  openvdbr::vdb_set(grid, c(0, 0, 0), -1)
+  openvdbr::vdb_write(grid, file, overwrite = TRUE)
+  expect_error(
+    medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+    'nonnegative'
+  )
+})
+
+test_that('truncated compressed payloads fail safely', {
+  for (codec in c('zip', 'blosc')) {
+    original = readBin(
+      test_path('fixtures', 'volumes', paste0('transformed-', codec, '.nvdb')),
+      'raw',
+      n = 1e7
+    )
+    file = tempfile(fileext = '.nvdb')
+    writeBin(original[seq_len(length(original) - 8L)], file)
+    expect_error(
+      medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+      'Truncated|sizes'
+    )
+    unlink(file)
+  }
+})
