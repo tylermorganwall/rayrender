@@ -28,10 +28,13 @@
 ^\.cache$
 ^\.vscode/*$
 ^_pkgdown\.yml$
-^tests/*$
+^tests/testthat($|/)
+^tests/testthat[.]R$
+^tests/aerial_explosion($|/)
 ^todo.text$
 ^CLAUDE.md$
 ^todo.txt$
+^todo_new[.]txt$
 ^src/pbrt$
 ^nanovdb$
 ^LICENSE\.md$
@@ -47,8 +50,7 @@
 ^\.codex-sccache($|/)
 ^\.sccache-.*($|/)
 ^tools/codex($|/)
-^inst/licenses?($|/)
-^inst/doc($|/)
+^inst/doc/(?!composable-textures\.(html|Rmd|R)$)
 ^inst/examples($|/)
 ^air\.toml$
 ^Rplots\.pdf$
@@ -64,3 +66,5 @@
 ^pbrt-v4-tests($|/)
 ^vignettes/figures/composable-textures/.*-[0-9][0-9]\.png$
 ^vignettes/figures/composable-textures/.*-timings\.csv$
+
+^vignettes/figures/composable-textures/(coordinate-spaces|directional|fine-patterns|glass|image-composition|nested-patterns|roughness-finishes|shared-field|stretched-noise|uv-versus-object)[.]png$
