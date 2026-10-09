@@ -59,7 +59,8 @@ render_scene(
   camera = NULL,
   start_frame = 1,
   end_frame = NA,
-  mode = c("auto", "image", "animation", "preview")
+  mode = c("auto", "image", "animation", "preview"),
+  camera_flip_x = FALSE
 )
 }
 \arguments{
@@ -286,6 +287,8 @@ rendering so text size and justification are independent of scene scale and view
 \item{end_frame}{Default `NA`. Last camera frame to render when using an animated camera. If `NA`, renders through the final frame.}
 
 \item{mode}{Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.}
+
+\item{camera_flip_x}{Default `FALSE`. Reverse horizontal film coordinates before tracing.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

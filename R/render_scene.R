@@ -88,6 +88,7 @@
 #' `backgroundlow` directly down (-y).
 #' @param lookfrom Default `c(0,1,10)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
+#' @param camera_flip_x Default `FALSE`. Reverse horizontal film coordinates before tracing.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
 #' less blurring in areas not in focus.
@@ -317,7 +318,8 @@ render_scene = function(
   camera = NULL,
   start_frame = 1,
   end_frame = NA,
-  mode = c("auto", "image", "animation", "preview")
+  mode = c("auto", "image", "animation", "preview"),
+  camera_flip_x = FALSE
 ) {
   mode = match.arg(mode)
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
@@ -345,6 +347,7 @@ render_scene = function(
     shutteropen = !missing(shutteropen),
     shutterclose = !missing(shutterclose),
     camera_motion_blur = !missing(camera_motion_blur),
+    camera_flip_x = !missing(camera_flip_x),
     filename = filename_supplied
   )
   legacy_camera_geometry_supplied = any(legacy_camera_supplied[c(
@@ -364,6 +367,7 @@ render_scene = function(
     "shutteropen",
     "shutterclose",
     "camera_motion_blur",
+    "camera_flip_x",
     "shutter_speed",
     "filename"
   )]
@@ -376,6 +380,7 @@ render_scene = function(
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = camera_shutter_speed,
+    camera_flip_x = camera_flip_x,
     filename = filename
   )
   metadata_supplied[["shutter_speed"]] = shutter_speed_supplied
@@ -408,6 +413,7 @@ render_scene = function(
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = camera_shutter_speed,
+    camera_flip_x = camera_flip_x,
     message_cornell = is.null(camera_arg) &&
       length(ray_scene_cameras(scene)) == 0
   )
@@ -630,6 +636,7 @@ render_scene = function(
   shutterclose = camera_args$shutterclose
   camera_motion_blur = camera_args$camera_motion_blur
   shutter_speed = camera_args$shutter_speed
+  camera_flip_x = camera_args$camera_flip_x
   filename = camera_image_filename(selected_camera, frame)
   if (render_mode == "preview") {
     filename = NA
@@ -728,6 +735,7 @@ HAS_OIDN: %s
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = shutter_speed,
+    camera_flip_x = camera_flip_x,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,

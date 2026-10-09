@@ -16,7 +16,8 @@ Imports:
     Rcpp (>= 1.0.0),
     parallel,
     png,
-    rayimage (>= 0.27.1),
+    rayimage (>= 0.28.0),
+    libopenexr (>= 3.4.12-6),
     stats,
     progress,
     rayvertex (>= 0.16.0),
@@ -25,7 +26,8 @@ Imports:
     cli,
     pillar,
     skymodelr (>= 0.6.3),
-    ptexr (>= 2.5.4-1)
+    ptexr (>= 2.5.4-1),
+    openvdbr (>= 13.1.0-2)
 Suggests:
     ambient,
     knitr,
@@ -40,13 +42,13 @@ Suggests:
     rayshader (>= 0.38.13),
     xml2,
     rgl
-LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.3), glmheaders (>= 1.0.1-1), openpbr (>= 1.1.1-1), piton (>= 1.0.1), ptexr (>= 2.5.4-1)
+LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.3), glmheaders (>= 1.0.1-1), openpbr (>= 1.1.1-1), piton (>= 1.0.1), ptexr (>= 2.5.4-1), openvdbr (>= 13.1.0-2)
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender, http://www.rayrender.net/
-SystemRequirements: C++20
+SystemRequirements: C++20, X11 (optional, for interactive previews on Unix),
+    OpenImageDenoise (optional, for denoising)
 Biarch: true
 Encoding: UTF-8
 Config/testthat/edition: 3
 Config/build/compilation-database: true
 Config/roxygen2/version: 8.0.0
 VignetteBuilder: knitr
-Remotes: tylermorganwall/ptexr, tylermorganwall/glmheaders, tylermorganwall/openpbr, tylermorganwall/rayvertex

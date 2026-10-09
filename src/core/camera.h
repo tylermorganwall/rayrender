@@ -62,6 +62,10 @@ class RayCamera {
       shutter_speed = value;
     }
     Float get_shutter_speed() const {return(shutter_speed);}
+    // Reverse film coordinates before tracing, so preview, picking and ray
+    // differentials use the same handedness as the final image.
+    void set_camera_flip_x(bool value) { camera_flip_x = value; }
+    bool get_camera_flip_x() const { return camera_flip_x; }
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
@@ -84,6 +88,8 @@ class RayCamera {
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
   protected:
+    Float film_x(Float value) const { return camera_flip_x ? 1 - value : value; }
+    bool camera_flip_x = false;
     Float sample_motion_time(Float unit_time) const {
       Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
       if(std::isinf(shutter_speed)) {

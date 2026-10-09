@@ -47,16 +47,8 @@ Float bilinear_interpolate(Float value00, Float value10,
   return top * (1 - y_weight) + bottom * y_weight;
 }
 
-} // namespace
-
-point3f triangle_texture::value(Float u, Float v, const point3f& p) const {
-    return(u * a + v * b + (1 - u - v) * c);
-}
-
-point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
-  bilinear_texture_sample sample = get_bilinear_texture_sample(
-    u, v, repeatu, repeatv, nx, ny, offsetu, offsetv
-  );
+point3f interpolate_float_texture(const Float *data, int nx, int channels, Float intensity,
+                                 const bilinear_texture_sample &sample) {
   auto channel_value = [&](int x, int y, int channel) {
     return data[channels*x + channels*nx*y + channel];
   };
@@ -74,6 +66,30 @@ point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
     interpolate_channel(1),
     interpolate_channel(2)
   );
+}
+
+} // namespace
+
+point3f triangle_texture::value(Float u, Float v, const point3f& p) const {
+  return(u * a + v * b + (1 - u - v) * c);
+}
+
+point3f image_texture_float::value(Float u, Float v, const point3f& p) const {
+  const auto sample = get_bilinear_texture_sample(u, v, repeatu, repeatv, nx, ny, offsetu, offsetv);
+  return interpolate_float_texture(data, nx, channels, intensity, sample);
+}
+
+point3f latlong_image_texture::value(Float u, Float v, const point3f&) const {
+  // Each texel spans 1/n of its axis. Interpolate across longitude's seam:
+  // u=0 lies halfway between the last and first texel centers. Endpoint-based
+  // lookup would halve the support of both edge texels and dim an HDR sun.
+  const Float x = (u - std::floor(u)) * nx - .5f;
+  const Float y = clamp((1 - v) * ny - .5f, Float(0), Float(ny - 1));
+  const int ix = int(std::floor(x)), iy = int(std::floor(y));
+  const int x0 = (ix + nx) % nx;
+  const bilinear_texture_sample sample{x0, (x0 + 1) % nx, iy, std::min(iy + 1, ny - 1),
+                                      x - ix, y - iy};
+  return interpolate_float_texture(data, nx, channels, intensity, sample);
 }
 
 point3f image_texture_char::value(Float u, Float v, const point3f& p) const {

@@ -140,6 +140,15 @@ public:
   Float intensity;
 };
 
+// Latitude-longitude images have periodic longitude and clamped latitude.
+// Pixel centers, rather than endpoint texels, must partition the full sphere.
+class latlong_image_texture final : public image_texture_float {
+public:
+  latlong_image_texture(Float *pixels, int width, int height, int channels, Float intensity = 1)
+      : image_texture_float(pixels, width, height, channels, 1, 1, intensity) {}
+  point3f value(Float u, Float v, const point3f& p) const override;
+};
+
 class image_texture_char : public texture {
 public:
   image_texture_char() {}

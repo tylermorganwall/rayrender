@@ -49,7 +49,8 @@ prepare_scene_list = function(
   deferred_render = FALSE,
   integrator_type = "nee",
   denoise = TRUE,
-  print_debug_info = FALSE
+  print_debug_info = FALSE,
+  camera_flip_x = FALSE
 ) {
   if (inherits(scene, "ray_mesh")) {
     scene = raymesh_model(scene)
@@ -232,6 +233,9 @@ prepare_scene_list = function(
     numbercores = 1
   }
   numbercores = as.integer(numbercores)
+  if (identical(toupper(Sys.getenv("_R_CHECK_LIMIT_CORES_")), "TRUE")) {
+    numbercores = min(numbercores, 2L)
+  }
   if (!parallel) {
     numbercores = 1
   }
@@ -311,6 +315,7 @@ prepare_scene_list = function(
   camera_info$shutterclose = shutterclose
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$shutter_speed = shutter_speed
+  camera_info$camera_flip_x = isTRUE(camera_flip_x)
   camera_info$ortho_dimensions = ortho_dimensions
   camera_info$focal_distance = focal_distance
   camera_info$max_depth = max_depth

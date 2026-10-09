@@ -51,6 +51,8 @@
 #' Image textures are decoded to linear EXR assets. UV checkerboards are baked
 #' at 256 by 256 pixels. Image environments retain the input height and use
 #' twice that width; their light transforms are baked into the resampling.
+#' EXR environments use their stored RGB primaries, converted to linear sRGB
+#' without white adaptation; untagged images default to sRGB, as in PBRT.
 #' Ptex textures use the \pkg{ptexr} runtime package. Source face IDs
 #' survive batching, instances, and lazy PLY storage. See [texture_ptex()] for
 #' encoding, filtering, cache controls, and the required face-local UV layout.
@@ -98,6 +100,8 @@
 #' camera and is inverted for rayrender. PBRT's field of view applies to the
 #' shorter image dimension; rayrender's applies to image height. This conversion
 #' adjusts portrait fields of view and retains the original framing.
+#' Horizontal camera handedness, including reflected camera transforms, is
+#' retained using `camera_flip_x`. Ordinary rayrender cameras keep their defaults.
 #' Film ISO is preserved. Diffuse transmission uses [translucent()] with
 #' independent reflection/transmission colors and textures; bump maps on this
 #' material are diagnosed and omitted. Combined energy above one is normalized.
@@ -107,7 +111,10 @@
 #' transform at the start of motion and move with an animated enclosing boundary.
 #' Light intensity is mapped in rayrender's relative linear RGB units, without
 #' PBRT's spectral-to-photometric normalization. NanoVDB files must contain
-#' uncompressed float grids; blackbody volume emission uses rayrender's RGB model.
+#' float grids (uncompressed, ZIP or BLOSC); blackbody volume emission uses
+#' rayrender's RGB model with PBRT's CIE film normalization accounted for.
+#' Constant spectral absorption/scattering tables covering 360--830 nm are
+#' imported as neutral RGB coefficients. Other spectral tables remain unsupported.
 #'
 #' @references [PBRT v4 file format](https://pbrt.org/fileformat-v4)
 #' @export
@@ -909,16 +916,25 @@ pbrt_render_arguments = function(context) {
   p = pbrt_parameters(camera, context)
   camera_to_world = solve(camera$transform)
   basis = camera_to_world[1:3, 1:3, drop = FALSE]
-  if (max(abs(crossprod(basis) - diag(3))) > 1e-6 || det(basis) < 0) {
+  if (max(abs(crossprod(basis) - diag(3))) > 1e-6) {
     pbrt_note(
       context,
       camera,
-      "Scaled, sheared, or reflected cameras are reduced to a LookAt frame."
+      "Scaled or sheared cameras are reduced to a LookAt frame."
     )
   }
   result$lookfrom = camera_to_world[1:3, 4]
   result$lookat = result$lookfrom + basis[, 3]
   result$camera_up = basis[, 2]
+  # Our conventional cameras and PBRT use the same right/up/forward frame,
+  # but rayrender reverses x when displaying its native raster. Its realistic
+  # camera already reverses film x in the integrator. Retain reflected PBRT
+  # frames (e.g. Scale -1 1 1) by reversing the film rather than the world.
+  result$camera_flip_x = if (camera$args[1] == "realistic") {
+    det(basis) < 0
+  } else {
+    det(basis) > 0
+  }
   aspect = result$width / result$height
   frame_aspect = pbrt_get(p, "frameaspectratio", aspect, 1L)
   if (frame_aspect <= 0) {
@@ -3061,13 +3077,19 @@ pbrt_medium = function(command, state, context) {
       context,
       command
     )
-    args$temperature_grid = "temperature"
+    args$density_grid = pbrt_get(p, "gridname", "density", 1L)
+    args$temperature_grid = pbrt_get(p, "temperaturename", "temperature", 1L)
+    # PBRT's PixelSensor integrates CIE response without dividing by its Y
+    # integral. BlackbodyRGB() divides by 106.856895, unlike PBRT's blackbody
+    # volume emission (which bypasses its usual photometric light normalization).
+    # Convert here so native rayrender temperature units remain unchanged.
+    args$emission_scale = args$emission_scale * 106.856895
     result = do.call(nanovdb_medium, args)
     result$temperature_optional = TRUE
     pbrt_note(
       context,
       command,
-      "NanoVDB temperature emission uses rayrender's RGB blackbody model; files must contain uncompressed float grids, with density required and temperature optional."
+      "NanoVDB temperature emission uses rayrender's RGB blackbody model; files must contain float grids, with density required and temperature optional. Uncompressed, ZIP and BLOSC files are supported through openvdbr."
     )
   } else if (type == "uniformgrid") {
     dims = vapply(
@@ -3096,6 +3118,7 @@ pbrt_medium = function(command, state, context) {
     temperature = pbrt_get(p, "temperature", size = prod(dims))
     if (!is.null(temperature)) {
       args$temperature = array(temperature, dims)
+      args$emission_scale = args$emission_scale * 106.856895
     }
     result = do.call(grid_medium, args)
   } else {
@@ -3133,7 +3156,7 @@ pbrt_light = function(command, state, context) {
     radiance = pbrt_spectrum(p, "L", rep(1, 3)) * pbrt_get(p, "scale", 1, 1L)
     if (nzchar(filename)) {
       source = pbrt_asset(filename, context, command)
-      image = pbrt_read_image(source)
+      image = pbrt_read_environment(source)
       if (
         length(dim(image)) != 3L || dim(image)[3] < 3L || any(!is.finite(image))
       ) {
@@ -3580,6 +3603,29 @@ pbrt_spectrum = function(p, name, default) {
     return(default)
   }
   value = pbrt_get(p, name)
+  # Constant wavelength tables describe wavelength-independent coefficients.
+  # A neutral RGB coefficient represents them directly, including values > 1.
+  if (
+    name %in%
+      c("sigma_a", "sigma_s") &&
+      entry$type == "spectrum" &&
+      is.numeric(value) &&
+      length(value) >= 4L &&
+      length(value) %% 2L == 0L
+  ) {
+    wavelengths = value[seq.int(1L, length(value), 2L)]
+    amplitudes = value[seq.int(2L, length(value), 2L)]
+    if (
+      all(is.finite(value)) &&
+        all(diff(wavelengths) > 0) &&
+        wavelengths[1] <= 360 &&
+        utils::tail(wavelengths, 1) >= 830 &&
+        all(amplitudes == amplitudes[1]) &&
+        amplitudes[1] >= 0
+    ) {
+      return(rep(amplitudes[1], length.out = length(default)))
+    }
+  }
   if (entry$type %in% c("spectrum", "blackbody")) {
     pbrt_note(
       p$context,
@@ -3668,6 +3714,49 @@ pbrt_texture_graph = function(descriptor, type) {
     node = texture_constant(descriptor$value)
   }
   if (type == "scalar") texture_scalar(node) else node
+}
+
+#' @param filename Environment image file path.
+#' @return Linear sRGB radiance array, using EXR primaries when present.
+#' @keywords internal
+#' @noRd
+pbrt_read_environment = function(filename) {
+  if (tolower(tools::file_ext(filename)) != "exr") {
+    return(pbrt_read_image(filename))
+  }
+  # Read the header together with the pixels. An untagged PBRT image defaults
+  # to sRGB, whereas rayimage's general-purpose EXR fallback is ACEScg.
+  source = libopenexr::read_exr(filename)
+  image = array(0, c(source$height, source$width, 3L))
+  channels = list(source$r, source$g, source$b)
+  chromaticities = source$metadata$chromaticities
+  conversion = diag(3)
+  if (!is.null(chromaticities)) {
+    xy = do.call(cbind, chromaticities[c("red", "green", "blue", "white")])
+    if (
+      !identical(dim(xy), c(2L, 4L)) || any(!is.finite(xy)) || any(xy[2, ] == 0)
+    ) {
+      stop("Invalid environment EXR chromaticities: ", filename, call. = FALSE)
+    }
+    xyz = rbind(xy[1, ], xy[2, ], 1 - colSums(xy))
+    xyz = sweep(xyz, 2, xy[2, ], "/")
+    primaries = xyz[, 1:3, drop = FALSE]
+    rgb_to_xyz = sweep(primaries, 2, solve(primaries, xyz[, 4]), "*")
+    # PBRT reconstructs spectra in the image's color space, then integrates
+    # them into the film's XYZ response. It does not chromatically adapt the
+    # image white point to the film white point. Match that linear conversion.
+    conversion = rayimage::CS_SRGB$xyz_to_rgb %*% rgb_to_xyz
+  }
+  for (channel in 1:3) {
+    image[,, channel] = pmax(
+      0,
+      conversion[channel, 1] *
+        channels[[1]] +
+        conversion[channel, 2] * channels[[2]] +
+        conversion[channel, 3] * channels[[3]]
+    )
+  }
+  image
 }
 
 #' @param filename Image file path.
@@ -3760,6 +3849,14 @@ pbrt_write_asset = function(image, extension, context) {
       columns = rep(seq_len(dimensions[2]), length.out = max(2L, dimensions[2]))
       image = image[rows, columns, , drop = FALSE]
     }
+    # Generated RGB assets contain rayrender's linear sRGB values. Supply
+    # their primaries explicitly rather than tagging plain arrays as ACEScg.
+    image = rayimage::ray_read_image(
+      image,
+      source_linear = TRUE,
+      assume_colorspace = rayimage::CS_SRGB,
+      assume_white = "D65"
+    )
     rayimage::ray_write_image(image, filename, write_linear = TRUE)
   }
   context$assets = c(context$assets, filename)

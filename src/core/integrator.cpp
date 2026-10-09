@@ -151,7 +151,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   // Diffuse normal mapping consumes both 1D and 2D samples. Always keep those
   // dimensions independent, including diffuse materials discovered by importers.
   const bool independent_dimensions = true;
-  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y, independent_dimensions] (
+  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y] (
       size_t width, size_t height, const std::vector<unsigned int>& state_seeds,
       std::vector<random_gen>& state_rngs, std::vector<std::unique_ptr<Sampler> >& state_samplers) {
     state_rngs.clear();
@@ -333,7 +333,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler,
-                   nx, ny, ns, s, sample_method,
+                   nx, ny, ns, s,
                    &rngs, fov, &samplers,
                    cam, &world, &hlist,
                    clampval, sample_minimum, max_depth, roulette_active, integrator_type,
@@ -424,7 +424,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     render_cancelled.store(false, std::memory_order_relaxed);
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler_small,
-                   nx_small, ny_small, s, sample_method,
+                   nx_small, ny_small, s,
                    &rngs_small, fov, &samplers_small,
                    cam, &world, &hlist,
                    clampval, sample_minimum, max_depth, roulette_active, integrator_type,

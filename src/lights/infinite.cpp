@@ -64,6 +64,28 @@ ImageInfiniteLight::ImageInfiniteLight(std::shared_ptr<texture> source, int widt
     }
   }
 
+  // Integrate the bilinear footprint over each proposal cell. A texel's tent
+  // puts 3/4 of its area in its own cell and 1/8 in either neighbor on each
+  // axis. Center-only weights miss that spill, producing rare bright samples
+  // beside compact HDR suns. Longitude wraps; latitude clamps at the poles.
+  // Filtering the sin-weighted values is an approximation near the poles,
+  // which is harmless for a proposal: Pdf() evaluates this same distribution.
+  std::vector<Float> horizontal(values.size());
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      const size_t row = size_t(y) * width;
+      horizontal[row + x] = .75f * values[row + x] +
+        .125f * (values[row + (x + width - 1) % width] + values[row + (x + 1) % width]);
+    }
+  }
+  for (int y = 0; y < height; ++y) {
+    const size_t previous = size_t(std::max(y - 1, 0)) * width;
+    const size_t next = size_t(std::min(y + 1, height - 1)) * width;
+    for (int x = 0; x < width; ++x) {
+      const size_t i = size_t(y) * width + x;
+      values[i] = .75f * horizontal[i] + .125f * (horizontal[previous + x] + horizontal[next + x]);
+    }
+  }
 
   // A common scale preserves sampling probabilities while keeping the CDF
   // manageable. With no positive luminance, leave sampling to the uniform path.
@@ -464,8 +486,11 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
       if (!std::isfinite(data[j]))
         throw std::runtime_error("Infinite light image contains non-finite pixels: " + filename);
     }
-    auto image = std::make_shared<image_texture_float>(
-        data, width, height, channels, 1, 1, intensity);
+    std::shared_ptr<texture> image;
+    if (type == "image")
+      image = std::make_shared<latlong_image_texture>(data, width, height, channels, intensity);
+    else
+      image = std::make_shared<image_texture_float>(data, width, height, channels, 1, 1, intensity);
 
 
     // A disk also carries its geometric support and reference spectrum. The

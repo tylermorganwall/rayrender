@@ -1,211 +1,48 @@
 #include "medium.h"
 #include <algorithm>
-#include <cstring>
-#include <fstream>
-#include <nanovdb/GridHandle.h>
+#include <nanovdb/NanoVDB.h>
 #include <nanovdb/math/SampleFromVoxels.h>
-#include <nanovdb/tools/GridValidator.h>
+#include <openvdbr/openvdbr_volume_api.h>
+#include <R_ext/Rdynload.h>
 #include <stdexcept>
 
 struct NanoVDBMedium::Data {
-  nanovdb::GridHandle<> density, temperature;
-  const nanovdb::FloatGrid *d = nullptr;
-  const nanovdb::FloatGrid *t = nullptr;
+  Rcpp::Environment provider = Rcpp::Environment::namespace_env("openvdbr");
+  const openvdbr_volume_api_v1 *api = nullptr;
+  openvdbr_volume_buffer *density = nullptr, *temperature = nullptr;
+  uint64_t density_bytes = 0, temperature_bytes = 0;
+  const nanovdb::FloatGrid *d = nullptr, *t = nullptr;
+  Data() {
+    // Resolve on the main R thread. Rendering only reads immutable grids;
+    // it performs no R calls or runtime lookups in the sampling hot path.
+    auto get_api = reinterpret_cast<openvdbr_get_volume_api_v1_fn>(
+        R_GetCCallable("openvdbr", "openvdbr_get_volume_api_v1"));
+    api = get_api(1);
+    if (!api || api->abi_version != 1 || api->struct_size < sizeof(openvdbr_volume_api_v1) ||
+        api->nanovdb_major != NANOVDB_MAJOR_VERSION_NUMBER)
+      throw std::runtime_error("Incompatible openvdbr volume runtime API or NanoVDB format.");
+  }
+  ~Data() {
+    if (density) api->destroy(density);
+    if (temperature) api->destroy(temperature);
+  }
+  const nanovdb::FloatGrid *Read(const std::string &filename, const std::string &name,
+                                bool optional, openvdbr_volume_buffer *&buffer, uint64_t &size) {
+    openvdbr_error error{};
+    if (api->read_float_grid(filename.c_str(), name.c_str(), optional, &buffer, &error))
+      throw std::runtime_error(std::string("VDB grid ") + name + ": " + error.message);
+    if (!buffer) return nullptr;
+    const void *bytes = nullptr;
+    if (api->data(buffer, &bytes, &size, &error)) throw std::runtime_error(error.message);
+    return static_cast<const nanovdb::FloatGrid *>(bytes);
+  }
 };
 namespace {
-struct GridLocation {
-  uint64_t offset, size;
-  std::string name;
-};
-uint64_t checked_offset(uint64_t base, int64_t offset, uint64_t size) {
-  if (base > size)
-    throw std::runtime_error("Invalid NanoVDB metadata offset.");
-  if (offset < 0) {
-    uint64_t magnitude = uint64_t(-(offset + 1)) + 1;
-    if (magnitude > base)
-      throw std::runtime_error("Invalid NanoVDB metadata offset.");
-    return base - magnitude;
-  }
-  if (uint64_t(offset) > size - base)
-    throw std::runtime_error("Invalid NanoVDB metadata offset.");
-  return base + uint64_t(offset);
-}
-std::string raw_name(std::ifstream &f, uint64_t start, const nanovdb::GridData &grid) {
-  if (!grid.mFlags.isMaskOn(nanovdb::GridFlags::HasLongGridName)) {
-    if (!std::memchr(grid.mGridName, 0, sizeof(grid.mGridName)))
-      throw std::runtime_error("Invalid NanoVDB grid name.");
-    return grid.mGridName;
-  }
-  uint64_t offset = checked_offset(0, grid.mBlindMetadataOffset, grid.mGridSize);
-  if (grid.mBlindMetadataCount > (grid.mGridSize - offset) / sizeof(nanovdb::GridBlindMetaData))
-    throw std::runtime_error("Invalid NanoVDB name metadata.");
-  for (uint32_t i = 0; i < grid.mBlindMetadataCount; ++i) {
-    nanovdb::GridBlindMetaData m;
-    uint64_t position = offset + i * sizeof(m);
-    f.seekg(start + position);
-    if (!f.read(reinterpret_cast<char *>(&m), sizeof(m)))
-      throw std::runtime_error("Truncated NanoVDB name metadata.");
-    if (m.mDataClass != nanovdb::GridBlindDataClass::GridName)
-      continue;
-    uint64_t data = checked_offset(position, m.mDataOffset, grid.mGridSize);
-    if (m.mValueSize != 1 || m.mValueCount == 0 || m.mValueCount > 1048576 ||
-        m.mValueCount > grid.mGridSize - data)
-      throw std::runtime_error("Invalid NanoVDB long grid name.");
-    std::vector<char> name(m.mValueCount);
-    f.seekg(start + data);
-    if (!f.read(name.data(), name.size()) || name.back() != 0)
-      throw std::runtime_error("Invalid NanoVDB long grid name.");
-    return name.data();
-  }
-  throw std::runtime_error("Missing NanoVDB long grid name.");
-}
-std::vector<GridLocation> preflight(const std::string &path) {
-  std::ifstream f(path, std::ios::binary | std::ios::ate);
-  if (!f || f.tellg() < 0)
-    throw std::runtime_error("Cannot open NanoVDB file: " + path);
-  uint64_t size = uint64_t(f.tellg());
-  nanovdb::GridData first{};
-  f.seekg(0);
-  bool raw = bool(f.read(reinterpret_cast<char *>(&first), sizeof(first))) && first.isValid();
-  f.clear();
-  f.seekg(0);
-  std::vector<GridLocation> grids;
-  uint32_t raw_count = 0, raw_remaining = 0;
-  while (uint64_t(f.tellg()) < size) {
-    if (raw) {
-      uint64_t start = uint64_t(f.tellg());
-      nanovdb::GridData grid;
-      if (!f.read(reinterpret_cast<char *>(&grid), sizeof(grid)) || !grid.isValid() ||
-          !grid.mVersion.isCompatible() || grid.mGridCount == 0 ||
-          grid.mGridIndex >= grid.mGridCount || grid.mGridSize < sizeof(grid) ||
-          grid.mGridSize > size - start)
-        throw std::runtime_error("Invalid or truncated raw NanoVDB grid.");
-      if (raw_remaining == 0)
-        raw_count = raw_remaining = grid.mGridCount;
-      if (grid.mGridCount != raw_count || grid.mGridIndex != raw_count - raw_remaining)
-        throw std::runtime_error("Inconsistent raw NanoVDB grid indices.");
-      --raw_remaining;
-      grids.push_back({start, grid.mGridSize, raw_name(f, start, grid)});
-      f.seekg(start + grid.mGridSize);
-      continue;
-    }
-    nanovdb::io::FileHeader header;
-    if (!f.read(reinterpret_cast<char *>(&header), sizeof(header)))
-      throw std::runtime_error("Truncated NanoVDB header.");
-    auto magic = nanovdb::toMagic(header.magic);
-    if (magic != nanovdb::MagicType::NanoVDB && magic != nanovdb::MagicType::NanoFile)
-      throw std::runtime_error("Expected an uncompressed .nvdb file, not OpenVDB.");
-    if (header.codec != nanovdb::io::Codec::NONE)
-      throw std::runtime_error("Compressed NanoVDB is unsupported; convert to uncompressed .nvdb.");
-    if (!header.version.isCompatible() || header.gridCount == 0 ||
-        header.gridCount > (size - uint64_t(f.tellg())) / sizeof(nanovdb::io::FileMetaData))
-      throw std::runtime_error("Invalid or incompatible NanoVDB header.");
-    uint64_t payload = 0;
-    size_t first_grid = grids.size();
-    for (uint32_t i = 0; i < header.gridCount; ++i) {
-      nanovdb::io::FileMetaData m;
-      if (!f.read(reinterpret_cast<char *>(&m), sizeof(m)))
-        throw std::runtime_error("Truncated NanoVDB metadata.");
-      if (m.codec != nanovdb::io::Codec::NONE)
-        throw std::runtime_error("Compressed NanoVDB grid is unsupported.");
-      if (m.nameSize == 0 || m.nameSize > 1048576 || m.nameSize > size - uint64_t(f.tellg()) ||
-          m.fileSize != m.gridSize || m.gridSize < sizeof(nanovdb::GridData) ||
-          m.gridSize > size - payload)
-        throw std::runtime_error("Invalid NanoVDB grid sizes.");
-      std::vector<char> name(m.nameSize);
-      if (!f.read(name.data(), m.nameSize) || name.back() != '\0')
-        throw std::runtime_error("Invalid NanoVDB grid name.");
-      grids.push_back({payload, m.gridSize, name.data()});
-      payload += m.fileSize;
-    }
-    uint64_t start = uint64_t(f.tellg());
-    if (payload > size - start)
-      throw std::runtime_error("Truncated NanoVDB grid data.");
-    for (size_t i = first_grid; i < grids.size(); ++i)
-      grids[i].offset += start;
-    f.seekg(payload, std::ios::cur);
-  }
-  if (raw_remaining)
-    throw std::runtime_error("Truncated raw NanoVDB grid sequence.");
-  if (grids.empty())
-    throw std::runtime_error("NanoVDB file contains no grids.");
-  return grids;
-}
-// Validate every pointer before upstream validation dereferences sparse nodes.
-// The upstream validator assumes a trustworthy allocation and grid header.
-template <class Node>
-void check_node_storage(const Node *node, uintptr_t begin, uintptr_t end, size_t &remaining,
-                        std::array<uint64_t, 3> &counts) {
-  uintptr_t p = reinterpret_cast<uintptr_t>(node);
-  if (p < begin || p > end || sizeof(Node) > end - p || p % NANOVDB_DATA_ALIGNMENT || !remaining--)
-    throw std::runtime_error("Malformed NanoVDB sparse node offsets.");
-  ++counts[Node::LEVEL];
-  if constexpr (Node::LEVEL > 0)
-    for (auto child = node->cbeginChild(); child; ++child)
-      check_node_storage(&*child, begin, end, remaining, counts);
-}
-void check_storage(const nanovdb::FloatGrid *grid, uint64_t size) {
-  using Tree = nanovdb::FloatGrid::TreeType;
-  using Root = Tree::RootType;
-  uintptr_t begin = reinterpret_cast<uintptr_t>(grid), end = begin + size;
-  if (size < sizeof(nanovdb::FloatGrid) + sizeof(Tree) || grid->gridSize() != size)
-    throw std::runtime_error("Malformed NanoVDB grid size.");
-  const auto *root = static_cast<const Root *>(grid->tree().getRoot());
-  uintptr_t p = reinterpret_cast<uintptr_t>(root);
-  if (p < begin + sizeof(nanovdb::FloatGrid) + sizeof(Tree) || p > end || sizeof(Root) > end - p ||
-      p % NANOVDB_DATA_ALIGNMENT)
-    throw std::runtime_error("Malformed NanoVDB root offset.");
-  if (root->memUsage() > end - p)
-    throw std::runtime_error("Malformed NanoVDB root tile count.");
-  const auto &tree = grid->tree();
-  const uint64_t node_sizes[3] = {sizeof(Tree::Node0), sizeof(Tree::Node1), sizeof(Tree::Node2)};
-  for (int level = 0; level < 3; ++level) {
-    int64_t offset = tree.mNodeOffset[level];
-    uint64_t count = tree.nodeCount(level);
-    if (offset < 0 || uint64_t(offset) > size - sizeof(nanovdb::FloatGrid))
-      throw std::runtime_error("Malformed NanoVDB node array offset.");
-    uint64_t start = sizeof(nanovdb::FloatGrid) + uint64_t(offset);
-    if (count && (start < sizeof(nanovdb::FloatGrid) + sizeof(Tree) || start % 32 ||
-                  count > (size - start) / node_sizes[level]))
-      throw std::runtime_error("Malformed NanoVDB node array size.");
-  }
-  size_t remaining = size / 32;
-  std::array<uint64_t, 3> counts{};
-  for (auto child = root->cbeginChild(); child; ++child)
-    check_node_storage(&*child, begin, end, remaining, counts);
-  for (int level = 0; level < 3; ++level)
-    if (counts[level] != tree.nodeCount(level))
-      throw std::runtime_error("NanoVDB sparse node counts do not match its tree.");
-}
-nanovdb::GridHandle<> read_grid(const std::string &filename, const std::string &name,
-                                const std::vector<GridLocation> &locations) {
-  auto found = std::find_if(locations.begin(), locations.end(),
-                            [&](const GridLocation &g) { return g.name == name; });
-  if (found == locations.end())
-    throw std::runtime_error("NanoVDB grid '" + name + "' is missing.");
-  auto buffer = nanovdb::HostBuffer::create(found->size);
-  std::ifstream input(filename, std::ios::binary);
-  input.seekg(found->offset);
-  if (!input.read(reinterpret_cast<char *>(buffer.data()), found->size))
-    throw std::runtime_error("Truncated NanoVDB grid: " + name);
-  auto *header = reinterpret_cast<nanovdb::GridData *>(buffer.data());
-  if (!header->isValid() || !header->mVersion.isCompatible() || header->mGridCount == 0 ||
-      header->mGridIndex >= header->mGridCount || header->mGridSize != found->size)
-    throw std::runtime_error("Invalid NanoVDB grid header: " + name);
-  if (header->mGridType != nanovdb::GridType::Float)
-    throw std::runtime_error("NanoVDB grid '" + name + "' is not a float grid.");
-  const auto *grid = reinterpret_cast<const nanovdb::FloatGrid *>(buffer.data());
-  check_storage(grid, found->size);
+void validate_render_grid(const nanovdb::FloatGrid *grid, const std::string &name) {
   if (grid->gridClass() != nanovdb::GridClass::FogVolume &&
       grid->gridClass() != nanovdb::GridClass::Unknown)
     throw std::runtime_error("NanoVDB grid '" + name +
                              "' must be a fog or scalar field, not a level set.");
-  // The upstream full traversal assumes nonempty leaf/lower node arrays and
-  // rejects valid tile-only trees. check_storage validates all sparse pointers
-  // against the allocation; retain upstream header and full checksum checks.
-  if (!nanovdb::tools::isValid<float>(grid, nanovdb::CheckMode::Half, false) ||
-      !nanovdb::tools::validateChecksum(grid, nanovdb::CheckMode::Full))
-    throw std::runtime_error("Invalid NanoVDB grid: " + name);
   const auto &map = grid->mMap;
   for (int i = 0; i < 9; ++i)
     if (!std::isfinite(map.mMatD[i]) || !std::isfinite(map.mInvMatD[i]) ||
@@ -224,10 +61,6 @@ nanovdb::GridHandle<> read_grid(const std::string &filename, const std::string &
   for (int a = 0; a < 3; ++a)
     if (!std::isfinite(o[a]) || !std::isfinite(Float(o[a])))
       throw std::runtime_error("NanoVDB native transform exceeds the supported coordinate range.");
-  // Normalize a selected grid only after validating its original allocation and
-  // checksum. GridHandle's constructor can then safely inspect this one grid.
-  nanovdb::tools::updateGridCount(header, 0, 1);
-  return nanovdb::GridHandle<>(std::move(buffer));
 }
 template <class Node, class F> void visit_values(const Node &node, F &f) {
   for (auto it = node.cbeginValueAll(); it; ++it) {
@@ -255,20 +88,19 @@ Float lookup(const nanovdb::FloatGrid *grid, const point3f &p) {
 } // namespace
 NanoVDBMedium::NanoVDBMedium(const Rcpp::List &d) : Medium(d), data(new Data) {
   std::string filename = Rcpp::as<std::string>(d["filename"]);
-  auto locations = preflight(filename);
-  data->density = read_grid(filename, Rcpp::as<std::string>(d["density_grid"]), locations);
-  data->d = data->density.grid<float>();
+
+  data->d = data->Read(filename, Rcpp::as<std::string>(d["density_grid"]), false,
+                       data->density, data->density_bytes);
+  validate_render_grid(data->d, Rcpp::as<std::string>(d["density_grid"]));
   if (data->d->tree().background() != 0)
     throw std::runtime_error("NanoVDB density background must be zero.");
   if (d.containsElementNamed("temperature_grid") && !Rf_isNull(d["temperature_grid"])) {
     const std::string temperature_name = Rcpp::as<std::string>(d["temperature_grid"]);
     const bool optional = d.containsElementNamed("temperature_optional") &&
                           Rcpp::as<bool>(d["temperature_optional"]);
-    const bool present = std::any_of(locations.begin(), locations.end(),
-        [&](const GridLocation &location) { return location.name == temperature_name; });
-    if (!optional || present) {
-      data->temperature = read_grid(filename, temperature_name, locations);
-      data->t = data->temperature.grid<float>();
+    data->t = data->Read(filename, temperature_name, optional, data->temperature, data->temperature_bytes);
+    if (data->t) {
+      validate_render_grid(data->t, temperature_name);
       auto validate = [&](const nanovdb::Coord &, int, float v) {
         if (!std::isfinite(v) || v < 0 ||
             !std::isfinite(Float((double(v) - temperature_offset) * temperature_scale)))
@@ -381,6 +213,6 @@ RayMajorantIterator NanoVDBMedium::SampleRay(const Ray &r, double t_max) const {
 }
 
 size_t NanoVDBMedium::MemoryBytes() const {
-  return sizeof(*this) + sizeof(Data) + data->density.bufferSize() +
-         data->temperature.bufferSize() + sizeof(Float) * majorants.density.capacity();
+  return sizeof(*this) + sizeof(Data) + data->density_bytes +
+         data->temperature_bytes + sizeof(Float) * majorants.density.capacity();
 }

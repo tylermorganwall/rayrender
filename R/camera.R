@@ -29,6 +29,8 @@
 #' motion blur. A value of `1` samples the full frame-to-frame motion
 #' interval, `2` samples one-half, and `4` samples one-quarter. Higher
 #' values produce less motion blur. `Inf` disables temporal motion blur.
+#' @param camera_flip_x Default `FALSE`. Reverse horizontal film coordinates before
+#' tracing. Useful for matching camera handedness in imported scenes.
 #'
 #' @return A `ray_camera` object.
 #' @export
@@ -144,8 +146,16 @@ camera = function(
   shutteropen = 0,
   shutterclose = 1,
   camera_motion_blur = FALSE,
-  shutter_speed = 2
+  shutter_speed = 2,
+  camera_flip_x = FALSE
 ) {
+  if (
+    !is.logical(camera_flip_x) ||
+      length(camera_flip_x) != 1L ||
+      is.na(camera_flip_x)
+  ) {
+    stop("camera_flip_x must be a single TRUE/FALSE value.")
+  }
   validate_camera_name(name)
   keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
@@ -203,7 +213,8 @@ camera = function(
       shutteropen = shutteropen,
       shutterclose = shutterclose,
       camera_motion_blur = isTRUE(camera_motion_blur),
-      shutter_speed = shutter_speed
+      shutter_speed = shutter_speed,
+      camera_flip_x = camera_flip_x
     ),
     class = "ray_camera"
   )
@@ -1254,7 +1265,8 @@ render_scene_legacy_camera = function(
   shutterclose,
   camera_motion_blur = FALSE,
   shutter_speed = 2,
-  message_cornell = TRUE
+  message_cornell = TRUE,
+  camera_flip_x = FALSE
 ) {
   if (!is.null(attr(scene, "cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -1308,7 +1320,8 @@ render_scene_legacy_camera = function(
     shutteropen = shutteropen,
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
-    shutter_speed = shutter_speed
+    shutter_speed = shutter_speed,
+    camera_flip_x = camera_flip_x
   )
 }
 
@@ -1335,7 +1348,8 @@ camera_frame_args = function(camera, frame = 1) {
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
     camera_motion_blur = isTRUE(blur),
-    shutter_speed = ray_camera_shutter_speed(camera)
+    shutter_speed = ray_camera_shutter_speed(camera),
+    camera_flip_x = isTRUE(camera$camera_flip_x)
   )
 }
 
@@ -1355,7 +1369,8 @@ camera_batch_metadata = function(camera) {
     film_size = as.numeric(camera$film_size),
     shutteropen = as.numeric(camera$shutteropen),
     shutterclose = as.numeric(camera$shutterclose),
-    shutter_speed = as.numeric(ray_camera_shutter_speed(camera))
+    shutter_speed = as.numeric(ray_camera_shutter_speed(camera)),
+    camera_flip_x = isTRUE(camera$camera_flip_x)
   )
 }
 

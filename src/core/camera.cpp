@@ -192,6 +192,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  s = film_x(s);
   Float motion_time = sample_motion_time(u1);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
   if(camera_motion_blur && camera_motion_blur_has_range) {
@@ -407,6 +408,7 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+  s = film_x(s);
   Float motion_time = sample_motion_time(u);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
   if(camera_motion_blur && camera_motion_blur_has_range) {
@@ -595,6 +597,7 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  s = film_x(s);
   Float motion_time = sample_motion_time(u1);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
   point3f ray_origin = origin;
@@ -1248,7 +1251,7 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   Float motion_time = sample_motion_time(sample.time);
   const Float ray_time = shutterOpen + (shutterClose - shutterOpen) * motion_time;
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
-  point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
+  point2f pFilm2 = GetPhysicalExtent().Lerp(point2f(film_x(sample.pFilm.xy.x), sample.pFilm.xy.y));
   point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
 
   // Trace ray from _pFilm_ through lens system
@@ -1563,12 +1566,43 @@ context("Camera shutter speed temporal mapping") {
     cam.GenerateRay(CameraSample(point2f(.501, .5), sample.pLens, sample.time), &adjacent);
     expect_true((footprint.rx_direction - adjacent.d).squared_length() < 1e-10);
     expect_true((footprint.rx_origin - adjacent.o).squared_length() < 1e-10);
+    Ray expected, flipped;
+    Float expected_weight = cam.GenerateRay(
+      CameraSample(point2f(.6, .5), sample.pLens, sample.time), &expected);
+    cam.set_camera_flip_x(true);
+    Float flipped_weight = cam.GenerateRayDifferential(
+      CameraSample(point2f(.4, .5), sample.pLens, sample.time), &flipped, .001, .001);
+    expect_true(expected_weight > 0);
+    expect_true(flipped_weight == Approx(expected_weight));
+    expect_true((flipped.o - expected.o).squared_length() < 1e-10);
+    expect_true((flipped.d - expected.d).squared_length() < 1e-10);
+    expect_true(flipped.has_differentials);
   }
 }
 #endif
 
 #ifdef NOT_CRAN
 context("Camera ray differentials") {
+  test_that("film reflection preserves camera pose and reverses the x differential") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      const point3f lens(.2, .3, 0);
+      Ray expected = cam->get_ray_differential(.6, .5, lens, .7, -.001, .002);
+      cam->set_camera_flip_x(true);
+      Ray flipped = cam->get_ray_differential(.4, .5, lens, .7, .001, .002);
+      expect_true((flipped.o - expected.o).squared_length() < 1e-10);
+      expect_true((flipped.d - expected.d).squared_length() < 1e-10);
+      expect_true((flipped.rx_origin - expected.rx_origin).squared_length() < 1e-10);
+      expect_true((flipped.rx_direction - expected.rx_direction).squared_length() < 1e-10);
+      expect_true((flipped.ry_direction - expected.ry_direction).squared_length() < 1e-10);
+      expect_true(flipped.time() == expected.time());
+    }
+  }
   test_that("[all pinhole camera projections use shared lens and time samples]") {
     camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
     ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);

@@ -80,6 +80,7 @@ std::unique_ptr<RayCamera> make_animation_camera(
     Float camera_scale,
     Float iso,
     Float shutter_speed,
+    bool camera_flip_x,
     TransformCache& transformCache) {
   std::unique_ptr<RayCamera> cam;
   if(fov < 0) {
@@ -117,6 +118,7 @@ std::unique_ptr<RayCamera> make_animation_camera(
                                                 shutteropen, shutterclose, iso));
   }
   cam->set_shutter_speed(shutter_speed);
+  cam->set_camera_flip_x(camera_flip_x);
   return cam;
 }
 
@@ -274,6 +276,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview = as<bool>(camera_info["preview"]);
+  bool camera_flip_x = camera_info.containsElementNamed("camera_flip_x") &&
+    as<bool>(camera_info["camera_flip_x"]);
   bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
     as<bool>(camera_info["camera_motion_blur"]) :
     false;
@@ -480,7 +484,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                   focus_distance, orthox, orthoy, nx, ny,
                                   shutteropen, shutterclose, realCameraInfo,
-                                  film_size, camera_scale, iso, shutter_speed,
+                                  film_size, camera_scale, iso, shutter_speed, camera_flip_x,
                                   transformCache);
       bool blur_enabled = frame_camera_motion_blur_enabled(
         i,
@@ -574,7 +578,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
           preview_cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                               focus_distance, orthox, orthoy, nx, ny,
                                               shutteropen, shutterclose, realCameraInfo,
-                                              film_size, camera_scale, iso, shutter_speed,
+                                              film_size, camera_scale, iso, shutter_speed, camera_flip_x,
                                               transformCache);
           preview_cam_initialized = true;
           preview_camera_type = current_camera_type;
@@ -585,7 +589,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         frame_cam_storage = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
                                                  focus_distance, orthox, orthoy, nx, ny,
                                                  shutteropen, shutterclose, realCameraInfo,
-                                                 film_size, camera_scale, iso, shutter_speed,
+                                                 film_size, camera_scale, iso, shutter_speed, camera_flip_x,
                                                  transformCache);
         frame_cam = frame_cam_storage.get();
       }

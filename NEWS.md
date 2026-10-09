@@ -16,6 +16,12 @@
 
 ## New features
 
+- `vdb_medium()` Loads native OpenVDB and uncompressed, ZIP or BLOSC NanoVDB
+  volumes through `openvdbr`'s registered runtime interface. Sparse storage and
+  native affine transforms are preserved, with direct grid sampling during
+  rendering. `nanovdb_medium()` remains available as an alias, and PBRT imports
+  can now render compressed NanoVDB smoke and temperature fields.
+
 - `texture_ptex()` Adds filtered per-face textures through the required `ptexr`
   runtime package, using its installed headers through `LinkingTo` without
   bundling the Ptex implementation in rayrender. `read_pbrt()` preserves Ptex
@@ -110,6 +116,27 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- Overall: Preserves shipped configuration scripts during Windows cleanup and
+  removes generated configuration for both platforms.
+
+- Overall: Retains generated vignette files in source packages so installation
+  can create the vignette index successfully.
+
+- `infinite_light()` Wraps latitude-longitude images across the longitude seam
+  using texel centers. Bright sources straddling that seam now retain their
+  energy, also when supplied through `render_scene(environment_light = ...)`.
+  Image-light sampling accounts for the interpolated footprint of bright texels
+  to reduce rare, high-weight samples around small HDR sources.
+
+- Overall: Requires rayimage 0.28.0 for correct HBD display encoding and limits
+  renderer threads to two when R package checks request a core limit.
+
+- `read_pbrt()` Preserves camera handedness, converts EXR environment primaries
+  to linear sRGB, and corrects the film normalization of blackbody volume
+  emission. Constant spectral absorption/scattering coefficients and custom
+  NanoVDB density/temperature grid names are now retained. `camera()` and
+  `render_scene()` support `camera_flip_x` for matching imported camera frames.
 
 - Overall: Resolves package-check warnings and notes for missing C++ override
   declarations, R utility calls, and example lines truncated in the PDF manual.

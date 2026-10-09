@@ -68,6 +68,8 @@ and the converted scene must fit in memory.
 Image textures are decoded to linear EXR assets. UV checkerboards are baked
 at 256 by 256 pixels. Image environments retain the input height and use
 twice that width; their light transforms are baked into the resampling.
+EXR environments use their stored RGB primaries, converted to linear sRGB
+without white adaptation; untagged images default to sRGB, as in PBRT.
 Ptex textures use the \pkg{ptexr} runtime package. Source face IDs
 survive batching, instances, and lazy PLY storage. See \code{\link[=texture_ptex]{texture_ptex()}} for
 encoding, filtering, cache controls, and the required face-local UV layout.
@@ -115,6 +117,8 @@ PBRT's world coordinates are preserved. Its camera transform maps world to
 camera and is inverted for rayrender. PBRT's field of view applies to the
 shorter image dimension; rayrender's applies to image height. This conversion
 adjusts portrait fields of view and retains the original framing.
+Horizontal camera handedness, including reflected camera transforms, is
+retained using \code{camera_flip_x}. Ordinary rayrender cameras keep their defaults.
 Film ISO is preserved. Diffuse transmission uses \code{\link[=translucent]{translucent()}} with
 independent reflection/transmission colors and textures; bump maps on this
 material are diagnosed and omitted. Combined energy above one is normalized.
@@ -124,7 +128,10 @@ interval require manual adjustment. Spatial media retain their definition
 transform at the start of motion and move with an animated enclosing boundary.
 Light intensity is mapped in rayrender's relative linear RGB units, without
 PBRT's spectral-to-photometric normalization. NanoVDB files must contain
-uncompressed float grids; blackbody volume emission uses rayrender's RGB model.
+float grids (uncompressed, ZIP or BLOSC); blackbody volume emission uses
+rayrender's RGB model with PBRT's CIE film normalization accounted for.
+Constant spectral absorption/scattering tables covering 360--830 nm are
+imported as neutral RGB coefficients. Other spectral tables remain unsupported.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

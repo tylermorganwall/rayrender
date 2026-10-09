@@ -50,7 +50,8 @@ prepare_scene_list(
   deferred_render = FALSE,
   integrator_type = "nee",
   denoise = TRUE,
-  print_debug_info = FALSE
+  print_debug_info = FALSE,
+  camera_flip_x = FALSE
 )
 }
 \description{

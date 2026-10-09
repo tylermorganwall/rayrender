@@ -941,6 +941,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   cam->set_camera_motion_blur(camera_motion_blur);
   cam->set_shutter_speed(shutter_speed);
+  cam->set_camera_flip_x(camera_info.containsElementNamed("camera_flip_x") &&
+                         as<bool>(camera_info["camera_flip_x"]));
   if (camera_motion_blur && camera_info.containsElementNamed("motion_endpoint")) {
     List endpoint = camera_info["motion_endpoint"];
     NumericVector origin = endpoint["lookfrom"], target = endpoint["lookat"], up = endpoint["up"];
