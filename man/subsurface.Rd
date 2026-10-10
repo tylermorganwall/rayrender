@@ -62,7 +62,7 @@ A \code{ray_material} descriptor.
 }
 \description{
 A neutral dielectric boundary containing a homogeneous RGB scattering medium.
-Pass this material directly to a closed sphere, cube, ellipsoid, or watertight
+Pass this material directly to a sphere, cube, ellipsoid, fully capped cylinder, or watertight
 triangle mesh. An interior medium is attached automatically during preparation.
 Explicit \code{\link[=set_medium]{set_medium()}} attachments on the same object are an error.
 }

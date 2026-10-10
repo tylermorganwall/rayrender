@@ -58,6 +58,7 @@ protected:
 };
 
 class BeckmannDistribution : public MicrofacetDistribution {
+  friend class WavefrontSceneCompiler;
 public:
   static Float RoughnessToAlpha(Float roughness) {
     roughness = std::fmax(roughness, (Float)0.0001550155);
@@ -103,6 +104,7 @@ private:
 
 
 class TrowbridgeReitzDistribution : public MicrofacetDistribution {
+  friend class WavefrontSceneCompiler;
 public:
   TrowbridgeReitzDistribution(const Float alphax_, const Float alphay_, std::shared_ptr<roughness_texture> roughness,
                               bool has_roughness, bool samplevis = true)

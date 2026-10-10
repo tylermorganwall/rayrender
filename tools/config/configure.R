@@ -878,6 +878,8 @@ if (
     "Metal"
   )
   METAL_OBJECTS = "core/hlbvh_metal.o core/wavefront_metal.o"
+  source("tools/config/openpbr-metal.R", local = TRUE)
+  write_openpbr_metal(CXX_COMMAND, "src/core/wavefront_openpbr_generated.inc")
   message(
     "*** configure: enabling optional Metal BVH construction and wavefront rendering"
   )

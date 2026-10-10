@@ -2,7 +2,7 @@
 # pipeline, including reconstruction and film accumulation. No exact-noise
 # comparison is expected between two independent sampling implementations.
 test_that("Metal fallback preserves the existing CPU result", {
-  scene = cube(material = dielectric())
+  scene = cube(material = diffuse(color = texture_checker('red', 'blue')))
   render = function(backend) {
     set.seed(729)
     render_scene(
@@ -21,7 +21,7 @@ test_that("Metal fallback preserves the existing CPU result", {
     )
   }
   cpu = render('nee')
-  expect_warning(gpu <- render('metal'), 'MediumBoundary.*CPU NEE')
+  expect_warning(gpu <- render('metal'), 'composable texture.*CPU NEE')
   expect_false(attr(gpu, 'wavefront')$used)
   expect_identical(as.numeric(gpu), as.numeric(cpu))
 })

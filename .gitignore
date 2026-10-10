@@ -25,6 +25,7 @@ docs
 /.quarto/
 cache/*
 src/Makevars
+src/core/wavefront_openpbr_generated.inc
 .codex:/
 .codex/
 .codex-sccache/

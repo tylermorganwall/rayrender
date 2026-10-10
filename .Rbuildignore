@@ -60,6 +60,7 @@
 
 ^tools/normal-mapping($|/)
 ^dev($|/)
+^src/core/wavefront_openpbr_generated[.]inc$
 ^\.agents($|/)
 ^tools/openpbr($|/)
 ^tools/pbrt($|/)

@@ -22,6 +22,7 @@ struct CurveCommon {
 };
 
 class curve: public hitable {
+  friend class WavefrontCurveTessellator;
   public:
     curve() : uMin(0), uMax(0) {}
     ~curve() {

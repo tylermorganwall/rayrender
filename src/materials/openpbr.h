@@ -4,6 +4,7 @@
 #include "material.h"
 #include <Rcpp.h>
 #include <memory>
+#include "../core/wavefront.h"
 
 // The reference library and its math types stay in one translation unit. These
 // types expose only rayrender's conventions: world directions pointing away
@@ -14,6 +15,11 @@ struct OpenPBRSample {
   Float pdf = 0;
   Float eta_squared = 1;
   bool specular = false, transmission = false;
+};
+struct OpenPBRWavefrontTextures {
+  const texture *base;
+  const roughness_texture *roughness;
+  point2f repeat;
 };
 
 class OpenPBRInteraction {
@@ -53,6 +59,8 @@ public:
   const std::string GetName() override { return "openpbr"; }
   size_t GetSize() override;
   Float EmissionEstimate() const;
+  // Cold GPU export. The reference's GLM types and private storage stay here.
+  OpenPBRWavefrontTextures ExportWavefront(std::vector<WFVector> &parameters) const;
 private:
   struct Impl;
   std::unique_ptr<Impl> impl;

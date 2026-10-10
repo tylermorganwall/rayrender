@@ -298,6 +298,32 @@ Ray spawn(const hit_record &h, const vec3f &wi, Float time, VolumePathState &sta
   return r;
 }
 
+// A closest hit can report the hidden face at a coincident liquid/glass contact.
+// Resolve the complete interface before deciding whether a straight shadow ray
+// may cross it; otherwise the offset can skip a refracting glass face entirely.
+enum class DiffusionShadowCrossing { NotApplicable, Pass, Blocked };
+DiffusionShadowCrossing cross_diffusion_shadow(const VolumeScene *scene,
+    VolumePathState &state, const hit_record &h, const Ray &ray, RGB &weight,
+    const std::atomic<bool> *cancel) {
+  if (!scene || !scene->has_diffusion || !h.mat_ptr || !h.mat_ptr->is_dielectric())
+    return DiffusionShadowCrossing::NotApplicable;
+  Ray probe(OffsetMediumOrigin(h, ray.d), ray.d, ray.time());
+  auto adjacent = scene->InitialState(probe, cancel);
+  const dielectric *before = state.ActiveDielectric(), *after = adjacent.ActiveDielectric();
+  const Float eta_before = before ? before->ref_idx : 1;
+  const Float eta_after = after ? after->ref_idx : 1;
+  if (eta_before != eta_after) return DiffusionShadowCrossing::Blocked;
+  if (before != after &&
+      ((before && typeid(*before) != typeid(dielectric)) ||
+       (after && typeid(*after) != typeid(dielectric))))
+    return DiffusionShadowCrossing::Blocked; // A layered BSDF is not a null interface.
+  if (before != after && after && !subsurface_medium(h) &&
+      dot(ray.d, h.geometric_normal) < 0)
+    weight *= RGB(after->albedo);
+  state = std::move(adjacent);
+  return DiffusionShadowCrossing::Pass;
+}
+
 
 // An ordinary surface may coincide with a medium boundary. Its normal offset
 // can cross that boundary before the next intersection. Resolve only such nearby
@@ -817,6 +843,15 @@ RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *sur
 
     // Boundary-only geometry and alpha-mask misses do not terminate the light
     // connection. Boundary crossings update membership before continuing straight.
+    auto diffusion_crossing = cross_diffusion_shadow(lights->volume_scene.get(), state, h, ray, tr, cancel);
+    if (diffusion_crossing == DiffusionShadowCrossing::Blocked) {
+      flush_haze();
+      return atmospheric_light;
+    }
+    if (diffusion_crossing == DiffusionShadowCrossing::Pass) {
+      ray = spawn(h, ray.d, ray.time(), state);
+      continue;
+    }
     if (priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
       { Ray next=spawn(h,ray.d,ray.time(),state);
@@ -927,7 +962,11 @@ RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *su
                                                   interval->t_max - interval->t_min));
     if (!(tr.Max() > 0)) return RGB(0);
     if (!found) break;
-    if (priority_hidden(state, h, ray.d)) {
+    auto diffusion_crossing = cross_diffusion_shadow(scene, state, h, ray, tr, cancel);
+    if (diffusion_crossing == DiffusionShadowCrossing::Blocked) return RGB(0);
+    if (diffusion_crossing == DiffusionShadowCrossing::Pass) {
+      // Membership and any matched-IOR tint have already been applied.
+    } else if (priority_hidden(state, h, ray.d)) {
       state.CrossDielectric(h, ray.d);
     } else if (cross_matched_dielectric(state, h, ray.d, tr)) {
       // The following segment uses the new priority-selected absorption.
@@ -1575,11 +1614,10 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       // before the liquid has entered the stack. Determine the actual adjacent
       // region before sampling Fresnel, avoiding a fabricated glass/air interface.
       Ray transmitted_probe(OffsetMediumOrigin(h, ray.d), ray.d, ray.time());
-      auto adjacent = scene->InitialState(transmitted_probe, cancel);
-      const auto *before = state.Active(), *after = adjacent.Active();
-      if ((before && before->boundary->medium->subsurface_diffusion) ||
-          (after && after->boundary->medium->subsurface_diffusion))
-        diffusion_transmitted_state = std::move(adjacent);
+      // The reported face can be the losing member of a coincident pair. Keep
+      // the complete adjacent state even if glass wins on both sides, otherwise
+      // sampling this face can use the hidden liquid's IOR or lose its membership.
+      diffusion_transmitted_state = scene->InitialState(transmitted_probe, cancel);
     }
     if (cross_matched_dielectric(state, h, ray.d, beta,
                                 diffusion_transmitted_state ? &*diffusion_transmitted_state : nullptr)) {
@@ -1611,6 +1649,12 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
         continue;
       }
       bool from_inside = body && !interface.entering;
+      if (diffusion_transmitted_state) {
+        const auto *active = state.Active();
+        // At a contact, the reported triangle may belong to a hidden body.
+        // Depth accounting follows the incident region, just like Fresnel.
+        from_inside = active && active->boundary->medium->subsurface && !interface.entering;
+      }
       if ((!from_inside && depth >= max_depth) || !(beta.Max() > 0) || !(ru.Average() > 0)) break;
       if (from_inside) ++internal_events;
       else ++depth;

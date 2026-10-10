@@ -477,6 +477,18 @@ context("Deterministic volume picking") {
   }
 }
 context("Participating media geometry and sampling") {
+  test_that("coincident whole boundaries retain both interior memberships") {
+    PickingScene fixture;
+    fixture.Add(std::make_shared<Medium>(medium_description()), 1);
+    fixture.Add(std::make_shared<Medium>(medium_description(.5)), 1);
+    auto inside = fixture.scene.InitialState(Ray(point3f(0), vec3f(0, 0, 1)), nullptr);
+    auto outside = fixture.scene.InitialState(Ray(point3f(2), vec3f(0, 0, 1)), nullptr);
+    expect_true(inside.media.size() == 2);
+    expect_true(outside.media.empty());
+    if (inside.media.size() == 2)
+      expect_true(inside.media[0].boundary_id != inside.media[1].boundary_id);
+  }
+
   test_that("first-crossing containment matches full replay for nested boundaries and exact contacts") {
     PickingScene direct;
     auto medium = std::make_shared<Medium>(medium_description());

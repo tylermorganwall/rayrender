@@ -45,6 +45,11 @@ Suggests:
     xml2,
     rgl
 LinkingTo: Rcpp, RcppThread (>= 2.4.0), progress, spacefillr (>= 0.3.0), testthat, libopenexr (>= 3.4.12-6), libimath (>= 3.2.2), skymodelr (>= 0.6.3), glmheaders (>= 1.0.1-1), openpbr (>= 1.1.1-1), piton (>= 1.0.1), ptexr (>= 2.5.4-1), openvdbr (>= 13.1.0-2)
+Remotes:
+    tylermorganwall/ptexr,
+    tylermorganwall/openvdbr,
+    tylermorganwall/glmheaders,
+    tylermorganwall/openpbr
 URL: https://www.rayrender.net, https://github.com/tylermorganwall/rayrender
 SystemRequirements: C++20, X11 (optional, for interactive previews on Unix),
     OpenImageDenoise (optional, for denoising)

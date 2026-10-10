@@ -1,6 +1,7 @@
 #ifndef RAYRENDER_WAVEFRONT_H
 #define RAYRENDER_WAVEFRONT_H
 
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -11,6 +12,8 @@ class hitable_list;
 class RayCamera;
 class adaptive_sampler;
 class InfiniteLight;
+class hitable;
+class Transform;
 
 // Explicit float4 storage keeps the C++/MSL ABI independent of native Float,
 // SIMD configuration and Objective-C. No GPU record owns a native pointer.
@@ -18,8 +21,11 @@ struct alignas(16) WFVector {
   float x = 0, y = 0, z = 0, w = 0;
 };
 struct WFTriangle {
+  // Curve-only metadata in unused float4 lanes: p[].w transforms a unit error
+  // cube; geometric.w/uv2.z hold endpoint widths, n[].w the world radius.
+  // Positions remain xyz float3s.
   WFVector p[3], n[3], uv01, uv2, geometric;
-  uint32_t material = 0, light = UINT32_MAX, padding[2]{};
+  uint32_t material = 0, light = UINT32_MAX, boundary = 0, flags = 0;
 };
 struct WFTexture {
   // Types: constant, checker, u-gradient, v-gradient, vertex color, image,
@@ -29,7 +35,22 @@ struct WFTexture {
 };
 struct WFMaterial {
   WFVector diffuse{1, 0, 0, 0}; // EON A, B, average loss; emission intensity in w.
-  uint32_t texture = 0, emissive = 0, padding[2]{};
+  WFVector optical{1, 0, 0, 0}, attenuation;
+  uint32_t texture = 0, emissive = 0, dielectric = 0, priority = 0;
+  // Tagged BSDF parameters. Diffuse retains its small, separate shader path.
+  WFVector eta, k, parameters, extra;
+  uint32_t type = 0, distribution = 0, second_texture = UINT32_MAX, data = 0;
+};
+struct WFBoundary {
+  WFVector sigma_a, sigma_s; // roughness in a.w, HG anisotropy in s.w.
+  uint32_t material = 0, subsurface = 0, diffusion_offset = 0, padding = 0;
+  WFVector color, radius, lo{INFINITY, INFINITY, INFINITY, 0},
+      hi{-INFINITY, -INFINITY, -INFINITY, 0};
+};
+struct WFDiffusionExit {
+  WFVector shape; // interior/exterior IOR, critical cosine squared, support, mass.
+  WFVector normalization;
+  uint32_t offset = 0, padding[3]{};
 };
 struct WFLight {
   // Types: image environment, infinite disk, point/spot, emissive triangle.
@@ -44,14 +65,15 @@ struct WFParameters {
   WFCamera camera;
   uint32_t width = 0, height = 0, active = 0, sample = 0;
   uint32_t lights = 0, depth = 0, roulette = 0, sampler = 0;
-  uint32_t seed = 0, max_depth = 0, padding[2]{};
+  uint32_t seed = 0, max_depth = 0, boundaries = 0, environments = 0;
+  WFVector boundary_lo, boundary_hi;
 };
 struct WFPixel {
   WFVector radiance, normal, albedo;
 };
-static_assert(sizeof(WFTriangle) == 160 && sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 32 &&
-              sizeof(WFLight) == 80 && sizeof(WFCamera) == 128 && sizeof(WFParameters) == 176 &&
-              sizeof(WFPixel) == 48);
+static_assert(sizeof(WFTriangle) == 160 && sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 &&
+              sizeof(WFBoundary) == 112 && sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 80 &&
+              sizeof(WFCamera) == 128 && sizeof(WFParameters) == 208 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {
   std::vector<WFTriangle> triangles;
@@ -59,6 +81,15 @@ struct WavefrontScene {
   std::vector<WFTexture> textures;
   std::vector<WFVector> texels;
   std::vector<WFLight> lights;
+  std::vector<WFVector> material_data;
+  std::vector<WFDiffusionExit> diffusion_exits;
+  std::vector<WFVector> diffusion_samples;
+  std::vector<uint32_t> diffusion_pairs;
+  uint32_t environments = 0; // Infinite emitters form the prefix of lights.
+  // Index zero means vacuum/no boundary. Each placement gets its own ID, even
+  // when instances share material and geometry pointers.
+  std::vector<WFBoundary> boundaries{WFBoundary()};
+  WFVector boundary_lo, boundary_hi;
   // Borrowed only on the host: refresh environment rotations after UI edits.
   std::vector<const InfiniteLight *> light_sources;
   std::vector<std::shared_ptr<InfiniteLight>> owned_lights;
@@ -69,6 +100,7 @@ struct WavefrontReport {
   std::string fallback;
   double upload_seconds = 0, sample_seconds = 0;
   size_t triangles = 0, completed_samples = 0;
+  size_t tessellated_primitives = 0, discarded_paths = 0, scattering_events = 0;
 };
 
 // Device work is transactional: cancellation never commits a partial sample.
@@ -78,8 +110,10 @@ public:
   virtual ~WavefrontSession() = default;
   virtual bool Render(const WFParameters &, const std::vector<uint32_t> &active,
                       const std::vector<WFLight> &lights, const std::function<bool()> &cancelled,
-                      const WFPixel *&pixels) = 0;
+                      const WFPixel *&pixels, WavefrontReport &report) = 0;
 };
+// Empty output means this primitive has no faithful static triangulation.
+std::vector<WFTriangle> TriangulateWavefrontPrimitive(const hitable &, const Transform &);
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, size_t capacity);
 std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &, const hitable_list &,
                                                    RayCamera &, size_t capacity, int sampler,
@@ -87,5 +121,18 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &, const h
 bool RenderWavefrontSample(WavefrontSession &, WavefrontScene &, RayCamera &, adaptive_sampler &,
                            size_t sample, int sampler, uint32_t seed, size_t depth, size_t roulette,
                            float clamp, const std::function<bool()> &cancelled, WavefrontReport &);
+
+#if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
+// Development-only numerical cross-backend probes. No R API or CPU hot-path hook.
+struct WFBsdfProbe {
+  WFMaterial material;
+  WFVector rho, transmission, view, direction, random, context;
+};
+struct WFBsdfResult {
+  WFVector evaluated, direction, weight;
+};
+std::vector<WFBsdfResult> ProbeMetalMaterials(const std::vector<WFBsdfProbe> &,
+                                              const std::vector<WFVector> &data);
+#endif
 
 #endif

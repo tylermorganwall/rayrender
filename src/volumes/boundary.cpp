@@ -1,6 +1,7 @@
 #include "boundary.h"
 #include "../core/bvh.h"
 #include "../hitables/box.h"
+#include "../hitables/cylinder.h"
 #include "../hitables/ellipsoid.h"
 #include "../hitables/mesh3d.h"
 #include "../hitables/plymesh.h"
@@ -173,7 +174,8 @@ MediumBoundary::MediumBoundary(std::shared_ptr<hitable> geom, std::shared_ptr<co
   ValidateMediumTransform(medium_to_world);
   if (auto *mesh = boundary_mesh(geometry.get()))
     orientation_sign = signed_mesh_volume(*mesh) < 0 ? -1 : 1;
-  else if ((dynamic_cast<sphere *>(geometry.get()) || dynamic_cast<ellipsoid *>(geometry.get())) &&
+  else if ((dynamic_cast<sphere *>(geometry.get()) || dynamic_cast<ellipsoid *>(geometry.get()) ||
+            dynamic_cast<cylinder *>(geometry.get())) &&
            geometry->reverseOrientation)
     orientation_sign = -1;
 }
@@ -387,7 +389,6 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
     // in reverse to retain nesting and equal-priority dielectric ordering.
     // An instance may contain several boundaries, so it uses the full walk.
     std::vector<const hitable *> classified;
-    double previous = -INFINITY;
     while (!cancelled()) {
       hit_record h;
       if (!containment_bvh->HitContainingObjects(probe, 0, MaxT, h, rng, &classified))
@@ -396,14 +397,15 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
       if (!std::isfinite(h.OrderedDistance()) || !std::isfinite(orientation))
         throw PathFailure(PathFailureKind::PositionPrecision,
                           "Non-finite boundary intersection in initial membership.");
-      if (h.t == 0 || h.OrderedDistance() == previous || orientation == 0) {
-        // Exact contacts/ties need the original direction-sensitive crossing
-        // rules. Restart without exclusions rather than inventing a tie order.
+      if (h.t == 0 || orientation == 0) {
+        // Origins on a face need the original direction-sensitive crossing
+        // rules. Positive-distance ties between different complete objects are
+        // safe: each object's first crossing independently determines containment.
+        // Restarting closest-hit replay at a tie loses one coincident boundary.
         classify_first_crossings = false;
         crossings.clear();
         break;
       }
-      previous = h.OrderedDistance();
       classified.push_back(h.medium_boundary);
       if (orientation > 0) crossings.push_back(h);
     }
@@ -449,6 +451,9 @@ bool ValidateMediumBoundary(hitable *geometry, bool required) {
   if (dynamic_cast<sphere *>(geometry) || dynamic_cast<box *>(geometry) ||
       dynamic_cast<ellipsoid *>(geometry))
     return true;
+  if (const auto *c = dynamic_cast<cylinder *>(geometry))
+    if (c->has_caps && c->phi_min <= 0 && c->phi_max >= Float(2 * M_PI))
+      return true;
   TriangleMesh *mesh = boundary_mesh(geometry);
   auto invalid = [&] {
     if (required)

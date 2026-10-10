@@ -17,9 +17,17 @@
 ## New features
 
 - `render_scene()` Adds experimental `integrator_type = "metal"` for GPU wavefront
-  rendering of opaque diffuse meshes on supported macOS GPUs. Camera movement,
+  rendering with diffuse, metal, microfacet reflection/transmission, glossy,
+  dielectric, translucent, hair, and layered OpenPBR materials. Homogeneous
+  `subsurface()` walks and `subsurface_diffusion()` respect priority overlaps.
+  It supports image roughness maps on supported macOS GPUs. Analytic spheres,
+  ellipsoids, cylinders, disks, and cylindrical/ribbon curves are triangulated
+  automatically. Camera movement,
   environment rotation, progressive denoising, and cancellation remain interactive.
-  Unsupported scenes warn and use CPU NEE; the default CPU integrator is unchanged.
+  Opaque scenes use specialized pipelines without interior-boundary handling.
+  Unsupported scenes warn and use CPU NEE, which remains the default integrator.
+
+- `subsurface()` Supports fully capped cylinders as closed scattering boundaries.
 
 - `render_scene()` Adds `bvh_type = "hlbvh"` for parallel CPU BVH construction
   and `bvh_type = "metal"` for optional Metal GPU construction on macOS. Both
@@ -137,6 +145,16 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `render_scene()` Avoids scanning finite triangle emitters when a Metal ray
+  escapes the scene, removing a major slowdown with triangulated area lights.
+  OpenPBR surfaces retain their layered BSDF instead of being mistaken for
+  ordinary dielectrics during GPU export.
+
+- `subsurface_diffusion()` Resolves coincident glass/liquid contacts consistently
+  for camera and shadow rays, including containment, refraction, and depth
+  accounting. Distinct closed bodies retain both memberships when their first
+  containment intersections have identical distances.
 
 - `diffuse()` Preserves smooth mesh shading by applying analytic bump mapping
   relative to the interpolated surface normal. Geometric sidedness remains

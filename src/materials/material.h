@@ -125,6 +125,7 @@ void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bum
 // A thin sheet with independent Lambertian reflection and transmission lobes.
 // It has no refractive interior and uses geometric normals on both sides.
 class translucent_material final : public material {
+  friend class WavefrontSceneCompiler;
 public:
   translucent_material(std::shared_ptr<texture> reflection, std::shared_ptr<texture> transmission)
     : reflection(std::move(reflection)), transmission(std::move(transmission)) {}
@@ -251,6 +252,7 @@ public:
 };
 
 class MicrofacetReflection : public material {
+  friend class WavefrontSceneCompiler;
 public:
   MicrofacetReflection(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                        point3f eta, point3f k)
@@ -275,6 +277,7 @@ private:
 };
 
 class MicrofacetTransmission : public material {
+  friend class WavefrontSceneCompiler;
 public:
   MicrofacetTransmission(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                          point3f eta2, point3f k) : 
@@ -302,6 +305,7 @@ private:
 };
 
 class glossy : public material {
+  friend class WavefrontSceneCompiler;
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          point3f Rs, point3f Rd2)

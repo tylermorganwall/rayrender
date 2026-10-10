@@ -96,4 +96,12 @@ private:
   onb frame;
   double eta, normalization;
 };
+
+// Cold export of the same proposal used on the CPU. The GPU evaluates the
+// analytic lobe and the interpolated proposal separately, preserving f/pdf.
+struct DiffusionExitTable {
+  double eta, critical2, support, mass, normalization;
+  std::array<std::array<float, 2>, 1025> samples;
+};
+DiffusionExitTable ExportDiffusionExitTable(double eta);
 #endif

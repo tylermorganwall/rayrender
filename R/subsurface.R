@@ -1,7 +1,7 @@
 #' Homogeneous Subsurface Scattering
 #'
 #' A neutral dielectric boundary containing a homogeneous RGB scattering medium.
-#' Pass this material directly to a closed sphere, cube, ellipsoid, or watertight
+#' Pass this material directly to a sphere, cube, ellipsoid, fully capped cylinder, or watertight
 #' triangle mesh. An interior medium is attached automatically during preparation.
 #' Explicit [set_medium()] attachments on the same object are an error.
 #'
@@ -239,6 +239,7 @@ prepare_subsurface = function(scene) {
             "sphere",
             "box",
             "ellipsoid",
+            "cylinder",
             "obj",
             "ply",
             "mesh3d",
@@ -246,6 +247,7 @@ prepare_subsurface = function(scene) {
             1,
             5,
             6,
+            8,
             9,
             12,
             13,
@@ -253,7 +255,7 @@ prepare_subsurface = function(scene) {
           )
       ) {
         stop(
-          "Subsurface boundaries require spheres, cubes, ellipsoids, or closed triangle meshes. Apply the material before creating instances.",
+          "Subsurface boundaries require spheres, cubes, ellipsoids, fully capped cylinders, or closed triangle meshes. Apply the material before creating instances.",
           call. = FALSE
         )
       }

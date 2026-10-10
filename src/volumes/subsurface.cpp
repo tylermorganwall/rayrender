@@ -489,6 +489,18 @@ DiffusionExitBSDF::DiffusionExitBSDF(const normal3f &normal, double inside, doub
     : eta(inside / outside), normalization(diffusion_fresnel_normalization(eta)) {
   frame.build_from_w(normal);
 }
+DiffusionExitTable ExportDiffusionExitTable(double eta) {
+  const auto &source = diffusion_exit_distribution(eta);
+  DiffusionExitTable result;
+  result.eta = eta;
+  result.critical2 = source.critical2;
+  result.support = source.support;
+  result.mass = source.mass;
+  result.normalization = diffusion_fresnel_normalization(eta);
+  for (size_t i = 0; i < result.samples.size(); ++i)
+    result.samples[i] = {float(source.density[i]), float(source.cdf[i])};
+  return result;
+}
 double DiffusionExitBSDF::Pdf(const vec3f &wi) const {
   double cosine = std::clamp(double(dot(wi, frame.w())), 0.0, 1.0);
   return eta == 1 ? cosine / M_PI : diffusion_exit_distribution(eta).Pdf(cosine);

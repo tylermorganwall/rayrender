@@ -1279,6 +1279,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     final_image.attr("wavefront") = List::create(
       _["used"] = wavefront_report.used, _["fallback"] = wavefront_report.fallback,
       _["triangles"] = double(wavefront_report.triangles),
+      _["tessellated_primitives"] = double(wavefront_report.tessellated_primitives),
+      _["scattering_events"] = double(wavefront_report.scattering_events),
+      _["discarded_paths"] = double(wavefront_report.discarded_paths),
       _["upload_seconds"] = wavefront_report.upload_seconds,
       _["sample_seconds"] = wavefront_report.sample_seconds,
       _["completed_samples"] = double(wavefront_report.completed_samples));

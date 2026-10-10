@@ -275,17 +275,23 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 `"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.
-It traces static triangle meshes, rectangles, boxes, and their instances with diffuse
-materials (including rough diffuse), constant/checker/gradient/image textures, area lights,
+It traces static meshes and instances with [diffuse()] (including rough diffuse),
+[metal()], [microfacet()] reflection/transmission, [glossy()], [dielectric()],
+[translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
+random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
+Spheres, ellipsoids, cylinders, disks, and cylindrical/ribbon curves are triangulated
+automatically; curve silhouettes and fiber frames therefore approximate the native curves.
+It supports constant/checker/gradient/image textures, image roughness maps, area lights,
 point/spot lights, and image/disk infinite lights. Camera movement, environment rotation,
 progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective
 and orthographic cameras are supported. Unsupported geometry, materials, media, bump/alpha
-mapping, stratified sampling, or motion blur produce a warning and use CPU `nee` for the
+mapping, composable texture graphs, Ptex, stratified sampling, or motion blur produce a warning and use CPU `nee` for the
 whole scene. Enabling camera motion blur in the preview also switches to CPU rendering.
 GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
 but do not give pixel-identical noise across backends. Mesh instances currently expand in
 GPU memory; image environments use a uniform directional proposal. The returned image's
-`wavefront` attribute reports use/fallback, triangle count, upload time, and sampling time.
+`wavefront` attribute reports use/fallback, triangle and tessellated-primitive counts,
+scattering events, discarded paths, upload time, and sampling time.
 Other platforms retain the CPU renderer and do not require Metal.
 With `nee`, surfaces and participating media use RGB null-scattering transport;
 \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
@@ -332,6 +338,25 @@ summarized warning after image output and a diagnostic log. The `path_warning_lo
 attribute then gives its filename. Saved images use `<filename>.warnings.log`;
 renders without a filename, or with an unwritable log directory, use a temporary log.
 Scene validation errors and unclassified exceptions remain errors.
+
+Metal uses the same homogeneous SSS coefficients, HG phase function, dielectric
+Fresnel boundary, and priority convention as CPU rendering. Its RGB free-flight
+mixture is an unguided estimator, including when `method = "guided"` is requested;
+the physical transport model is unchanged. Internal scattering and SSS boundary
+reflections do not consume `max_depth`, and walks have no finite event cap.
+Camera origins inside bodies are classified on the GPU. Denoising guides use
+the first non-specular interaction, including scattering behind glass.
+
+Triangulation approximates curved geometry: spheres use 128 azimuth segments and
+64 latitude intervals; cylinders/disks use 128 azimuth segments. Cylindrical curves
+use 16-sided tubes and ribbons use strips, with 64 longitudinal intervals per
+full Bezier span. Supply a mesh directly when finer control is needed. Ray-facing
+flat curves, hair materials, [subsurface_diffusion()], heterogeneous/explicit media,
+and other unsupported features still select CPU rendering for the whole scene.
+GPU membership supports up to 16 simultaneous overlapping closed boundaries.
+Overflow, unresolvable positions, and nonfinite transport weights terminate affected
+rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.
+These terminated paths can bias the result, so inspect that count for extreme scenes.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
@@ -342,7 +367,7 @@ Scene validation errors and unclassified exceptions remain errors.
   # Add a sphere to the center
   scene = scene |>
     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
-  render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
+  render_scene(scene, fov = 20, parallel = TRUE, samples = 16, integrator_type = "metal")
   # Add a marbled cube
   scene = scene |>
     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
