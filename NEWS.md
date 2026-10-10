@@ -16,6 +16,22 @@
 
 ## New features
 
+- `render_scene()` Adds `bvh_type = "hlbvh"` for parallel CPU BVH construction
+  and `bvh_type = "metal"` for optional Metal GPU construction on macOS. Both
+  retain CPU ray traversal and are available to animation and AO renders.
+  SAH remains the default; HLBVH trades traversal quality for faster building.
+  Metal uses cooperative sorting and parallel singleton-leaf construction, with
+  shared node buffers retained through CPU packing to avoid a full arena copy.
+  Both HLBVH builders prepare bounds in one pass and pack large SIMD trees in
+  parallel; batched CPU Morton generation reduces scheduling overhead.
+  Further construction optimizations reduce primitive-reordering and leaf-bound
+  overhead. Metal sorting, grouping, and lower-tree construction now share one
+  GPU submission, eliminating an intermediate CPU synchronization.
+  Large triangle meshes also prepare bounds and shadow classifications in
+  parallel. Both HLBVH backends validate compact bounds and compute Morton
+  extents in parallel for large inputs. HLBVH packing initializes traversal
+  storage on its workers, avoiding a serial initialization pass.
+
 - `vdb_medium()` Loads native OpenVDB and uncompressed, ZIP or BLOSC NanoVDB
   volumes through `openvdbr`'s registered runtime interface. Sparse storage and
   native affine transforms are preserved, with direct grid sampling during
@@ -116,6 +132,15 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `diffuse()` Preserves smooth mesh shading by applying analytic bump mapping
+  relative to the interpolated surface normal. Geometric sidedness remains
+  enforced, and bump textures retain the energy-conserving model.
+
+- `render_scene()` Correctly selects equal-count BVH partitioning for
+  `bvh_type = "equal"` instead of treating the selector as a leaf-size value.
+- Overall: Makes the scalar float-to-integer lane bit cast agree with SSE/NEON
+  in builds with SIMD disabled.
 
 - Overall: Preserves shipped configuration scripts during Windows cleanup and
   removes generated configuration for both platforms.

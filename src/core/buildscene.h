@@ -3,6 +3,7 @@
 
 #include <Rcpp.h>
 #include <memory>
+#include "hlbvh.h"
 #include "../math/float.h"
 using namespace Rcpp;
 
@@ -32,7 +33,7 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      std::vector<std::shared_ptr<alpha_texture> >& alpha,
                                      std::vector<std::shared_ptr<bump_texture> >& bump,
                                      std::vector<std::shared_ptr<roughness_texture> >& roughness,
-                                     int bvh_type,
+                                     const BVHBuildOptions& bvh_type,
                                      TransformCache& transformCache,
                                      TextureCache& texCache,
                                      hitable_list& imp_sample_objects,

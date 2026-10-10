@@ -321,6 +321,7 @@ bool curve::recursiveIntersect(const Ray& r, Float tmin, Float tmax, hit_record&
     rec.p = r(rec.t);
     rec.geometric_normal = rec.normal;
     rec.physical_shading_normal = normal3f(0);
+    rec.base_shading_normal = normal3f(0);
     rec.shape = this;
     rec.alpha_miss = false;
     rec.texture_object_p = rec.p;

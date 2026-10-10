@@ -14,7 +14,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                std::string displacement_texture, Float displacement, bool displacement_vector, 
                TextureCache &texCache, bool recalculate_normals,
                bool verbose, 
-               Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+               Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng,
                Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) :
   hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation) {
   Rcpp::NumericMatrix vertices = Rcpp::as<Rcpp::NumericMatrix>(mesh_info["vertices"]);
@@ -132,7 +132,10 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
     
-  mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+  // All triangle geometry/material tables are loaded; these queries only read them.
+  auto mesh_build = bvh_type;
+  mesh_build.parallel_primitive_queries = true;
+  mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, 1, true, mesh_build);
   // Transfer ownership to the BVH; retain no empty construction buffer.
   std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
 }

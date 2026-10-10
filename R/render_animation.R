@@ -104,8 +104,9 @@ animation_default_plot_scene = function(
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-#' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-#' of equal size.
+#' hierarchy. Options are `"sah"`, `"equal"`, `"hlbvh"` (parallel CPU construction)
+#' and `"metal"` (Metal GPU construction, CPU traversal). See [render_scene()] for
+#' availability, construction/traversal tradeoffs, and core-limit behavior.
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise.
 #' @param preview_light_direction Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.
 #' @param preview_exponent Default `6`. Phong exponent.

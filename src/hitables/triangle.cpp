@@ -264,6 +264,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     }
   }
+  rec.base_shading_normal = rec.physical_shading_normal;
   rec.normal.make_unit_vector();
 
   rec.dpdu = dpdu;
@@ -522,6 +523,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     }
   }
+  rec.base_shading_normal = rec.physical_shading_normal;
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
 
   rec.dndu = rec.dndv = normal3f(0);

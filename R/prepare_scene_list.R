@@ -52,6 +52,7 @@ prepare_scene_list = function(
   print_debug_info = FALSE,
   camera_flip_x = FALSE
 ) {
+  bvh_type = match.arg(bvh_type, c("sah", "equal", "hlbvh", "metal"))
   if (inherits(scene, "ray_mesh")) {
     scene = raymesh_model(scene)
   }
@@ -323,7 +324,7 @@ prepare_scene_list = function(
   camera_info$sample_method = sample_method
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
-  camera_info$bvh = switch(bvh_type, "sah" = 1, "equal" = 2, 1)
+  camera_info$bvh = match(bvh_type, c("sah", "equal", "hlbvh", "metal"))
   camera_info$real_camera_info = real_camera_info
   camera_info$film_size = film_size
   camera_info$camera_scale = camera_scale

@@ -848,6 +848,39 @@ collect_sources = function(subdir, pattern) {
   file.path(subdir, files)
 }
 
+# Metal is optional and confined to BVH construction. Probe Objective-C++ and
+# frameworks, not a discrete GPU: a build machine need not have a usable device.
+METAL_OBJECTS = ""
+if (
+  is_macos &&
+    !identical(
+      tolower(Sys.getenv("RAYRENDER_DISABLE_METAL", "false")),
+      "true"
+    ) &&
+    compile_test(
+      c(
+        "#import <Foundation/Foundation.h>",
+        "#import <Metal/Metal.h>",
+        "int main() { @autoreleasepool { id<MTLDevice> d = MTLCreateSystemDefaultDevice(); (void)d; } }"
+      ),
+      extra_cxxflags = c("-x", "objective-c++", "-fobjc-arc"),
+      extra_ldflags = c("-framework", "Foundation", "-framework", "Metal"),
+      link = TRUE,
+      quiet = TRUE
+    )
+) {
+  DEFINES = append_unique_flags(DEFINES, "-DRAY_HAS_METAL_BVH")
+  PKG_LIBS_ACC = append_flags(
+    PKG_LIBS_ACC,
+    "-framework",
+    "Foundation",
+    "-framework",
+    "Metal"
+  )
+  METAL_OBJECTS = "core/hlbvh_metal.o"
+  message("*** configure: enabling optional Metal BVH construction")
+}
+
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))
 SUBDIR_SOURCES = sort(unlist(lapply(
   c("core", "hitables", "lights", "materials", "math", "utils", "volumes"),
@@ -888,7 +921,8 @@ define(
   DIR_SOURCES = collapse_flags(DIR_SOURCES),
   SUBDIR_SOURCES = collapse_flags(SUBDIR_SOURCES),
   EXT_CPP_SOURCES = collapse_flags(EXT_CPP_SOURCES),
-  EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES)
+  EXT_C_SOURCES = collapse_flags(EXT_C_SOURCES),
+  METAL_OBJECTS = METAL_OBJECTS
 )
 
 if (is_windows) {

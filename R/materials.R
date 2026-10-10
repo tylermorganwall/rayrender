@@ -44,7 +44,11 @@
 #' this will help with the convergence of the image.
 #'
 #' @details Diffuse surfaces use energy-conserving analytic normal mapping for
-#'   bump textures and smooth mesh normals. Positive `sigma` uses EON rough
+#'   bump textures relative to the unperturbed smooth surface normal. Interpolated
+#'   mesh normals define that base surface, so smooth shading does not acquire
+#'   triangle facets from the bump correction. Reflection remains on the same
+#'   side of the geometric surface; rejected samples absorb energy. Energy is
+#'   bounded in the smooth surface frame. Positive `sigma` uses EON rough
 #'   diffuse with color-dependent multiple scattering; zero uses Lambertian
 #'   reflection. Image and procedural reflectance is bounded to [0, 1], with
 #'   nonfinite values treated as absorbing. The analytic normal-mapping model

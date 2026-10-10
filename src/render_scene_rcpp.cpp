@@ -863,7 +863,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     }
   }
   Float iso = as<Float>(camera_info["iso"]);
-  int bvh_type = as<int>(camera_info["bvh"]);
+  BVHBuildOptions bvh_type{static_cast<BVHBuildMethod>(as<int>(camera_info["bvh"])),
+                           static_cast<unsigned>(std::max(1, numbercores))};
 
   
   //Initialize transformation cache
@@ -1162,7 +1163,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   QUERY_MEMORY_USAGE();
   PRINT_CURRENT_MEMORY("Before raytracing");
   
-  // Rcpp::Rcout << "Total world size: " << world.GetSize() + texture_bytes << " (Textures: " << texture_bytes << ") \n";
+  const auto trace_start = benchmark_timing ? std::chrono::steady_clock::now() :
+                                            std::chrono::steady_clock::time_point{};
   if(debug_channel != 0) {
     debug_scene(numbercores, nx, ny, ns, debug_channel,
                 min_variance, min_adaptive_size,
@@ -1184,6 +1186,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display, integrator_type);
   }
+  const double trace_seconds = benchmark_timing ?
+    std::chrono::duration<double>(std::chrono::steady_clock::now() - trace_start).count() : 0;
   PRINT_CURRENT_MEMORY("After raytracing");
 #ifdef HAS_OIDN
   Display.PollCloseEvent();
@@ -1265,6 +1269,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   if (benchmark_timing) {
     final_image.attr("bvh_build_seconds") = bvh_timing.count ? bvh_timing.seconds : NA_REAL;
     final_image.attr("bvh_build_count") = bvh_timing.count;
+    final_image.attr("trace_seconds") = trace_seconds;
   }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;

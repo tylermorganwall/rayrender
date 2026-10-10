@@ -269,8 +269,8 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
    expect_true(std::abs(a.physical_shading_normal[k]-d.physical_shading_normal[k])<2e-6);
    expect_true(std::abs(a.p[k]-b.p[k])<2e-6);
   }
-  double forward=mat->f(Ray(point3f(0),-wo),a,wi)[0]/wi[2];
-  double reverse=mat->f(Ray(point3f(0),-wi),d,wo)[0]/wo[2];
+  double forward=mat->f(Ray(point3f(0),-wo),a,wi)[0]/dot(a.base_shading_normal,wi);
+  double reverse=mat->f(Ray(point3f(0),-wi),d,wo)[0]/dot(d.base_shading_normal,wo);
   expect_true(std::abs(forward-reverse)<2e-6);
   // Texture storage is owned here, not by bump_texture (same cache lifetime as production).
   // Zero displacement is neutral; a nonzero constant height also changes
@@ -289,6 +289,8 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
   expect_true(tri.hit(Ray(point3f(0,0,1),vec3f(0,0,-1)),0,10,c,&sampler));
   expect_true((b.physical_shading_normal-a.physical_shading_normal).length()>1e-4);
   for(int k=0;k<3;++k) {
+    expect_true(std::abs(b.base_shading_normal[k]-a.base_shading_normal[k])<2e-6);
+    expect_true(std::abs(c.base_shading_normal[k]-a.base_shading_normal[k])<2e-6);
     expect_true(std::abs(b.physical_shading_normal[k]-c.physical_shading_normal[k])<2e-6);
     expect_true(b.bump_normal[k]==b.physical_shading_normal[k]);
   }
@@ -302,7 +304,101 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
    auto mapped=transform(b),other=transform(constant);
    expect_true(std::abs(mapped.physical_shading_normal.length()-1)<2e-6);
    expect_true(std::abs(mapped.geometric_normal.length()-1)<2e-6);
+   const auto expected_base=unit_vector(transform(b.base_shading_normal));
+   expect_true((mapped.base_shading_normal-expected_base).length()<2e-6);
    for(int k=0;k<3;k++)expect_true(mapped.physical_shading_normal[k]==other.physical_shading_normal[k]);
+  }
+ }
+ test_that("smooth diffuse lighting is continuous across differently tilted triangles") {
+  Transform identity;
+  float normals[]={0,0,1, 0,0,1, 0,0,1};
+  float uv[]={0,0,1,0,.5,1}; int indices[]={0,1,2};
+  const vec3f wi=unit_vector(vec3f(.4,.2,1));
+  unsigned char pixels[16];
+  for(int y=0;y<4;++y) for(int x=0;x<4;++x) pixels[y*4+x]=30*x+10*y;
+  auto bump=std::make_shared<bump_texture>(pixels,4,4,1,1);
+  random_gen rng(987); RandomSampler sampler(rng);
+  for(double sigma:{0.,.7}) for(bool bumped:{false,true}) {
+    auto mat=std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.7)),sigma);
+    Float reference_f=0, reference_pdf=0;
+    for(Float tilt:{-.35f,0.f,.35f}) {
+      float positions[]={-2,-2,2*tilt, 2,-2,-2*tilt, 0,2,0};
+      TriangleMesh mesh(positions,indices,normals,uv,3,3,nullptr,bumped?bump:nullptr,mat,
+                        &identity,&identity,false);
+      // The view-dependent repair must not become the base of bump mapping.
+      mesh.has_consistent_normals=true; mesh.alpha_v={.3,.3,.3};
+      triangle tri(&mesh,indices,indices,indices,0,&identity,&identity,false);
+      Ray ray(point3f(0,0,2),vec3f(0,0,-1));
+      hit_record a,b;
+      expect_true(tri.hit(ray,0,10,a,rng));
+      expect_true(tri.hit(ray,0,10,b,&sampler));
+      expect_true((a.base_shading_normal-normal3f(0,0,1)).length()<1e-6);
+      expect_true((a.base_shading_normal-b.base_shading_normal).length()<1e-6);
+      scatter_record scatter;
+      expect_true(mat->scatter(ray,a,scatter,rng));
+      const Float f=mat->f(ray,a,wi)[0], pdf=scatter.pdf_ptr->value(wi,rng);
+      if(tilt<0) { reference_f=f; reference_pdf=pdf; }
+      expect_true(std::abs(f-reference_f)<2e-6);
+      expect_true(std::abs(pdf-reference_pdf)<2e-6);
+      expect_true(std::abs(mat->f(ray,b,wi)[0]-f)<2e-6);
+      if(!bumped && sigma==0) {
+        expect_true(std::abs(f-.7*normalmap::inv_pi*wi[2])<2e-6);
+        expect_true(std::abs(pdf-normalmap::inv_pi*wi[2])<2e-6);
+      }
+    }
+  }
+ }
+ test_that("smooth diffuse clipping preserves energy, reciprocity and sampler null mass") {
+  auto tex=std::make_shared<constant_texture>(point3f(1));
+  for(double sigma:{0.,.8}) for(bool bumped:{false,true}) for(Float side:{-1.f,1.f}) {
+    diffuse_material mat(tex,sigma);
+    auto h=fixture();
+    h.geometric_normal=normal3f(.6,0,.8);
+    h.base_shading_normal=normal3f(0,0,1);
+    h.physical_shading_normal=bumped?h.bump_normal:h.base_shading_normal;
+    h.has_bump=bumped;
+    const vec3f wo(0,0,side);
+    const Ray ray(point3f(0),-wo);
+    random_gen rng(493),other_rng(73); RandomSampler sampler(other_rng);
+    scatter_record a,b;
+    expect_true(mat.scatter(ray,h,a,rng));
+    expect_true(mat.scatter(ray,h,b,&sampler));
+    double energy=0,mass=0,max_reciprocity_error=0;
+    const int nz=128,np=192;
+    const double solid_angle=2/normalmap::inv_pi/(nz*np);
+    for(int z=0;z<nz;++z) for(int p=0;p<np;++p) {
+      const auto v=side*direction((z+.5)/nz,2/normalmap::inv_pi*(p+.5)/np);
+      const vec3f wi(v[0],v[1],v[2]);
+      const double f=mat.f(ray,h,wi)[0];
+      energy+=f*solid_angle;
+      mass+=a.pdf_ptr->value(wi,rng)*solid_angle;
+      const double forward=f/std::abs(wi[2]);
+      const double reverse=mat.f(Ray(point3f(0),-wi),h,wo)[0];
+      max_reciprocity_error=std::max(max_reciprocity_error,std::abs(forward-reverse));
+    }
+    expect_true((energy>=0 && energy<=1.001));
+    expect_true(max_reciprocity_error<2e-5);
+    const int count=40000;
+    double estimate[2]={},nulls[2]={};
+    int invalid=0;
+    for(int i=0;i<count;++i) for(int implementation=0;implementation<2;++implementation) {
+      bool diffuse=false;
+      auto wi=implementation==0?a.pdf_ptr->generate(rng,diffuse):b.pdf_ptr->generate(&sampler,diffuse);
+      if(wi.squared_length()==0) { nulls[implementation]+=1./count; continue; }
+      const Float pdf=implementation==0?a.pdf_ptr->value(wi,rng):b.pdf_ptr->value(wi,&sampler);
+      invalid+=!diffuse || !(pdf>0) || side*dot(h.geometric_normal,wi)<=0;
+      if(pdf>0) estimate[implementation]+=mat.f(ray,h,wi)[0]/pdf/count;
+    }
+    expect_true(invalid==0);
+    for(int i=0;i<2;++i) {
+      expect_true(std::abs(estimate[i]-energy)<.015);
+      expect_true(std::abs(mass+nulls[i]-1)<.015);
+    }
+    // A ray between the geometric and smooth horizons must not switch sides.
+    const Ray wrong_side(point3f(0),vec3f(-1,0,.1));
+    scatter_record rejected;
+    expect_true(!mat.scatter(wrong_side,h,rejected,rng));
+    expect_true(!mat.scatter(wrong_side,h,rejected,&sampler));
   }
  }
  test_that("primitive bump frames match both overloads and survive reflected and animated transforms") {

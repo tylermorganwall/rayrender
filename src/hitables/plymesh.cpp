@@ -141,7 +141,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                  std::shared_ptr<alpha_texture> alpha, std::shared_ptr<bump_texture> bump,
                  Float scale, int subdivision_levels, bool recalculate_normals,
                  bool verbose,
-                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+                 Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng,
                  Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation,
                  bool calculate_consistent_normals) :
   hitable(ObjectToWorld, WorldToObject, mat, reverseOrientation) {
@@ -184,7 +184,10 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
                                              &mesh->texIndices[i], i / 3,
                                              ObjectToWorld, WorldToObject, reverseOrientation));
   }
-  ply_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+  // All triangle geometry/material tables are loaded; these queries only read them.
+  auto mesh_build = bvh_type;
+  mesh_build.parallel_primitive_queries = true;
+  ply_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, 1, true, mesh_build);
   // ply_mesh_bvh->validate_bvh();
   // Transfer ownership to the BVH; retain no empty construction buffer.
   std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);

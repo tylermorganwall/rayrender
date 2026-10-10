@@ -18,7 +18,7 @@ class plymesh : public hitable {
           std::shared_ptr<alpha_texture> alpha, std::shared_ptr<bump_texture> bump,
           Float scale, int subdivision_levels, bool recalculate_normals,
           bool verbose,
-          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng,
+          Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng,
           Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation,
           bool calculate_consistent_normals = false);
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;

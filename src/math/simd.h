@@ -390,10 +390,10 @@ inline IVec4 simd_cast_float_to_int(FVec4 mask) {
     result.v = vreinterpretq_s32_f32(mask.v);
     return result;
 #else
-    // Fallback for non-SIMD
+    // Match SSE/NEON bit reinterpretation, including non-mask float values.
     IVec4 result;
     for (int i = 0; i < 4; ++i) {
-        result.xyzw[i] = (mask.xyzw[i] != 0.0f) ? -1 : 0;
+        std::memcpy(&result.xyzw[i], &mask.xyzw[i], sizeof(result.xyzw[i]));
     }
     return result;
 #endif

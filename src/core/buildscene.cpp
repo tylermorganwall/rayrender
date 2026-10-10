@@ -444,7 +444,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
             std::vector<unsigned char *> &alpha_textures, std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
             std::vector<unsigned char *> &roughness_textures, std::vector<std::shared_ptr<material>> *shared_materials,
             std::vector<std::shared_ptr<alpha_texture>> &alpha, std::vector<std::shared_ptr<bump_texture>> &bump,
-            std::vector<std::shared_ptr<roughness_texture>> &roughness, int bvh_type, TransformCache &transformCache,
+            std::vector<std::shared_ptr<roughness_texture>> &roughness, const BVHBuildOptions& bvh_type, TransformCache &transformCache,
             TextureCache &texCache, hitable_list &imp_sample_objects,
             std::vector<std::shared_ptr<hitable>> &instanced_objects,
             std::vector<std::shared_ptr<hitable_list>> &instance_importance_sampled, std::vector<int> &texture_idx,
@@ -1061,7 +1061,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     }
   }
   std::shared_ptr<BVHAggregate> world_bvh =
-      std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true, Iden, Iden, false);
+      std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true, Iden, Iden, false, bvh_type);
 
 #ifdef FULL_DEBUG
   world_bvh->validate_bvh();

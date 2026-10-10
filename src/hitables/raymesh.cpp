@@ -30,7 +30,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                  TextureCache &texCache, bool recalculate_normals,
                  hitable_list& imp_sample_objects, 
                  bool verbose, 
-                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
+                 Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng,
                  Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(raymesh_list, verbose, 
@@ -88,7 +88,10 @@ raymesh::raymesh(Rcpp::List raymesh_list,
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+    // All triangle geometry/material tables are loaded; these queries only read them.
+    auto mesh_build = bvh_type;
+    mesh_build.parallel_primitive_queries = true;
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, 1, true, mesh_build);
 #ifdef FULL_DEBUG
     tri_mesh_bvh->validate_bvh();
 #endif

@@ -155,8 +155,15 @@
 #' @param parallel Default `TRUE`. If `FALSE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` or `options("Ncpus")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-#' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-#' of equal size.
+#' hierarchy used for scene objects and meshes. `"equal"` uses equal-count splits;
+#' `"hlbvh"` builds Morton-code treelets in parallel on the CPU, then joins them
+#' with SAH. `"metal"` builds those treelets on a Metal GPU, with CPU SAH joining
+#' and layout packing. Metal requires a supported macOS build and available GPU;
+#' otherwise it reports an error (use `"hlbvh"` for the portable CPU path).
+#' HLBVH can reduce construction time at the cost of slower traversal. Ray tracing
+#' remains on the CPU for every method. CPU construction honors `parallel` and
+#' the renderer's core limit. Set `RAYRENDER_DISABLE_METAL=true` when installing
+#' to omit the optional Metal backend. First Metal use includes shader compilation.
 #' @param progress Default `interactive()` if interactive session, `FALSE` otherwise.
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
@@ -869,6 +876,7 @@ HAS_OIDN: %s
   print_time(verbose, "Post-processed image")
   attr(return_array, "bvh_build_seconds") = attr(rgb_mat, "bvh_build_seconds")
   attr(return_array, "bvh_build_count") = attr(rgb_mat, "bvh_build_count")
+  attr(return_array, "trace_seconds") = attr(rgb_mat, "trace_seconds")
 
   return(invisible(return_array))
 }

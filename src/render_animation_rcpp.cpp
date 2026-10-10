@@ -269,7 +269,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int stratified_y = static_cast<int>(stratified_dim(1));
   vec3f preview_light_direction(light_direction(0), light_direction(1), light_direction(2));
   Float preview_exponent = light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
-  int bvh_type = as<int>(camera_info["bvh"]);
+  BVHBuildOptions bvh_type{static_cast<BVHBuildMethod>(as<int>(camera_info["bvh"])),
+                           static_cast<unsigned>(std::max(1, numbercores))};
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);

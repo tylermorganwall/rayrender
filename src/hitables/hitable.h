@@ -68,6 +68,10 @@ struct alignas(16) hit_record {
   }
   normal3f normal; //PBRT: In interaction
   normal3f geometric_normal{0};
+  // View-independent interpolated normal before bump mapping. Mesh smoothing
+  // defines the diffuse base surface, not a perturbation of each flat triangle.
+  // Zero falls back to geometric_normal for primitives without smooth normals.
+  normal3f base_shading_normal{0};
   // Raw smooth (and, when present, corrected bump) input before ray-dependent
   // triangle repairs. Zero means an analytic primitive: use its normal/bump.
   normal3f physical_shading_normal{0};

@@ -13,9 +13,12 @@ C_OBJECTS=$(C_SOURCES:.c=.o)
 CPP_SOURCES=@DIR_SOURCES@ @SUBDIR_SOURCES@ @EXT_CPP_SOURCES@
 CPP_OBJECTS=$(CPP_SOURCES:.cpp=.o)
 
-OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS)
+OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS) @METAL_OBJECTS@
 
 $(SHLIB): $(OBJECTS)
+
+core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
+	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
 # Make the shared object
 all: $(SHLIB)

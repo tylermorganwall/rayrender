@@ -713,6 +713,8 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.texture_object_normal = r.texture_object_normal;
   hr.normal = (*this)(r.normal);
   hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
+  hr.base_shading_normal = r.base_shading_normal.squared_length() > 0
+      ? unit_vector((*this)(r.base_shading_normal)) : normal3f(0);
   hr.physical_shading_normal = r.physical_shading_normal.squared_length() > 0
       ? (*this)(r.physical_shading_normal) : normal3f(0);
   hr.medium_boundary = r.medium_boundary;

@@ -155,8 +155,9 @@ to control the intensity of the bloom (higher number = more bloom).}
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-of equal size.}
+hierarchy. Options are `"sah"`, `"equal"`, `"hlbvh"` (parallel CPU construction)
+and `"metal"` (Metal GPU construction, CPU traversal). See [render_scene()] for
+availability, construction/traversal tradeoffs, and core-limit behavior.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
 the scene. Supports EXR, HDR, PNG, and JPEG images. Scene lights added with

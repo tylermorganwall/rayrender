@@ -17,7 +17,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                  int subdivision_levels, std::string displacement_texture, Float displacement,
                  bool displacement_vector, TextureCache& texCache, bool recalculate_normals,
                  hitable_list& imp_sample_objects, 
-                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
+                 Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng, bool verbose,
                  Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
@@ -73,7 +73,10 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, bvh_type, true);
+    // All triangle geometry/material tables are loaded; these queries only read them.
+    auto mesh_build = bvh_type;
+    mesh_build.parallel_primitive_queries = true;
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, 1, true, mesh_build);
     // Transfer ownership to the BVH; retain no empty construction buffer.
     std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
   } else {
