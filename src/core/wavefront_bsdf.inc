@@ -22,13 +22,6 @@ R"MSL(
     float3 y = normalize(cross(n, abs(n.x) > .9999999f ? float3(0, 1, 0) : float3(1, 0, 0)));
     return {cross(y, n), y, n};
   }
-  float3 surface_tangent(Triangle t) {
-    float2 a = t.uv01.zw - t.uv01.xy, b = t.uv2.xy - t.uv01.xy;
-    float det = a.x * b.y - a.y * b.x;
-    return abs(det) > 1e-12f
-               ? (b.y * (t.p[1].xyz - t.p[0].xyz) - a.y * (t.p[2].xyz - t.p[0].xyz)) / det
-               : normal_frame(t.geometric.xyz).x;
-  }
   float3 conductor_fresnel(float cosine, float3 eta, float3 k) {
     float3 q = eta * eta + k * k, twice = 2 * eta * cosine;
     float c2 = cosine * cosine;

@@ -1,18 +1,16 @@
 #include "../hitables/curve.h"
 #include "../hitables/cylinder.h"
 #include "../hitables/disk.h"
-#include "../hitables/ellipsoid.h"
-#include "../hitables/sphere.h"
 #include "wavefront.h"
 #include <array>
 #include <cmath>
 #include <stdexcept>
 
 namespace {
-// Same regular UV-sphere/lathe construction idiom as rayvertex's primitives,
+// Regular lathe construction, as in rayvertex's cylindrical primitives,
 // generated directly into the GPU snapshot to avoid an R round trip per shape.
 // 128 azimuth segments bound radial chord error by 1-cos(pi/128) (~0.03%).
-constexpr int radial_segments = 128, latitude_segments = 64;
+constexpr int radial_segments = 128;
 struct Vertex {
   point3f p;
   normal3f n;
@@ -54,28 +52,6 @@ public:
     Triangle(a, c, d, smooth);
   }
 };
-
-void Sphere(Tessellator &out, vec3f axes, bool ellipsoid_uv) {
-  auto vertex = [&](int row, int col) {
-    double theta = M_PI * row / latitude_segments;
-    double phi = M_PI - 2 * M_PI * (col % radial_segments) / radial_segments;
-    double s = row == 0 || row == latitude_segments ? 0 : std::sin(theta);
-    vec3f unit(s * std::cos(phi), std::cos(theta), s * std::sin(phi));
-    normal3f normal = unit_vector(convert_to_normal3(unit / axes));
-    point2f uv(Float(col) / radial_segments, Float(1) - Float(row) / latitude_segments);
-    if (ellipsoid_uv) {
-      // Native ellipsoids map the inverse-axis normal, not the unscaled position.
-      uv.xy.y = .5 + std::asin(std::clamp(double(normal[1]), -1.0, 1.0)) / M_PI;
-      if (row != 0 && row != latitude_segments && col != radial_segments)
-        uv.xy.x = 1 - (std::atan2(double(normal[2]), double(normal[0])) + M_PI) / (2 * M_PI);
-    }
-    return Vertex{point3f(unit * axes), normal, uv};
-  };
-  out.triangles.reserve(2 * radial_segments * (latitude_segments - 1));
-  for (int y = 0; y < latitude_segments; ++y)
-    for (int x = 0; x < radial_segments; ++x)
-      out.Quad(vertex(y, x), vertex(y + 1, x), vertex(y + 1, x + 1), vertex(y, x + 1));
-}
 
 void Disk(Tessellator &out, Float radius, Float inner, Float y, Float normal_sign) {
   auto vertex = [&](int i, Float r) {
@@ -185,21 +161,9 @@ std::vector<WFTriangle> TriangulateWavefrontPrimitive(const hitable &shape,
   if (!shape.ObjectToWorld)
     return {};
   Tessellator out(shape, placement);
-  auto check = [](const auto &s) {
-    if (s.alpha_mask || s.bump_tex)
-      throw std::runtime_error("analytic primitive alpha or bump mapping");
-  };
-  if (auto *s = dynamic_cast<const sphere *>(&shape)) {
-    check(*s);
-    Sphere(out, vec3f(s->radius), false);
-  } else if (auto *s = dynamic_cast<const ellipsoid *>(&shape)) {
-    check(*s);
-    Sphere(out, s->axes, true);
-  } else if (auto *s = dynamic_cast<const disk *>(&shape)) {
-    check(*s);
+  if (auto *s = dynamic_cast<const disk *>(&shape)) {
     Disk(out, s->radius, s->inner_radius, 0, 1);
   } else if (auto *s = dynamic_cast<const cylinder *>(&shape)) {
-    check(*s);
     // Split exactly at the UV seam phi=pi as well as clipped angular endpoints.
     std::vector<double> angles{s->phi_min, s->phi_max};
     for (int i = 0; i <= radial_segments; ++i) {

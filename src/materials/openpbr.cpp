@@ -171,8 +171,6 @@ Float OpenPBRMaterial::EmissionEstimate() const {
 }
 
 OpenPBRWavefrontTextures OpenPBRMaterial::ExportWavefront(std::vector<WFVector> &parameters) const {
-  if (impl->roughness_graph)
-    throw std::runtime_error("composable OpenPBR roughness texture");
   const auto &p = impl->parameters;
 #define WF_SCALAR(name) parameters.push_back({float(p.name), 0, 0, 0});
 #define WF_COLOR(name) parameters.push_back({p.name.x, p.name.y, p.name.z, 0});
@@ -181,7 +179,7 @@ OpenPBRWavefrontTextures OpenPBRMaterial::ExportWavefront(std::vector<WFVector> 
 #undef WF_COLOR
   for (const auto &v : {impl->normal, impl->tangent, impl->coat_normal, impl->coat_tangent})
     parameters.push_back({v.x, v.y, v.z, 0});
-  return {impl->base.get(), impl->has_roughness ? impl->roughness.get() : nullptr, impl->texture_repeat};
+  return {impl->base.get(), impl->has_roughness ? impl->roughness.get() : nullptr, impl->texture_repeat, impl->roughness_graph.get()};
 }
 
 OpenPBRInteraction OpenPBRMaterial::Prepare(const Ray& ray, const hit_record& h, Float exterior_ior) const {

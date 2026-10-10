@@ -569,7 +569,10 @@ bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sr
   
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec);
-  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+  // Sampling and evaluation must use the same bump frame; otherwise the
+  // declared PDF loses directions supported by the evaluated glossy lobe.
+  srec.pdf_ptr = new glossy_pdf(hrec.has_bump ? hrec.bump_normal : hrec.normal,
+                              r_in.direction(), distribution, hrec.u, hrec.v);
     static_cast<glossy_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   return(true);
 }
@@ -580,7 +583,8 @@ bool glossy::scatter(const Ray& r_in, const hit_record& hrec, scatter_record& sr
   
   srec.is_specular = false;
   srec.attenuation = albedo->value(hrec);
-  srec.pdf_ptr = new glossy_pdf(hrec.normal, r_in.direction(), distribution, hrec.u, hrec.v);
+  srec.pdf_ptr = new glossy_pdf(hrec.has_bump ? hrec.bump_normal : hrec.normal,
+                              r_in.direction(), distribution, hrec.u, hrec.v);
     static_cast<glossy_pdf*>(srec.pdf_ptr)->alphas = distribution->Resolve(hrec);
   return(true);
 }

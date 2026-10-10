@@ -25,6 +25,10 @@ TextureEvalContext TextureEvalContext::FromHit(const hit_record& h) {
   return result;
 }
 
+TextureNodeDescription TextureNode::Describe() const {
+  throw std::runtime_error("Ptex or unsupported texture graph node");
+}
+
 namespace {
 using Node = std::shared_ptr<const TextureNode>;
 
@@ -45,7 +49,12 @@ struct Mapping {
     if (!std::isfinite(angle)) Rcpp::stop("Nonfinite texture rotation.");
     sine = std::sin(angle); cosine = std::cos(angle);
   }
-  point3f Map(const TextureEvalContext& h) const {
+void Describe(TextureNodeDescription& out) const {
+  out.space = space == "uv" ? 0 : space == "object" ? 1 : 2;
+  out.scale = scale; out.offset = offset; out.sine = sine; out.cosine = cosine;
+}
+point3f Map(const TextureEvalContext& h) const {
+
     point3f p = space == "uv" ? point3f(h.u, h.v, 0) : space == "world" ? h.p : h.object_p;
     p = p * scale;
     return point3f(cosine*p[0] - sine*p[1], sine*p[0] + cosine*p[1], p[2]) + offset;
@@ -56,6 +65,12 @@ class Constant final : public TextureNode {
   point3f value;
 public:
   Constant(bool scalar, point3f value) : TextureNode(scalar), value(value) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Constant;
+    out.value = value;
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext&) const override { return value; }
 };
 
@@ -95,6 +110,14 @@ class Mix final : public TextureNode {
   Node a, b, weight;
 public:
   Mix(Node a, Node b, Node weight) : TextureNode(a->scalar && b->scalar), a(a), b(b), weight(weight) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Mix;
+    out.children[0] = a.get();
+    out.children[1] = b.get();
+    out.children[2] = weight.get();
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override {
     Float w = std::clamp(weight->Evaluate(h)[0], Float(0), Float(1));
     if (w == 0) return a->Evaluate(h);
@@ -108,6 +131,14 @@ class Direction final : public TextureNode {
   bool absolute, object;
 public:
   Direction(normal3f direction, bool absolute, bool object) : TextureNode(true), direction(unit_vector(direction)), absolute(absolute), object(object) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Direction;
+    out.value = point3f(direction[0], direction[1], direction[2]);
+    out.flag = absolute;
+    out.space = object ? 1 : 2;
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override {
     normal3f n = object ? h.object_normal : h.geometric_normal;
     Float weight = n.squared_length() > 0 ? dot(unit_vector(n), direction) : 0;
@@ -119,6 +150,13 @@ class ScaledTexture final : public TextureNode {
   Node child, factor;
 public:
   ScaledTexture(Node child, Node factor) : TextureNode(child->scalar), child(child), factor(factor) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Scale;
+    out.children[0] = child.get();
+    out.children[1] = factor.get();
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override { return child->Evaluate(h) * factor->Evaluate(h)[0]; }
 };
 
@@ -127,6 +165,13 @@ class Channel final : public TextureNode {
   int channel;
 public:
   Channel(Node child, int channel) : TextureNode(true), child(child), channel(channel) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Channel;
+    out.children[0] = child.get();
+    out.argument = channel;
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override {
     point3f c = child->Evaluate(h);
     return point3f(channel < 3 ? c[channel] : channel == 3 ? (c[0]+c[1]+c[2])/3 : .2126f*c[0]+.7152f*c[1]+.0722f*c[2]);
@@ -139,6 +184,13 @@ class Power final : public TextureNode {
   Float exponent;
 public:
   Power(Node child, Float exponent) : TextureNode(true), child(child), exponent(exponent) {}
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation = TextureNodeDescription::Power;
+    out.children[0] = child.get();
+    out.value = point3f(exponent);
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override {
     return point3f(std::pow(std::max(Float(0), child->Evaluate(h)[0]), exponent));
   }
@@ -188,6 +240,18 @@ public:
       if (octaves < 1 || octaves > 16) Rcpp::stop("Invalid noise octave count.");
     }
   }
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    mapping.Describe(out);
+    out.operation = op == "checker"    ? TextureNodeDescription::Checker
+                    : op == "gradient" ? TextureNodeDescription::Gradient
+                                       : TextureNodeDescription::Noise;
+    out.children[0] = a.get();
+    out.children[1] = b.get();
+    out.argument = op == "noise" ? octaves : axis;
+    out.seed = seed;
+    return out;
+  }
   point3f Evaluate(const TextureEvalContext& h) const override {
     point3f p = mapping.Map(h);
     if (op == "gradient") return point3f(std::clamp(p[axis], Float(0), Float(1)));
@@ -216,6 +280,14 @@ public:
     repeat = wrap == "repeat";
     image = cache.LookupGraphImage(file, encoding);
     width = image->width; height = image->height;
+  }
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    mapping.Describe(out);
+    out.operation = TextureNodeDescription::Image;
+    out.image = image;
+    out.flag = repeat;
+    return out;
   }
   point3f Evaluate(const TextureEvalContext& h) const override {
     point3f p = mapping.Map(h);

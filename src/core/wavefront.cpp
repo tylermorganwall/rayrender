@@ -1,20 +1,27 @@
 #include "wavefront.h"
 #include "../hitables/box.h"
+#include "../hitables/cylinder.h"
+#include "../hitables/disk.h"
+#include "../hitables/ellipsoid.h"
 #include "../hitables/infinite_area_light.h"
 #include "../hitables/instance.h"
 #include "../hitables/mesh3d.h"
 #include "../hitables/plymesh.h"
 #include "../hitables/raymesh.h"
 #include "../hitables/rectangle.h"
+#include "../hitables/sphere.h"
 #include "../hitables/triangle.h"
 #include "../hitables/trimesh.h"
 #include "../materials/openpbr.h"
+#include "../materials/texturegraph.h"
 #include "../volumes/boundary.h"
 #include "../volumes/subsurface.h"
 #include "adaptivesampler.h"
 #include "bvh.h"
 #include "camera.h"
 #include <chrono>
+#include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <unordered_map>
 
@@ -34,8 +41,6 @@ public:
     if (const auto *tri = dynamic_cast<const triangle *>(&object)) {
       const auto &mesh = *tri->mesh;
       int material_id = mesh.face_material_id[tri->face_number];
-      if (mesh.alpha_textures[material_id] || mesh.bump_textures[material_id])
-        throw std::runtime_error("mesh alpha or bump mapping");
       WFTriangle output;
       // TriangleMesh has already applied its object transform. Instances are
       // the only transforms still outstanding; normals use inverse transpose.
@@ -64,13 +69,23 @@ public:
       point2f uv[3];
       tri->GetUVs(uv);
       if (mesh.has_vertex_colors) {
+        // Native vertex colors use barycentrics for lookup, but geometric
+        // derivatives still use the mesh's original UV chart.
+        output.flags |= 16;
+        for (int k = 0; k < 3; ++k) {
+          output.p[k].w = uv[k][0];
+          output.n[k].w = uv[k][1];
+        }
         uv[0] = point2f(1, 0);
         uv[1] = point2f(0, 1);
         uv[2] = point2f(0, 0);
       }
       output.uv01 = {float(uv[0][0]), float(uv[0][1]), float(uv[1][0]), float(uv[1][1])};
       output.uv2 = {float(uv[2][0]), float(uv[2][1]), 0, 0};
+      if (smooth)
+        output.flags |= 8;
       output.material = Material(mesh.mesh_materials[material_id].get());
+      SetSurface(output, MeshSurface(*tri, material_id, placement));
       AddTriangle(output);
     } else if (const auto *body = dynamic_cast<const MediumBoundary *>(&object)) {
       const Medium *medium = body->medium.get();
@@ -106,7 +121,10 @@ public:
       for (const auto &child : bvh->primitives)
         Geometry(*child, placement);
     } else if (const auto *inst = dynamic_cast<const instance *>(&object)) {
+      const auto previous_placement = current_placement;
+      current_placement = ++next_placement;
       Geometry(*inst->original_scene, placement * *inst->ObjectToWorld);
+      current_placement = previous_placement;
     } else if (const auto *mesh = dynamic_cast<const mesh3d *>(&object)) {
       ReserveTriangles(mesh->mesh->nTriangles);
       Geometry(*mesh->mesh_bvh, placement);
@@ -130,6 +148,10 @@ public:
     } else if (const auto *rect = dynamic_cast<const yz_rect *>(&object)) {
       Rectangle(*rect, placement, {rect->k, rect->y0, rect->z0}, {rect->k, rect->y1, rect->z0},
                 {rect->k, rect->y1, rect->z1}, {rect->k, rect->y0, rect->z1}, {1, 0, 0});
+    } else if (const auto *s = dynamic_cast<const sphere *>(&object)) {
+      Quadric(object, placement, vec3f(s->radius), s->alpha_mask.get(), s->bump_tex.get(), 1);
+    } else if (const auto *s = dynamic_cast<const ellipsoid *>(&object)) {
+      Quadric(object, placement, s->axes, s->alpha_mask.get(), s->bump_tex.get(), 2);
     } else if (const auto *light = dynamic_cast<const InfiniteAreaLight *>(&object)) {
       if (light->light)
         Infinite(*light->light);
@@ -148,9 +170,21 @@ public:
       if (triangles.empty())
         throw std::runtime_error("geometry '" + object.GetName() + "'");
       uint32_t material = Material(object.mat_ptr.get());
+      const alpha_texture *alpha = nullptr;
+      const bump_texture *bump = nullptr;
+      WFVector axes;
+      if (const auto *s = dynamic_cast<const cylinder *>(&object)) {
+        alpha = s->alpha_mask.get();
+        bump = s->bump_tex.get();
+      } else if (const auto *s = dynamic_cast<const disk *>(&object)) {
+        alpha = s->alpha_mask.get();
+        bump = s->bump_tex.get();
+      }
+      uint32_t surface = Surface(placement * *object.ObjectToWorld, alpha, bump, axes, placement);
       ReserveTriangles(triangles.size());
       for (auto &tri : triangles) {
         tri.material = material;
+        SetSurface(tri, surface);
         AddTriangle(tri);
       }
       ++tessellated_primitives;
@@ -249,7 +283,11 @@ private:
     if (found != textures.end())
       return found->second;
     WFTexture out;
-    if (const auto *t = dynamic_cast<const constant_texture *>(input)) {
+    if (const auto *t = dynamic_cast<const graph_texture *>(input)) {
+      uint32_t id = Graph(t->Root());
+      textures[input] = id;
+      return id;
+    } else if (const auto *t = dynamic_cast<const constant_texture *>(input)) {
       out.a = Pack(t->color);
     } else if (const auto *t = dynamic_cast<const checker_texture *>(input)) {
       auto *even = dynamic_cast<const constant_texture *>(t->even.get());
@@ -302,11 +340,15 @@ private:
       }
     } else
       throw std::runtime_error("procedural or composable texture");
+    if (out.type == 2 || out.type == 3 || out.type == 5)
+      scene.texture_features |= 2;
     uint32_t id = scene.textures.size();
     scene.textures.push_back(out);
     textures[input] = id;
     return id;
   }
+
+#include "wavefront_texture_export.inc"
 
   uint32_t Roughness(const roughness_texture &input, bool alpha, point2f repeat = point2f(1, 1)) {
     WFTexture out;
@@ -332,8 +374,6 @@ private:
   }
 
   void Distribution(const MicrofacetDistribution *input, WFMaterial &out) {
-    if (input->roughness_graph || input->roughness_graph_v)
-      throw std::runtime_error("composable roughness texture");
     const roughness_texture *image = nullptr;
     if (const auto *ggx = dynamic_cast<const TrowbridgeReitzDistribution *>(input)) {
       out.distribution = 0;
@@ -345,6 +385,15 @@ private:
       throw std::runtime_error("unrecognized microfacet distribution");
     if (image)
       out.second_texture = Roughness(*image, true);
+    if (input->roughness_graph) {
+      WFTexture map;
+      map.type = 9;
+      map.offset = Graph(*input->roughness_graph);
+      map.width = input->roughness_graph_v ? Graph(*input->roughness_graph_v) : map.offset;
+      map.height = input->graph_is_alpha;
+      out.second_texture = scene.textures.size();
+      scene.textures.push_back(map);
+    }
     const auto alphas = input->GetAlphas(0, 0);
     out.parameters.x = alphas[0];
     out.parameters.y = alphas[1];
@@ -371,6 +420,8 @@ private:
       out.data = scene.material_data.size();
       auto maps = pbr->ExportWavefront(scene.material_data);
       out.texture = Texture(maps.base);
+      if (maps.roughness_graph)
+        out.second_texture = Graph(*maps.roughness_graph);
       if (maps.roughness)
         out.second_texture = Roughness(*maps.roughness, false, maps.repeat);
       out.dielectric = pbr->is_dielectric();
@@ -431,9 +482,78 @@ private:
     return id;
   }
 
+  void Quadric(const hitable &object, const Transform &placement, vec3f axes,
+               const alpha_texture *alpha, const bump_texture *bump, float chart) {
+    if (scene.quadrics.size() >= 0x7ffffffdu)
+      throw std::runtime_error("Metal analytic primitive capacity exceeded");
+    WFQuadric out;
+    out.material = Material(object.mat_ptr.get());
+    out.boundary = current_boundary;
+    const Transform object_transform = placement * *object.ObjectToWorld;
+    const Transform unit_transform = object_transform * Scale(axes[0], axes[1], axes[2]);
+    const auto &forward = unit_transform.GetMatrix();
+    const auto &inverse = unit_transform.GetInverseMatrix();
+    auto mapping = Pack(axes);
+    mapping.w = chart;
+    out.surface = Surface(object_transform, alpha, bump, mapping, placement);
+    out.measure.y = (object.reverseOrientation ^ object.transformSwapsHandedness) ? -1 : 1;
+    out.measure.w = out.measure.y * (current_boundary ? boundary_orientation : 1);
+    WFVector lo, hi;
+    for (int k = 0; k < 3; ++k) {
+      out.forward[k] = {float(forward.m[k][0]), float(forward.m[k][1]), float(forward.m[k][2]),
+                        float(forward.m[k][3])};
+      out.inverse[k] = {float(inverse.m[k][0]), float(inverse.m[k][1]), float(inverse.m[k][2]),
+                        float(inverse.m[k][3])};
+      // An affine image of the unit ball has axis extent equal to the row norm.
+      // Forward and inverse matrices round independently when uploaded. Pad for
+      // float arithmetic before rounding outward so grazing roots remain inside.
+      const auto &row = out.forward[k];
+      double extent =
+          std::sqrt(double(row.x) * row.x + double(row.y) * row.y + double(row.z) * row.z);
+      double padding = 8 * std::numeric_limits<float>::epsilon() * (std::abs(row.w) + extent);
+      (&lo.x)[k] = std::nextafter(float(double(row.w) - extent - padding), -INFINITY);
+      (&hi.x)[k] = std::nextafter(float(double(row.w) + extent + padding), INFINITY);
+    }
+    vec3f a(forward.m[0][0], forward.m[1][0], forward.m[2][0]);
+    vec3f b(forward.m[0][1], forward.m[1][1], forward.m[2][1]);
+    vec3f c(forward.m[0][2], forward.m[1][2], forward.m[2][2]);
+    out.measure.x = std::abs(dot(a, cross(b, c)));
+    double radius2 = a.squared_length(), tolerance = 1e-6 * radius2;
+    if (std::abs(b.squared_length() - radius2) <= tolerance &&
+        std::abs(c.squared_length() - radius2) <= tolerance && std::abs(dot(a, b)) <= tolerance &&
+        std::abs(dot(a, c)) <= tolerance && std::abs(dot(b, c)) <= tolerance)
+      out.measure.z = std::sqrt(radius2);
+    if (!(out.measure.x > 0) || !std::isfinite(out.measure.x))
+      throw std::runtime_error("singular or unrepresentable analytic transform");
+    if (current_boundary) {
+      auto &body = scene.boundaries[current_boundary];
+      if (body.material != out.material)
+        throw std::runtime_error("mixed materials on a dielectric/SSS boundary");
+      for (int k = 0; k < 3; ++k) {
+        (&scene.boundary_lo.x)[k] = std::min((&scene.boundary_lo.x)[k], (&lo.x)[k]);
+        (&scene.boundary_hi.x)[k] = std::max((&scene.boundary_hi.x)[k], (&hi.x)[k]);
+        (&body.lo.x)[k] = std::min((&body.lo.x)[k], (&lo.x)[k]);
+        (&body.hi.x)[k] = std::max((&body.hi.x)[k], (&hi.x)[k]);
+      }
+    } else if (scene.materials[out.material].dielectric)
+      throw std::runtime_error("open dielectric surface (a closed boundary is required on Metal)");
+    if (scene.materials[out.material].emissive) {
+      WFLight light;
+      light.type = 3;
+      light.primitive = 0x80000000u | uint32_t(scene.quadrics.size());
+      out.light = scene.lights.size();
+      scene.lights.push_back(light);
+      scene.light_sources.push_back(nullptr);
+    }
+    scene.quadrics.push_back(out);
+    scene.quadric_bounds.push_back(lo);
+    scene.quadric_bounds.push_back(hi);
+  }
+
   void AddTriangle(WFTriangle out) {
-    if (scene.triangles.size() >= UINT32_MAX)
-      throw std::runtime_error("more than 2^32 triangles");
+    // The high primitive bit distinguishes analytic shapes in GPU hit queues.
+    if (scene.triangles.size() >= 0x80000000u)
+      throw std::runtime_error("Metal triangle capacity exceeded");
     out.boundary = current_boundary;
     if (current_boundary) {
       auto &body = scene.boundaries[current_boundary];
@@ -464,7 +584,7 @@ private:
     if (scene.materials[out.material].emissive) {
       WFLight light;
       light.type = 3;
-      light.triangle = scene.triangles.size();
+      light.primitive = scene.triangles.size();
       out.light = scene.lights.size();
       scene.lights.push_back(light);
       scene.light_sources.push_back(nullptr);
@@ -475,9 +595,9 @@ private:
   template <class Rect>
   void Rectangle(const Rect &rect, const Transform &placement, point3f a, point3f b, point3f c,
                  point3f d, normal3f normal) {
-    if (rect.alpha_mask || rect.bump_tex)
-      throw std::runtime_error("rectangle alpha or bump mapping");
     Transform transform = placement * *rect.ObjectToWorld;
+    uint32_t surface =
+        Surface(transform, rect.alpha_mask.get(), rect.bump_tex.get(), {}, placement);
     normal = unit_vector(transform(normal * (rect.reverseOrientation ? -1 : 1)));
     point3f points[4] = {a, b, c, d};
     int indices[6] = {0, 1, 2, 0, 2, 3};
@@ -498,6 +618,7 @@ private:
       }
       out.uv01 = {float(tex[0][0]), float(tex[0][1]), float(tex[1][0]), float(tex[1][1])};
       out.uv2 = {float(tex[2][0]), float(tex[2][1]), 0, 0};
+      SetSurface(out, surface);
       AddTriangle(out);
     }
   }
@@ -563,18 +684,23 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
       for (size_t i = 0; i < unordered_lights.size(); ++i)
         if ((unordered_lights[i].type < 2) == infinite) {
           const auto &light = unordered_lights[i];
-          if (light.type == 3)
-            scene.triangles[light.triangle].light = scene.lights.size();
+          if (light.type == 3) {
+            if (light.primitive & 0x80000000u)
+              scene.quadrics[light.primitive & 0x7fffffffu].light = scene.lights.size();
+            else
+              scene.triangles[light.primitive].light = scene.lights.size();
+          }
           scene.lights.push_back(light);
           scene.light_sources.push_back(unordered_sources[i]);
           scene.environments += infinite;
         }
     WavefrontSceneCompiler::RefreshLights(scene);
-    if (scene.triangles.empty())
-      throw std::runtime_error("scene without triangles");
+    if (scene.triangles.empty() && scene.quadrics.empty())
+      throw std::runtime_error("scene without renderable geometry");
     auto session = MakeMetalWavefront(scene, capacity);
     report.used = true;
     report.triangles = scene.triangles.size();
+    report.analytic_primitives = scene.quadrics.size();
     report.tessellated_primitives = compiler.tessellated_primitives;
     report.upload_seconds = std::chrono::duration<double>(Clock::now() - started).count();
     return session;
@@ -629,6 +755,7 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
       for (int y = block.starty; y < block.endy; ++y)
         active.push_back(y + film.ny * x);
   p.active = active.size();
+  p.camera.up.w = std::max(.125f, float(1 / std::sqrt(double(film.ns))));
   const WFPixel *pixels = nullptr;
   size_t previous_discarded = report.discarded_paths;
   if (!session.Render(p, active, scene.lights, cancelled, pixels, report))

@@ -20,7 +20,9 @@ $(SHLIB): $(OBJECTS)
 core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
-core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc
+core/wavefront.o: core/wavefront_texture_export.inc
+
+core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
 # Make the shared object

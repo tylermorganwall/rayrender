@@ -20,6 +20,7 @@ struct OpenPBRWavefrontTextures {
   const texture *base;
   const roughness_texture *roughness;
   point2f repeat;
+  const TextureNode *roughness_graph;
 };
 
 class OpenPBRInteraction {

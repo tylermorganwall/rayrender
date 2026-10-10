@@ -1,9 +1,12 @@
 R"MSL(
+
   // Specialize away all interior state/traversal for scenes without boundaries.
   // This is a pipeline constant, not a per-ray material branch.
   constant bool scene_has_boundaries [[function_constant(0)]];
-#include <metal_stdlib>
+  constant uint texture_features [[function_constant(1)]];
+  constant bool scene_has_quadrics [[function_constant(2)]];
 #include <metal_raytracing>
+#include <metal_stdlib>
   using namespace metal;
   using namespace raytracing;
   constant float pi = 3.14159265358979323846f;
@@ -33,7 +36,7 @@ R"MSL(
   };
   struct Light {
     float4 forward, right, up, color;
-    uint type, texture, triangle, flags;
+    uint type, texture, primitive, flags;
   };
   struct Camera {
     float4 origin, lower_left, horizontal, vertical, right, up, forward;
@@ -48,6 +51,9 @@ R"MSL(
   struct Pixel {
     float4 radiance, normal, albedo;
   };
+  struct Differential {
+    float4 ox, oy, dx, dy;
+  };
   struct Path {
     // origin.w stores the last surface primitive plus one as uint bits. A ray
     // leaving a planar triangle cannot physically hit that same triangle again
@@ -57,10 +63,10 @@ R"MSL(
     uint dimension, depth, internal, flags;
   };
   struct Hit {
-    uint pixel, triangle;
+    uint pixel, primitive;
     float u, v;
-    float distance;
-    uint padding[3];
+    float distance, w;
+    uint padding[2];
   };
   struct Shadow {
     float4 origin, direction, contribution;
@@ -119,52 +125,11 @@ R"MSL(
     return min(float(owen(value, seed ^ (dim + (seed << 6) + (seed >> 2)))) * 0x1p-32f,
                0x1.fffffep-1f);
   }
-  float wrap(float v) {
-    float w = v - floor(v);
-    return w == 0 && v > 0 ? 1 : w;
-  }
-  float3 texture_value(uint id, float2 uv, float3 position, device const Texture *textures,
-                       device const float4 *texels) {
-    Texture t = textures[id];
-    if (t.type == 0)
-      return t.a.xyz;
-    if (t.type == 1) {
-      float3 s = sin(pi * position / t.a.w);
-      s = select(s, float3(1), s == 0);
-      return s.x * s.y * s.z < 0 ? t.b.xyz : t.a.xyz;
-    }
-    if (t.type == 2 || t.type == 3)
-      return mix(t.a.xyz, t.b.xyz, t.type == 2 ? uv.x : uv.y);
-    if (t.type == 4)
-      return uv.x * t.a.xyz + uv.y * t.b.xyz + (1 - uv.x - uv.y) * t.c.xyz;
-    if (t.type == 7) {
-      uv = uv * t.mapping.xy + t.mapping.zw;
-      uint x = min(uint(wrap(uv.x) * t.width), t.width - 1);
-      uint y = min(uint((1 - wrap(uv.y)) * t.height), t.height - 1);
-      return texels[t.offset + y * t.width + x].xyz;
-    }
-    float2 coord;
-    int x0, x1, y0, y1;
-    if (t.type == 6) {
-      coord = float2(fract(uv.x) * t.width - .5f,
-                     clamp((1 - uv.y) * t.height - .5f, 0.f, float(t.height - 1)));
-      x0 = (int(floor(coord.x)) + int(t.width)) % t.width;
-      x1 = (x0 + 1) % t.width;
-    } else {
-      uv = uv * t.mapping.xy + t.mapping.zw;
-      coord = float2(wrap(uv.x) * (t.width - 1), (1 - wrap(uv.y)) * (t.height - 1));
-      x0 = int(floor(coord.x));
-      x1 = min(x0 + 1, int(t.width) - 1);
-    }
-    y0 = int(floor(coord.y));
-    y1 = min(y0 + 1, int(t.height) - 1);
-    float2 w = fract(coord);
-    return mix(mix(texels[t.offset + y0 * t.width + x0].xyz,
-                   texels[t.offset + y0 * t.width + x1].xyz, w.x),
-               mix(texels[t.offset + y1 * t.width + x0].xyz,
-                   texels[t.offset + y1 * t.width + x1].xyz, w.x),
-               w.y);
-  }
+
+)MSL"
+#include "wavefront_textures.inc"
+R"MSL(
+
   float mis(float a, float b) {
     float ratio = b / a;
     // Native NEE uses the balance heuristic. Keep the same estimator policy
@@ -224,6 +189,11 @@ R"MSL(
     float3 extent = abs(t.p[1].xyz - t.p[0].xyz) + abs(t.p[2].xyz - t.p[0].xyz);
     error += 3 * FLT_EPSILON * max(extent.x, max(extent.y, extent.z));
   }
+
+)MSL"
+#include "wavefront_intersections.inc"
+R"MSL(
+
   float3 environment(Light l, float3 wi, float3 position, device const Texture *textures,
                      device const float4 *texels) {
     if (l.type == 0) {
@@ -366,19 +336,13 @@ R"MSL(
     return weight > 0 && pdf > 0;
   }
 
-  [[intersection(triangle, triangle_data)]]
-  bool containment_face(uint primitive [[primitive_id]], ray_data uint &body [[payload]],
-                        device const Triangle *triangles [[buffer(0)]]) {
-    return triangles[primitive].boundary == body;
-  }
-
   // Classify the camera origin by replaying all boundary crossings from outside
   // their aggregate bounds. This also works after interactively moving inside a
   // solid. No per-pixel CPU ray query or per-body scan is needed.
   bool initial_membership(float3 origin, thread VolumeState &state, constant Params &p,
-                          device const Triangle *triangles, device const Boundary *boundaries,
-                          primitive_acceleration_structure scene,
-                          intersection_function_table<triangle_data> containment) {
+                          device const Triangle *triangles, device const Quadric *quadrics,
+                          device const Surface *surfaces, device const Boundary *boundaries,
+                          GeometryScene scene) {
     state.count = 0;
     if (!scene_has_boundaries || any(origin < p.boundary_lo.xyz) || any(origin > p.boundary_hi.xyz))
       return true;
@@ -388,9 +352,6 @@ R"MSL(
       // Query each containing bound independently: closest-hit replay cannot
       // see both members of an exactly coincident pair. The first outward
       // crossing of a closed, oriented body is an exit iff this point is inside.
-      intersector<triangle_data> query;
-      query.assume_geometry_type(geometry_type::triangle);
-      query.force_opacity(forced_opacity::non_opaque);
       ray probe;
       probe.origin = origin;
       probe.direction = direction;
@@ -402,9 +363,11 @@ R"MSL(
         if (any(origin < b.lo.xyz) || any(origin > b.hi.xyz))
           continue;
         uint body = id;
-        auto hit = query.intersect(probe, scene, containment, body);
+        auto hit = trace_geometry(probe, scene, quadrics, body);
         if (hit.type != intersection_type::none &&
-            dot(direction, triangles[hit.primitive_id].geometric.xyz) > 0) {
+            dot(direction,
+                geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces)
+                    .face.geometric.xyz) > 0) {
           if (!cross_boundary(state, id, true))
             return false;
           // Replay farther exits first, matching nested/equal-priority order.
@@ -434,14 +397,13 @@ R"MSL(
         64 * FLT_EPSILON *
         max(distance, max(1.f, max(abs(origin.x), max(abs(origin.y), abs(origin.z)))));
     probe.max_distance = distance + endpoint_guard;
-    intersector<triangle_data> query;
-    query.assume_geometry_type(geometry_type::triangle);
-    query.force_opacity(forced_opacity::opaque);
     while (true) {
-      auto hit = query.intersect(probe, scene);
+      auto hit = trace_geometry(probe, scene, quadrics);
       if (hit.type == intersection_type::none)
         return true;
-      Triangle t = triangles[hit.primitive_id];
+      GeometrySurface contact =
+          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      Triangle t = contact.face;
       float facing = dot(direction, t.geometric.xyz);
       bool before_endpoint = hit.distance < distance - endpoint_guard ||
                              dot(origin - t.p[0].xyz, t.geometric.xyz) * facing >= 0;
@@ -476,35 +438,41 @@ R"MSL(
     path.beta.xyz /= survival;
     return all(isfinite(path.beta));
   }
+
 )MSL"
 #include "wavefront_bsdf.inc"
 #include "wavefront_diffusion.inc"
 #include "wavefront_openpbr.inc"
+#include "wavefront_bump.inc"
     R"MSL(
 
-#define SCENE_ARGUMENTS                                                                          \
-    device const Triangle *triangles [[buffer(0)]],                                                \
-        device const Material *materials [[buffer(1)]],                                            \
-        device const Texture *textures [[buffer(2)]], device const float4 *texels [[buffer(3)]],   \
-        device const Light *lights [[buffer(4)]], device Path *paths [[buffer(5)]],                \
-        device Pixel *pixels [[buffer(6)]], device uint *ray_queue [[buffer(7)]],                  \
-        device uint *next_queue [[buffer(8)]], device Hit *hit_queue [[buffer(9)]],                \
-        device Shadow *shadow_queue [[buffer(10)]], device Counts &counts [[buffer(11)]],          \
-        constant Params &p [[buffer(12)]], device const uint *active [[buffer(13)]],               \
-        device const uint *directions [[buffer(14)]], device const uint *blue [[buffer(15)]],      \
-        primitive_acceleration_structure scene [[buffer(16)]],                                     \
-        device const Boundary *boundaries [[buffer(17)]],                                          \
-        device VolumeState *membership [[buffer(18)]],                                             \
-        device atomic_uint *indirect [[buffer(19)]],                                               \
-        device const float4 *material_data [[buffer(20)]],                                         \
-        device const DiffusionExit *diffusion_exits [[buffer(21)]],                                \
-        device const float4 *diffusion_samples [[buffer(22)]],                                     \
-        device const uint *diffusion_pairs [[buffer(23)]],                                         \
-        device DiffusionEntry *diffusion_entries [[buffer(24)]],                                   \
-        intersection_function_table<triangle_data> containment [[buffer(25)]],                     \
-        uint i [[thread_position_in_grid]]
+#define SCENE_ARGUMENTS                                                                            \
+  device const Triangle *triangles [[buffer(0)]], device const Material *materials [[buffer(1)]],  \
+      device const Texture *textures [[buffer(2)]], device const float4 *texels [[buffer(3)]],     \
+      device const Light *lights [[buffer(4)]], device Path *paths [[buffer(5)]],                  \
+      device Pixel *pixels [[buffer(6)]], device uint *ray_queue [[buffer(7)]],                    \
+      device uint *next_queue [[buffer(8)]], device Hit *hit_queue [[buffer(9)]],                  \
+      device Shadow *shadow_queue [[buffer(10)]], device Counts &counts [[buffer(11)]],            \
+      constant Params &p [[buffer(12)]], device const uint *active [[buffer(13)]],                 \
+      device const uint *directions [[buffer(14)]], device const uint *blue [[buffer(15)]],        \
+      primitive_acceleration_structure triangle_scene [[buffer(16)]],                              \
+      device const Boundary *boundaries [[buffer(17)]],                                            \
+      device VolumeState *membership [[buffer(18)]], device atomic_uint *indirect [[buffer(19)]],  \
+      device const float4 *material_data [[buffer(20)]],                                           \
+      device const DiffusionExit *diffusion_exits [[buffer(21)]],                                  \
+      device const float4 *diffusion_samples [[buffer(22)]],                                       \
+      device const uint *diffusion_pairs [[buffer(23)]],                                           \
+      device DiffusionEntry *diffusion_entries [[buffer(24)]],                                     \
+      intersection_function_table<triangle_data> triangle_functions [[buffer(25)]],                \
+      device const Surface *surfaces [[buffer(26)]],                                               \
+      device Differential *differentials [[buffer(27)]],                                           \
+      device const Quadric *quadrics [[buffer(28)]],                                               \
+      instance_acceleration_structure mixed_scene [[buffer(29)]],                                  \
+      intersection_function_table<triangle_data, instancing> mixed_functions [[buffer(30)]],       \
+      uint i [[thread_position_in_grid]]
 
   kernel void primary(SCENE_ARGUMENTS) {
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
     if (i == 0) {
       atomic_store_explicit(&counts.rays, p.active, memory_order_relaxed);
       atomic_store_explicit(&counts.hits, 0, memory_order_relaxed);
@@ -541,9 +509,23 @@ R"MSL(
     path.depth = 0;
     path.internal = 0;
     path.flags = 1; // delta predecessor, no guide yet.
+    if (texture_features & 4) {
+      float scale = p.camera.up.w;
+      float3 dx = p.camera.horizontal.xyz * (p.camera.flip_x ? -1.f : 1.f) / p.width * scale;
+      float3 dy = p.camera.vertical.xyz / p.height * scale;
+      Differential d;
+      d.ox = float4(path.origin.xyz + (p.camera.orthographic ? dx : float3(0)), 1);
+      d.oy = float4(path.origin.xyz + (p.camera.orthographic ? dy : float3(0)), 0);
+      d.dx = float4(
+          p.camera.orthographic ? path.direction.xyz : normalize(film + dx - path.origin.xyz), 0);
+      d.dy = float4(
+          p.camera.orthographic ? path.direction.xyz : normalize(film + dy - path.origin.xyz), 0);
+      differentials[pixel] = d;
+    }
     if (scene_has_boundaries) {
       VolumeState state = {};
-      if (!initial_membership(path.origin.xyz, state, p, triangles, boundaries, scene, containment)) {
+      if (!initial_membership(path.origin.xyz, state, p, triangles, quadrics, surfaces, boundaries,
+                              scene)) {
         path.flags |= 4;
       }
       membership[pixel] = state;
@@ -554,6 +536,7 @@ R"MSL(
   }
 
   kernel void intersect_paths(SCENE_ARGUMENTS) {
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
     if (i >= atomic_load_explicit(&counts.rays, memory_order_relaxed))
       return;
     uint pixel = ray_queue[i];
@@ -578,7 +561,7 @@ R"MSL(
         atomic_store_explicit(&counts.error, 1, memory_order_relaxed);
         return;
       }
-      hit_queue[slot] = {pixel, UINT_MAX - 1, 0, 0, 0, {0, 0, 0}};
+      hit_queue[slot] = {pixel, UINT_MAX - 1, 0, 0, 0, 0, {0, 0}};
       atomic_fetch_max_explicit(&indirect[3], (slot + 64) / 64, memory_order_relaxed);
       return;
     }
@@ -601,19 +584,34 @@ R"MSL(
     // Match SubsurfaceFlightLimit: query beyond the sampled endpoint only to
     // obtain its positional error. This guard never changes the physical flight.
     r.max_distance = isfinite(flight) ? flight + 32 * FLT_EPSILON * magnitude : INFINITY;
-    intersector<triangle_data> query;
-    query.assume_geometry_type(geometry_type::triangle);
-    query.force_opacity(forced_opacity::opaque);
-    auto hit = query.intersect(r, scene);
+    auto hit = trace_geometry(r, scene, quadrics);
     uint departed = as_type<uint>(path.origin.w);
-    while (hit.type != intersection_type::none && departed && hit.primitive_id == departed - 1) {
+    while (hit.type != intersection_type::none) {
+      bool skip = departed && !is_quadric(departed - 1) && hit.primitive_id == departed - 1;
+      if (!skip && (texture_features & 8)) {
+        GeometrySurface contact =
+            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+        Triangle face = contact.face;
+        uint alpha = surfaces[as_type<uint>(face.uv2.w)].alpha;
+        if (alpha != UINT_MAX) {
+          float2 uv = hit.coordinates.xy;
+          float3 bary = float3(1 - uv.x - uv.y, uv);
+          float3 position = contact.position;
+          float opacity = texture_value(alpha, surface_context(face, bary, position, surfaces),
+                                        textures, texels)
+                              .x;
+          skip = opacity < sample1(pixel, path.dimension, p, directions, blue);
+        }
+      }
+      if (!skip)
+        break;
       float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
       if (!(next > r.min_distance)) {
         atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
         return;
       }
       r.min_distance = next;
-      hit = query.intersect(r, scene);
+      hit = trace_geometry(r, scene, quadrics);
     }
     float surface = hit.type == intersection_type::none ? INFINITY : hit.distance;
     bool collision = flight < surface;
@@ -646,9 +644,10 @@ R"MSL(
         // Match SubsurfaceCollisionPoint: rounding a near-boundary collision
         // outside its medium corrupts subsequent membership. Keep the sampled
         // distance/PDF and move only an uncertain position onto the incident side.
-        Triangle endpoint = triangles[hit.primitive_id];
-        float3 surface_position, error;
-        surface_point(endpoint, hit.triangle_barycentric_coord, surface_position, error);
+        GeometrySurface contact =
+            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+        Triangle endpoint = contact.face;
+        float3 surface_position = contact.position, error = contact.error;
         error += 3 * FLT_EPSILON * (abs(r.origin) + abs(flight * r.direction));
         float3 g = endpoint.geometric.xyz, delta = position - surface_position;
         float side = dot(r.direction, g), plane = dot(delta, g);
@@ -691,22 +690,25 @@ R"MSL(
     }
     hit_queue[slot] = {pixel,
                        collision ? UINT_MAX : hit.primitive_id,
-                       collision ? 0 : hit.triangle_barycentric_coord.x,
-                       collision ? 0 : hit.triangle_barycentric_coord.y,
+                       collision ? 0 : hit.coordinates.x,
+                       collision ? 0 : hit.coordinates.y,
                        distance,
-                       {0, 0, 0}};
+                       collision ? 0 : hit.coordinates.z,
+                       {0, 0}};
     atomic_fetch_max_explicit(&indirect[3], (slot + 64) / 64, memory_order_relaxed);
   }
 
   template <ushort features> kernel void shade(SCENE_ARGUMENTS) {
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
     if (i >= atomic_load_explicit(&counts.hits, memory_order_relaxed))
       return;
     Hit h = hit_queue[i];
-    bool is_diffusion = h.triangle == UINT_MAX - 1;
+    bool is_diffusion = h.primitive == UINT_MAX - 1;
     if (is_diffusion != (features == 4))
       return;
     bool is_pbr =
-        h.triangle < UINT_MAX - 1 && materials[triangles[h.triangle].material].type == bsdf_openpbr;
+        h.primitive < UINT_MAX - 1 &&
+        materials[geometry_material(h.primitive, triangles, quadrics)].type == bsdf_openpbr;
     if (is_pbr != (features == 2))
       return;
     uint pixel = h.pixel;
@@ -717,15 +719,20 @@ R"MSL(
     if (scene_has_boundaries)
       state = membership[pixel];
     VolumeState adjacent = state;
-    bool volume = scene_has_boundaries && h.triangle == UINT_MAX, interface = false,
+    bool volume = scene_has_boundaries && h.primitive == UINT_MAX, interface = false,
          internal = volume;
     uint body = active_boundary(state, boundaries, materials);
     float3 position = path.origin.xyz, error = 0, g = 0, n = 0, rho = 0, wo = -path.direction.xyz;
     float eta = 1, roughness = 0, anisotropy = body ? boundaries[body].sigma_s.w : 0;
     bool entering = false;
     Triangle t = {};
+    GeometrySurface geometry = {};
     Material m = {};
     SurfaceBsdf bsdf = {};
+    SurfaceDerivatives derivatives = {};
+    MappedDiffuse mapped;
+    float3 base_normal = 0;
+    bool mapped_surface = false;
     PbrState pbr;
     DiffusionExit exit_lobe;
     bool extended = false;
@@ -735,9 +742,9 @@ R"MSL(
       ++path.depth;
       DiffusionSample exit;
       bool invalid = false;
-      bool found =
-          diffusion_surface(body, diffusion_entries[pixel], pixel, dim, p, directions, blue,
-                            triangles, boundaries, materials, scene, containment, exit, invalid);
+      bool found = diffusion_surface(body, diffusion_entries[pixel], pixel, dim, p, directions,
+                                     blue, triangles, quadrics, surfaces, boundaries, materials,
+                                     scene, exit, invalid);
       if (invalid)
         atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
       if (!found)
@@ -751,7 +758,9 @@ R"MSL(
       }
       path.beta.xyz *= exit.weight;
       h = exit.hit;
-      t = triangles[h.triangle];
+      geometry =
+          geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces);
+      t = geometry.face;
       position = exit.position;
       error = exit.error;
       g = n = exit.normal;
@@ -775,18 +784,27 @@ R"MSL(
         path.flags |= 2;
       }
     } else {
-      t = triangles[h.triangle];
+      geometry =
+          geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces);
+      t = geometry.face;
       m = materials[t.material];
       float3 bary = float3(1 - h.u - h.v, h.u, h.v);
-      surface_point(t, float2(h.u, h.v), position, error);
+      position = geometry.position;
+      error = geometry.error;
       g = t.geometric.xyz;
-      float3 interpolated = bary.x * t.n[0].xyz + bary.y * t.n[1].xyz + bary.z * t.n[2].xyz;
-      n = dot(interpolated, interpolated) > 0 ? normalize(interpolated) : g;
-      rho = texture_value(m.texture, triangle_uv(t, bary), position, textures, texels);
+      n = geometry.normal;
+      TextureContext texture_hit = surface_context(t, bary, position, surfaces);
+      base_normal = n;
+      if (texture_features & 4) {
+        Surface mapping = surfaces[as_type<uint>(t.uv2.w)];
+        derivatives = surface_derivatives(t, mapping, texture_hit, n, differentials[pixel]);
+        n = bump_normal(t, mapping, texture_hit, n, derivatives, textures, texels);
+        mapped_surface = mapping.bump != UINT_MAX;
+      }
+      rho = texture_value(m.texture, texture_hit, textures, texels);
       float mapped_roughness = -1;
       if (m.second_texture != UINT_MAX && m.type != bsdf_translucent) {
-        float3 rough =
-            texture_value(m.second_texture, triangle_uv(t, bary), position, textures, texels);
+        float3 rough = texture_value(m.second_texture, texture_hit, textures, texels);
         if (m.type == bsdf_openpbr)
           mapped_roughness = rough.x;
         else
@@ -795,9 +813,8 @@ R"MSL(
       pixels[pixel].radiance.w = 1;
       if (m.emissive == 1) {
         if (dot(n, wo) > 0) {
-          float area = .5f * length(cross(t.p[1].xyz - t.p[0].xyz, t.p[2].xyz - t.p[0].xyz));
           float pdf =
-              distance_squared(position, path.previous.xyz) / (area * abs(dot(g, wo)) * p.lights);
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) / p.lights;
           float weight = (path.flags & 1) ? 1 : mis(path.direction.w, pdf);
           pixels[pixel].radiance.xyz += path.beta.xyz * rho * m.diffuse.w * weight;
         }
@@ -810,7 +827,7 @@ R"MSL(
         uint after = body;
         if (scene_has_boundaries && m.dielectric) {
           if (!adjacent_membership(t.boundary, entering, position, error, g, adjacent, p, triangles,
-                                   boundaries, scene, containment)) {
+                                   quadrics, surfaces, boundaries, scene)) {
             atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
             return;
           }
@@ -819,7 +836,7 @@ R"MSL(
                         (body && after && boundaries[body].material == boundaries[after].material);
           if (hidden) {
             path.origin = float4(offset_origin(position, error, entering ? -g : g),
-                                 as_type<float>(h.triangle + 1));
+                                 as_type<float>(h.primitive + 1));
             remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
                                      diffusion_entries);
             enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
@@ -827,13 +844,12 @@ R"MSL(
           }
         }
         float exterior = boundary_ior(entering ? body : after, boundaries, materials);
-        pbr = prepare_pbr(m, rho, wo, n, g, surface_tangent(t), exterior, mapped_roughness,
+        pbr = prepare_pbr(m, rho, wo, n, g, geometry.tangent, exterior, mapped_roughness,
                           material_data);
         float weight = 1;
         if (m.emissive && !(path.flags & 1)) {
-          float area = .5f * length(cross(t.p[1].xyz - t.p[0].xyz, t.p[2].xyz - t.p[0].xyz));
           float pdf =
-              distance_squared(position, path.previous.xyz) / (area * abs(dot(g, wo)) * p.lights);
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) / p.lights;
           weight = mis(path.direction.w, pdf);
         }
         pixels[pixel].radiance.xyz += path.beta.xyz * pbr.prepared.emission * weight;
@@ -849,20 +865,21 @@ R"MSL(
       } else if (scene_has_boundaries && m.dielectric) {
         entering = dot(g, wo) > 0;
         if (!adjacent_membership(t.boundary, entering, position, error, g, adjacent, p, triangles,
-                                 boundaries, scene, containment)) {
+                                 quadrics, surfaces, boundaries, scene)) {
           atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
           return;
         }
         uint after = active_boundary(adjacent, boundaries, materials);
         bool hidden = body == after ||
                       (body && after && boundaries[body].material == boundaries[after].material);
-        eta = boundary_ior(after, boundaries, materials) / boundary_ior(body, boundaries, materials);
+        eta =
+            boundary_ior(after, boundaries, materials) / boundary_ior(body, boundaries, materials);
         if (hidden || eta == 1) {
           // Hidden and index-matched crossings retain MIS history and depth.
           if (!hidden && entering && !boundaries[t.boundary].subsurface)
             path.beta.xyz *= rho;
           path.origin = float4(offset_origin(position, error, entering ? -g : g),
-                               as_type<float>(h.triangle + 1));
+                               as_type<float>(h.primitive + 1));
           path.dimension = dim;
           remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
                                    diffusion_entries);
@@ -882,7 +899,7 @@ R"MSL(
         roughness = boundaries[t.boundary].sigma_a.w;
         // Tessellated analytic boundaries retain smooth refraction normals;
         // native triangle meshes use their actual geometric interface normals.
-        n = (t.flags & 1) ? (dot(n, g) < 0 ? -n : n) : g;
+        n = ((t.flags & 1) || mapped_surface) ? (dot(n, g) < 0 ? -n : n) : g;
         if (!entering) {
           g = -g;
           n = -n;
@@ -904,8 +921,12 @@ R"MSL(
             path.beta.w *= eta * eta;
           }
           path.origin = float4(offset_origin(position, error, transmission ? -g : g),
-                               as_type<float>(h.triangle + 1));
+                               as_type<float>(h.primitive + 1));
           path.previous = float4(position, 0);
+          if (texture_features & 4)
+            differentials[pixel] =
+                propagate_differential(differentials[pixel], derivatives, n, path.direction.xyz,
+                                       path.origin.xyz, wi, transmission, eta);
           path.direction = float4(wi, pdf);
           remember_diffusion_entry(path, pixel, state, position, g, boundaries, materials,
                                    diffusion_entries);
@@ -927,17 +948,19 @@ R"MSL(
         ++path.depth;
         rho = select(float3(0), clamp(rho, 0.f, 1.f), isfinite(rho));
         extended = (features == 1 || features == 3) && m.type != 0;
-        if (!extended && dot(g, wo) * dot(n, wo) <= 0)
+        if (!extended && dot(g, wo) * dot(base_normal, wo) <= 0)
           return;
         if (!extended && dot(g, wo) < 0) {
           g = -g;
           n = -n;
         }
+        if ((texture_features & 4) && !extended)
+          mapped = mapped_diffuse(dot(base_normal, wo) < 0 ? -base_normal : base_normal, n, wo);
         if (extended) {
           bsdf.material = m;
           bsdf.frame = normal_frame(m.type == bsdf_translucent ? g : n);
           if (m.type == bsdf_hair) {
-            float3 tangent = normalize(surface_tangent(t));
+            float3 tangent = normalize(geometry.tangent);
             float3 normal = n - tangent * dot(n, tangent);
             normal = dot(normal, normal) < 1e-12f ? normal_frame(tangent).y : normalize(normal);
             if (t.flags & 6) {
@@ -972,9 +995,8 @@ R"MSL(
           if (!(m.type == bsdf_hair && (t.flags & 6)))
             bsdf.impact = clamp(2 * triangle_uv(t, bary).y - 1, -1.f, 1.f);
           if (m.type == bsdf_translucent) {
-            bsdf.transmission = clamp(
-                texture_value(m.second_texture, triangle_uv(t, bary), position, textures, texels),
-                0.f, 1.f);
+            bsdf.transmission =
+                clamp(texture_value(m.second_texture, texture_hit, textures, texels), 0.f, 1.f);
             float3 total = max(bsdf.rho + bsdf.transmission, float3(1));
             bsdf.rho /= total;
             bsdf.transmission /= total;
@@ -997,6 +1019,7 @@ R"MSL(
             v = sample1(pixel, dim, p, directions, blue);
       Light l = lights[choice];
       float3 wi, emitted = 0;
+      float3 light_target = 0, light_error = 0, light_normal = 0;
       float pdf = 0, maximum = INFINITY;
       if (l.type == 0) {
         float y = 1 - 2 * u, r = sqrt(max(0.f, 1 - y * y)), phi = 2 * pi * v;
@@ -1009,6 +1032,7 @@ R"MSL(
         emitted = environment(l, wi, position, textures, texels);
         pdf = light_pdf(l) / p.lights;
       } else if (l.type == 2) {
+        light_target = l.forward.xyz;
         float3 delta = l.forward.xyz - position;
         float distance2 = dot(delta, delta);
         maximum = sqrt(distance2);
@@ -1026,40 +1050,56 @@ R"MSL(
         emitted = l.color.xyz * falloff / distance2;
         pdf = 1.f / p.lights;
       } else {
-        Triangle emitter = triangles[l.triangle];
+        GeometrySurface source = sample_geometry_light(l.primitive, float2(u, v), position,
+                                                       triangles, quadrics, surfaces);
+        Triangle emitter = source.face;
         Material lm = materials[emitter.material];
-        float su = sqrt(u);
-        float3 b = float3(1 - su, su * (1 - v), su * v);
-        float3 target = b.x * emitter.p[0].xyz + b.y * emitter.p[1].xyz + b.z * emitter.p[2].xyz;
+        float3 b = float3(1 - source.coordinates.x - source.coordinates.y, source.coordinates.xy);
+        float3 target = source.position;
+        light_target = target;
+        light_error = source.error;
+        light_normal = source.face.geometric.xyz;
         float3 delta = target - position;
         maximum = length(delta);
         wi = delta / maximum;
-        float3 en =
-            normalize(b.x * emitter.n[0].xyz + b.y * emitter.n[1].xyz + b.z * emitter.n[2].xyz);
+        float3 en = source.normal;
         float cosine = dot(emitter.geometric.xyz, -wi);
-        float area = .5f * length(cross(emitter.p[1].xyz - emitter.p[0].xyz,
-                                        emitter.p[2].xyz - emitter.p[0].xyz));
         if (dot(en, -wi) > 0 && abs(cosine) > 0) {
           if (features >= 2 && lm.type == bsdf_openpbr) {
             // Emission is view dependent under OpenPBR's coating layers.
             auto emitter_pbr = prepare_pbr(
-                lm, texture_value(lm.texture, triangle_uv(emitter, b), target, textures, texels),
-                -wi, en, emitter.geometric.xyz, surface_tangent(emitter),
+                lm,
+                texture_value(lm.texture, surface_context(emitter, b, target, surfaces), textures,
+                              texels),
+                -wi, en, emitter.geometric.xyz, source.tangent,
                 boundary_ior(body, boundaries, materials),
                 lm.second_texture == UINT_MAX
                     ? -1.f
-                    : texture_value(lm.second_texture, triangle_uv(emitter, b), target, textures,
-                                    texels)
+                    : texture_value(lm.second_texture,
+                                    surface_context(emitter, b, target, surfaces), textures, texels)
                           .x,
                 material_data);
             emitted = emitter_pbr.prepared.emission;
           } else
-            emitted = texture_value(lm.texture, triangle_uv(emitter, b), target, textures, texels) *
+            emitted = texture_value(lm.texture, surface_context(emitter, b, target, surfaces),
+                                    textures, texels) *
                       lm.diffuse.w;
-          pdf = maximum * maximum / (area * abs(cosine) * p.lights);
+          if (texture_features & 8) {
+            uint alpha = surfaces[as_type<uint>(emitter.uv2.w)].alpha;
+            if (alpha != UINT_MAX)
+              emitted *= clamp(texture_value(alpha, surface_context(emitter, b, target, surfaces),
+                                             textures, texels)
+                                   .x,
+                               0.f, 1.f);
+          }
+          pdf = geometry_light_pdf(l.primitive, source, position, quadrics) / p.lights;
         }
       }
       float cosine = dot(n, wi);
+      BsdfValue mapped_value = {0, 0};
+      if ((texture_features & 4) && !volume && !interface && !extended && features != 2 &&
+          features != 4)
+        mapped_value = mapped_eval(mapped, wi, rho, m);
       BsdfValue surface = extended ? surface_eval(bsdf, wi) : BsdfValue{0, 0};
       if (features == 2)
         surface = pbr_eval(pbr, wi);
@@ -1067,17 +1107,19 @@ R"MSL(
         surface = diffusion_eval(exit_lobe, n, wi, diffusion_samples);
       float2 boundary_value = interface ? boundary_eval(wo, wi, n, eta, roughness) : float2(0);
       float competing = volume ? phase_pdf(-wo, wi, anisotropy)
-                               : (interface                                      ? boundary_value.y
-                                  : (extended || features == 2 || features == 4) ? surface.pdf
-                                                                                 : cosine / pi);
+                               : (interface ? boundary_value.y
+                                  : (extended || features == 2 || features == 4)
+                                      ? surface.pdf
+                                      : ((texture_features & 4) ? mapped_value.pdf : cosine / pi));
       float3 value = volume ? float3(competing)
                             : (interface ? float3(boundary_value.x)
                                : (extended || features == 2 || features == 4)
                                    ? surface.value
-                                   : brdf(wo, wi, n, rho, m) * cosine);
+                                   : ((texture_features & 4) ? mapped_value.value
+                                                             : brdf(wo, wi, n, rho, m) * cosine));
       if (pdf > 0 && any(value > 0) &&
           (volume || interface || extended || features == 2 || features == 4 ||
-           (cosine > 0 && dot(g, wi) > 0)) &&
+           (((texture_features & 4) ? dot(mapped.g, wi) > 0 : cosine > 0) && dot(g, wi) > 0)) &&
           any(emitted > 0)) {
         float weight = l.type == 2 ? 1 : mis(pdf, competing);
         float3 contribution = path.beta.xyz * value * emitted * (weight / pdf);
@@ -1085,17 +1127,30 @@ R"MSL(
         if (slot >= p.active)
           atomic_store_explicit(&counts.error, 1, memory_order_relaxed);
         else {
-          float3 origin = volume ? position : offset_origin(position, error, dot(g, wi) < 0 ? -g : g);
+          float3 origin =
+              volume ? position : offset_origin(position, error, dot(g, wi) < 0 ? -g : g);
           VolumeState direct_state = (interface && dot(g, wi) < 0) ||
                                              (features == 2 && m.dielectric && pbr_crossed(pbr, wi))
                                          ? adjacent
                                          : state;
-          // Shorten only finite light segments, accounting for the origin shift.
-          float max_t = isfinite(maximum)
-                            ? max(0.f, maximum - dot(origin - position, wi)) * (1 - 8 * FLT_EPSILON)
-                            : maximum;
-          shadow_queue[slot] = {float4(origin, volume ? 0.f : as_type<float>(h.triangle + 1)),
-                                float4(wi, max_t),
+          // Connect the two offset endpoints. Merely subtracting the origin's
+          // shift from t_max leaves a parallel ray aimed beside the sampled
+          // light point, which can hit the light itself. Large ground spheres
+          // expose this because their conservative position errors are larger.
+          // BSDF/PDF evaluation above retains the original, unshifted segment.
+          float3 shadow_direction = wi;
+          float max_t = maximum;
+          if (isfinite(maximum)) {
+            float3 target =
+                offset_origin(light_target, light_error,
+                              dot(light_normal, -wi) < 0 ? -light_normal : light_normal);
+            float3 segment = target - origin;
+            float distance = length(segment);
+            shadow_direction = segment / distance;
+            max_t = distance * (1 - 8 * FLT_EPSILON);
+          }
+          shadow_queue[slot] = {float4(origin, volume ? 0.f : as_type<float>(h.primitive + 1)),
+                                float4(shadow_direction, max_t),
                                 float4(contribution, 0),
                                 pixel,
                                 {0, 0, 0},
@@ -1107,9 +1162,11 @@ R"MSL(
     float3 wi;
     float pdf;
     bool delta_sample = false;
+    float specular_eta = 1;
     float branch =
         (interface || extended || features == 2) ? sample1(pixel, dim, p, directions, blue) : 0;
-    float u = sample1(pixel, dim, p, directions, blue), v = sample1(pixel, dim, p, directions, blue);
+    float u = sample1(pixel, dim, p, directions, blue),
+          v = sample1(pixel, dim, p, directions, blue);
     if (features == 4) {
       wi = diffusion_direction(exit_lobe, n, float2(u, v), diffusion_samples);
       BsdfValue value = diffusion_eval(exit_lobe, n, wi, diffusion_samples);
@@ -1142,6 +1199,7 @@ R"MSL(
       wi = sample.direction;
       pdf = sample.pdf;
       delta_sample = sample.delta;
+      specular_eta = sqrt(sample.eta_squared);
       path.beta.xyz *= sample.weight;
       path.beta.w *= sample.eta_squared;
       if (m.dielectric && pbr_crossed(pbr, wi))
@@ -1161,12 +1219,24 @@ R"MSL(
       path.beta.xyz *= sample.weight;
       path.beta.w *= sample.eta_squared;
       delta_sample = sample.delta;
+      specular_eta = sqrt(sample.eta_squared);
     } else {
-      wi = basis_direction(n, float2(u, v));
-      pdf = dot(wi, n) / pi;
-      if (dot(g, wi) <= 0 || pdf <= 0)
-        return;
-      path.beta.xyz *= brdf(wo, wi, n, rho, m) * pi;
+      if (texture_features & 4) {
+        float facet = sample1(pixel, dim, p, directions, blue),
+              escape = sample1(pixel, dim, p, directions, blue);
+        wi = mapped_sample(mapped, float2(u, v), facet, escape);
+        BsdfValue value = mapped_eval(mapped, wi, rho, m);
+        pdf = value.pdf;
+        if (dot(g, wi) <= 0 || pdf <= 0)
+          return;
+        path.beta.xyz *= value.value / pdf;
+      } else {
+        wi = basis_direction(n, float2(u, v));
+        pdf = dot(wi, n) / pi;
+        if (dot(g, wi) <= 0 || pdf <= 0)
+          return;
+        path.beta.xyz *= brdf(wo, wi, n, rho, m) * pi;
+      }
     }
     if (!all(isfinite(path.beta))) {
       atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
@@ -1177,7 +1247,16 @@ R"MSL(
     path.previous = float4(position, 0);
     path.origin =
         float4(volume ? position : offset_origin(position, error, dot(g, wi) < 0 ? -g : g),
-               volume ? 0.f : as_type<float>(h.triangle + 1));
+               volume ? 0.f : as_type<float>(h.primitive + 1));
+    if (texture_features & 4) {
+      Differential next = {};
+      if (delta_sample && !volume) {
+        bool transmitted = dot(g, wo) * dot(g, wi) < 0;
+        next = propagate_differential(differentials[pixel], derivatives, n, path.direction.xyz,
+                                      path.origin.xyz, wi, transmitted, specular_eta);
+      }
+      differentials[pixel] = next;
+    }
     path.direction = float4(wi, pdf);
     path.dimension = dim;
     path.flags &= ~1u;
@@ -1197,6 +1276,7 @@ R"MSL(
   template [[host_name("shade_diffusion")]] kernel void shade<4>(SCENE_ARGUMENTS);
 
   kernel void shadows(SCENE_ARGUMENTS) {
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
     if (i >= atomic_load_explicit(&counts.shadows, memory_order_relaxed))
       return;
     Shadow s = shadow_queue[i];
@@ -1207,12 +1287,8 @@ R"MSL(
     r.direction = s.direction.xyz;
     r.min_distance = FLT_MIN;
     r.max_distance = s.direction.w;
-    intersector<triangle_data> query;
-    query.assume_geometry_type(geometry_type::triangle);
-    query.force_opacity(forced_opacity::opaque);
-    if (!scene_has_boundaries) {
-      query.accept_any_intersection(true);
-      if (query.intersect(r, scene).type == intersection_type::none)
+    if (!scene_has_boundaries && !(texture_features & 8)) {
+      if (trace_geometry(r, scene, quadrics, 0, true).type == intersection_type::none)
         pixels[s.pixel].radiance.xyz += s.contribution.xyz;
       return;
     }
@@ -1220,9 +1296,10 @@ R"MSL(
     float3 transmittance = 1;
     VolumeState state = s.state;
     while (true) {
-      auto hit = query.intersect(r, scene);
+      auto hit = trace_geometry(r, scene, quadrics);
       uint departed = as_type<uint>(s.origin.w);
-      if (hit.type != intersection_type::none && departed && hit.primitive_id == departed - 1) {
+      if (hit.type != intersection_type::none && departed && !is_quadric(departed - 1) &&
+          hit.primitive_id == departed - 1) {
         float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
         if (!(next > r.min_distance)) {
           atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
@@ -1246,14 +1323,48 @@ R"MSL(
         pixels[s.pixel].radiance.xyz += transmittance * s.contribution.xyz;
         return;
       }
-      Triangle t = triangles[hit.primitive_id];
+      GeometrySurface contact =
+          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      Triangle t = contact.face;
+      if (texture_features & 8) {
+        uint alpha = surfaces[as_type<uint>(t.uv2.w)].alpha;
+        if (alpha != UINT_MAX) {
+          float2 uv = hit.coordinates.xy;
+          float opacity =
+              clamp(texture_value(alpha,
+                                  surface_context(t, float3(1 - uv.x - uv.y, uv),
+                                                  r.origin + endpoint * r.direction, surfaces),
+                                  textures, texels)
+                        .x,
+                    0.f, 1.f);
+          // Opaque coverage has an exact scalar shadow transmittance. At a
+          // dielectric boundary, choose the covered/hole branch instead: they
+          // can enter different media and cannot share one averaged stack.
+          bool hole = true;
+          if (t.boundary) {
+            uint bits = hash_seed(hash_seed(s.pixel, p.sample),
+                                  hit.primitive_id ^ p.seed ^ (p.depth * 0x9e3779b9u));
+            hole = float(bits) * 0x1p-32f >= opacity;
+          } else
+            transmittance *= 1 - opacity;
+          if (all(transmittance == 0))
+            return;
+          if (hole) {
+            float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
+            if (!(next > r.min_distance))
+              return;
+            previous = endpoint;
+            r.min_distance = next;
+            continue;
+          }
+        }
+      }
       if (!t.boundary)
         return;
       bool entering = dot(r.direction, t.geometric.xyz) < 0;
-      float3 position, error;
-      surface_point(t, hit.triangle_barycentric_coord, position, error);
+      float3 position = contact.position, error = contact.error;
       if (!adjacent_membership(t.boundary, entering, position, error, t.geometric.xyz, state, p,
-                               triangles, boundaries, scene, containment)) {
+                               triangles, quadrics, surfaces, boundaries, scene)) {
         atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
         return;
       }
@@ -1261,14 +1372,15 @@ R"MSL(
       bool hidden = before == after ||
                     (before && after && boundaries[before].material == boundaries[after].material);
       if (!hidden) {
-        if (boundary_ior(before, boundaries, materials) != boundary_ior(after, boundaries, materials))
+        if (boundary_ior(before, boundaries, materials) !=
+            boundary_ior(after, boundaries, materials))
           return;
         if ((before && materials[boundaries[before].material].type == bsdf_openpbr) ||
             (after && materials[boundaries[after].material].type == bsdf_openpbr))
           return; // Matching IOR does not remove OpenPBR's other scattering lobes.
         if (entering && !boundaries[t.boundary].subsurface) {
           Material m = materials[t.material];
-          float2 uv = hit.triangle_barycentric_coord;
+          float2 uv = hit.coordinates.xy;
           transmittance *=
               texture_value(m.texture, triangle_uv(t, float3(1 - uv.x - uv.y, uv.x, uv.y)),
                             r.origin + endpoint * r.direction, textures, texels);
@@ -1301,4 +1413,5 @@ R"MSL(
     for (uint j = 3; j < 9; ++j)
       args[j] = 1;
   }
-    )MSL"
+
+)MSL"

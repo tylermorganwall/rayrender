@@ -8,6 +8,7 @@ namespace wavefront_tables {
 #include <array>
 #include <chrono>
 #include <cstring>
+#include <map>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -36,21 +37,30 @@ struct Pipelines {
   id<MTLComputePipelineState> primary, intersect, shade, shade_materials, shade_pbr,
       shade_pbr_lights, shade_diffusion, shadow, dispatch;
   id<MTLBuffer> directions, blue;
-  bool boundary_support;
+  bool boundary_support, analytic_support;
+  uint32_t texture_features;
   std::mutex material_mutex;
 
   id<MTLComputePipelineState> Compile(NSString *name) {
     NSError *error = nil;
     auto constants = [MTLFunctionConstantValues new];
     [constants setConstantValue:&boundary_support type:MTLDataTypeBool atIndex:0];
+    [constants setConstantValue:&texture_features type:MTLDataTypeUInt atIndex:1];
+    [constants setConstantValue:&analytic_support type:MTLDataTypeBool atIndex:2];
     auto function = [library newFunctionWithName:name constantValues:constants error:&error];
     if (!function)
       throw MetalError("wavefront function specialization", error);
     auto descriptor = [MTLComputePipelineDescriptor new];
     descriptor.computeFunction = function;
-    if (boundary_support) {
+    if (boundary_support || analytic_support) {
       auto linked = [MTLLinkedFunctions linkedFunctions];
-      linked.functions = @[ [library newFunctionWithName:@"containment_face"] ];
+      NSMutableArray<id<MTLFunction>> *functions = [NSMutableArray array];
+      [functions
+          addObject:[library newFunctionWithName:analytic_support ? @"containment_face_instanced"
+                                                                  : @"containment_face"]];
+      if (analytic_support)
+        [functions addObject:[library newFunctionWithName:@"intersect_quadric"]];
+      linked.functions = functions;
       descriptor.linkedFunctions = linked;
     }
     auto result = [device newComputePipelineStateWithDescriptor:descriptor
@@ -72,7 +82,9 @@ struct Pipelines {
     if (diffusion && !shade_diffusion)
       shade_diffusion = Compile(@"shade_diffusion");
   }
-  explicit Pipelines(bool boundary_support) : boundary_support(boundary_support) {
+  explicit Pipelines(bool boundary_support, uint32_t textures, bool analytics)
+      : boundary_support(boundary_support), analytic_support(analytics),
+        texture_features(textures) {
     device = MTLCreateSystemDefaultDevice();
     if (!device || !device.supportsRaytracing)
       throw std::runtime_error("this Metal device does not support ray tracing");
@@ -118,25 +130,30 @@ struct Pipelines {
   }
 };
 
-Pipelines &SharedPipelines(bool boundaries = false) {
-  if (boundaries) {
-    static Pipelines pipelines(true);
-    return pipelines;
-  }
-  static Pipelines pipelines(false);
-  return pipelines;
+Pipelines &SharedPipelines(bool boundaries = false, uint32_t textures = 0, bool analytics = false) {
+  // Specialization removes graph registers, alpha traversal and bump footprint
+  // storage from ordinary opaque scenes. Sessions retain their own resources.
+  static std::mutex mutex;
+  static std::map<uint32_t, std::unique_ptr<Pipelines>> pipelines;
+  std::lock_guard<std::mutex> lock(mutex);
+  uint32_t key = (textures << 2) | uint32_t(boundaries) | (uint32_t(analytics) << 1);
+  auto &entry = pipelines[key];
+  if (!entry)
+    entry = std::make_unique<Pipelines>(boundaries, textures, analytics);
+  return *entry;
 }
 
 class MetalWavefront final : public WavefrontSession {
   Pipelines &kernels;
   id<MTLCommandQueue> queue;
-  id<MTLAccelerationStructure> acceleration;
+  id<MTLAccelerationStructure> acceleration, mixed_acceleration;
+  NSArray<id<MTLAccelerationStructure>> *bottom_levels;
   // Slots match SCENE_ARGUMENTS. Parameters use setBytes at 12; the acceleration
   // structure uses setAccelerationStructure at 16, so neither occupies a buffer.
-  std::array<id<MTLBuffer>, 25> buffers;
+  std::array<id<MTLBuffer>, 29> buffers;
   id<MTLBuffer> indirect;
   std::vector<std::pair<id<MTLComputePipelineState>, id<MTLIntersectionFunctionTable>>>
-      containment_tables;
+      intersection_tables;
   size_t capacity;
   bool has_materials = false, has_pbr = false, has_pbr_emission = false, has_diffusion = false;
 
@@ -179,6 +196,48 @@ class MetalWavefront final : public WavefrontSession {
     return !(stop || cancelled());
   }
 
+  id<MTLAccelerationStructure> BuildAcceleration(MTLAccelerationStructureDescriptor *descriptor) {
+    auto sizes = [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
+    auto result = [kernels.device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
+    auto scratch = Buffer(sizes.buildScratchBufferSize);
+    if (!result)
+      throw MetalError("wavefront acceleration structure", nil);
+    auto command = [queue commandBuffer];
+    auto encoder = [command accelerationStructureCommandEncoder];
+    [encoder buildAccelerationStructure:result
+                             descriptor:descriptor
+                          scratchBuffer:scratch
+                    scratchBufferOffset:0];
+    [encoder endEncoding];
+    Wait(command, [] { return false; });
+    return result;
+  }
+
+  void RegisterIntersections(id<MTLComputePipelineState> pipeline) {
+    auto table_descriptor =
+        [MTLIntersectionFunctionTableDescriptor intersectionFunctionTableDescriptor];
+    table_descriptor.functionCount = kernels.analytic_support ? 2 : 1;
+    auto table = [pipeline newIntersectionFunctionTableWithDescriptor:table_descriptor];
+    auto handle = [pipeline
+        functionHandleWithFunction:[kernels.library
+                                       newFunctionWithName:kernels.analytic_support
+                                                               ? @"containment_face_instanced"
+                                                               : @"containment_face"]];
+    if (!table || !handle)
+      throw MetalError("wavefront containment table", nil);
+    [table setFunction:handle atIndex:0];
+    [table setBuffer:buffers[0] offset:0 atIndex:0];
+    if (kernels.analytic_support) {
+      auto function = [kernels.library newFunctionWithName:@"intersect_quadric"];
+      auto analytic = [pipeline functionHandleWithFunction:function];
+      if (!analytic)
+        throw MetalError("wavefront analytic intersection table", nil);
+      [table setFunction:analytic atIndex:1];
+      [table setBuffer:buffers[28] offset:0 atIndex:1];
+    }
+    intersection_tables.emplace_back(pipeline, table);
+  }
+
   void AdvanceQueues(id<MTLCommandBuffer> command) {
     auto encoder = [command computeCommandEncoder];
     encoder.label = @"Wavefront queue counts";
@@ -206,9 +265,12 @@ class MetalWavefront final : public WavefrontSession {
         [encoder setBuffer:buffers[i] offset:0 atIndex:i];
     [encoder setBytes:&parameters length:sizeof(parameters) atIndex:12];
     [encoder setAccelerationStructure:acceleration atBufferIndex:16];
-    for (const auto &entry : containment_tables)
+    if (kernels.analytic_support)
+      [encoder setAccelerationStructure:mixed_acceleration atBufferIndex:29];
+    for (const auto &entry : intersection_tables)
       if (entry.first == pipeline)
-        [encoder setIntersectionFunctionTable:entry.second atBufferIndex:25];
+        [encoder setIntersectionFunctionTable:entry.second
+                                atBufferIndex:kernels.analytic_support ? 30 : 25];
     if (primary)
       [encoder dispatchThreadgroups:MTLSizeMake(std::max(1u, (parameters.active + 63) / 64), 1, 1)
               threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
@@ -256,6 +318,9 @@ public:
     buffers[22] = Upload(scene.diffusion_samples);
     buffers[23] = Upload(scene.diffusion_pairs);
     buffers[24] = Buffer(has_diffusion ? capacity * 32 : 32);
+    buffers[26] = Upload(scene.surfaces);
+    buffers[28] = Upload(scene.quadrics);
+    buffers[27] = Buffer(scene.texture_features & 4 ? capacity * 64 : 64);
     for (const auto &material : scene.materials) {
       has_materials |= material.type > 0 && material.type < 7;
       has_pbr |= material.type == 7;
@@ -265,19 +330,9 @@ public:
     for (id<MTLComputePipelineState> pipeline :
          {kernels.primary, kernels.intersect, kernels.shade, kernels.shade_materials,
           kernels.shade_pbr, kernels.shade_pbr_lights, kernels.shade_diffusion, kernels.shadow}) {
-      if (!pipeline || !kernels.boundary_support)
+      if (!pipeline || !(kernels.boundary_support || kernels.analytic_support))
         continue;
-      auto table_descriptor =
-          [MTLIntersectionFunctionTableDescriptor intersectionFunctionTableDescriptor];
-      table_descriptor.functionCount = 1;
-      auto table = [pipeline newIntersectionFunctionTableWithDescriptor:table_descriptor];
-      auto handle = [pipeline
-          functionHandleWithFunction:[kernels.library newFunctionWithName:@"containment_face"]];
-      if (!table || !handle)
-        throw MetalError("wavefront containment table", nil);
-      [table setFunction:handle atIndex:0];
-      [table setBuffer:buffers[0] offset:0 atIndex:0];
-      containment_tables.emplace_back(pipeline, table);
+      RegisterIntersections(pipeline);
     }
     // Reuse packed triangle vertices rather than allocating a second positions
     // array. Ten float4 records per triangle; the first three are its vertices.
@@ -288,31 +343,92 @@ public:
       for (size_t k = 0; k < 3; ++k)
         indices[3 * i + k] = 10 * i + k;
     id<MTLBuffer> index_buffer = Upload(indices);
-    auto geometry = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-    geometry.vertexBuffer = buffers[0];
-    geometry.vertexStride = sizeof(WFVector);
-    geometry.indexBuffer = index_buffer;
-    geometry.indexType = MTLIndexTypeUInt32;
-    geometry.triangleCount = scene.triangles.size();
-    geometry.opaque = YES;
-    auto descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
-    descriptor.geometryDescriptors = @[ geometry ];
-    MTLAccelerationStructureSizes sizes =
-        [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
-    acceleration =
-        [kernels.device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
-    id<MTLBuffer> scratch = Buffer(sizes.buildScratchBufferSize);
-    if (!acceleration)
-      throw MetalError("wavefront acceleration structure", nil);
+    NSMutableArray<MTLAccelerationStructureGeometryDescriptor *> *geometries =
+        [NSMutableArray array];
+    if (!scene.triangles.empty()) {
+      auto geometry = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
+      geometry.vertexBuffer = buffers[0];
+      geometry.vertexStride = sizeof(WFVector);
+      geometry.indexBuffer = index_buffer;
+      geometry.indexType = MTLIndexTypeUInt32;
+      geometry.triangleCount = scene.triangles.size();
+      geometry.opaque = YES;
+      geometry.intersectionFunctionTableOffset = 0;
+      [geometries addObject:geometry];
+    }
+    id<MTLBuffer> box_buffer = nil;
+    if (!scene.quadrics.empty()) {
+      std::vector<MTLAxisAlignedBoundingBox> boxes(scene.quadrics.size());
+      for (size_t i = 0; i < boxes.size(); ++i) {
+        const auto &lo = scene.quadric_bounds[2 * i];
+        const auto &hi = scene.quadric_bounds[2 * i + 1];
+        boxes[i].min = MTLPackedFloat3{lo.x, lo.y, lo.z};
+        boxes[i].max = MTLPackedFloat3{hi.x, hi.y, hi.z};
+      }
+      box_buffer = Upload(boxes);
+      auto geometry = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
+      geometry.boundingBoxBuffer = box_buffer;
+      geometry.boundingBoxCount = boxes.size();
+      geometry.boundingBoxStride = sizeof(MTLAxisAlignedBoundingBox);
+      geometry.intersectionFunctionTableOffset = 1;
+      [geometries addObject:geometry];
+    }
+    NSMutableArray<id<MTLAccelerationStructure>> *children = [NSMutableArray array];
+    for (MTLAccelerationStructureGeometryDescriptor *geometry in geometries) {
+      auto descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
+      descriptor.geometryDescriptors = @[ geometry ];
+      [children addObject:BuildAcceleration(descriptor)];
+    }
+    bottom_levels = children;
+    acceleration = children[0];
+    if (kernels.analytic_support) {
+      // Keep triangle and bounding-box BLASes separate: Metal's primitive
+      // descriptors cannot mix geometry kinds. Identity instances join them
+      // under one GPU-traversed top level, without expanding individual spheres.
+      std::vector<MTLAccelerationStructureInstanceDescriptor> instances(children.count);
+      for (size_t i = 0; i < instances.size(); ++i) {
+        auto &instance = instances[i];
+        instance.transformationMatrix.columns[0].x = 1;
+        instance.transformationMatrix.columns[1].y = 1;
+        instance.transformationMatrix.columns[2].z = 1;
+        instance.mask = 0xff;
+        instance.accelerationStructureIndex = i;
+      }
+      auto descriptor = [MTLInstanceAccelerationStructureDescriptor descriptor];
+      descriptor.instancedAccelerationStructures = children;
+      descriptor.instanceCount = instances.size();
+      descriptor.instanceDescriptorBuffer = Upload(instances);
+      mixed_acceleration = BuildAcceleration(descriptor);
+    }
+  }
+
+#ifdef NOT_CRAN
+  std::vector<WFGeometryResult> Probe(const std::vector<WFGeometryProbe> &input) {
+    auto pipeline = kernels.Compile(@"probe_geometry");
+    RegisterIntersections(pipeline);
+    auto probes = Upload(input);
+    auto results = Buffer(input.size() * sizeof(WFGeometryResult));
     auto command = [queue commandBuffer];
-    auto encoder = [command accelerationStructureCommandEncoder];
-    [encoder buildAccelerationStructure:acceleration
-                             descriptor:descriptor
-                          scratchBuffer:scratch
-                    scratchBufferOffset:0];
+    auto encoder = [command computeCommandEncoder];
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:buffers[0] offset:0 atIndex:0];
+    [encoder setBuffer:probes offset:0 atIndex:1];
+    [encoder setBuffer:results offset:0 atIndex:2];
+    [encoder setAccelerationStructure:acceleration atBufferIndex:16];
+    if (kernels.analytic_support)
+      [encoder setAccelerationStructure:mixed_acceleration atBufferIndex:29];
+    [encoder setIntersectionFunctionTable:intersection_tables.back().second
+                            atBufferIndex:kernels.analytic_support ? 30 : 25];
+    [encoder setBuffer:buffers[26] offset:0 atIndex:26];
+    [encoder setBuffer:buffers[28] offset:0 atIndex:28];
+    [encoder dispatchThreads:MTLSizeMake(input.size(), 1, 1)
+        threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
     [encoder endEncoding];
     Wait(command, [] { return false; });
+    const auto *data = static_cast<const WFGeometryResult *>(results.contents);
+    return std::vector<WFGeometryResult>(data, data + input.size());
   }
+#endif
 
   bool Render(const WFParameters &input, const std::vector<uint32_t> &active,
               const std::vector<WFLight> &lights, const std::function<bool()> &cancelled,
@@ -375,11 +491,25 @@ public:
 };
 } // namespace
 
+#if defined(NOT_CRAN)
+std::vector<WFGeometryResult> ProbeMetalGeometry(const WavefrontScene &scene,
+                                                 const std::vector<WFGeometryProbe> &input) {
+  @autoreleasepool {
+    auto &pipelines = SharedPipelines(scene.boundaries.size() > 1, scene.texture_features,
+                                      !scene.quadrics.empty());
+    MetalWavefront session(pipelines, scene, 1);
+    return session.Probe(input);
+  }
+}
+#endif
+
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &scene, size_t capacity) {
   @autoreleasepool {
     if (@available(macOS 11.0, *)) {
-      return std::make_unique<MetalWavefront>(SharedPipelines(scene.boundaries.size() > 1), scene,
-                                              capacity);
+      return std::make_unique<MetalWavefront>(SharedPipelines(scene.boundaries.size() > 1,
+                                                              scene.texture_features,
+                                                              !scene.quadrics.empty()),
+                                              scene, capacity);
     }
     throw std::runtime_error("Metal wavefront requires macOS 11 or later");
   }
@@ -424,6 +554,43 @@ std::vector<WFBsdfResult> ProbeMetalMaterials(const std::vector<WFBsdfProbe> &in
     if (command.status != MTLCommandBufferStatusCompleted)
       throw MetalError("material probe", command.error);
     std::memcpy(output.data(), result.contents, output.size() * sizeof(WFBsdfResult));
+  }
+  return output;
+}
+std::vector<WFVector> ProbeMetalTextures(const WavefrontScene &scene,
+                                         const std::vector<WFTextureProbe> &inputs) {
+  std::vector<WFVector> output(inputs.size());
+  if (inputs.empty())
+    return output;
+  @autoreleasepool {
+    auto &shared = SharedPipelines(false, scene.texture_features);
+    auto pipeline = shared.Compile(@"probe_textures");
+    auto upload = [&](const void *data, size_t bytes) {
+      WFVector empty;
+      return [shared.device newBufferWithBytes:bytes ? data : &empty
+                                        length:std::max(bytes, sizeof(empty))
+                                       options:MTLResourceStorageModeShared];
+    };
+    auto input = upload(inputs.data(), inputs.size() * sizeof(WFTextureProbe));
+    auto result = upload(output.data(), output.size() * sizeof(WFVector));
+    auto textures = upload(scene.textures.data(), scene.textures.size() * sizeof(WFTexture));
+    auto texels = upload(scene.texels.data(), scene.texels.size() * sizeof(WFVector));
+    auto queue = [shared.device newCommandQueue];
+    auto command = [queue commandBuffer];
+    auto encoder = [command computeCommandEncoder];
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:input offset:0 atIndex:0];
+    [encoder setBuffer:result offset:0 atIndex:1];
+    [encoder setBuffer:textures offset:0 atIndex:2];
+    [encoder setBuffer:texels offset:0 atIndex:3];
+    [encoder dispatchThreads:MTLSizeMake(inputs.size(), 1, 1)
+        threadsPerThreadgroup:MTLSizeMake(32, 1, 1)];
+    [encoder endEncoding];
+    [command commit];
+    [command waitUntilCompleted];
+    if (command.status != MTLCommandBufferStatusCompleted)
+      throw MetalError("texture probe", command.error);
+    std::memcpy(output.data(), result.contents, output.size() * sizeof(WFVector));
   }
   return output;
 }

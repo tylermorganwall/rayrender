@@ -470,4 +470,37 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
  }
 
 }
+context("Glossy bump sampling frame") {
+  test_that("both glossy samplers use the same normal as evaluation") {
+    auto color = std::make_shared<constant_texture>(point3f(.6));
+    glossy material(color, new TrowbridgeReitzDistribution(.2, .3, nullptr, false), point3f(.04),
+                    point3f(.8));
+    auto bumped = fixture(), oriented = bumped;
+    oriented.normal = oriented.bump_normal;
+    oriented.has_bump = false;
+    Ray ray(point3f(0, 0, 2), vec3f(0, 0, -1));
+    random_gen rng(41);
+    for (bool sampled : {false, true}) {
+      scatter_record a, b;
+      if (sampled) {
+        material.scatter(ray, bumped, a, static_cast<Sampler *>(nullptr));
+        material.scatter(ray, oriented, b, static_cast<Sampler *>(nullptr));
+      } else {
+        material.scatter(ray, bumped, a, rng);
+        material.scatter(ray, oriented, b, rng);
+      }
+      double max_error = 0;
+      for (int i = 0; i < 17; ++i) {
+        vec3f wi = unit_vector(vec3f(-.8f + i * .1f, .2f, 1));
+        max_error =
+            std::max(max_error,
+                     std::abs(double(a.pdf_ptr->value(wi, rng, 0) - b.pdf_ptr->value(wi, rng, 0))));
+        max_error = std::max(
+            max_error,
+            double((material.f(ray, bumped, wi) - material.f(ray, oriented, wi)).length()));
+      }
+      expect_true(max_error < 1e-6);
+    }
+  }
+}
 #endif

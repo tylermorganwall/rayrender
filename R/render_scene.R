@@ -146,14 +146,18 @@
 #' [metal()], [microfacet()] reflection/transmission, [glossy()], [dielectric()],
 #' [translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
 #' random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
-#' Spheres, ellipsoids, cylinders, disks, and cylindrical/ribbon curves are triangulated
+#' Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
+#' textures, and area emission. Cylinders, disks, and cylindrical/ribbon curves are triangulated
 #' automatically; curve silhouettes and fiber frames therefore approximate the native curves.
-#' It supports constant/checker/gradient/image textures, image roughness maps, area lights,
-#' point/spot lights, and image/disk infinite lights. Camera movement, environment rotation,
+#' It supports constant/checker/gradient/image textures, composable color and roughness graphs,
+#' image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
+#' and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
+#' point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
 #' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective
-#' and orthographic cameras are supported. Unsupported geometry, materials, media, bump/alpha
-#' mapping, composable texture graphs, Ptex, stratified sampling, or motion blur produce a warning and use CPU `nee` for the
-#' whole scene. Enabling camera motion blur in the preview also switches to CPU rendering.
+#' and orthographic cameras are supported. Unsupported geometry, materials, media,
+#' Ptex, legacy noise and world/HSV gradients, stratified sampling, or motion blur produce a
+#' warning and use CPU `nee` for the whole scene. Enabling camera motion blur in the preview
+#' also switches to CPU rendering.
 #' GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
 #' but do not give pixel-identical noise across backends. Mesh instances currently expand in
 #' GPU memory; image environments use a uniform directional proposal. The returned image's

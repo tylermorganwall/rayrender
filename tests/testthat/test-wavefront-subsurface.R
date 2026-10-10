@@ -151,7 +151,7 @@ test_that('Metal random walks agree with CPU transport for rough anisotropic bod
   expect_equal(attr(gpu, 'wavefront')$discarded_paths, 0)
 })
 
-test_that('Metal triangulates analytic shapes and cylindrical/ribbon curves', {
+test_that('Metal exports analytic spheres and triangulates other shapes and curves', {
   shapes = list(
     sphere(),
     ellipsoid(a = 1, b = .8, c = .6),
@@ -160,12 +160,18 @@ test_that('Metal triangulates analytic shapes and cylindrical/ribbon curves', {
     bezier_curve(),
     bezier_curve(type = 'ribbon')
   )
-  for (scene in shapes) {
+  for (index in seq_along(shapes)) {
+    scene = shapes[[index]]
     gpu = suppressWarnings(render_wavefront_body(scene, samples = 2, width = 8))
     if (!isTRUE(attr(gpu, 'wavefront')$used)) {
       skip('Metal is unavailable')
     }
-    expect_gt(attr(gpu, 'wavefront')$tessellated_primitives, 0)
+    if (index <= 2) {
+      expect_equal(attr(gpu, 'wavefront')$analytic_primitives, 1)
+      expect_equal(attr(gpu, 'wavefront')$triangles, 0)
+    } else {
+      expect_gt(attr(gpu, 'wavefront')$tessellated_primitives, 0)
+    }
     expect_true(all(is.finite(gpu)))
   }
 })

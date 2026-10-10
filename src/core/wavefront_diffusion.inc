@@ -1,4 +1,5 @@
 R"MSL(
+
   // Normalized diffusion retains the CPU's three-axis RGB proposal. A chord can
   // intersect any number of components. Weighted reservoir selection avoids a
   // per-ray candidate array without dropping crossings or truncating the profile.
@@ -16,15 +17,15 @@ R"MSL(
   };
   bool adjacent_membership(uint boundary, bool entering, float3 position, float3 error,
                            float3 geometric, thread VolumeState &adjacent, constant Params &p,
-                           device const Triangle *triangles, device const Boundary *boundaries,
-                           primitive_acceleration_structure scene,
-                           intersection_function_table<triangle_data> containment) {
+                           device const Triangle *triangles, device const Quadric *quadrics,
+                           device const Surface *surfaces, device const Boundary *boundaries,
+                           GeometryScene scene) {
     if (!cross_boundary(adjacent, boundary, entering))
       return false;
     if (p.boundary_lo.w != 0) {
       VolumeState resolved;
       if (!initial_membership(offset_origin(position, error, entering ? -geometric : geometric),
-                              resolved, p, triangles, boundaries, scene, containment))
+                              resolved, p, triangles, quadrics, surfaces, boundaries, scene))
         return false;
       // The reported face can be the losing member of an exact contact. Even
       // when the winner is glass on both sides, retain ALL coincident members
@@ -59,9 +60,9 @@ R"MSL(
   }
   bool diffusion_surface(uint body, DiffusionEntry entry, uint pixel, thread uint &dimension,
                          constant Params &p, device const uint *directions, device const uint *blue,
-                         device const Triangle *triangles, device const Boundary *boundaries,
-                         device const Material *materials, primitive_acceleration_structure scene,
-                         intersection_function_table<triangle_data> containment,
+                         device const Triangle *triangles, device const Quadric *quadrics,
+                         device const Surface *surfaces, device const Boundary *boundaries,
+                         device const Material *materials, GeometryScene scene,
                          thread DiffusionSample &result, thread bool &invalid) {
     Boundary b = boundaries[body];
     if (all(b.color.xyz == 0))
@@ -97,29 +98,27 @@ R"MSL(
     probe.direction = direction;
     probe.min_distance = FLT_MIN;
     probe.max_distance = upper - lower + 2 * padding;
-    intersector<triangle_data> query;
-    query.assume_geometry_type(geometry_type::triangle);
-    query.force_opacity(forced_opacity::opaque);
     float total = -INFINITY, selected_score = -INFINITY;
     float3 last_position = 0, last_error = 0;
     bool have_candidate = false, last_leaving = false;
     while (true) {
-      auto hit = query.intersect(probe, scene);
+      auto hit = trace_geometry(probe, scene, quadrics);
       if (hit.type == intersection_type::none)
         break;
-      Triangle t = triangles[hit.primitive_id];
+      GeometrySurface contact =
+          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      Triangle t = contact.face;
       if (t.boundary) {
-        float3 position, error;
-        surface_point(t, hit.triangle_barycentric_coord, position, error);
+        float3 position = contact.position, error = contact.error;
         float3 g = t.geometric.xyz;
         float3 forward = dot(direction, g) > 0 ? g : -g;
         VolumeState before, after;
         // Classify BOTH sides: one closest hit alone cannot represent coincident
         // milk/glass faces. The winning region, not mesh identity, defines an exit.
         bool classified = initial_membership(offset_origin(position, error, -forward), before, p,
-                                             triangles, boundaries, scene, containment) &&
+                                             triangles, quadrics, surfaces, boundaries, scene) &&
                           initial_membership(offset_origin(position, error, forward), after, p,
-                                             triangles, boundaries, scene, containment);
+                                             triangles, quadrics, surfaces, boundaries, scene);
         if (!classified) {
           invalid = true;
           return false;
@@ -141,10 +140,11 @@ R"MSL(
                 (selected_score == -INFINITY || choose < exp(score - next_total))) {
               result.hit = {pixel,
                             hit.primitive_id,
-                            hit.triangle_barycentric_coord.x,
-                            hit.triangle_barycentric_coord.y,
+                            hit.coordinates.x,
+                            hit.coordinates.y,
                             hit.distance,
-                            {0, 0, 0}};
+                            hit.coordinates.z,
+                            {0, 0}};
               result.position = position;
               result.error = error;
               result.normal = leaving ? forward : -forward;
@@ -196,7 +196,8 @@ R"MSL(
     float critical = table.shape.y, support = table.shape.z, mass = table.shape.w;
     if (cosine * cosine <= critical)
       return {0, 0};
-    float t = sqrt(max(0.f, (cosine * cosine - critical) / support)), coordinate = min(t, 1.f) * 1024;
+    float t = sqrt(max(0.f, (cosine * cosine - critical) / support)),
+          coordinate = min(t, 1.f) * 1024;
     uint bin = min(uint(coordinate), 1023u);
     float density =
         mix(samples[table.offset + bin].x, samples[table.offset + bin + 1].x, coordinate - bin);
@@ -231,4 +232,5 @@ R"MSL(
     float radius = sqrt(max(0.f, 1 - cosine * cosine)), phi = 2 * pi * u.y;
     return normal_frame(normal).world(float3(radius * cos(phi), radius * sin(phi), cosine));
   }
+
 )MSL"

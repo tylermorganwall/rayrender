@@ -16,6 +16,16 @@
 
 ## New features
 
+- `render_scene()` Intersects spheres and ellipsoids analytically on Metal,
+  retaining smooth silhouettes and accurate texture coordinates without
+  tessellation. Transformed instances, area lights, and priority-aware SSS
+  use the same analytic geometry.
+
+- `render_scene()` Evaluates composable color and roughness textures on Metal,
+  including UV/object/world mappings, seeded noise, direction mixes, and image
+  decoding/addressing. Metal also supports image alpha coverage and filtered bump
+  maps, including imported bump graphs and energy-conserving diffuse normal mapping.
+
 - `render_scene()` Adds experimental `integrator_type = "metal"` for GPU wavefront
   rendering with diffuse, metal, microfacet reflection/transmission, glossy,
   dielectric, translucent, hair, and layered OpenPBR materials. Homogeneous
@@ -145,6 +155,11 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `glossy()` Samples bump-mapped surfaces in the same normal frame used to evaluate
+  them, correcting dark edges and missing scattering directions.
+- `render_scene()` Preserves large ground spheres and their checker-pattern
+  alignment with analytic Metal intersections.
 
 - `render_scene()` Avoids scanning finite triangle emitters when a Metal ray
   escapes the scene, removing a major slowdown with triangulated area lights.
