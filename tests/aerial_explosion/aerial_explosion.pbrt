@@ -1,0 +1,62 @@
+ColorSpace "aces2065-1"
+Film "rgb"
+    "string filename" [ "aerial_explosion_aces.exr" ]
+    "integer yresolution" [ 360 ]
+    "integer xresolution" [ 480 ]
+PixelFilter "gaussian"
+    "float xradius" [ 2 ]
+    "float yradius" [ 2 ]
+Sampler "zsobol"
+    "integer pixelsamples" [ 16 ]
+Integrator "volpath"
+    "integer maxdepth" [ 10 ]
+Accelerator "bvh"
+Transform [ 1 0 0 0 0 0.9848077 0.17364818 0 0 0.17364818 -0.9848077 0 0 -42.608097 195.57237 1  ]
+Camera "perspective"
+    "float screenwindow" [ -1 1 -0.75 0.75 ]
+    "float fov" [ 45.000042 ]
+
+WorldBegin
+
+AttributeBegin
+    Transform [ -1 0 0 0 0 0.9961947 -0.087155744 0 0 -0.087155744 -0.9961947 0 0 0 0 1  ]
+    Scale 1 1 -1
+    Rotate 90 0 0 1
+    Rotate 90 0 1 0
+    LightSource "infinite"
+        "float scale" [ 2 ]
+        "string filename" [ "env/high_sun.exr" ]
+AttributeEnd
+
+AttributeBegin
+    ConcatTransform [ 1000 0 0 0 0 1000 0 0 0 0 1000 0 0 -0.05 0 1  ]
+
+    AttributeBegin
+        ConcatTransform [ 1 0 0 0 0 0 -1 0 0 1 0 0 0 0 0 1  ]
+        Shape "disk"
+    AttributeEnd
+AttributeEnd
+
+AttributeBegin
+    ConcatTransform [ 1 0 0 0 0 1 0 0 0 0 1 0 0 25 0 1  ]
+
+    AttributeBegin
+        MakeNamedMedium "/obj/aerial_explosion/output-0"
+            "float LeScale" [ 0.5 ]
+            "float scale" [ 0.5 ]
+            "rgb sigma_a" [ 0.1 0.1 0.1 ]
+            "string filename" [ "geometry/aerial_explosion-output-0.120.nvdb" ]
+            "float temperaturescale" [ 4500 ]
+            "string type" [ "nanovdb" ]
+
+        Material "interface"
+        MediumInterface "/obj/aerial_explosion/output-0" ""
+        Shape "trianglemesh"
+            "point3 P" [ 29.60001 -17.399988 25.800022 -30.99999 -17.399988 25.800022 
+                         29.60001 49.400017 25.800022 -30.99999 49.400017 25.800022 
+                         -30.99999 -17.399988 -29.999979 29.60001 -17.399988 -29.999979 
+                         -30.99999 49.400017 -29.999979 29.60001 49.400017 -29.999979 ]
+            "integer indices" [ 0 3 1 0 2 3 4 7 5 4 6 7 6 2 7 6 3 2 5 1 4 5 0 1 5 
+                                2 0 5 7 2 1 6 4 1 3 6 ]
+    AttributeEnd
+AttributeEnd

@@ -184,7 +184,7 @@ test_that("Metal exports owned mesh triangles and transformed instances", {
   if (!isTRUE(attr(gpu, 'wavefront')$used)) {
     skip('Metal unavailable; checked in the transport test')
   }
-  expect_equal(attr(gpu, 'wavefront')$triangles, 2 * count + 2)
+  expect_equal(attr(gpu, 'wavefront')$triangles, count + 2)
   cpu = render('nee')
   expect_lt(mean(abs(gpu[,, 1:3] - cpu[,, 1:3])), .025)
 })

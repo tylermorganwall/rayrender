@@ -126,17 +126,13 @@ public:
       Geometry(*inst->original_scene, placement * *inst->ObjectToWorld);
       current_placement = previous_placement;
     } else if (const auto *mesh = dynamic_cast<const mesh3d *>(&object)) {
-      ReserveTriangles(mesh->mesh->nTriangles);
-      Geometry(*mesh->mesh_bvh, placement);
+      Mesh(object, *mesh->mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *mesh = dynamic_cast<const plymesh *>(&object)) {
-      ReserveTriangles(mesh->mesh->nTriangles);
-      Geometry(*mesh->ply_mesh_bvh, placement);
+      Mesh(object, *mesh->ply_mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *mesh = dynamic_cast<const raymesh *>(&object)) {
-      ReserveTriangles(mesh->mesh->nTriangles);
-      Geometry(*mesh->tri_mesh_bvh, placement);
+      Mesh(object, *mesh->tri_mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *mesh = dynamic_cast<const trimesh *>(&object)) {
-      ReserveTriangles(mesh->mesh->nTriangles);
-      Geometry(*mesh->tri_mesh_bvh, placement);
+      Mesh(object, *mesh->tri_mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *shape = dynamic_cast<const box *>(&object)) {
       Geometry(shape->list, placement);
     } else if (const auto *rect = dynamic_cast<const xy_rect *>(&object)) {
@@ -193,7 +189,35 @@ public:
 
   size_t tessellated_primitives = 0;
 
+  void FinishMeshes() {
+    scene.loose_triangles = scene.triangles.size();
+    // Identity descriptors precede mesh placements in the TLAS. Their count=0
+    // distinguishes flat triangles and baked-world quadrics from shared meshes.
+    size_t prefix = (scene.loose_triangles != 0) + !scene.quadrics.empty();
+    if (scene.instances.empty())
+      return;
+    for (auto &prototype : prototypes) {
+      WFMeshRange range{uint32_t(scene.triangles.size()), uint32_t(prototype.triangles.size())};
+      ReserveTriangles(range.count);
+      scene.triangles.insert(scene.triangles.end(), prototype.triangles.begin(),
+                             prototype.triangles.end());
+      scene.meshes.push_back(range);
+    }
+    for (auto &instance : scene.instances) {
+      instance.triangle_start = scene.meshes[instance.mesh].start;
+      instance.triangle_count = scene.meshes[instance.mesh].count;
+    }
+    for (auto &light : scene.lights)
+      if (light.instance) {
+        light.primitive += scene.instances[light.instance - 1].triangle_start;
+        light.instance += prefix;
+      }
+    scene.instances.insert(scene.instances.begin(), prefix, WFMeshInstance());
+    prototypes.clear(); // Release staging vertices before allocating GPU resources.
+  }
+
   void DiffusionTables() {
+
     std::unordered_map<double, uint32_t> tables;
     for (auto &body : scene.boundaries) {
       if (body.subsurface != 2)
@@ -265,6 +289,8 @@ private:
   std::unordered_map<const texture *, uint32_t> textures;
   uint32_t current_boundary = 0;
   Float boundary_orientation = 1;
+
+#include "wavefront_instances.inc"
 
   void ReserveTriangles(size_t additional) {
     const size_t required = scene.triangles.size() + additional;
@@ -551,6 +577,10 @@ private:
   }
 
   void AddTriangle(WFTriangle out) {
+    if (prototype_triangles) {
+      prototype_triangles->push_back(out);
+      return;
+    }
     // The high primitive bit distinguishes analytic shapes in GPU hit queues.
     if (scene.triangles.size() >= 0x80000000u)
       throw std::runtime_error("Metal triangle capacity exceeded");
@@ -623,6 +653,104 @@ private:
     }
   }
 
+  // Alias entries share the immutable texel buffer. Rotation only changes the
+  // light basis: both lookup and sampling stay in the image's local frame.
+  void EnvironmentAlias(const ImageInfiniteLight &image, WFLight &light) {
+    const auto texture = scene.textures[light.texture];
+    if (!image.distribution || (texture.type != 5 && texture.type != 6))
+      return; // Black/constant environments retain uniform sphere sampling.
+    auto found = environment_aliases.find(light.texture);
+    if (found != environment_aliases.end()) {
+      light.alias_offset = found->second.alias_offset;
+      light.alias_width = found->second.alias_width;
+      light.alias_height = found->second.alias_height;
+      return;
+    }
+    // Bound table memory while retaining enough bits for each alias decision. Larger maps aggregate
+    // all source-cell mass into coarser cells; this changes the proposal only, never the radiance
+    // image.
+    light.alias_width = std::min(texture.width, 2048u);
+    light.alias_height = std::min(texture.height, 1024u);
+    size_t cells = size_t(light.alias_width) * light.alias_height;
+    size_t count = 1;
+    unsigned column_bits = 0;
+    while (count < cells) {
+      count *= 2;
+      ++column_bits;
+    }
+    // Power-of-two columns split one 32-bit sample exactly into a column and
+    // a coin. Padding has zero mass and always aliases to a real image cell.
+    // Quantize thresholds to the coin's actual resolution, then derive PDFs
+    // from those thresholds. Even very dark cells retain at least one outcome.
+    double coin_resolution = double(uint32_t(1) << std::min(24u, 32u - column_bits));
+    std::vector<double> mass(count, 0);
+    for (uint32_t y = 0; y < texture.height; ++y) {
+      if (y % 64 == 0)
+        Rcpp::checkUserInterrupt();
+      for (uint32_t x = 0; x < texture.width; ++x) {
+        double u = (x + .5) / texture.width, v = (y + .5) / texture.height;
+        size_t cell =
+            size_t(v * light.alias_height) * light.alias_width + size_t(u * light.alias_width);
+        mass[cell] += image.distribution->Pdf(vec2f(u, v));
+      }
+    }
+    double total = 0;
+    for (double value : mass)
+      total += value;
+    if (!(total > 0) || !std::isfinite(total))
+      return;
+    std::vector<double> solid_angle(light.alias_height);
+    for (uint32_t y = 0; y < light.alias_height; ++y) {
+      solid_angle[y] =
+          2 * M_PI / light.alias_width *
+          (std::cos(M_PI * y / light.alias_height) - std::cos(M_PI * (y + 1) / light.alias_height));
+      for (uint32_t x = 0; x < light.alias_width; ++x) {
+        size_t i = size_t(y) * light.alias_width + x;
+        // Retain support for bilinear filtering, seams and arbitrarily dark cells.
+        mass[i] = .999 * mass[i] / total + .001 * solid_angle[y] / (4 * M_PI);
+      }
+    }
+    std::vector<WFVector> table(count);
+    std::vector<double> scaled(count);
+    std::vector<uint32_t> small, large;
+    for (size_t i = 0; i < count; ++i) {
+      scaled[i] = mass[i] * count;
+      (scaled[i] < 1 ? small : large).push_back(i);
+      table[i].x = 1;
+      uint32_t self = i;
+      std::memcpy(&table[i].y, &self, sizeof(self));
+    }
+    // Vose construction: each equally likely column keeps its own mass and
+    // borrows the remainder from a larger cell. Sampling requires one lookup.
+    while (!small.empty() && !large.empty()) {
+      uint32_t a = small.back(), b = large.back();
+      small.pop_back();
+      large.pop_back();
+      table[a].x =
+          std::clamp(float(std::ceil(scaled[a] * coin_resolution) / coin_resolution), 0.f, 1.f);
+      std::memcpy(&table[a].y, &b, sizeof(b));
+      scaled[b] -= 1 - scaled[a];
+      (scaled[b] < 1 ? small : large).push_back(b);
+    }
+    // Store the PDF of the rounded table actually sampled on the GPU, rather
+    // than the ideal double-precision weights used to construct it.
+    std::fill(mass.begin(), mass.end(), 0);
+    for (size_t i = 0; i < count; ++i) {
+      uint32_t alias;
+      std::memcpy(&alias, &table[i].y, sizeof(alias));
+      mass[i] += table[i].x / double(count);
+      mass[alias] += (1 - double(table[i].x)) / count;
+    }
+    for (size_t i = 0; i < cells; ++i)
+      table[i].z = mass[i] / solid_angle[i / light.alias_width];
+    if (scene.texels.size() + count > UINT32_MAX)
+      throw std::runtime_error("Metal environment table capacity exceeded");
+    light.alias_offset = scene.texels.size();
+    scene.texels.insert(scene.texels.end(), table.begin(), table.end());
+    environment_aliases.emplace(light.texture, light);
+  }
+  std::unordered_map<uint32_t, WFLight> environment_aliases;
+
   void Infinite(const InfiniteLight &source) {
     if (const auto *mixture = dynamic_cast<const InfiniteLightMixture *>(&source)) {
       for (const auto &light : mixture->lights)
@@ -637,6 +765,7 @@ private:
     } else if (const auto *image = dynamic_cast<const ImageInfiniteLight *>(&source)) {
       out.type = 0;
       out.texture = Texture(image->image.get());
+      EnvironmentAlias(*image, out);
     } else
       throw std::runtime_error("atmospheric or unrecognized infinite light");
     scene.lights.push_back(out);
@@ -671,6 +800,7 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
     scene.boundary_lo = {INFINITY, INFINITY, INFINITY, 0};
     scene.boundary_hi = {-INFINITY, -INFINITY, -INFINITY, 0};
     compiler.Geometry(world);
+    compiler.FinishMeshes();
     compiler.DiffusionTables();
     if (lights.volume_scene)
       compiler.Points(lights.volume_scene->point_lights);
@@ -685,7 +815,10 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
         if ((unordered_lights[i].type < 2) == infinite) {
           const auto &light = unordered_lights[i];
           if (light.type == 3) {
-            if (light.primitive & 0x80000000u)
+            if (light.instance) {
+              auto &instance = scene.instances[light.instance - 1];
+              instance.light_base = scene.lights.size() - scene.triangles[light.primitive].light;
+            } else if (light.primitive & 0x80000000u)
               scene.quadrics[light.primitive & 0x7fffffffu].light = scene.lights.size();
             else
               scene.triangles[light.primitive].light = scene.lights.size();
@@ -701,6 +834,9 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
     report.used = true;
     report.triangles = scene.triangles.size();
     report.analytic_primitives = scene.quadrics.size();
+    report.unique_meshes = scene.meshes.size();
+    for (const auto &instance : scene.instances)
+      report.mesh_instances += instance.triangle_count != 0;
     report.tessellated_primitives = compiler.tessellated_primitives;
     report.upload_seconds = std::chrono::duration<double>(Clock::now() - started).count();
     return session;

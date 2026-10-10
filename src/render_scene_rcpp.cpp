@@ -1281,6 +1281,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       _["triangles"] = double(wavefront_report.triangles),
       _["tessellated_primitives"] = double(wavefront_report.tessellated_primitives),
       _["analytic_primitives"] = double(wavefront_report.analytic_primitives),
+      _["unique_meshes"] = double(wavefront_report.unique_meshes),
+      _["mesh_instances"] = double(wavefront_report.mesh_instances),
       _["scattering_events"] = double(wavefront_report.scattering_events),
       _["discarded_paths"] = double(wavefront_report.discarded_paths),
       _["upload_seconds"] = wavefront_report.upload_seconds,

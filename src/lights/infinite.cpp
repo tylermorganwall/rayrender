@@ -45,7 +45,7 @@ ImageInfiniteLight::ImageInfiniteLight(std::shared_ptr<texture> source, int widt
     throw std::runtime_error("Infinite light image dimensions must be positive.");
   std::vector<Float> values(size_t(width) * height);
   double max_value = 0;
-  // Normalize in double precision before building the Float CDF so bright HDR
+  // Normalize in double precision before building the Float proposal so bright HDR
   // images cannot overflow its integral.
   for (int y = 0; y < height; ++y) {
     if (y % 64 == 0) Rcpp::checkUserInterrupt();
@@ -87,12 +87,12 @@ ImageInfiniteLight::ImageInfiniteLight(std::shared_ptr<texture> source, int widt
     }
   }
 
-  // A common scale preserves sampling probabilities while keeping the CDF
+  // A common scale preserves sampling probabilities while keeping the table
   // manageable. With no positive luminance, leave sampling to the uniform path.
   if (max_value > 0) {
     for (size_t i = 0; i < values.size(); ++i)
       values[i] = double(values[i]) / max_value;
-    distribution = std::make_unique<Distribution2D>(values.data(), width, height);
+    distribution = std::make_unique<AliasDistribution2D>(values.data(), width, height);
   }
 
 
@@ -152,6 +152,7 @@ InfiniteLightMixture::InfiniteLightMixture(std::vector<std::shared_ptr<InfiniteL
   if (lights.empty()) throw std::runtime_error("An infinite light mixture must contain lights.");
   double maximum = 0;
   for (const auto &light : lights) {
+    continuous_samples |= light->NeedsContinuousSamples();
     weight += light->SamplingWeight();
     maximum = std::max(maximum, light->SamplingWeight());
   }

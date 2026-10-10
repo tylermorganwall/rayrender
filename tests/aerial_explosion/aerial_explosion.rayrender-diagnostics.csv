@@ -1,0 +1,4 @@
+"file","line","directive","message"
+"/Users/tyler/Desktop/R/rayrender/pbrt-v4-tests/aerial_explosion/aerial_explosion.pbrt",1,"ColorSpace","Only linear sRGB values are supported; other ColorSpace values are not converted."
+"/Users/tyler/Desktop/R/rayrender/pbrt-v4-tests/aerial_explosion/aerial_explosion.pbrt",44,"MakeNamedMedium","NanoVDB temperature emission uses rayrender's RGB blackbody model; files must contain uncompressed float grids, with density required and temperature optional."
+"/Users/tyler/Desktop/R/rayrender/pbrt-v4-tests/aerial_explosion/aerial_explosion.pbrt",15,"Camera","Scaled, sheared, or reflected cameras are reduced to a LookAt frame."

@@ -5,6 +5,7 @@ R"MSL(
   constant bool scene_has_boundaries [[function_constant(0)]];
   constant uint texture_features [[function_constant(1)]];
   constant bool scene_has_quadrics [[function_constant(2)]];
+  constant bool scene_has_instances [[function_constant(3)]];
 #include <metal_raytracing>
 #include <metal_stdlib>
   using namespace metal;
@@ -37,6 +38,7 @@ R"MSL(
   struct Light {
     float4 forward, right, up, color;
     uint type, texture, primitive, flags;
+    uint instance, alias_offset, alias_width, alias_height;
   };
   struct Camera {
     float4 origin, lower_left, horizontal, vertical, right, up, forward;
@@ -78,7 +80,7 @@ R"MSL(
     atomic_uint rays, hits, shadows, next, error, discarded, scattering;
   };
   static_assert(sizeof(Triangle) == 160 && sizeof(Texture) == 80 && sizeof(Material) == 144 &&
-                    sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 80 &&
+                    sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 96 &&
                     sizeof(Camera) == 128 && sizeof(Params) == 208 && sizeof(Pixel) == 48 &&
                     sizeof(Path) == 80 && sizeof(Hit) == 32 && sizeof(Shadow) == 144 &&
                     sizeof(Counts) == 28,
@@ -104,16 +106,21 @@ R"MSL(
     x ^= x * 0x53a22864u;
     return reverse_bits(x);
   }
-  float sample1(uint pixel, thread uint &dimension, constant Params &p,
-                device const uint *directions, device const uint *blue) {
+  uint sample_bits(uint pixel, thread uint &dimension, constant Params &p,
+                   device const uint *directions, device const uint *blue,
+                   bool continuous = false) {
     uint dim = dimension++, x = pixel / p.height, y = pixel % p.height;
     if (p.sampler == 0)
-      return min(float(hash_seed(hash_seed(p.sample, pixel ^ p.seed), dim)) * 0x1p-32f,
-                 0x1.fffffep-1f);
+      return hash_seed(hash_seed(p.sample, pixel ^ p.seed), dim);
     if (p.sampler == 3 && dim < 8) {
       uint tile = ((x & 127) + (y & 127) * 128) * 8 + dim;
       uint ranked = (p.sample & 255) ^ blue[65536 + tile];
-      return (0.5f + float(blue[ranked * 256 + dim] ^ blue[65536 + 131072 + tile])) / 256.f;
+      uint stratum = blue[ranked * 256 + dim] ^ blue[65536 + 131072 + tile];
+      // Preserve the blue-noise stratum, restoring its missing low bits only
+      // for image-environment proposals. Ordinary callers retain the midpoint.
+      uint low =
+          continuous ? hash_seed(hash_seed(p.sample, pixel ^ p.seed), dim) & 0xffffffu : 0x800000u;
+      return (stratum << 24) | low;
     }
     uint seed = p.sampler == 3 ? x * 0x9e3779b9u ^ y * 0x85ebca6bu : hash_seed(pixel, p.seed);
     seed += dim / 21200;
@@ -122,7 +129,11 @@ R"MSL(
     for (uint bit = 0; index; index >>= 1, ++bit)
       if (index & 1)
         value ^= directions[dim * 32 + bit];
-    return min(float(owen(value, seed ^ (dim + (seed << 6) + (seed >> 2)))) * 0x1p-32f,
+    return owen(value, seed ^ (dim + (seed << 6) + (seed >> 2)));
+  }
+  float sample1(uint pixel, thread uint &dimension, constant Params &p,
+                device const uint *directions, device const uint *blue, bool continuous = false) {
+    return min(float(sample_bits(pixel, dimension, p, directions, blue, continuous)) * 0x1p-32f,
                0x1.fffffep-1f);
   }
 
@@ -212,7 +223,52 @@ R"MSL(
     }
     return 0;
   }
-  float light_pdf(Light l) { return l.type == 0 ? 1 / (4 * pi) : 1 / (2 * pi * l.forward.w); }
+  float2 environment_uv(Light l, float3 wi) {
+    float3 local = float3(dot(wi, l.forward.xyz), dot(wi, l.right.xyz), dot(wi, l.up.xyz));
+    float u = .5f - atan2(-local.x, -local.z) / (2 * pi);
+    return float2(fract(u), .5f + asin(clamp(local.y, -1.f, 1.f)) / pi);
+  }
+  float light_pdf(Light l, float3 wi, device const float4 *texels) {
+    if (l.type != 0)
+      return 1 / (2 * pi * l.forward.w);
+    if (l.alias_offset == UINT_MAX)
+      return 1 / (4 * pi);
+    float2 uv = environment_uv(l, wi);
+    uint x = min(uint(uv.x * l.alias_width), l.alias_width - 1);
+    uint y = min(uint(uv.y * l.alias_height), l.alias_height - 1);
+    return texels[l.alias_offset + y * l.alias_width + x].z;
+  }
+  float3 sample_environment(Light l, uint bits, float latitude, device const float4 *texels) {
+    if (l.alias_offset == UINT_MAX) {
+      float u = min(float(bits) * 0x1p-32f, 0x1.fffffep-1f);
+      float y = 1 - 2 * u, r = sqrt(max(0.f, 1 - y * y)), phi = 2 * pi * latitude;
+      return float3(r * cos(phi), y, r * sin(phi));
+    }
+    uint cells = l.alias_width * l.alias_height;
+    uint column_bits = cells > 1 ? 32 - clz(cells - 1) : 0;
+    uint coin_bits = min(24u, 32 - column_bits);
+    uint cell = column_bits ? bits >> (32 - column_bits) : 0;
+    uint coin = (bits >> (32 - column_bits - coin_bits)) & ((1u << coin_bits) - 1);
+    float resolution = float(1u << coin_bits);
+    float residual = (float(coin) + .5f) / resolution;
+    float4 entry = texels[l.alias_offset + cell];
+    // Reuse the alias decision's remapped residual for longitude. No rejection
+    // or search, and only the two random dimensions needed for a direction.
+    if (coin < uint(entry.x * resolution))
+      residual /= entry.x;
+    else {
+      residual = (residual - entry.x) / (1 - entry.x);
+      cell = as_type<uint>(entry.y);
+    }
+    residual = clamp(residual, 0.f, 0x1.fffffep-1f);
+    uint x = cell % l.alias_width, y = cell / l.alias_width;
+    float phi = -2 * pi * (x + residual) / l.alias_width;
+    float c0 = -cos(pi * float(y) / l.alias_height);
+    float c1 = -cos(pi * float(y + 1) / l.alias_height);
+    float cosine = mix(c0, c1, latitude), radius = sqrt(max(0.f, 1 - cosine * cosine));
+    float3 local = float3(radius * sin(phi), cosine, radius * cos(phi));
+    return local.x * l.forward.xyz + local.y * l.right.xyz + local.z * l.up.xyz;
+  }
 
   uint active_boundary(thread const VolumeState &state, device const Boundary *boundaries,
                        device const Material *materials) {
@@ -365,9 +421,9 @@ R"MSL(
         uint body = id;
         auto hit = trace_geometry(probe, scene, quadrics, body);
         if (hit.type != intersection_type::none &&
-            dot(direction,
-                geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces)
-                    .face.geometric.xyz) > 0) {
+            dot(direction, geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
+                                            surfaces, hit.instance, scene.instances)
+                               .face.geometric.xyz) > 0) {
           if (!cross_boundary(state, id, true))
             return false;
           // Replay farther exits first, matching nested/equal-priority order.
@@ -401,8 +457,8 @@ R"MSL(
       auto hit = trace_geometry(probe, scene, quadrics);
       if (hit.type == intersection_type::none)
         return true;
-      GeometrySurface contact =
-          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
+                                                 quadrics, surfaces, hit.instance, scene.instances);
       Triangle t = contact.face;
       float facing = dot(direction, t.geometric.xyz);
       bool before_endpoint = hit.distance < distance - endpoint_guard ||
@@ -466,13 +522,19 @@ R"MSL(
       intersection_function_table<triangle_data> triangle_functions [[buffer(25)]],                \
       device const Surface *surfaces [[buffer(26)]],                                               \
       device Differential *differentials [[buffer(27)]],                                           \
-      device const Quadric *quadrics [[buffer(28)]],                                               \
+      device const GeometryStorage *storage [[buffer(28)]],                                        \
       instance_acceleration_structure mixed_scene [[buffer(29)]],                                  \
       intersection_function_table<triangle_data, instancing> mixed_functions [[buffer(30)]],       \
       uint i [[thread_position_in_grid]]
 
   kernel void primary(SCENE_ARGUMENTS) {
-    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const Quadric *quadrics =
+        reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
+    device const MeshInstance *instances =
+        reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
+                           instances};
     if (i == 0) {
       atomic_store_explicit(&counts.rays, p.active, memory_order_relaxed);
       atomic_store_explicit(&counts.hits, 0, memory_order_relaxed);
@@ -536,7 +598,13 @@ R"MSL(
   }
 
   kernel void intersect_paths(SCENE_ARGUMENTS) {
-    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const Quadric *quadrics =
+        reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
+    device const MeshInstance *instances =
+        reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
+                           instances};
     if (i >= atomic_load_explicit(&counts.rays, memory_order_relaxed))
       return;
     uint pixel = ray_queue[i];
@@ -587,10 +655,12 @@ R"MSL(
     auto hit = trace_geometry(r, scene, quadrics);
     uint departed = as_type<uint>(path.origin.w);
     while (hit.type != intersection_type::none) {
-      bool skip = departed && !is_quadric(departed - 1) && hit.primitive_id == departed - 1;
+      bool skip = departed && !is_quadric(departed - 1) && hit.primitive_id == departed - 1 &&
+                  hit.instance == as_type<uint>(path.previous.w);
       if (!skip && (texture_features & 8)) {
         GeometrySurface contact =
-            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
+                             hit.instance, scene.instances);
         Triangle face = contact.face;
         uint alpha = surfaces[as_type<uint>(face.uv2.w)].alpha;
         if (alpha != UINT_MAX) {
@@ -645,7 +715,8 @@ R"MSL(
         // outside its medium corrupts subsequent membership. Keep the sampled
         // distance/PDF and move only an uncertain position onto the incident side.
         GeometrySurface contact =
-            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+            geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
+                             hit.instance, scene.instances);
         Triangle endpoint = contact.face;
         float3 surface_position = contact.position, error = contact.error;
         error += 3 * FLT_EPSILON * (abs(r.origin) + abs(flight * r.direction));
@@ -676,7 +747,9 @@ R"MSL(
         Light l = lights[j];
         if (l.type > 1)
           continue;
-        float weight = (path.flags & 1) ? 1 : mis(path.direction.w, light_pdf(l) / p.lights);
+        float weight = (path.flags & 1)
+                           ? 1
+                           : mis(path.direction.w, light_pdf(l, r.direction, texels) / p.lights);
         radiance += weight * environment(l, r.direction, path.previous.xyz, textures, texels);
       }
       pixels[pixel].radiance.xyz += path.beta.xyz * radiance;
@@ -694,12 +767,18 @@ R"MSL(
                        collision ? 0 : hit.coordinates.y,
                        distance,
                        collision ? 0 : hit.coordinates.z,
-                       {0, 0}};
+                       {collision ? 0 : hit.instance, 0}};
     atomic_fetch_max_explicit(&indirect[3], (slot + 64) / 64, memory_order_relaxed);
   }
 
   template <ushort features> kernel void shade(SCENE_ARGUMENTS) {
-    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const Quadric *quadrics =
+        reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
+    device const MeshInstance *instances =
+        reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
+                           instances};
     if (i >= atomic_load_explicit(&counts.hits, memory_order_relaxed))
       return;
     Hit h = hit_queue[i];
@@ -758,8 +837,8 @@ R"MSL(
       }
       path.beta.xyz *= exit.weight;
       h = exit.hit;
-      geometry =
-          geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces);
+      geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
+                                  h.padding[0], scene.instances);
       t = geometry.face;
       position = exit.position;
       error = exit.error;
@@ -784,8 +863,8 @@ R"MSL(
         path.flags |= 2;
       }
     } else {
-      geometry =
-          geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces);
+      geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
+                                  h.padding[0], scene.instances);
       t = geometry.face;
       m = materials[t.material];
       float3 bary = float3(1 - h.u - h.v, h.u, h.v);
@@ -837,6 +916,7 @@ R"MSL(
           if (hidden) {
             path.origin = float4(offset_origin(position, error, entering ? -g : g),
                                  as_type<float>(h.primitive + 1));
+            path.previous.w = as_type<float>(h.padding[0]);
             remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
                                      diffusion_entries);
             enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
@@ -880,6 +960,7 @@ R"MSL(
             path.beta.xyz *= rho;
           path.origin = float4(offset_origin(position, error, entering ? -g : g),
                                as_type<float>(h.primitive + 1));
+          path.previous.w = as_type<float>(h.padding[0]);
           path.dimension = dim;
           remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
                                    diffusion_entries);
@@ -922,7 +1003,7 @@ R"MSL(
           }
           path.origin = float4(offset_origin(position, error, transmission ? -g : g),
                                as_type<float>(h.primitive + 1));
-          path.previous = float4(position, 0);
+          path.previous = float4(position, as_type<float>(h.padding[0]));
           if (texture_features & 4)
             differentials[pixel] =
                 propagate_differential(differentials[pixel], derivatives, n, path.direction.xyz,
@@ -1015,22 +1096,23 @@ R"MSL(
     // technique; evaluating emission individually on a miss avoids mixture bias.
     if (p.lights) {
       uint choice = min(uint(sample1(pixel, dim, p, directions, blue) * p.lights), p.lights - 1);
-      float u = sample1(pixel, dim, p, directions, blue),
-            v = sample1(pixel, dim, p, directions, blue);
       Light l = lights[choice];
+      bool continuous = l.type == 0 && l.alias_offset != UINT_MAX;
+      uint environment_bits = sample_bits(pixel, dim, p, directions, blue, continuous);
+      float u = min(float(environment_bits) * 0x1p-32f, 0x1.fffffep-1f);
+      float v = sample1(pixel, dim, p, directions, blue, continuous);
       float3 wi, emitted = 0;
       float3 light_target = 0, light_error = 0, light_normal = 0;
       float pdf = 0, maximum = INFINITY;
       if (l.type == 0) {
-        float y = 1 - 2 * u, r = sqrt(max(0.f, 1 - y * y)), phi = 2 * pi * v;
-        wi = float3(r * cos(phi), y, r * sin(phi));
+        wi = sample_environment(l, environment_bits, v, texels);
         emitted = environment(l, wi, position, textures, texels);
-        pdf = light_pdf(l) / p.lights;
+        pdf = light_pdf(l, wi, texels) / p.lights;
       } else if (l.type == 1) {
         float d = u * l.forward.w, s = sqrt(d * (2 - d)), phi = 2 * pi * v;
         wi = (1 - d) * l.forward.xyz + s * (cos(phi) * l.right.xyz + sin(phi) * l.up.xyz);
         emitted = environment(l, wi, position, textures, texels);
-        pdf = light_pdf(l) / p.lights;
+        pdf = light_pdf(l, wi, texels) / p.lights;
       } else if (l.type == 2) {
         light_target = l.forward.xyz;
         float3 delta = l.forward.xyz - position;
@@ -1050,8 +1132,9 @@ R"MSL(
         emitted = l.color.xyz * falloff / distance2;
         pdf = 1.f / p.lights;
       } else {
-        GeometrySurface source = sample_geometry_light(l.primitive, float2(u, v), position,
-                                                       triangles, quadrics, surfaces);
+        GeometrySurface source =
+            sample_geometry_light(l.primitive, float2(u, v), position, triangles, quadrics,
+                                  surfaces, l.instance, scene.instances);
         Triangle emitter = source.face;
         Material lm = materials[emitter.material];
         float3 b = float3(1 - source.coordinates.x - source.coordinates.y, source.coordinates.xy);
@@ -1153,7 +1236,7 @@ R"MSL(
                                 float4(shadow_direction, max_t),
                                 float4(contribution, 0),
                                 pixel,
-                                {0, 0, 0},
+                                {volume ? 0 : h.padding[0], 0, 0},
                                 direct_state};
           atomic_fetch_max_explicit(&indirect[6], (slot + 64) / 64, memory_order_relaxed);
         }
@@ -1244,7 +1327,7 @@ R"MSL(
     }
     if (all(path.beta.xyz == 0))
       return;
-    path.previous = float4(position, 0);
+    path.previous = float4(position, as_type<float>(h.padding[0]));
     path.origin =
         float4(volume ? position : offset_origin(position, error, dot(g, wi) < 0 ? -g : g),
                volume ? 0.f : as_type<float>(h.primitive + 1));
@@ -1276,7 +1359,13 @@ R"MSL(
   template [[host_name("shade_diffusion")]] kernel void shade<4>(SCENE_ARGUMENTS);
 
   kernel void shadows(SCENE_ARGUMENTS) {
-    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions};
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const Quadric *quadrics =
+        reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
+    device const MeshInstance *instances =
+        reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
+    GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
+                           instances};
     if (i >= atomic_load_explicit(&counts.shadows, memory_order_relaxed))
       return;
     Shadow s = shadow_queue[i];
@@ -1299,7 +1388,7 @@ R"MSL(
       auto hit = trace_geometry(r, scene, quadrics);
       uint departed = as_type<uint>(s.origin.w);
       if (hit.type != intersection_type::none && departed && !is_quadric(departed - 1) &&
-          hit.primitive_id == departed - 1) {
+          hit.primitive_id == departed - 1 && hit.instance == s.padding[0]) {
         float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
         if (!(next > r.min_distance)) {
           atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
@@ -1323,8 +1412,8 @@ R"MSL(
         pixels[s.pixel].radiance.xyz += transmittance * s.contribution.xyz;
         return;
       }
-      GeometrySurface contact =
-          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
+                                                 quadrics, surfaces, hit.instance, scene.instances);
       Triangle t = contact.face;
       if (texture_features & 8) {
         uint alpha = surfaces[as_type<uint>(t.uv2.w)].alpha;
@@ -1343,7 +1432,8 @@ R"MSL(
           bool hole = true;
           if (t.boundary) {
             uint bits = hash_seed(hash_seed(s.pixel, p.sample),
-                                  hit.primitive_id ^ p.seed ^ (p.depth * 0x9e3779b9u));
+                                  hit.primitive_id ^ (hit.instance * 0x85ebca6bu) ^ p.seed ^
+                                      (p.depth * 0x9e3779b9u));
             hole = float(bits) * 0x1p-32f >= opacity;
           } else
             transmittance *= 1 - opacity;

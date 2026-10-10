@@ -292,9 +292,11 @@ Ptex, legacy noise and world/HSV gradients, stratified sampling, or motion blur 
 warning and use CPU `nee` for the whole scene. Enabling camera motion blur in the preview
 also switches to CPU rendering.
 GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
-but do not give pixel-identical noise across backends. Mesh instances currently expand in
-GPU memory; image environments use a uniform directional proposal. The returned image's
-`wavefront` attribute reports use/fallback, triangle and tessellated-primitive counts,
+but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
+buffers and acceleration structures, including nested placements. Image environments
+use luminance-weighted alias sampling in solid angle; interactive rotation reuses the table.
+The returned image's `wavefront` attribute reports use/fallback, stored triangle,
+unique-mesh, mesh-placement, analytic-primitive, and tessellated-primitive counts,
 scattering events, discarded paths, upload time, and sampling time.
 Other platforms retain the CPU renderer and do not require Metal.
 With `nee`, surfaces and participating media use RGB null-scattering transport;

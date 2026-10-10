@@ -295,6 +295,28 @@ vec2f SobolBlueNoiseSampler::Get2D() {
 SobolBlueNoiseSampler::SobolBlueNoiseSampler(random_gen& rng)
   : PixelSampler(1000000000,0,rng),  current1Dsample(0), current2Dsample(0)  {}
 
+vec2f SobolBlueNoiseSampler::Get2DContinuous() {
+  size_t dimension = independent_dimensions ? current1DDimension : current2DDimension;
+  uint32_t sample = independent_dimensions ? current1Dsample : current2Dsample;
+  vec2f result = Get2D();
+  for (unsigned axis = 0; axis < 2; ++axis) {
+    if (independent_dimensions && dimension + axis >= 8)
+      continue; // These dimensions already use full-precision scrambled Sobol.
+    // Restore low bits deterministically without consuming another dimension or
+    // changing the RNG sequence. The original 8-bit blue-noise stratum is fixed.
+    uint32_t key = currentPixelx * 0x9e3779b9u ^ currentPixely * 0x85ebca6bu ^
+                   sample * 0xc2b2ae35u ^ uint32_t(dimension + axis) * 0x27d4eb2du;
+    key ^= key >> 16;
+    key *= 0x7feb352du;
+    key ^= key >> 15;
+    key *= 0x846ca68bu;
+    key ^= key >> 16;
+    uint32_t stratum = std::min(uint32_t(result[axis] * 256), 255u);
+    result.e[axis] = Float((stratum << 16) | (key & 65535u)) * Float(0x1p-24);
+  }
+  return result;
+}
+
 
 void SobolBlueNoiseSampler::StartPixel( unsigned int i,  unsigned int j) {
   currentPixelx = i;

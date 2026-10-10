@@ -329,7 +329,7 @@ vec3f InfiniteAreaLight::random(const point3f& o, random_gen& rng, Float time) {
 }
 
 vec3f InfiniteAreaLight::random(const point3f& o, Sampler* sampler, Float time) {
-  vec2f u = sampler->Get2D();
+  vec2f u = light && light->NeedsContinuousSamples() ? sampler->Get2DContinuous() : sampler->Get2D();
   if (light) return light->Sample(o, u, time);
   Float mapPdf;
   vec2f uv = distribution->SampleContinuous(u, &mapPdf);

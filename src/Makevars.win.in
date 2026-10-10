@@ -17,5 +17,8 @@ OBJECTS=$(C_OBJECTS) $(CPP_OBJECTS)
 
 $(SHLIB): $(OBJECTS)
 
+# Keep virtual sampler/light interfaces consistent during incremental builds.
+$(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
+
 # Make the shared object
 all: $(SHLIB)

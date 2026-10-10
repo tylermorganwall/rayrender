@@ -56,7 +56,23 @@ struct WFQuadric {
   WFVector measure;
   uint32_t material = 0, light = UINT32_MAX, boundary = 0, surface = 0;
 };
+// One affine placement references a shared triangle range and its own mapping,
+// emitter and medium metadata. IDs are TLAS descriptor indices plus one (0=flat).
+struct WFMeshInstance {
+  WFVector inverse[3], forward[3];
+  uint32_t triangle_start = 0, triangle_count = 0, surface_base = 0, boundary = 0;
+  uint32_t light_base = 0, mesh = 0;
+  float orientation = 1;
+  uint32_t padding = 0;
+};
+struct WFMeshRange {
+  uint32_t start = 0, count = 0;
+};
+struct WFGeometryStorage {
+  uint32_t quadric_offset = 16, instance_offset = 16, padding[2]{};
+};
 struct WFMaterial {
+
   WFVector diffuse{1, 0, 0, 0}; // EON A, B, average loss; emission intensity in w.
   WFVector optical{1, 0, 0, 0}, attenuation;
   uint32_t texture = 0, emissive = 0, dielectric = 0, priority = 0;
@@ -79,6 +95,7 @@ struct WFLight {
   // Types: image environment, infinite disk, point/spot, emissive primitive.
   WFVector forward, right, up, color;
   uint32_t type = 0, texture = 0, primitive = 0, flags = 0;
+  uint32_t instance = 0, alias_offset = UINT32_MAX, alias_width = 0, alias_height = 0;
 };
 struct WFCamera {
   WFVector origin, lower_left, horizontal, vertical, right, up, forward;
@@ -94,14 +111,18 @@ struct WFParameters {
 struct WFPixel {
   WFVector radiance, normal, albedo;
 };
-static_assert(sizeof(WFQuadric) == 128 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
+static_assert(sizeof(WFMeshInstance) == 128 && sizeof(WFGeometryStorage) == 16 &&
+              sizeof(WFQuadric) == 128 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
               sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 && sizeof(WFBoundary) == 112 &&
-              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 80 && sizeof(WFCamera) == 128 &&
+              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 96 && sizeof(WFCamera) == 128 &&
               sizeof(WFParameters) == 208 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {
   std::vector<WFTriangle> triangles;
   std::vector<WFQuadric> quadrics;
+  std::vector<WFMeshRange> meshes;
+  std::vector<WFMeshInstance> instances;
+  size_t loose_triangles = 0;
   std::vector<WFVector> quadric_bounds; // Two entries (lo, hi) per primitive.
   std::vector<WFMaterial> materials;
   std::vector<WFTexture> textures;
@@ -129,7 +150,7 @@ struct WavefrontReport {
   double upload_seconds = 0, sample_seconds = 0;
   size_t triangles = 0, completed_samples = 0;
   size_t tessellated_primitives = 0, discarded_paths = 0, scattering_events = 0;
-  size_t analytic_primitives = 0;
+  size_t analytic_primitives = 0, unique_meshes = 0, mesh_instances = 0;
 };
 
 // Device work is transactional: cancellation never commits a partial sample.
@@ -170,6 +191,13 @@ struct WFBsdfProbe {
 struct WFBsdfResult {
   WFVector evaluated, direction, weight;
 };
+struct WFEnvironmentProbe {
+  uint32_t bits = 0;
+  float latitude = 0;
+  uint32_t padding[2]{};
+};
+std::vector<WFVector> ProbeMetalEnvironment(const WavefrontScene &, const WFLight &,
+                                            const std::vector<WFEnvironmentProbe> &);
 struct WFTextureProbe {
   WFVector uv, position, object_position, normal, object_normal, footprint;
 };

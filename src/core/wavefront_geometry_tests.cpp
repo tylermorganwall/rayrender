@@ -105,3 +105,136 @@ context("Metal analytic intersections") {
   }
 }
 #endif
+
+#if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
+context("Metal shared mesh intersections") {
+  test_that("persistent sessions retain every indirectly referenced mesh BLAS") {
+    if (!MetalBVHAvailable())
+      return;
+    // Three separate prototypes make two BLASes reachable only through the
+    // TLAS. Binding the first BLAS is insufficient to keep the others resident.
+    WavefrontScene scene;
+    for (uint32_t copy = 0; copy < 3; ++copy) {
+      WFTriangle face;
+      face.p[0] = {-1, -1, 0, 0};
+      face.p[1] = {1, -1, 0, 0};
+      face.p[2] = {0, 1, 0, 0};
+      face.geometric = {0, 0, 1, 0};
+      for (auto &normal : face.n)
+        normal = face.geometric;
+      face.material = copy;
+      scene.triangles.push_back(face);
+      scene.meshes.push_back({copy, 1});
+      WFMeshInstance placement;
+      placement.triangle_start = placement.mesh = copy;
+      placement.triangle_count = 1;
+      placement.forward[0] = {1, 0, 0, 4.f * (int(copy) - 1)};
+      placement.inverse[0] = {1, 0, 0, -placement.forward[0].w};
+      placement.forward[1] = placement.inverse[1] = {0, 1, 0, 0};
+      placement.forward[2] = placement.inverse[2] = {0, 0, 1, 0};
+      scene.instances.push_back(placement);
+      WFTexture texture;
+      texture.a = {float(copy == 0), float(copy == 1), float(copy == 2), 0};
+      scene.textures.push_back(texture);
+      WFMaterial material;
+      material.texture = copy;
+      material.emissive = 1;
+      material.diffuse.w = 1;
+      scene.materials.push_back(material);
+    }
+    auto session = MakeMetalWavefront(scene, 1);
+    auto other_queue = MakeMetalWavefront(scene, 1);
+    WFParameters parameters;
+    parameters.width = parameters.height = parameters.active = parameters.boundaries = 1;
+    parameters.max_depth = 2;
+    parameters.camera.orthographic = 1;
+    parameters.camera.forward = {0, 0, -1, 0};
+    WavefrontReport report;
+    const WFPixel *pixels = nullptr;
+    for (int edit = 0; edit < 9; ++edit) {
+      int copy = edit % 3;
+      parameters.camera.lower_left = {4.f * (copy - 1), 0, 3, 0};
+      expect_true(other_queue->Render(parameters, {0}, {}, [] { return false; }, pixels, report));
+      bool completed = session->Render(parameters, {0}, {}, [] { return false; }, pixels, report);
+      expect_true(completed);
+      if (completed) {
+        const auto &actual = pixels[0].radiance;
+        expect_true(std::abs(actual.x - float(copy == 0)) < 1e-6);
+        expect_true(std::abs(actual.y - float(copy == 1)) < 1e-6);
+        expect_true(std::abs(actual.z - float(copy == 2)) < 1e-6);
+      }
+    }
+  }
+  test_that("shared BLAS placements preserve hits, normals, UVs and containment identity") {
+    if (!MetalBVHAvailable())
+      return;
+    WavefrontScene scene;
+    WFTriangle face;
+    face.p[0] = {-1, -1, 0, 0};
+    face.p[1] = {1, -1, 0, 0};
+    face.p[2] = {0, 1, 0, 0};
+    for (auto &n : face.n)
+      n = {0, 0, 1, 0};
+    face.geometric = {0, 0, 1, 0};
+    face.uv01 = {0, 0, 1, 0};
+    face.uv2 = {.5, 1, 0, 0};
+    scene.triangles.push_back(face);
+    scene.meshes.push_back({0, 1});
+    scene.materials.push_back(WFMaterial());
+    scene.boundaries.resize(4);
+    std::vector<WFGeometryProbe> probes;
+    std::vector<point3f> points;
+    std::vector<normal3f> normals;
+    for (int copy = 0; copy < 3; ++copy) {
+      Transform placement = Translate(vec3f(4 * (copy - 1), 0, 0)) * RotateY(20 * copy) *
+                            Scale(copy == 1 ? -1.2 : .8, .7, 1.3);
+      WFMeshInstance instance;
+      instance.triangle_count = 1;
+      instance.boundary = copy + 1;
+      const auto &f = placement.GetMatrix(), &v = placement.GetInverseMatrix();
+      for (int k = 0; k < 3; ++k) {
+        instance.forward[k] = {float(f.m[k][0]), float(f.m[k][1]), float(f.m[k][2]),
+                               float(f.m[k][3])};
+        instance.inverse[k] = {float(v.m[k][0]), float(v.m[k][1]), float(v.m[k][2]),
+                               float(v.m[k][3])};
+      }
+      scene.instances.push_back(instance);
+      for (int j = 0; j < 51; ++j) {
+        point3f p = placement(point3f((j % 7 - 3) * .07, (j % 5 - 2) * .09, 0));
+        normal3f n = unit_vector(placement(normal3f(0, 0, 1)));
+        vec3f direction(-n[0], -n[1], -n[2]);
+        point3f origin = p - 3 * direction;
+        WFGeometryProbe ray;
+        ray.origin = {float(origin[0]), float(origin[1]), float(origin[2]), 0};
+        ray.direction = {float(direction[0]), float(direction[1]), float(direction[2]), 4};
+        ray.body = j % 3 == 0 ? 0 : (j % 3 == 1 ? copy + 1 : (copy + 1) % 3 + 1);
+        probes.push_back(ray);
+        points.push_back(p);
+        normals.push_back(n);
+      }
+    }
+    auto hits = ProbeMetalGeometry(scene, probes);
+    double point_error = 0, normal_error = 0, distance_error = 0;
+    size_t mismatches = 0;
+    for (size_t i = 0; i < hits.size(); ++i) {
+      const auto &hit = hits[i];
+      if (i % 51 % 3 == 2) {
+        mismatches += hit.primitive != UINT32_MAX;
+        continue;
+      }
+      mismatches += hit.primitive != 0 || hit.boundary != i / 51 + 1;
+      point_error =
+          std::max(point_error,
+                   double((point3f(hit.point.x, hit.point.y, hit.point.z) - points[i]).length()));
+      normal_error = std::max(
+          normal_error,
+          double((normal3f(hit.normal.x, hit.normal.y, hit.normal.z) - normals[i]).length()));
+      distance_error = std::max(distance_error, std::abs(double(hit.point.w) - 3));
+    }
+    expect_true(mismatches == 0);
+    expect_true(point_error < 2e-5);
+    expect_true(normal_error < 2e-5);
+    expect_true(distance_error < 2e-5);
+  }
+}
+#endif

@@ -1,5 +1,18 @@
 R"MSL(
 
+  struct EnvironmentProbe {
+    uint bits;
+    float latitude;
+    uint padding[2];
+  };
+  kernel void probe_environment(device const EnvironmentProbe *inputs [[buffer(0)]],
+                                device float4 *outputs [[buffer(1)]],
+                                constant Light &light [[buffer(2)]],
+                                device const float4 *texels [[buffer(3)]],
+                                uint i [[thread_position_in_grid]]) {
+    float3 direction = sample_environment(light, inputs[i].bits, inputs[i].latitude, texels);
+    outputs[i] = float4(direction, light_pdf(light, direction, texels));
+  }
   struct TextureProbe {
     float4 uv, position, object_position, normal, object_normal, footprint;
   };
@@ -71,12 +84,17 @@ R"MSL(
                              primitive_acceleration_structure triangle_scene [[buffer(16)]],
                              intersection_function_table<triangle_data> functions [[buffer(25)]],
                              device const Surface *surfaces [[buffer(26)]],
-                             device const Quadric *quadrics [[buffer(28)]],
+                             device const GeometryStorage *storage [[buffer(28)]],
                              instance_acceleration_structure mixed_scene [[buffer(29)]],
                              intersection_function_table<triangle_data, instancing> mixed_functions
                              [[buffer(30)]],
                              uint i [[thread_position_in_grid]]) {
-    GeometryScene scene = {triangle_scene, functions, mixed_scene, mixed_functions};
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const Quadric *quadrics =
+        reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
+    device const MeshInstance *instances =
+        reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
+    GeometryScene scene = {triangle_scene, functions, mixed_scene, mixed_functions, instances};
     GeometryProbe p = input[i];
     ray r;
     r.origin = p.origin.xyz;
@@ -87,8 +105,8 @@ R"MSL(
     GeometryResult result = {};
     result.primitive = UINT_MAX;
     if (hit.type != intersection_type::none) {
-      auto surface =
-          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      auto surface = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
+                                      surfaces, hit.instance, scene.instances);
       result.point = float4(surface.position, hit.distance);
       result.normal = float4(surface.normal, 1);
       float3 bary = float3(1 - hit.coordinates.x - hit.coordinates.y, hit.coordinates.xy);

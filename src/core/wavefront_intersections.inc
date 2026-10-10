@@ -8,6 +8,17 @@ R"MSL(
     uint material, light, boundary, surface;
   };
   static_assert(sizeof(Quadric) == 128, "wavefront quadric ABI mismatch");
+  struct MeshInstance {
+    float4 inverse[3], forward[3];
+    uint triangle_start, triangle_count, surface_base, boundary;
+    uint light_base, mesh;
+    float orientation;
+    uint padding;
+  };
+  struct GeometryStorage {
+    uint quadric_offset, instance_offset, padding[2];
+  };
+  static_assert(sizeof(MeshInstance) == 128, "wavefront instance ABI mismatch");
   bool is_quadric(uint primitive) { return scene_has_quadrics && (primitive & quadric_bit); }
   float3 quadric_point(Quadric q, float3 p) {
     return float3(dot(q.forward[0], float4(p, 1)), dot(q.forward[1], float4(p, 1)),
@@ -64,9 +75,14 @@ R"MSL(
     return !body || triangles[primitive].boundary == body;
   }
   [[intersection(triangle, triangle_data, instancing)]]
-  bool containment_face_instanced(uint primitive [[primitive_id]], ray_data uint &body [[payload]],
-                                  device const Triangle *triangles [[buffer(0)]]) {
-    return !body || triangles[primitive].boundary == body;
+  bool containment_face_instanced(uint primitive [[primitive_id]], uint instance [[instance_id]],
+                                  ray_data uint &body [[payload]],
+                                  device const Triangle *triangles [[buffer(0)]],
+                                  device const MeshInstance *instances [[buffer(2)]]) {
+    if (!body)
+      return true;
+    MeshInstance placement = instances[instance];
+    return (placement.triangle_count ? placement.boundary : triangles[primitive].boundary) == body;
   }
   // Metal's primitive structures are homogeneous. Mixed scenes traverse one
   // top-level structure over triangle and bounding-box leaves. The original
@@ -76,25 +92,31 @@ R"MSL(
     intersection_function_table<triangle_data> triangle_functions;
     instance_acceleration_structure mixed;
     intersection_function_table<triangle_data, instancing> mixed_functions;
+    device const MeshInstance *instances;
   };
   struct GeometryIntersection {
     intersection_type type;
-    uint primitive_id;
+    uint primitive_id, instance;
     float distance;
     float3 coordinates; // triangle barycentric pair, or unit-sphere point
   };
   GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Quadric *quadrics,
                                       uint body = 0, bool any_hit = false) {
     GeometryIntersection result;
-    if (scene_has_quadrics) {
+    if (scene_has_quadrics || scene_has_instances) {
       intersector<triangle_data, instancing> query;
       query.force_opacity(body ? forced_opacity::non_opaque : forced_opacity::opaque);
       query.accept_any_intersection(any_hit);
       auto hit = query.intersect(r, scene.mixed, 0xff, scene.mixed_functions, body);
-      result = {hit.type, hit.primitive_id, hit.distance, float3(0)};
-      if (hit.type == intersection_type::triangle)
+      result = {hit.type, hit.primitive_id, 0, hit.distance, float3(0)};
+      if (hit.type == intersection_type::triangle) {
+        MeshInstance placement = scene.instances[hit.instance_id];
+        if (placement.triangle_count) {
+          result.primitive_id += placement.triangle_start;
+          result.instance = hit.instance_id + 1;
+        }
         result.coordinates.xy = hit.triangle_barycentric_coord;
-      else if (hit.type == intersection_type::bounding_box) {
+      } else if (hit.type == intersection_type::bounding_box) {
         result.primitive_id |= quadric_bit;
         Quadric q = quadrics[hit.primitive_id];
         result.coordinates = normalize(fma(float3(hit.distance), quadric_direction(q, r.direction),
@@ -110,7 +132,7 @@ R"MSL(
         hit = query.intersect(r, scene.triangles, scene.triangle_functions, body);
       else
         hit = query.intersect(r, scene.triangles);
-      result = {hit.type, hit.primitive_id, hit.distance,
+      result = {hit.type, hit.primitive_id, 0, hit.distance,
                 float3(hit.triangle_barycentric_coord, 0)};
     }
     return result;
@@ -126,7 +148,8 @@ R"MSL(
   };
   GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                                    device const Triangle *triangles, device const Quadric *quadrics,
-                                   device const Surface *surfaces) {
+                                   device const Surface *surfaces, uint instance,
+                                   device const MeshInstance *instances) {
     GeometrySurface out = {};
     out.coordinates = coordinates;
     if (is_quadric(primitive)) {
@@ -167,8 +190,39 @@ R"MSL(
       return out;
     }
     out.face = triangles[primitive];
+    if (scene_has_instances && instance) {
+      MeshInstance placement = instances[instance - 1];
+      Triangle local = out.face;
+      for (uint k = 0; k < 3; ++k) {
+        float3 p = local.p[k].xyz, n = local.n[k].xyz;
+        out.face.p[k].xyz =
+            float3(dot(placement.forward[0], float4(p, 1)), dot(placement.forward[1], float4(p, 1)),
+                   dot(placement.forward[2], float4(p, 1)));
+        out.face.n[k].xyz = placement.inverse[0].xyz * n.x + placement.inverse[1].xyz * n.y +
+                            placement.inverse[2].xyz * n.z;
+      }
+      float3 g = local.geometric.xyz;
+      out.face.geometric.xyz = placement.orientation * normalize(placement.inverse[0].xyz * g.x +
+                                                                 placement.inverse[1].xyz * g.y +
+                                                                 placement.inverse[2].xyz * g.z);
+      out.face.boundary = placement.boundary;
+      out.face.uv2.w = as_type<float>(placement.surface_base + as_type<uint>(local.uv2.w));
+      if (local.light != UINT_MAX)
+        out.face.light = placement.light_base + local.light;
+    }
+
     float3 bary = float3(1 - coordinates.x - coordinates.y, coordinates.xy);
     surface_point(out.face, coordinates.xy, out.position, out.error);
+    if (scene_has_instances && instance) {
+      MeshInstance placement = instances[instance - 1];
+      Triangle local = triangles[primitive];
+      float3 magnitude = bary.x * abs(local.p[0].xyz) + bary.y * abs(local.p[1].xyz) +
+                         bary.z * abs(local.p[2].xyz);
+      for (uint k = 0; k < 3; ++k)
+        out.error[k] +=
+            8 * FLT_EPSILON *
+            (dot(abs(placement.forward[k].xyz), magnitude) + abs(placement.forward[k].w));
+    }
     float3 normal =
         bary.x * out.face.n[0].xyz + bary.y * out.face.n[1].xyz + bary.z * out.face.n[2].xyz;
     out.normal = dot(normal, normal) > 0 ? normalize(normal) : out.face.geometric.xyz;
@@ -208,7 +262,8 @@ R"MSL(
   GeometrySurface sample_geometry_light(uint primitive, float2 u, float3 reference,
                                         device const Triangle *triangles,
                                         device const Quadric *quadrics,
-                                        device const Surface *surfaces) {
+                                        device const Surface *surfaces, uint instance,
+                                        device const MeshInstance *instances) {
     float3 coordinates;
     if (is_quadric(primitive)) {
       Quadric q = quadrics[primitive & ~quadric_bit];
@@ -234,7 +289,8 @@ R"MSL(
       float root = sqrt(u.x);
       coordinates = float3(root * (1 - u.y), root * u.y, 0);
     }
-    return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces);
+    return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces, instance,
+                            instances);
   }
 
 )MSL"

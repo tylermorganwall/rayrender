@@ -16,6 +16,11 @@
 
 ## New features
 
+- `render_scene()` Samples Metal image environments with luminance-weighted alias
+  tables, reducing noise from compact bright sources and preserving interactive
+  rotation. Mesh instances share GPU geometry and acceleration structures while
+  retaining per-placement texture mapping, emission, and medium priorities.
+
 - `render_scene()` Intersects spheres and ellipsoids analytically on Metal,
   retaining smooth silhouettes and accurate texture coordinates without
   tessellation. Transformed instances, area lights, and priority-aware SSS
@@ -542,6 +547,10 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `render_scene()` Uses constant-time alias sampling for CPU image environments,
+  with finer blue-noise samples for image-light proposals. Large maps trade
+  additional table setup and storage for faster directional sampling.
 
 - Overall: Speeds up scene-row assembly, including large PBRT imports, while
   preserving descriptor data, names, metadata, and type compatibility checks.

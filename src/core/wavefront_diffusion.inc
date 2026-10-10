@@ -105,8 +105,8 @@ R"MSL(
       auto hit = trace_geometry(probe, scene, quadrics);
       if (hit.type == intersection_type::none)
         break;
-      GeometrySurface contact =
-          geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces);
+      GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
+                                                 quadrics, surfaces, hit.instance, scene.instances);
       Triangle t = contact.face;
       if (t.boundary) {
         float3 position = contact.position, error = contact.error;
@@ -138,13 +138,8 @@ R"MSL(
             float choose = sample1(pixel, dimension, p, directions, blue);
             if (isfinite(score) &&
                 (selected_score == -INFINITY || choose < exp(score - next_total))) {
-              result.hit = {pixel,
-                            hit.primitive_id,
-                            hit.coordinates.x,
-                            hit.coordinates.y,
-                            hit.distance,
-                            hit.coordinates.z,
-                            {0, 0}};
+              result.hit = {pixel,        hit.primitive_id,  hit.coordinates.x, hit.coordinates.y,
+                            hit.distance, hit.coordinates.z, {hit.instance, 0}};
               result.position = position;
               result.error = error;
               result.normal = leaving ? forward : -forward;

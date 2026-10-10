@@ -1,6 +1,7 @@
 #ifdef NOT_CRAN
 #include "infinite.h"
 #include "../hitables/infinite_area_light.h"
+#include <random>
 #include <testthat.h>
 
 namespace {
@@ -56,8 +57,13 @@ context("Image infinite lights") {
     // bright spill into neighboring cells whose center radiance is near zero.
     double sampled = 0;
     const int samples = 1024;
+    // Alias decisions are discontinuous inside each input interval. A regular
+    // grid commensurate with the table repeats the same two coins per column;
+    // use full-precision independent samples to test the physical integral.
+    std::mt19937 proposal_rng(742);
     for (int y = 0; y < samples; ++y) for (int x = 0; x < samples; ++x) {
-      vec3f wi = light.Sample(point3f(0), vec2f((x + .5f) / samples, (y + .5f) / samples), 0);
+      vec2f u(Float(proposal_rng() >> 8) * 0x1p-24f, Float(proposal_rng() >> 8) * 0x1p-24f);
+      vec3f wi = light.Sample(point3f(0), u, 0);
       sampled += light.Radiance(point3f(0), wi, 0)[0] * std::max(Float(0), wi[2]) /
                  light.Pdf(point3f(0), wi, 0);
     }
