@@ -16,6 +16,11 @@
 
 ## New features
 
+- `render_scene()` Adds experimental `integrator_type = "metal"` for GPU wavefront
+  rendering of opaque diffuse meshes on supported macOS GPUs. Camera movement,
+  environment rotation, progressive denoising, and cancellation remain interactive.
+  Unsupported scenes warn and use CPU NEE; the default CPU integrator is unchanged.
+
 - `render_scene()` Adds `bvh_type = "hlbvh"` for parallel CPU BVH construction
   and `bvh_type = "metal"` for optional Metal GPU construction on macOS. Both
   retain CPU ray traversal and are available to animation and AO renders.

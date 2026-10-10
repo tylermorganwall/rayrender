@@ -848,7 +848,7 @@ collect_sources = function(subdir, pattern) {
   file.path(subdir, files)
 }
 
-# Metal is optional and confined to BVH construction. Probe Objective-C++ and
+# Metal is optional for BVH construction and wavefront rendering. Probe Objective-C++ and
 # frameworks, not a discrete GPU: a build machine need not have a usable device.
 METAL_OBJECTS = ""
 if (
@@ -877,8 +877,10 @@ if (
     "-framework",
     "Metal"
   )
-  METAL_OBJECTS = "core/hlbvh_metal.o"
-  message("*** configure: enabling optional Metal BVH construction")
+  METAL_OBJECTS = "core/hlbvh_metal.o core/wavefront_metal.o"
+  message(
+    "*** configure: enabling optional Metal BVH construction and wavefront rendering"
+  )
 }
 
 DIR_SOURCES = sort(list.files("src", pattern = "\\.cpp$", full.names = FALSE))

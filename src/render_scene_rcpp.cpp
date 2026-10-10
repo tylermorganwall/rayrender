@@ -1,3 +1,4 @@
+#include "core/wavefront.h"
 #include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
@@ -802,6 +803,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+  WavefrontReport wavefront_report;
+  wavefront_report.requested = render_info.containsElementNamed("metal_wavefront") &&
+      as<bool>(render_info["metal_wavefront"]);
   bool print_debug_info = as<bool>(render_info["print_debug_info"]);
 #ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
@@ -1184,7 +1188,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                progress_bar, sample_method, stratified_x, stratified_y,
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
-               clampval, max_depth, roulette_active, Display, integrator_type);
+               clampval, max_depth, roulette_active, Display, integrator_type, nullptr, &wavefront_report);
   }
   const double trace_seconds = benchmark_timing ?
     std::chrono::duration<double>(std::chrono::steady_clock::now() - trace_start).count() : 0;
@@ -1203,11 +1207,11 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     oidn_aux_options.sample_method = sample_method;
     oidn_aux_options.stratified_x = stratified_x;
     oidn_aux_options.stratified_y = stratified_y;
-    if (has_media) {
+    if (has_media || wavefront_report.used) {
       std::copy(normalOutput.begin(), normalOutput.end(), oidn_normal_output.begin());
       std::copy(albedoOutput.begin(), albedoOutput.end(), oidn_albedo_output.begin());
     }
-    if(!has_media) render_oidn_aux_features(numbercores,
+    if(!has_media && !wavefront_report.used) render_oidn_aux_features(numbercores,
                              nx,
                              ny,
                              cam.get(),
@@ -1270,6 +1274,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     final_image.attr("bvh_build_seconds") = bvh_timing.count ? bvh_timing.seconds : NA_REAL;
     final_image.attr("bvh_build_count") = bvh_timing.count;
     final_image.attr("trace_seconds") = trace_seconds;
+  }
+  if(wavefront_report.requested) {
+    final_image.attr("wavefront") = List::create(
+      _["used"] = wavefront_report.used, _["fallback"] = wavefront_report.fallback,
+      _["triangles"] = double(wavefront_report.triangles),
+      _["upload_seconds"] = wavefront_report.upload_seconds,
+      _["sample_seconds"] = wavefront_report.sample_seconds,
+      _["completed_samples"] = double(wavefront_report.completed_samples));
   }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;

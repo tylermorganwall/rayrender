@@ -16,6 +16,7 @@ enum class InfiniteLightSpectrum { RGB, Sun, Moon };
 // Incident radiance and a directional proposal are separate operations. The
 // position/time context permits future spatial atmosphere implementations.
 class InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   virtual ~InfiniteLight() = default;
   virtual point3f Radiance(const point3f &p, const vec3f &wi, Float time) const = 0;
@@ -45,6 +46,7 @@ protected:
 };
 
 class ImageInfiniteLight final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   ImageInfiniteLight(std::shared_ptr<texture> image, int width, int height,
                      Float rotation);
@@ -62,6 +64,7 @@ private:
 };
 
 class InfiniteLightMixture final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   explicit InfiniteLightMixture(std::vector<std::shared_ptr<InfiniteLight>> lights);
   point3f Radiance(const point3f &, const vec3f &, Float) const override;
@@ -85,6 +88,7 @@ private:
 // into the environment dome. Uniform solid-angle sampling remains efficient for
 // small celestial disks and gives support to every phase/texture detail.
 class DiskInfiniteLight final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   DiskInfiniteLight(point3f radiance, vec3f direction, double angular_diameter,
                     Float rotation);

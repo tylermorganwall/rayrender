@@ -1,4 +1,5 @@
 #include "../core/integrator.h"
+#include "wavefront.h"
 
 #include "../math/RayMatrix.h"
 #include "../math/float.h"
@@ -35,7 +36,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override) {
+                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override, WavefrontReport* wavefront_report) {
+  WavefrontScene wavefront_scene;
+  std::unique_ptr<WavefrontSession> wavefront;
+  if(wavefront_report && wavefront_report->requested)
+    wavefront = PrepareWavefront(world, hlist, *cam, nx*ny, sample_method,
+                                 wavefront_scene, *wavefront_report);
+
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
   RProgress::RProgress pb("Adaptive Raytracing [:bar] :percent%");
@@ -151,11 +158,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   // Diffuse normal mapping consumes both 1D and 2D samples. Always keep those
   // dimensions independent, including diffuse materials discovered by importers.
   const bool independent_dimensions = true;
-  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y] (
+  auto reset_sampler_state = [sample_method, ns, stratified_x, stratified_y, &wavefront] (
       size_t width, size_t height, const std::vector<unsigned int>& state_seeds,
       std::vector<random_gen>& state_rngs, std::vector<std::unique_ptr<Sampler> >& state_samplers) {
     state_rngs.clear();
     state_samplers.clear();
+    if(wavefront) return; // GPU paths own their sampler dimensions and state.
     state_rngs.reserve(state_seeds.size());
     state_samplers.reserve(state_seeds.size());
     size_t index = 0;
@@ -209,7 +217,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_full_preview_oidn_aux = [&]() {
-    if(has_media) {
+    if(has_media || wavefront) {
       if (display.denoise && display.oidn_normal_output && display.oidn_albedo_output)
         adaptive_pixel_sampler.copy_denoising_features(*display.oidn_normal_output,
                                                        *display.oidn_albedo_output);
@@ -244,7 +252,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_fast_preview_oidn_aux = [&]() {
-    if(has_media) {
+    if(has_media || wavefront) {
       if (denoise_fast_preview)
         adaptive_pixel_sampler_small.copy_denoising_features(oidn_normal_output_small,
                                                              oidn_albedo_output_small);
@@ -326,11 +334,30 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         hlist.volume_scene->atmosphere->DeferredHaze() ? -std::numeric_limits<Float>::infinity() : 0;
   };
 
+  auto validate_wavefront_camera = [&]() {
+    if(wavefront && cam->get_camera_motion_blur()) {
+      wavefront.reset();
+      wavefront_report->fallback = "interactive camera motion blur";
+      reset_sampler_state(nx, ny, seeds, rngs, samplers);
+      reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
+      Rcpp::warning("Metal wavefront: camera motion blur enabled; continuing with CPU NEE.");
+    }
+  };
+
   auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, ns, sample_method,
                              &rngs, fov, &samplers, cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                             &render_cancelled, &render_pool, &display, &report_diffusion_interior] (size_t s) -> bool {
+                             &render_cancelled, &render_pool, &display, &report_diffusion_interior,
+                             &wavefront, &wavefront_scene, wavefront_report,
+                             &validate_wavefront_camera, &seeds] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
+    validate_wavefront_camera();
+    bool completed_sample;
+    if(wavefront) {
+      completed_sample = RenderWavefrontSample(*wavefront, wavefront_scene, *cam,
+          adaptive_pixel_sampler, s, sample_method, seeds[0], max_depth, roulette_active, clampval,
+          [&display] { Rcpp::checkUserInterrupt(); return display.PollCloseEvent(); }, *wavefront_report);
+    } else {
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler,
                    nx, ny, ns, s,
@@ -392,9 +419,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     futures.reserve(tiles.size());
     for (const auto& tile : tiles)
       futures.push_back(render_pool.pushReturn(worker, tile));
-    bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
+    completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
     report_diffusion_interior();
+    }
     // All pixels in each original block must be complete before its error is
     // tested. Scheduling tiles must not change adaptive thresholds or splits.
     if (completed_sample && adaptive_pixel_sampler.adaptive_on &&
@@ -420,8 +448,17 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   auto render_small_sample = [&adaptive_pixel_sampler_small, nx_small, ny_small, sample_method,
                               &rngs_small, fov, &samplers_small, cam, &world, &hlist,
                               clampval, sample_floor, max_depth, roulette_active, integrator_type,
-                              &render_cancelled, &render_pool, &display, &report_diffusion_interior] (size_t s) -> bool {
+                              &render_cancelled, &render_pool, &display, &report_diffusion_interior,
+                             &wavefront, &wavefront_scene, wavefront_report,
+                             &validate_wavefront_camera, &seeds] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
+    validate_wavefront_camera();
+    bool completed_sample;
+    if(wavefront) {
+      completed_sample = RenderWavefrontSample(*wavefront, wavefront_scene, *cam,
+          adaptive_pixel_sampler_small, s, sample_method, seeds[0], max_depth, roulette_active, clampval,
+          [&display] { Rcpp::checkUserInterrupt(); return display.PollCloseEvent(); }, *wavefront_report);
+    } else {
     const Float sample_minimum = sample_floor();
     auto worker = [&adaptive_pixel_sampler_small,
                    nx_small, ny_small, s,
@@ -485,9 +522,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     futures.reserve(tiles.size());
     for (const auto& tile : tiles)
       futures.push_back(render_pool.pushReturn(worker, tile));
-    bool completed_sample = wait_for_render_jobs(futures, render_cancelled,
+    completed_sample = wait_for_render_jobs(futures, render_cancelled,
                                                  [&display] { return display.PollCloseEvent(); });
     report_diffusion_interior();
+    }
     // All pixels in each original block must be complete before its error is
     // tested. Scheduling tiles must not change adaptive thresholds or splits.
     if (completed_sample && adaptive_pixel_sampler_small.adaptive_on &&

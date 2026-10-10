@@ -20,5 +20,8 @@ $(SHLIB): $(OBJECTS)
 core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
+core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc
+	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
+
 # Make the shared object
 all: $(SHLIB)

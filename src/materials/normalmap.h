@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 
+class WavefrontSceneCompiler;
 namespace normalmap {
 using Vector = vec3<double>;
 constexpr double inv_pi = 0.31830988618379067154;
@@ -18,6 +19,7 @@ Vector normalized(const Vector& v);
 // sigma is in radians; roughness = clamp(sigma / (pi/2), 0, 1).
 // No cosine or normal-map terminator correction belongs in the child.
 struct DiffuseChild {
+  friend class ::WavefrontSceneCompiler;
   explicit DiffuseChild(double sigma = 0);
   double eval(const Vector& wo, const Vector& wi, const Vector& normal,
               double rho = 1) const;

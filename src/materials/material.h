@@ -104,6 +104,7 @@ class material {
 // Opaque reflective adapter with a validated diffuse child. Texture ownership
 // follows the other materials; per-interaction state belongs only to its PDF.
 class diffuse_material final : public material {
+  friend class WavefrontSceneCompiler;
 public:
   diffuse_material(std::shared_ptr<texture> albedo, double sigma = 0)
     : albedo(std::move(albedo)), child(sigma) {}

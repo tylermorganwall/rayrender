@@ -21,6 +21,7 @@ struct PointLight {
   PointLightSample Sample(const point3f &p) const;
 };
 class PointLightSet {
+  friend class WavefrontSceneCompiler;
 public:
   PointLightSet() = default;
   explicit PointLightSet(const Rcpp::List &descriptions);

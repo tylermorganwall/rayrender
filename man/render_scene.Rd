@@ -274,6 +274,19 @@ no filename specified). Set to `FALSE` for faster plotting (does not affect rend
 \item{integrator_type}{Default `"nee"` (Next Event Estimation, with direct light sampling).
 Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+`"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.
+It traces static triangle meshes, rectangles, boxes, and their instances with diffuse
+materials (including rough diffuse), constant/checker/gradient/image textures, area lights,
+point/spot lights, and image/disk infinite lights. Camera movement, environment rotation,
+progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective
+and orthographic cameras are supported. Unsupported geometry, materials, media, bump/alpha
+mapping, stratified sampling, or motion blur produce a warning and use CPU `nee` for the
+whole scene. Enabling camera motion blur in the preview also switches to CPU rendering.
+GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
+but do not give pixel-identical noise across backends. Mesh instances currently expand in
+GPU memory; image environments use a uniform directional proposal. The returned image's
+`wavefront` attribute reports use/fallback, triangle count, upload time, and sampling time.
+Other platforms retain the CPU renderer and do not require Metal.
 With `nee`, surfaces and participating media use RGB null-scattering transport;
 \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
 media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.

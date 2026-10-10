@@ -1,3 +1,4 @@
+#include "core/wavefront.h"
 #include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
 
@@ -238,6 +239,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+  WavefrontReport wavefront_report;
+  wavefront_report.requested = render_info.containsElementNamed("metal_wavefront") &&
+      as<bool>(render_info["metal_wavefront"]);
 #ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
 #endif
@@ -672,7 +676,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame);
+                   integrator_type, rng_for_frame, &wavefront_report);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx, ny, preview, false, 
@@ -691,7 +695,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    progress_bar, sample_method, stratified_x, stratified_y,
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report);
         terminated = d.terminate;
       }
 #else
@@ -713,7 +717,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame);
+                   integrator_type, rng_for_frame, &wavefront_report);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx,ny, preview, false, 
@@ -729,7 +733,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    progress_bar, sample_method, stratified_x, stratified_y,
                    verbose, frame_cam,  fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report);
         terminated = d.terminate;
       }
 #endif
@@ -745,11 +749,11 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         oidn_aux_options.sample_method = sample_method;
         oidn_aux_options.stratified_x = stratified_x;
         oidn_aux_options.stratified_y = stratified_y;
-        if (has_media) {
+        if (has_media || wavefront_report.used) {
           std::copy(normalOutput.begin(), normalOutput.end(), oidn_normal_output.begin());
           std::copy(albedoOutput.begin(), albedoOutput.end(), oidn_albedo_output.begin());
         }
-        if(!has_media) render_oidn_aux_features(numbercores,
+        if(!has_media && !wavefront_report.used) render_oidn_aux_features(numbercores,
                                  nx,
                                  ny,
                                  frame_cam,

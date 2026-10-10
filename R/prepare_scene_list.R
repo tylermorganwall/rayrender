@@ -74,9 +74,11 @@ prepare_scene_list = function(
       call. = FALSE
     )
   }
+  metal_wavefront = identical(integrator_type, "metal")
   integrator_type = switch(
     integrator_type,
     "nee" = 1L,
+    "metal" = 1L,
     "rtiow" = 2L,
     "basic" = 3L,
     stop(integrator_type, " not recognized as valid `integrator_type`")
@@ -371,6 +373,7 @@ prepare_scene_list = function(
   render_info$min_variance = min_variance
   render_info$min_adaptive_size = min_adaptive_size
   render_info$integrator_type = integrator_type
+  render_info$metal_wavefront = metal_wavefront
   render_info$denoise = denoise
   render_info$print_debug_info = print_debug_info
 

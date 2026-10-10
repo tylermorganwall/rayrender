@@ -134,6 +134,7 @@ static_assert(sizeof(LinearBVHLeaf4) == 8, "BVH4 leaves should occupy eight byte
 
 class BVHAggregate : public hitable {
 public:
+    friend class WavefrontSceneCompiler;
     BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                 float t_min, float t_max, 
                 int maxPrimsInNode, bool sah, 
