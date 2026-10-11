@@ -1,3 +1,4 @@
+#include "wavefront_medium_probe.h"
 #include "sobol_directions.h"
 #include "wavefront.h"
 #include "wavefront_motion.h"
@@ -40,13 +41,14 @@ struct Pipelines {
   id<MTLLibrary> library;
   id<MTLFunction> analytic_function;
   id<MTLComputePipelineState> primary, intersect, shade, shade_materials, shade_pbr,
-      shade_pbr_lights, shade_diffusion, shadow, dispatch, atmosphere_paths, atmosphere_dispatch;
+      shade_pbr_lights, shade_diffusion, shadow, shadow_transport, shadow_lights,
+      dispatch, atmosphere_paths, atmosphere_dispatch;
   id<MTLBuffer> directions, blue;
   bool boundary_support, analytic_support, instance_support, mixed_support, atmosphere_support;
   uint32_t texture_features;
   std::mutex material_mutex;
 
-  id<MTLComputePipelineState> Compile(NSString *name) {
+  id<MTLComputePipelineState> Compile(NSString *name, bool defer_shadow_lighting = false) {
     NSError *error = nil;
     auto constants = [MTLFunctionConstantValues new];
     [constants setConstantValue:&boundary_support type:MTLDataTypeBool atIndex:0];
@@ -54,6 +56,7 @@ struct Pipelines {
     [constants setConstantValue:&analytic_support type:MTLDataTypeBool atIndex:2];
     [constants setConstantValue:&instance_support type:MTLDataTypeBool atIndex:3];
     [constants setConstantValue:&atmosphere_support type:MTLDataTypeBool atIndex:4];
+    [constants setConstantValue:&defer_shadow_lighting type:MTLDataTypeBool atIndex:5];
     if (analytic_support && !analytic_function) {
       analytic_function=[library newFunctionWithName:@"intersect_quadric"
                                      constantValues:constants error:&error];
@@ -127,6 +130,13 @@ struct Pipelines {
     if (atmosphere) {
       atmosphere_paths = Compile(@"atmosphere_paths");
       atmosphere_dispatch = Compile(@"atmosphere_dispatch");
+      // Opaque visibility already has a short any-hit path. An additional pass
+      // pays off when boundary/alpha traversal also computes RGB attenuation.
+      if (boundary_support || (texture_features & 8)) {
+        shadow_lights = Compile(@"shadow_lights");
+        // Specialization removes unused spectral/haze state from scalar work.
+        shadow_transport = Compile(@"shadows", true);
+      }
     }
     dispatch = Compile(@"advance_queues");
     directions = [device newBufferWithBytes:SPACEFILLR_SOBOL_DIRECTIONS
@@ -365,7 +375,9 @@ class MetalWavefront final : public WavefrontSession {
 
   void Dispatch(id<MTLCommandBuffer> command, id<MTLComputePipelineState> pipeline,
                 const WFParameters &parameters, bool primary = false) {
-    bool spectral = gpu_atmosphere && (pipeline == kernels.atmosphere_paths || pipeline == kernels.shadow);
+    bool spectral = gpu_atmosphere &&
+        (pipeline == kernels.atmosphere_paths || pipeline == kernels.shadow_lights ||
+         pipeline == kernels.shadow);
     if (spectral) {
       auto encoder = [command computeCommandEncoder];
       [encoder setComputePipelineState:kernels.atmosphere_dispatch];
@@ -383,6 +395,7 @@ class MetalWavefront final : public WavefrontSession {
                     : pipeline == kernels.shade_pbr_lights ? @"Wavefront OpenPBR light shading"
                     : pipeline == kernels.shade_diffusion  ? @"Wavefront normalized diffusion"
                     : pipeline == kernels.atmosphere_paths ? @"Wavefront spectral atmosphere"
+                    : pipeline == kernels.shadow_lights    ? @"Wavefront shadow lighting"
                                                            : @"Wavefront shadow rays";
     [encoder setComputePipelineState:pipeline];
     for (size_t i = 0; i < buffers.size(); ++i)
@@ -405,16 +418,22 @@ class MetalWavefront final : public WavefrontSession {
     if (primary)
       [encoder dispatchThreadgroups:MTLSizeMake(std::max(1u, (parameters.active + 63) / 64), 1, 1)
               threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
-    else
+    else {
+      // Each indirect dispatch record contains three uint32 dimensions.
+      // Spectral queues expand each connection into one 32-lane SIMD group.
+      NSUInteger offset = 0;
+      if (spectral)
+        offset = pipeline == kernels.atmosphere_paths ? 36 : 48;
+      else if (pipeline == kernels.shade || pipeline == kernels.shade_materials ||
+               pipeline == kernels.shade_pbr || pipeline == kernels.shade_pbr_lights ||
+               pipeline == kernels.shade_diffusion)
+        offset = 12;
+      else if (pipeline == kernels.shadow || pipeline == kernels.shadow_transport)
+        offset = 24;
       [encoder dispatchThreadgroupsWithIndirectBuffer:indirect
-                                 indirectBufferOffset:spectral ? (pipeline == kernels.shadow ? 48 : 36) : (pipeline == kernels.shade ||
-                                                       pipeline == kernels.shade_materials ||
-                                                       pipeline == kernels.shade_pbr ||
-                                                       pipeline == kernels.shade_pbr_lights ||
-                                                       pipeline == kernels.shade_diffusion)
-                                                          ? 12
-                                                          : (pipeline == kernels.shadow ? 24 : 0)
+                                 indirectBufferOffset:offset
                                 threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
+    }
     [encoder endEncoding];
   }
 
@@ -433,7 +452,8 @@ public:
     }
     gpu_atmosphere = scene.gpu_atmosphere;
     if (gpu_atmosphere && (kernels.atmosphere_paths.threadExecutionWidth != 32 ||
-                           kernels.shadow.threadExecutionWidth != 32))
+                           kernels.shadow.threadExecutionWidth != 32 ||
+                           (kernels.shadow_lights && kernels.shadow_lights.threadExecutionWidth != 32)))
       gpu_atmosphere = false;
     has_haze = scene.transport_atmosphere != nullptr;
     queue = [kernels.device newCommandQueue];
@@ -549,7 +569,8 @@ public:
     kernels.PrepareMaterials(has_materials, has_pbr, has_pbr_emission, has_diffusion);
     for (id<MTLComputePipelineState> pipeline :
          {kernels.primary, kernels.intersect, kernels.shade, kernels.shade_materials,
-          kernels.shade_pbr, kernels.shade_pbr_lights, kernels.shade_diffusion, kernels.shadow}) {
+          kernels.shade_pbr, kernels.shade_pbr_lights, kernels.shade_diffusion,
+          kernels.shadow, kernels.shadow_transport}) {
       if (!pipeline || !(kernels.boundary_support || kernels.mixed_support))
         continue;
       RegisterIntersections(pipeline);
@@ -760,7 +781,11 @@ public:
             Dispatch(command, kernels.shade_pbr, parameters);
           if (has_diffusion)
             Dispatch(command, kernels.shade_diffusion, parameters);
-          Dispatch(command, kernels.shadow, parameters);
+          bool split_shadows = gpu_atmosphere && !has_haze && kernels.shadow_transport;
+          Dispatch(command, split_shadows ? kernels.shadow_transport : kernels.shadow,
+                   parameters);
+          if (split_shadows)
+            Dispatch(command, kernels.shadow_lights, parameters);
           if (atmosphere) {
             if (!Wait(command, cancelled))
               return false;
@@ -989,5 +1014,38 @@ std::vector<WFCameraResult> ProbeMetalCamera(const WFCamera &camera,
 }
 std::vector<WFCameraResult> ProbeMetalHaze(const std::vector<WFHazeProbe> &input) {
   return camera_haze_probe(@"probe_haze", input, WFCamera(), {});
+}
+#endif
+#ifdef NOT_CRAN
+std::vector<WFMediumResult> ProbeMetalMedium(const std::vector<WFMediumProbe> &input,
+                                           const std::vector<float> &values) {
+  std::vector<WFMediumResult> result(input.size());
+  if (input.empty()) return result;
+  @autoreleasepool {
+    auto &shared = SharedPipelines();
+    auto pipeline = shared.Compile(@"probe_medium");
+    auto source = [shared.device newBufferWithBytes:input.data()
+        length:input.size() * sizeof(WFMediumProbe) options:MTLResourceStorageModeShared];
+    auto output = [shared.device newBufferWithLength:result.size() * sizeof(WFMediumResult)
+        options:MTLResourceStorageModeShared];
+    auto field = [shared.device newBufferWithBytes:values.data()
+        length:values.size() * sizeof(float) options:MTLResourceStorageModeShared];
+    auto queue = [shared.device newCommandQueue];
+    auto command = [queue commandBuffer];
+    auto encoder = [command computeCommandEncoder];
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:source offset:0 atIndex:0];
+    [encoder setBuffer:output offset:0 atIndex:1];
+    [encoder setBuffer:field offset:0 atIndex:2];
+    [encoder dispatchThreads:MTLSizeMake(input.size(), 1, 1)
+        threadsPerThreadgroup:MTLSizeMake(32, 1, 1)];
+    [encoder endEncoding];
+    [command commit];
+    [command waitUntilCompleted];
+    if (command.status != MTLCommandBufferStatusCompleted)
+      throw MetalError("medium flight probe", command.error);
+    std::memcpy(result.data(), output.contents, result.size() * sizeof(WFMediumResult));
+  }
+  return result;
 }
 #endif

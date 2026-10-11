@@ -7,6 +7,7 @@ R"MSL(
   constant bool scene_has_quadrics [[function_constant(2)]];
   constant bool scene_has_instances [[function_constant(3)]];
   constant bool scene_has_atmosphere [[function_constant(4)]];
+  constant bool defer_shadow_lighting [[function_constant(5)]];
 #include <metal_raytracing>
 #include <metal_stdlib>
   using namespace metal;
@@ -781,7 +782,10 @@ R"MSL(
     float surface = hit.type == intersection_type::none ? INFINITY : hit.distance;
     bool collision = flight < surface;
     float distance = collision ? flight : surface;
-    if (scene_has_atmosphere) {
+    // GPU finite segments need atmosphere transport only when haze is enabled.
+    // Escaping rays still evaluate the sky from the last real lighting vertex.
+    if (scene_has_atmosphere &&
+        (!(p.camera.padding[1] & 2) || (p.camera.padding[1] & 1) || !isfinite(distance))) {
       air_requests[pixel].origin = path.origin;
       air_requests[pixel].direction = float4(r.direction, distance);
       air_requests[pixel].weight = path.beta;
@@ -1513,9 +1517,12 @@ R"MSL(
   template [[host_name("shade_diffusion")]] kernel void shade<4>(SCENE_ARGUMENTS);
 
   kernel void shadows(SCENE_ARGUMENTS) {
-    // Finite atmospheric source terms survive blocked connections. The native
-    // batch integrates these together with ordered medium shadow attenuation.
-    bool gpu_air = scene_has_atmosphere && (p.camera.padding[1] & 2);
+    // Without finite haze, visibility and RGB transmittance need one thread per
+    // connection. Keep their result in shadow_queue for the subsequent spectral
+    // pass. Finite haze retains cooperative transport: even blocked connections
+    // may contribute atmospheric in-scattering along the segment.
+    bool gpu_air = scene_has_atmosphere && (p.camera.padding[1] & 2) &&
+                   !defer_shadow_lighting;
     uint lane=gpu_air ? i%32 : 0;
     if(gpu_air) i/=32;
     bool gpu_haze = gpu_air && (p.camera.padding[1] & 1);
@@ -1596,13 +1603,17 @@ R"MSL(
         // process. Its independent stream never changes the continuation path.
         float majorant = max(sigma.x, max(sigma.y, sigma.z)) * (medium.controls.w!=0 ? medium.hi.w : 1.f);
         float t = previous;
+        MediumFlightIterator iterator = {};
+        if (medium.controls.w != 0)
+          iterator = medium_iterator(medium, r.origin + previous * r.direction, r.direction,
+                                     max(sigma.x, max(sigma.y, sigma.z)));
         while (majorant > 0) {
           uint bits = hash_seed(hash_seed(s.pixel, p.sample ^ p.seed),
                                 shadow_dimension++ ^ (p.depth * 0x9e3779b9u));
           float u = (float(bits >> 8) + .5f) * 0x1p-24f;
-          float next = t + (medium.controls.w != 0 ? medium_flight(medium,r.origin+t*r.direction,r.direction,
-                                         max(sigma.x,max(sigma.y,sigma.z)),min(u,0x1.fffffep-1f),fields,majorant)
-                                         : -log(1-u)/majorant);
+          float next = medium.controls.w != 0
+              ? previous + medium_next(iterator, min(u, 0x1.fffffep-1f), fields, majorant)
+              : t - log(1-u)/majorant;
           if (next >= endpoint)
             break;
           // A valid small flight may round to the current ray parameter. It

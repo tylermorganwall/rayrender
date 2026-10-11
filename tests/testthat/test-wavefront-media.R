@@ -216,3 +216,82 @@ test_that('Metal cloud shadow flights tolerate representable rounding', {
   expect_equal(attr(image, 'wavefront')$discarded_paths, 0)
   expect_true(all(is.finite(image)))
 })
+
+test_that('Metal shadow grid flights preserve colored absorption and clipped endpoints', {
+  probe = suppressWarnings(wavefront_medium_render(set_medium(
+    cube(),
+    homogeneous_medium()
+  )))
+  if (!isTRUE(attr(probe, 'wavefront')$used)) {
+    skip('Metal unavailable')
+  }
+  # The camera misses this off-axis slab. Only direct-light shadow rays cross it,
+  # isolating ratio tracking from camera free-flight sampling and multiple scattering.
+  render = function(medium, seed) {
+    scene = xy_rect(xwidth = 8, ywidth = 8, material = diffuse('white')) |>
+      add_object(set_medium(cube(x = 2, z = 2, width = 1), medium)) |>
+      add_infinite_light(disk_light(
+        direction = c(1, 0, 1),
+        angular_diameter = 5,
+        intensity = 100
+      ))
+    set.seed(seed)
+    image = render_scene(
+      scene,
+      integrator_type = 'metal',
+      width = 24,
+      height = 24,
+      samples = 256,
+      sample_method = 'sobol',
+      max_depth = 1,
+      lookfrom = c(0, 0, 3),
+      lookat = c(0, 0, 0),
+      fov = 0,
+      ortho_dimensions = c(.2, .2),
+      aperture = 0,
+      tonemap = 'raw',
+      denoise = FALSE,
+      bloom = FALSE,
+      preview = FALSE,
+      plot_scene = FALSE,
+      progress = FALSE,
+      min_variance = 0,
+      ambient_light = FALSE
+    )
+    if (!isTRUE(attr(image, 'wavefront')$used)) {
+      skip('Metal unavailable')
+    }
+    expect_equal(attr(image, 'wavefront')$discarded_paths, 0)
+    expect_true(all(is.finite(image)))
+    apply(image[,, 1:3], 3, mean)
+  }
+  sigma = c(.2, .6, 1)
+  # The transformed grid extends past the actual boundary: flights must stop at
+  # the geometry endpoint rather than integrating the rest of the grid.
+  grid = grid_medium(
+    array(1, c(17, 19, 23)),
+    sigma_a = sigma,
+    sigma_s = 0,
+    medium_transform = diag(c(2, .8, 2, 1))
+  )
+  homogeneous = homogeneous_medium(sigma_a = sigma, sigma_s = 0)
+  results = lapply(c(157, 513, 2026), function(seed) {
+    a = render(homogeneous, seed)
+    b = render(grid, seed)
+    data.frame(
+      seed,
+      channel = 1:3,
+      homogeneous = a,
+      grid = b,
+      relative_error = (b - a) / a
+    )
+  })
+  results = do.call(rbind, results)
+  expect_lt(max(abs(results$relative_error)), .02)
+  empty = render(
+    grid_medium(array(0, c(17, 19, 23)), sigma_a = sigma, sigma_s = 0),
+    513
+  )
+  vacuum = render(homogeneous_medium(sigma_a = 0, sigma_s = 0), 513)
+  expect_equal(empty, vacuum, tolerance = 1e-6)
+})

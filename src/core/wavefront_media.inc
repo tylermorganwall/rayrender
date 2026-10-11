@@ -5,55 +5,80 @@ R"MSL(
     Field density, temperature, red, green, blue, scale, blackbody, majorant;
   };
   static_assert(sizeof(Medium) == 240, "medium ABI mismatch");
-  // Invert the optical-depth CDF of the piecewise-constant majorant grid.
-  // The transformed direction is NOT normalized: t remains world distance.
-  float medium_flight(Medium m, float3 origin, float3 direction, float sigma,
-                      float u, device const float *values, thread float &majorant) {
-    majorant = 0;
-    if (sigma == 0) return INFINITY;
+  // Keep world-distance ray parameters while traversing the local majorant grid.
+  // Shadow ratio tracking samples many events on one straight segment; retaining
+  // this state avoids transforming, clipping and locating its cell at every event.
+  struct MediumFlightIterator {
+    float t, end, sigma;
+    uint n, offset;
+    int3 cell, step;
+    float3 next, delta;
+  };
+  MediumFlightIterator medium_iterator(Medium m, float3 origin, float3 direction, float sigma) {
+    MediumFlightIterator it = {};
+    it.sigma = sigma;
+    if (sigma == 0) return it;
     float3 o, d;
-    for (uint a=0; a<3; ++a) {
-      o[a] = dot(m.inverse[a],float4(origin,1));
-      d[a] = dot(m.inverse[a].xyz,direction);
+    for (uint a = 0; a < 3; ++a) {
+      o[a] = dot(m.inverse[a], float4(origin, 1));
+      d[a] = dot(m.inverse[a].xyz, direction);
     }
-    o = (o-m.lo.xyz)/(m.hi.xyz-m.lo.xyz);
-    d /= m.hi.xyz-m.lo.xyz;
-    float t=0, end=INFINITY;
-    for (uint a=0; a<3; ++a) {
+    o = (o - m.lo.xyz) / (m.hi.xyz - m.lo.xyz);
+    // Do not normalize d: affine scaling must not change world-space flight lengths.
+    d /= m.hi.xyz - m.lo.xyz;
+    it.end = INFINITY;
+    for (uint a = 0; a < 3; ++a) {
       if (d[a] == 0) {
-        if (o[a]<0 || o[a]>1) return INFINITY;
+        if (o[a] < 0 || o[a] > 1) { it.end = 0; return it; }
       } else {
-        float a0=-o[a]/d[a], a1=(1-o[a])/d[a];
-        t=max(t,min(a0,a1)); end=min(end,max(a0,a1));
+        float near = -o[a] / d[a], far = (1 - o[a]) / d[a];
+        it.t = max(it.t, min(near, far));
+        it.end = min(it.end, max(near, far));
       }
     }
-    if (!(t<end)) return INFINITY;
-    uint n=m.majorant.nx;
-    float3 q=(o+t*d)*n;
-    int3 cell=clamp(int3(floor(q)),int3(0),int3(n-1));
-    int3 step=select(int3(-1),int3(1),d>0);
-    float3 next,delta;
-    for (uint a=0;a<3;++a) {
-      delta[a]=d[a] == 0 ? INFINITY : abs(1/(n*d[a]));
-      next[a]=d[a] == 0 ? INFINITY : max(t,((cell[a]+(step[a]>0))/float(n)-o[a])/d[a]);
+    if (!(it.t < it.end)) return it;
+    it.n = m.majorant.nx;
+    it.offset = m.majorant.offset;
+    it.cell = clamp(int3(floor((o + it.t * d) * it.n)), int3(0), int3(it.n - 1));
+    it.step = select(int3(-1), int3(1), d > 0);
+    for (uint a = 0; a < 3; ++a) {
+      it.delta[a] = d[a] == 0 ? INFINITY : abs(1 / (it.n * d[a]));
+      it.next[a] = d[a] == 0 ? INFINITY :
+          max(it.t, ((it.cell[a] + (it.step[a] > 0)) / float(it.n) - o[a]) / d[a]);
     }
-    float optical=-log(1-u);
-    while (t<end) {
-      float stop=min(end,min(next.x,min(next.y,next.z)));
-      float rate=sigma*values[m.majorant.offset+cell.x+n*(cell.y+n*cell.z)];
-      if (rate>0 && optical < rate*(stop-t)) {
-        majorant=rate;
-        return t+optical/rate;
+    return it;
+  }
+  // Invert the piecewise-constant optical-depth CDF. Consume one uniform per
+  // flight, carrying its residual optical depth through empty and occupied cells.
+  // Returned distances are absolute from the iterator origin, not the last event.
+  float medium_next(thread MediumFlightIterator &it, float u, device const float *values,
+                    thread float &majorant) {
+    majorant = 0;
+    float optical = -log(1 - u);
+    while (it.t < it.end) {
+      float stop = min(it.end, min(it.next.x, min(it.next.y, it.next.z)));
+      float rate = it.sigma * values[it.offset + it.cell.x + it.n * (it.cell.y + it.n * it.cell.z)];
+      if (rate > 0 && optical < rate * (stop - it.t)) {
+        majorant = rate;
+        it.t += optical / rate;
+        return it.t;
       }
-      optical -= rate*(stop-t);
-      t=stop;
-      for (uint a=0;a<3;++a)
-        if (next[a]<=stop) {
-          cell[a]+=step[a]; next[a]+=delta[a];
-          if (cell[a]<0 || cell[a]>=int(n)) return INFINITY;
-        }
+      optical -= rate * (stop - it.t);
+      it.t = stop;
+      // Advance every tied axis at a grid edge/corner. An exhausted iterator
+      // remains exhausted, including subsequent calls with a zero-length flight.
+      for (uint a = 0; a < 3; ++a) if (it.next[a] <= stop) {
+        it.cell[a] += it.step[a];
+        it.next[a] += it.delta[a];
+        if (it.cell[a] < 0 || it.cell[a] >= int(it.n)) { it.end = it.t; return INFINITY; }
+      }
     }
     return INFINITY;
+  }
+  float medium_flight(Medium m, float3 origin, float3 direction, float sigma,
+                      float u, device const float *values, thread float &majorant) {
+    auto iterator = medium_iterator(m, origin, direction, sigma);
+    return medium_next(iterator, u, values, majorant);
   }
   bool lex_less(int3 a, int3 b) {
     return a.x != b.x ? a.x < b.x : (a.y != b.y ? a.y < b.y : a.z < b.z);

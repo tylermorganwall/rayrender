@@ -32,6 +32,7 @@ render_scene_rcpp.o render_animation_rcpp.o core/integrator.o core/wavefront_geo
 core/wavefront.o: core/wavefront.h core/wavefront_texture_export.inc core/wavefront_instances.inc core/wavefront_medium_export.inc
 core/wavefront.o core/wavefront_motion.o: core/wavefront_motion.h
 core/wavefront_metal.o: core/wavefront_motion.h
+core/wavefront_metal.o core/wavefront_medium_tests.o: core/wavefront_medium_probe.h
 
 core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_csg.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc core/wavefront_media.inc core/wavefront_atmosphere.inc core/wavefront_atmosphere_paths.inc core/wavefront_haze.inc core/wavefront_camera.inc
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@

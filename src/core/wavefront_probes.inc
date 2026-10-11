@@ -143,4 +143,18 @@ R"MSL(
       if(haze_polynomial(polynomial,(edges[j-1]+edges[j])*.5f)<0) selected|=1u<<(j-1);
     output[i]={float4(edges[0],edges[1],edges[2],edges[3]),float4(edges[4],count,selected,0)};
   }
+  struct MediumProbe { Medium medium; float4 origin, direction, uniforms[4]; };
+  struct MediumResult { float4 distances[4], majorants[4]; };
+  kernel void probe_medium(device const MediumProbe *input [[buffer(0)]],
+                           device MediumResult *output [[buffer(1)]],
+                           device const float *values [[buffer(2)]],
+                           uint i [[thread_position_in_grid]]) {
+    auto p = input[i];
+    auto iterator = medium_iterator(p.medium, p.origin.xyz, p.direction.xyz, p.origin.w);
+    for (uint j = 0; j < 16; ++j) {
+      float majorant;
+      output[i].distances[j/4][j%4] = medium_next(iterator, p.uniforms[j/4][j%4], values, majorant);
+      output[i].majorants[j/4][j%4] = majorant;
+    }
+  }
 )MSL"

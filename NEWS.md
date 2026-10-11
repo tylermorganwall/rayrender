@@ -577,6 +577,14 @@
 
 ## Other
 
+- `render_scene()` Further reduces Metal render times for heterogeneous volumes
+  and Prague skies by reusing shadow grid traversal and skipping finite-segment
+  atmosphere work when haze is disabled.
+
+- `render_scene()` Accelerates Metal lighting through volumes and alpha-mapped
+  surfaces with Prague skies when finite haze is disabled, separating shadow
+  visibility and RGB attenuation from spectral light evaluation.
+
 - `render_scene()` Reduces Metal density-threshold haze work by sharing density
   lookups and reusing cutoff polynomials. Animated scenes upload and refit only
   changing geometry; scenes with one shared motion transform rays into an

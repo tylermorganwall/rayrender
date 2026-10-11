@@ -13,6 +13,29 @@ R"MSL(
     float3 value=environment(light,direction,origin,textures,texels,true);
     return any(value!=0) ? value*air_celestial(origin,direction,uint(light.color.w),air,data) : value;
   }
+  // Reuse the shadow queue rather than allocating and compacting another one.
+  // Visibility has already written a zero contribution for blocked connections.
+  // The queue has at most one shadow per pixel per event, so lane zero can add
+  // the result without atomics. Encoder order publishes transmittance before
+  // this pass reads it, and queue advancement happens only after it finishes.
+  kernel void shadow_lights(SCENE_ARGUMENTS) {
+    uint lane = i % 32;
+    i /= 32;
+    if (i >= atomic_load_explicit(&counts.shadows, memory_order_relaxed)) return;
+    Shadow shadow = shadow_queue[i];
+    if (all(shadow.contribution.xyz == 0)) return;
+    device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const AtmosphereData &air = *reinterpret_cast<device const AtmosphereData *>(
+        bytes + storage->atmosphere_offset);
+    device const float *data = reinterpret_cast<device const float *>(
+        bytes + storage->atmosphere_data_offset);
+    float3 value = shadow.padding[1] < p.environments
+        ? air_light(lights[shadow.padding[1]], shadow.origin.xyz, shadow.direction.xyz,
+                    air, data, textures, texels)
+        : float3(1);
+    if (lane == 0)
+      pixels[shadow.pixel].radiance.xyz += shadow.contribution.xyz * value;
+  }
   kernel void atmosphere_paths(SCENE_ARGUMENTS) {
     uint lane=i%32;i/=32;
     if(i>=atomic_load_explicit(&counts.rays,memory_order_relaxed)) return;
