@@ -3,9 +3,6 @@
 #' This object takes an object constructed using the `csg_*` functions. The object is drawn using
 #' ray marching/sphere tracing.
 #'
-#' Note: For dielectric objects, any other objects not included in the CSG object and
-#' nested inside will be ignored.
-#'
 #' @param object Object created with CSG interface.
 #' @param x Default `0`. x-offset of the center of the object.
 #' @param y Default `0`. y-offset of the center of the object.
@@ -17,11 +14,26 @@
 #' @param flipped Default `FALSE`. Whether to flip the normals.
 #' @param scale Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 #' number, the object will be scaled uniformly.
-#' Note: emissive objects may not currently function correctly when scaled.
 #' @importFrom  grDevices col2rgb
 #'
-#' @return Single row of a tibble describing the sphere in the scene.
+#' @return Single row of a tibble describing the CSG object in the scene.
 #' @export
+#' @details
+#' Both CPU and Metal integrators evaluate CSG surfaces directly, without
+#' converting them to triangles. They use the same distance fields for Boolean
+#' operations, smooth blends, rounding, onion shells, and coordinate transformations.
+#' On Metal, expressions with more than 32 levels fall back to the CPU renderer.
+#'
+#' Closed solids support dielectric priorities, [subsurface()],
+#' [subsurface_diffusion()], and [set_medium()]. Expressions containing open
+#' planes or triangles are not accepted as medium boundaries. All parts of one
+#' CSG object share its material. UV coordinates are constant; use object-space
+#' or world-space [texture_coordinates()] for spatially varying textures.
+#'
+#' Emissive objects sample directions toward an enclosing sphere. Holes and empty
+#' parts of that sphere produce zero-contribution samples, so sparse CSG lights
+#' may need more samples than compact emitters. Ray marching uses a tolerance
+#' relative to the object bounds; features near that tolerance are not resolved.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #We will combine these three objects:

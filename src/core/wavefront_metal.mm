@@ -1,5 +1,7 @@
 #include "sobol_directions.h"
 #include "wavefront.h"
+#include "wavefront_motion.h"
+#include <skymodelr/prague.hpp>
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
 namespace wavefront_tables {
@@ -14,7 +16,9 @@ namespace wavefront_tables {
 #include <thread>
 
 namespace {
-const char *source = "#include <metal_stdlib>\nusing namespace metal;\nnamespace wf_openpbr {\n"
+const char *source = "#include <metal_stdlib>\nusing namespace metal;\n"
+#include <skymodelr/prague_metal.inc>
+                     "\nnamespace wf_openpbr {\n"
 #include "wavefront_openpbr_generated.inc"
                      "\n}\n"
 #include "wavefront_kernels.inc"
@@ -34,10 +38,11 @@ std::runtime_error MetalError(const char *context, NSError *error) {
 struct Pipelines {
   id<MTLDevice> device;
   id<MTLLibrary> library;
+  id<MTLFunction> analytic_function;
   id<MTLComputePipelineState> primary, intersect, shade, shade_materials, shade_pbr,
-      shade_pbr_lights, shade_diffusion, shadow, dispatch;
+      shade_pbr_lights, shade_diffusion, shadow, dispatch, atmosphere_paths, atmosphere_dispatch;
   id<MTLBuffer> directions, blue;
-  bool boundary_support, analytic_support, instance_support, mixed_support;
+  bool boundary_support, analytic_support, instance_support, mixed_support, atmosphere_support;
   uint32_t texture_features;
   std::mutex material_mutex;
 
@@ -48,6 +53,12 @@ struct Pipelines {
     [constants setConstantValue:&texture_features type:MTLDataTypeUInt atIndex:1];
     [constants setConstantValue:&analytic_support type:MTLDataTypeBool atIndex:2];
     [constants setConstantValue:&instance_support type:MTLDataTypeBool atIndex:3];
+    [constants setConstantValue:&atmosphere_support type:MTLDataTypeBool atIndex:4];
+    if (analytic_support && !analytic_function) {
+      analytic_function=[library newFunctionWithName:@"intersect_quadric"
+                                     constantValues:constants error:&error];
+      if (!analytic_function) throw MetalError("analytic intersection specialization",error);
+    }
     auto function = [library newFunctionWithName:name constantValues:constants error:&error];
     if (!function)
       throw MetalError("wavefront function specialization", error);
@@ -60,7 +71,7 @@ struct Pipelines {
           addObject:[library newFunctionWithName:mixed_support ? @"containment_face_instanced"
                                                                : @"containment_face"]];
       if (analytic_support)
-        [functions addObject:[library newFunctionWithName:@"intersect_quadric"]];
+        [functions addObject:analytic_function];
       linked.functions = functions;
       descriptor.linkedFunctions = linked;
     }
@@ -83,10 +94,10 @@ struct Pipelines {
     if (diffusion && !shade_diffusion)
       shade_diffusion = Compile(@"shade_diffusion");
   }
-  explicit Pipelines(bool boundary_support, uint32_t textures, bool analytics, bool instances)
+  explicit Pipelines(bool boundary_support, uint32_t textures, bool analytics, bool instances, bool atmosphere)
       : boundary_support(boundary_support), analytic_support(analytics),
         instance_support(instances), mixed_support(analytics || instances),
-        texture_features(textures) {
+        atmosphere_support(atmosphere), texture_features(textures) {
     device = MTLCreateSystemDefaultDevice();
     if (!device || !device.supportsRaytracing)
       throw std::runtime_error("this Metal device does not support ray tracing");
@@ -113,6 +124,10 @@ struct Pipelines {
     intersect = Compile(@"intersect_paths");
     shade = Compile(@"shade");
     shadow = Compile(@"shadows");
+    if (atmosphere) {
+      atmosphere_paths = Compile(@"atmosphere_paths");
+      atmosphere_dispatch = Compile(@"atmosphere_dispatch");
+    }
     dispatch = Compile(@"advance_queues");
     directions = [device newBufferWithBytes:SPACEFILLR_SOBOL_DIRECTIONS
                                      length:21200 * 32 * sizeof(uint32_t)
@@ -133,17 +148,17 @@ struct Pipelines {
 };
 
 Pipelines &SharedPipelines(bool boundaries = false, uint32_t textures = 0, bool analytics = false,
-                           bool instances = false) {
+                           bool instances = false, bool atmosphere = false) {
   // Specialization removes graph registers, alpha traversal and bump footprint
   // storage from ordinary opaque scenes. Sessions retain their own resources.
   static std::mutex mutex;
   static std::map<uint32_t, std::unique_ptr<Pipelines>> pipelines;
   std::lock_guard<std::mutex> lock(mutex);
-  uint32_t key = (textures << 3) | uint32_t(boundaries) | (uint32_t(analytics) << 1) |
-                 (uint32_t(instances) << 2);
+  uint32_t key = (textures << 4) | uint32_t(boundaries) | (uint32_t(analytics) << 1) |
+                 (uint32_t(instances) << 2) | (uint32_t(atmosphere) << 3);
   auto &entry = pipelines[key];
   if (!entry)
-    entry = std::make_unique<Pipelines>(boundaries, textures, analytics, instances);
+    entry = std::make_unique<Pipelines>(boundaries, textures, analytics, instances, atmosphere);
   return *entry;
 }
 
@@ -161,6 +176,88 @@ class MetalWavefront final : public WavefrontSession {
   size_t capacity;
   WFGeometryStorage geometry_storage;
   bool has_materials = false, has_pbr = false, has_pbr_emission = false, has_diffusion = false;
+  bool has_haze = false;
+  std::unique_ptr<WavefrontAtmosphere> atmosphere;
+  const WavefrontScene &scene_data;
+  bool gpu_atmosphere = false;
+  std::vector<id<MTLAccelerationStructure>> refit_structures;
+  std::vector<MTLAccelerationStructureDescriptor *> refit_descriptors;
+  id<MTLBuffer> refit_scratch = nil, motion_boxes = nil, motion_instances = nil;
+  bool moving_triangles = false, moving_quadrics = false, moving_instances = false;
+  bool whole_scene_frame = false;
+  id<MTLBuffer> reference_vertices = nil;
+
+  bool RefitMotion(const std::function<bool()> &cancelled) {
+    if (!scene_data.motion || !scene_data.motion_changed)
+      return true;
+    const auto &s = scene_data;
+    // Copy contiguous runs belonging to animated placements. Shared prototype
+    // vertices and static geometry stay resident, even in a moving scene.
+    auto copy_changed = [&](void *destination, const auto &values, size_t kind) {
+      const auto &owners = s.motion->owners[kind];
+      for (size_t begin = 0; begin < owners.size();) {
+        if (!owners[begin]) {
+          ++begin;
+          continue;
+        }
+        size_t end = begin + 1;
+        while (end < owners.size() && owners[end])
+          ++end;
+        std::memcpy(static_cast<char *>(destination) + begin * sizeof(values[0]),
+                    values.data() + begin, (end - begin) * sizeof(values[0]));
+        begin = end;
+      }
+    };
+    copy_changed(buffers[0].contents, s.triangles, 0);
+    copy_changed(buffers[26].contents, s.surfaces, 2);
+    std::memcpy(buffers[17].contents, s.boundaries.data(),
+                s.boundaries.size() * sizeof(WFBoundary));
+    auto *bytes = static_cast<char *>(buffers[28].contents);
+    if (whole_scene_frame)
+      std::memcpy(bytes + geometry_storage.motion_offset, s.motion->inverse_frame,
+                  3 * sizeof(WFVector));
+    copy_changed(bytes + geometry_storage.quadric_offset, s.quadrics, 1);
+    copy_changed(bytes + geometry_storage.instance_offset, s.instances, 3);
+    copy_changed(bytes + geometry_storage.medium_offset, s.media, 4);
+    if (motion_boxes) {
+      auto *boxes = static_cast<MTLAxisAlignedBoundingBox *>(motion_boxes.contents);
+      for (size_t i = 0; i < s.quadrics.size(); ++i) {
+        if (i >= s.motion->owners[1].size() || !s.motion->owners[1][i])
+          continue;
+        const auto &lo = s.quadric_bounds[2 * i], &hi = s.quadric_bounds[2 * i + 1];
+        boxes[i].min = {lo.x, lo.y, lo.z};
+        boxes[i].max = {hi.x, hi.y, hi.z};
+      }
+    }
+    if (motion_instances) {
+      auto *instances =
+          static_cast<MTLAccelerationStructureInstanceDescriptor *>(motion_instances.contents);
+      for (size_t i = 0; i < s.instances.size(); ++i)
+        if (i < s.motion->owners[3].size() && s.motion->owners[3][i] &&
+            s.instances[i].triangle_count) {
+          const auto *a = s.instances[i].forward;
+          instances[i].transformationMatrix.columns[0] = {a[0].x, a[1].x, a[2].x};
+          instances[i].transformationMatrix.columns[1] = {a[0].y, a[1].y, a[2].y};
+          instances[i].transformationMatrix.columns[2] = {a[0].z, a[1].z, a[2].z};
+          instances[i].transformationMatrix.columns[3] = {a[0].w, a[1].w, a[2].w};
+        }
+    }
+    if (refit_structures.empty())
+      return true;
+    auto command = [queue commandBuffer];
+    command.label = @"Wavefront shutter pose refit";
+    // Separate encoders order child bounds before the parent TLAS refit.
+    for (size_t i = 0; i < refit_structures.size(); ++i) {
+      auto encoder = [command accelerationStructureCommandEncoder];
+      [encoder refitAccelerationStructure:refit_structures[i]
+                               descriptor:refit_descriptors[i]
+                              destination:nil
+                            scratchBuffer:refit_scratch
+                      scratchBufferOffset:0];
+      [encoder endEncoding];
+    }
+    return Wait(command, cancelled);
+  }
 
   id<MTLBuffer> Buffer(size_t size, const void *data = nullptr) {
     size_t allocation_size = std::max(size, size_t(16));
@@ -201,7 +298,9 @@ class MetalWavefront final : public WavefrontSession {
     return !(stop || cancelled());
   }
 
-  id<MTLAccelerationStructure> BuildAcceleration(MTLAccelerationStructureDescriptor *descriptor) {
+  id<MTLAccelerationStructure> BuildAcceleration(MTLAccelerationStructureDescriptor *descriptor,
+                                                bool changes = false) {
+    if (changes) descriptor.usage |= MTLAccelerationStructureUsageRefit;
     auto sizes = [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
     auto result = [kernels.device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
     auto scratch = Buffer(sizes.buildScratchBufferSize);
@@ -215,6 +314,12 @@ class MetalWavefront final : public WavefrontSession {
                     scratchBufferOffset:0];
     [encoder endEncoding];
     Wait(command, [] { return false; });
+    if (changes) {
+      refit_structures.push_back(result);
+      refit_descriptors.push_back(descriptor);
+      if (!refit_scratch || refit_scratch.length < sizes.refitScratchBufferSize)
+        refit_scratch = Buffer(sizes.refitScratchBufferSize);
+    }
     return result;
   }
 
@@ -233,14 +338,18 @@ class MetalWavefront final : public WavefrontSession {
     [table setFunction:handle atIndex:0];
     [table setBuffer:buffers[0] offset:0 atIndex:0];
     if (kernels.analytic_support) {
-      auto function = [kernels.library newFunctionWithName:@"intersect_quadric"];
+      auto function = kernels.analytic_function;
       auto analytic = [pipeline functionHandleWithFunction:function];
       if (!analytic)
         throw MetalError("wavefront analytic intersection table", nil);
       [table setFunction:analytic atIndex:1];
-      [table setBuffer:buffers[28] offset:geometry_storage.quadric_offset atIndex:1];
+      [table setBuffer:buffers[28]
+                offset:whole_scene_frame ? geometry_storage.motion_offset + 3 * sizeof(WFVector)
+                                         : geometry_storage.quadric_offset
+               atIndex:1];
     }
     [table setBuffer:buffers[28] offset:geometry_storage.instance_offset atIndex:2];
+    [table setBuffer:buffers[11] offset:7*sizeof(uint32_t) atIndex:3];
     intersection_tables.emplace_back(pipeline, table);
   }
 
@@ -256,6 +365,15 @@ class MetalWavefront final : public WavefrontSession {
 
   void Dispatch(id<MTLCommandBuffer> command, id<MTLComputePipelineState> pipeline,
                 const WFParameters &parameters, bool primary = false) {
+    bool spectral = gpu_atmosphere && (pipeline == kernels.atmosphere_paths || pipeline == kernels.shadow);
+    if (spectral) {
+      auto encoder = [command computeCommandEncoder];
+      [encoder setComputePipelineState:kernels.atmosphere_dispatch];
+      [encoder setBuffer:buffers[11] offset:0 atIndex:0];
+      [encoder setBuffer:indirect offset:0 atIndex:1];
+      [encoder dispatchThreadgroups:MTLSizeMake(1,1,1) threadsPerThreadgroup:MTLSizeMake(1,1,1)];
+      [encoder endEncoding];
+    }
     auto encoder = [command computeCommandEncoder];
     encoder.label = primary                                ? @"Wavefront primary rays"
                     : pipeline == kernels.intersect        ? @"Wavefront intersections"
@@ -264,6 +382,7 @@ class MetalWavefront final : public WavefrontSession {
                     : pipeline == kernels.shade_pbr        ? @"Wavefront OpenPBR shading"
                     : pipeline == kernels.shade_pbr_lights ? @"Wavefront OpenPBR light shading"
                     : pipeline == kernels.shade_diffusion  ? @"Wavefront normalized diffusion"
+                    : pipeline == kernels.atmosphere_paths ? @"Wavefront spectral atmosphere"
                                                            : @"Wavefront shadow rays";
     [encoder setComputePipelineState:pipeline];
     for (size_t i = 0; i < buffers.size(); ++i)
@@ -288,7 +407,7 @@ class MetalWavefront final : public WavefrontSession {
               threadsPerThreadgroup:MTLSizeMake(64, 1, 1)];
     else
       [encoder dispatchThreadgroupsWithIndirectBuffer:indirect
-                                 indirectBufferOffset:(pipeline == kernels.shade ||
+                                 indirectBufferOffset:spectral ? (pipeline == kernels.shadow ? 48 : 36) : (pipeline == kernels.shade ||
                                                        pipeline == kernels.shade_materials ||
                                                        pipeline == kernels.shade_pbr ||
                                                        pipeline == kernels.shade_pbr_lights ||
@@ -301,7 +420,22 @@ class MetalWavefront final : public WavefrontSession {
 
 public:
   MetalWavefront(Pipelines &kernels, const WavefrontScene &scene, size_t capacity)
-      : kernels(kernels), capacity(capacity) {
+      : kernels(kernels), capacity(capacity), scene_data(scene) {
+    if (scene.motion) {
+      whole_scene_frame = scene.motion->whole_scene_frame;
+      auto changes = [&](size_t kind) {
+        const auto &owners = scene.motion->owners[kind];
+        return std::any_of(owners.begin(), owners.end(), [](uint32_t owner) { return owner != 0; });
+      };
+      moving_triangles = changes(0);
+      moving_quadrics = changes(1);
+      moving_instances = changes(3);
+    }
+    gpu_atmosphere = scene.gpu_atmosphere;
+    if (gpu_atmosphere && (kernels.atmosphere_paths.threadExecutionWidth != 32 ||
+                           kernels.shadow.threadExecutionWidth != 32))
+      gpu_atmosphere = false;
+    has_haze = scene.transport_atmosphere != nullptr;
     queue = [kernels.device newCommandQueue];
     if (!queue)
       throw MetalError("wavefront command queue", nil);
@@ -316,41 +450,95 @@ public:
     buffers[8] = Buffer(capacity * 4);
     buffers[9] = Buffer(capacity * 32);
     buffers[10] = Buffer(capacity * 144);
-    buffers[11] = Buffer(7 * 4);
+    buffers[11] = Buffer(8 * 4);
     buffers[13] = Buffer(capacity * 4);
     buffers[14] = kernels.directions;
     buffers[15] = kernels.blue;
     buffers[17] = Upload(scene.boundaries);
     buffers[18] = Buffer(scene.boundaries.size() > 1 ? capacity * 80 : 80);
-    indirect = Buffer(9 * sizeof(uint32_t));
+    indirect = Buffer(15 * sizeof(uint32_t));
     buffers[19] = indirect;
     buffers[20] = Upload(scene.material_data);
     has_diffusion = !scene.diffusion_exits.empty();
     buffers[21] = Upload(scene.diffusion_exits);
     buffers[22] = Upload(scene.diffusion_samples);
     buffers[23] = Upload(scene.diffusion_pairs);
-    buffers[24] = Buffer(has_diffusion ? capacity * 32 : 32);
+    // Keep diffusion-only scenes at 32 bytes per pixel; append atmosphere requests only when needed.
+    buffers[24] = Buffer((has_diffusion || scene.atmosphere ? capacity : 1) * 32 +
+                         (scene.atmosphere ? capacity * (sizeof(WFAtmosphereRequest) + 64) : 0));
+    if (scene.atmosphere && !gpu_atmosphere)
+      atmosphere = std::make_unique<WavefrontAtmosphere>(scene, capacity);
     buffers[26] = Upload(scene.surfaces);
-    // Metal exposes 31 buffer slots, all already in use. Pack immutable geometry
-    // metadata in one aligned allocation with explicit offsets, not pointer ABI.
+    // Metal exposes 31 buffer slots, all already in use. Pack geometry, media,
+    // camera and atmosphere metadata with explicit offsets, not a pointer ABI.
+    // Moving scenes also retain immutable quadrics for reference-frame tracing.
     auto instances = scene.instances;
     if (instances.empty())
       instances.resize((!scene.triangles.empty()) + (!scene.quadrics.empty()));
-    size_t instance_offset = sizeof(WFGeometryStorage) + scene.quadrics.size() * sizeof(WFQuadric);
+    size_t csg_bytes=scene.csg_instructions.size()*sizeof(WFCsgInstruction);
+    size_t instance_offset = sizeof(WFGeometryStorage) + scene.quadrics.size() * sizeof(WFQuadric)+csg_bytes;
     if (instance_offset > UINT32_MAX)
       throw std::runtime_error("Metal analytic metadata exceeds the 32-bit buffer offset capacity");
     geometry_storage.instance_offset = uint32_t(instance_offset);
     size_t storage_size = geometry_storage.instance_offset +
                           std::max(size_t(1), instances.size()) * sizeof(WFMeshInstance);
+    if (storage_size + scene.media.size() * sizeof(WFMedium) +
+            scene.fields.size() * sizeof(float) > UINT32_MAX)
+      throw std::runtime_error("Metal medium metadata exceeds the 32-bit buffer capacity");
+    geometry_storage.medium_offset = uint32_t(storage_size);
+    storage_size += scene.media.size() * sizeof(WFMedium);
+    geometry_storage.field_offset = uint32_t(storage_size);
+    storage_size += scene.fields.size() * sizeof(float);
+    storage_size = (storage_size + 15) & ~size_t(15);
+    if (whole_scene_frame) {
+      size_t motion_bytes = 3 * sizeof(WFVector) + scene.quadrics.size() * sizeof(WFQuadric)+csg_bytes;
+      if (storage_size + motion_bytes > UINT32_MAX)
+        throw std::runtime_error("Metal motion metadata exceeds the 32-bit scene buffer capacity");
+      geometry_storage.motion_offset = uint32_t(storage_size);
+      storage_size += motion_bytes;
+    }
+    geometry_storage.camera_offset = uint32_t(storage_size);
+    storage_size += scene.camera_data.size() * sizeof(WFVector);
+    geometry_storage.atmosphere_offset = uint32_t(storage_size);
+    size_t coefficient_count = 0;
+    const float *coefficients = nullptr;
+    if (gpu_atmosphere) {
+      coefficients = scene.atmosphere_snapshot->data(coefficient_count);
+      storage_size += sizeof(WFAtmosphereData);
+    }
+    geometry_storage.atmosphere_data_offset = uint32_t(storage_size);
+    if (coefficient_count > (UINT32_MAX - storage_size) / sizeof(float))
+      throw std::runtime_error("Metal atmosphere exceeds the 32-bit scene buffer capacity");
+    storage_size += coefficient_count * sizeof(float);
     buffers[28] = Buffer(storage_size);
     auto *bytes = static_cast<unsigned char *>(buffers[28].contents);
     std::memcpy(bytes, &geometry_storage, sizeof(geometry_storage));
+    if (whole_scene_frame) {
+      std::memcpy(bytes + geometry_storage.motion_offset, scene.motion->inverse_frame,
+                  3 * sizeof(WFVector));
+      if (!scene.quadrics.empty())
+        std::memcpy(bytes + geometry_storage.motion_offset + 3 * sizeof(WFVector),
+                    scene.quadrics.data(), scene.quadrics.size() * sizeof(WFQuadric));
+      if(csg_bytes) std::memcpy(bytes+geometry_storage.motion_offset+3*sizeof(WFVector)+
+          scene.quadrics.size()*sizeof(WFQuadric),scene.csg_instructions.data(),csg_bytes);
+    }
+    if (gpu_atmosphere) {
+      std::memcpy(bytes + geometry_storage.atmosphere_offset, &scene.atmosphere_data, sizeof(WFAtmosphereData));
+      std::memcpy(bytes + geometry_storage.atmosphere_data_offset, coefficients, coefficient_count*sizeof(float));
+    }
     if (!scene.quadrics.empty())
       std::memcpy(bytes + geometry_storage.quadric_offset, scene.quadrics.data(),
                   scene.quadrics.size() * sizeof(WFQuadric));
+    if(csg_bytes) std::memcpy(bytes+geometry_storage.quadric_offset+
+        scene.quadrics.size()*sizeof(WFQuadric),scene.csg_instructions.data(),csg_bytes);
     if (!instances.empty())
       std::memcpy(bytes + geometry_storage.instance_offset, instances.data(),
                   instances.size() * sizeof(WFMeshInstance));
+    std::memcpy(bytes + geometry_storage.medium_offset, scene.media.data(),
+                scene.media.size() * sizeof(WFMedium));
+    if (!scene.fields.empty())
+      std::memcpy(bytes + geometry_storage.field_offset, scene.fields.data(),
+                  scene.fields.size() * sizeof(float));
 
     buffers[27] = Buffer(scene.texture_features & 4 ? capacity * 64 : 64);
     for (const auto &material : scene.materials) {
@@ -378,9 +566,11 @@ public:
     NSMutableArray<MTLAccelerationStructureGeometryDescriptor *> *geometries =
         [NSMutableArray array];
     size_t loose = scene.meshes.empty() ? scene.triangles.size() : scene.loose_triangles;
+    if (whole_scene_frame && moving_triangles)
+      reference_vertices = Buffer(loose * sizeof(WFTriangle), scene.triangles.data());
     if (loose) {
       auto geometry = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-      geometry.vertexBuffer = buffers[0];
+      geometry.vertexBuffer = reference_vertices ? reference_vertices : buffers[0];
       geometry.vertexStride = sizeof(WFVector);
       geometry.indexBuffer = index_buffer;
       geometry.indexType = MTLIndexTypeUInt32;
@@ -399,6 +589,8 @@ public:
         boxes[i].max = MTLPackedFloat3{hi.x, hi.y, hi.z};
       }
       box_buffer = Upload(boxes);
+      if (moving_quadrics && !whole_scene_frame)
+        motion_boxes = box_buffer;
       auto geometry = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
       geometry.boundingBoxBuffer = box_buffer;
       geometry.boundingBoxCount = boxes.size();
@@ -419,10 +611,16 @@ public:
       [geometries addObject:geometry];
     }
     NSMutableArray<id<MTLAccelerationStructure>> *children = [NSMutableArray array];
+    size_t child_index = 0;
     for (MTLAccelerationStructureGeometryDescriptor *geometry in geometries) {
       auto descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
       descriptor.geometryDescriptors = @[ geometry ];
-      [children addObject:BuildAcceleration(descriptor)];
+      bool changes =
+          (loose && child_index == 0 && moving_triangles) ||
+          (!scene.quadrics.empty() && child_index == size_t(loose != 0) && moving_quadrics);
+      changes = changes && !whole_scene_frame;
+      [children addObject:BuildAcceleration(descriptor, changes)];
+      ++child_index;
     }
     bottom_levels = children;
     acceleration = children[0];
@@ -454,7 +652,11 @@ public:
       descriptor.instancedAccelerationStructures = children;
       descriptor.instanceCount = instances.size();
       descriptor.instanceDescriptorBuffer = Upload(instances);
-      mixed_acceleration = BuildAcceleration(descriptor);
+      if (moving_instances && !whole_scene_frame)
+        motion_instances = descriptor.instanceDescriptorBuffer;
+      mixed_acceleration = BuildAcceleration(
+          descriptor,
+          !whole_scene_frame && (moving_triangles || moving_quadrics || moving_instances));
     }
   }
 
@@ -500,16 +702,30 @@ public:
         throw std::runtime_error("wavefront image exceeds queue capacity");
       if (cancelled())
         return false;
+      // Primary rays can query CSG for initial membership. Reset on the host
+      // before dispatch, rather than racing the first lane against those queries.
+      static_cast<uint32_t *>(buffers[11].contents)[7]=0;
+      if (!RefitMotion(cancelled)) return false;
       if (!active.empty())
         std::memcpy(buffers[13].contents, active.data(), active.size() * sizeof(uint32_t));
       if (!lights.empty())
         std::memcpy(buffers[4].contents, lights.data(), lights.size() * sizeof(WFLight));
       WFParameters parameters = input;
+      if (!scene_data.camera_data.empty())
+        std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.camera_offset,
+                    scene_data.camera_data.data(), scene_data.camera_data.size()*sizeof(WFVector));
+      parameters.camera.padding[0] = static_cast<uint32_t>(capacity);
+      parameters.camera.padding[1] = uint32_t(has_haze) | (uint32_t(gpu_atmosphere) << 1);
+      if (gpu_atmosphere)
+        std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.atmosphere_offset,
+                    &scene_data.atmosphere_data, sizeof(WFAtmosphereData));
+      if (atmosphere)
+        atmosphere->Begin(active);
       // Media carry depth per path: internal flights and hidden crossings must
       // not spend ordinary bounce depth. Run bounded event batches until their
       // queue is empty, with no finite walk cap. Only batch completion crosses
       // to the CPU, so cancellation stays responsive during very long walks.
-      const uint32_t batch = input.boundaries ? 16 : 4;
+      const uint32_t batch = atmosphere ? 1 : (input.boundaries ? 16 : 4);
       for (uint64_t first = 0; input.boundaries || first <= input.max_depth; first += batch) {
         auto command = [queue commandBuffer];
         command.label = @"Wavefront transport batch";
@@ -520,6 +736,21 @@ public:
         for (uint32_t event = 0; event < events; ++event) {
           parameters.depth = first + event;
           Dispatch(command, kernels.intersect, parameters);
+          if (gpu_atmosphere) Dispatch(command, kernels.atmosphere_paths, parameters);
+          if (atmosphere) {
+            if (!Wait(command, cancelled))
+              return false;
+            auto *counts = static_cast<uint32_t *>(buffers[11].contents);
+            auto atmosphere_started = std::chrono::steady_clock::now();
+            if (!atmosphere->Paths(parameters, static_cast<uint32_t *>(buffers[7].contents), counts[0],
+                              reinterpret_cast<WFAtmosphereRequest *>(
+                                  static_cast<char *>(buffers[24].contents) + capacity * 32),
+                              static_cast<WFPath *>(buffers[5].contents),
+                              static_cast<WFPixel *>(buffers[6].contents),cancelled)) return false;
+            report.atmosphere_seconds += std::chrono::duration<double>(std::chrono::steady_clock::now() - atmosphere_started).count();
+            if (cancelled()) return false;
+            command = [queue commandBuffer];
+          }
           Dispatch(command,
                    has_pbr_emission ? kernels.shade_pbr_lights
                    : has_materials  ? kernels.shade_materials
@@ -530,6 +761,20 @@ public:
           if (has_diffusion)
             Dispatch(command, kernels.shade_diffusion, parameters);
           Dispatch(command, kernels.shadow, parameters);
+          if (atmosphere) {
+            if (!Wait(command, cancelled))
+              return false;
+            auto *counts = static_cast<uint32_t *>(buffers[11].contents);
+            auto atmosphere_started = std::chrono::steady_clock::now();
+            if (!atmosphere->Shadows(parameters, static_cast<WFShadow *>(buffers[10].contents), counts[2],
+                                static_cast<WFPixel *>(buffers[6].contents),cancelled)) return false;
+            const auto *shadow_results = static_cast<const WFShadow *>(buffers[10].contents);
+            for (size_t j=0; j<counts[2]; ++j)
+              report.discarded_paths += shadow_results[j].padding[2] != 0;
+            report.atmosphere_seconds += std::chrono::duration<double>(std::chrono::steady_clock::now() - atmosphere_started).count();
+            if (cancelled()) return false;
+            command = [queue commandBuffer];
+          }
           AdvanceQueues(command);
           std::swap(buffers[7], buffers[8]);
         }
@@ -546,6 +791,7 @@ public:
         throw std::runtime_error("Metal wavefront queue overflow; sample discarded");
       report.discarded_paths += counts[5];
       report.scattering_events += counts[6];
+      report.csg_failed_queries += counts[7];
       pixels = static_cast<const WFPixel *>(buffers[6].contents);
       return true;
     }
@@ -570,7 +816,7 @@ std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &scene
     if (@available(macOS 11.0, *)) {
       return std::make_unique<MetalWavefront>(
           SharedPipelines(scene.boundaries.size() > 1, scene.texture_features,
-                          !scene.quadrics.empty(), !scene.meshes.empty()),
+                          !scene.quadrics.empty(), !scene.meshes.empty(), scene.atmosphere != nullptr),
           scene, capacity);
     }
     throw std::runtime_error("Metal wavefront requires macOS 11 or later");
@@ -691,5 +937,57 @@ std::vector<WFVector> ProbeMetalEnvironment(const WavefrontScene &scene, const W
     std::memcpy(output.data(), result.contents, output.size() * sizeof(WFVector));
   }
   return output;
+}
+#endif
+
+#ifdef NOT_CRAN
+namespace {
+template <class Input>
+std::vector<WFCameraResult> camera_haze_probe(NSString *name, const std::vector<Input> &input,
+                                              const WFCamera &camera,
+                                              const std::vector<WFVector> &data) {
+  std::vector<WFCameraResult> result(input.size());
+  if (input.empty())
+    return result;
+  @autoreleasepool {
+    auto &shared = SharedPipelines();
+    auto pipeline = shared.Compile(name);
+    auto source = [shared.device newBufferWithBytes:input.data()
+                                             length:input.size() * sizeof(Input)
+                                            options:MTLResourceStorageModeShared];
+    auto output = [shared.device newBufferWithLength:result.size() * sizeof(WFCameraResult)
+                                             options:MTLResourceStorageModeShared];
+    WFVector empty;
+    auto values =
+        [shared.device newBufferWithBytes:data.empty() ? &empty : data.data()
+                                   length:std::max(size_t(1), data.size()) * sizeof(WFVector)
+                                  options:MTLResourceStorageModeShared];
+    auto queue = [shared.device newCommandQueue];
+    auto command = [queue commandBuffer];
+    auto encoder = [command computeCommandEncoder];
+    [encoder setComputePipelineState:pipeline];
+    [encoder setBuffer:source offset:0 atIndex:0];
+    [encoder setBuffer:output offset:0 atIndex:1];
+    [encoder setBuffer:values offset:0 atIndex:2];
+    [encoder setBytes:&camera length:sizeof(camera) atIndex:3];
+    [encoder dispatchThreads:MTLSizeMake(input.size(), 1, 1)
+        threadsPerThreadgroup:MTLSizeMake(32, 1, 1)];
+    [encoder endEncoding];
+    [command commit];
+    [command waitUntilCompleted];
+    if (command.status != MTLCommandBufferStatusCompleted)
+      throw MetalError("camera/haze probe", command.error);
+    std::memcpy(result.data(), output.contents, result.size() * sizeof(WFCameraResult));
+  }
+  return result;
+}
+}
+std::vector<WFCameraResult> ProbeMetalCamera(const WFCamera &camera,
+                                             const std::vector<WFVector> &data,
+                                             const std::vector<WFCameraProbe> &input) {
+  return camera_haze_probe(@"probe_camera", input, camera, data);
+}
+std::vector<WFCameraResult> ProbeMetalHaze(const std::vector<WFHazeProbe> &input) {
+  return camera_haze_probe(@"probe_haze", input, WFCamera(), {});
 }
 #endif

@@ -1627,3 +1627,88 @@ context("Camera ray differentials") {
   }
 }
 #endif
+
+#include "wavefront.h"
+
+// Export current camera state at a sample boundary, including interactive focus
+// changes. Lens coefficients and pupil bounds stay in a small separate buffer;
+// static cameras retain the original compact primary-ray calculation on device.
+void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVector> &data) {
+  auto pack = [](const auto &v) { return WFVector{float(v[0]), float(v[1]), float(v[2]), 0}; };
+  out.flip_x = source.get_camera_flip_x();
+  out.shutter.z = std::isinf(source.get_shutter_speed()) ? 0 : 1 / source.get_shutter_speed();
+  auto motion = [&](const auto &cam) {
+    out.moving = cam.camera_motion_blur && cam.camera_motion_blur_has_range;
+    if (!out.moving)
+      return;
+    for (int i = 0; i < 2; ++i) {
+      auto frame = InterpolateCameraMotionFrame(
+          Float(i), cam.camera_motion_start_origin, cam.camera_motion_start_lookat,
+          cam.camera_motion_start_up, cam.camera_motion_start_focal, cam.camera_motion_end_origin,
+          cam.camera_motion_end_lookat, cam.camera_motion_end_up, cam.camera_motion_end_focal);
+      out.motion_origin[i] = pack(frame.origin);
+      out.motion_origin[i].w = frame.focal;
+      Quaternion q(CameraBasisMatrix(frame.right, frame.up, frame.forward));
+      out.motion_rotation[i] = pack(q.v);
+      out.motion_rotation[i].w = q.w;
+    }
+  };
+  data.clear();
+  if (auto *cam = dynamic_cast<camera *>(&source)) {
+    out.origin = pack(cam->origin);
+    out.lower_left = pack(cam->lower_left_corner);
+    out.horizontal = pack(cam->horizontal);
+    out.vertical = pack(cam->vertical);
+    out.right = pack(cam->u);
+    out.right.w = cam->lens_radius;
+    out.up = pack(cam->v);
+    out.forward = pack(cam->w);
+    out.lens = {float(cam->half_width), float(cam->half_height), 0, 0};
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<ortho_camera *>(&source)) {
+    out.orthographic = 1;
+    out.origin = pack(cam->origin);
+    out.lower_left = pack(cam->lower_left_corner);
+    out.horizontal = pack(cam->horizontal);
+    out.vertical = pack(cam->vertical);
+    out.right = pack(cam->u);
+    out.up = pack(cam->v);
+    out.forward = pack(cam->w);
+    out.lens = {float(cam->cam_width / 2), float(cam->cam_height / 2), 0, 0};
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<environment_camera *>(&source)) {
+    out.orthographic = 2;
+    out.origin = pack(cam->origin);
+    out.right = pack(cam->get_u());
+    out.up = pack(cam->get_v());
+    out.forward = pack(cam->get_w());
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<RealisticCamera *>(&source)) {
+    out.orthographic = 3;
+    out.origin = pack(cam->get_origin());
+    out.right = pack(cam->CamTransform(vec3f(1, 0, 0)));
+    out.up = pack(cam->CamTransform(vec3f(0, 1, 0)));
+    out.forward = pack(cam->CamTransform(vec3f(0, 0, 1)));
+    auto extent = cam->GetPhysicalExtent();
+    out.lens = {float(extent.pMax[0]), float(extent.pMax[1]), float(cam->diag),
+                float(cam->LensRearZ())};
+    out.shutter.x = cam->shutterOpen;
+    out.shutter.y = cam->shutterClose;
+    out.elements = cam->elementInterfaces.size();
+    out.pupils = cam->exitPupilBounds.size();
+    out.simple_weighting = cam->simpleWeighting;
+    for (const auto &e : cam->elementInterfaces)
+      data.push_back(
+          {float(e.curvatureRadius), float(e.thickness), float(e.eta), float(e.apertureRadius)});
+    for (const auto &b : cam->exitPupilBounds)
+      data.push_back({float(b.pMin[0]), float(b.pMin[1]), float(b.pMax[0]), float(b.pMax[1])});
+    motion(*cam);
+  } else
+    throw std::runtime_error("Unsupported Metal camera class");
+}

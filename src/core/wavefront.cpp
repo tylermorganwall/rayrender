@@ -1,6 +1,8 @@
 #include "wavefront.h"
+#include "wavefront_motion.h"
 #include "../hitables/box.h"
 #include "../hitables/cylinder.h"
+#include "../hitables/csg.h"
 #include "../hitables/disk.h"
 #include "../hitables/ellipsoid.h"
 #include "../hitables/infinite_area_light.h"
@@ -16,6 +18,7 @@
 #include "../materials/texturegraph.h"
 #include "../volumes/boundary.h"
 #include "../volumes/subsurface.h"
+#include "../lights/atmosphere.h"
 #include "adaptivesampler.h"
 #include "bvh.h"
 #include "camera.h"
@@ -89,22 +92,27 @@ public:
       AddTriangle(output);
     } else if (const auto *body = dynamic_cast<const MediumBoundary *>(&object)) {
       const Medium *medium = body->medium.get();
-      if (medium && (!medium->subsurface || !medium->IsHomogeneous()))
-        throw std::runtime_error("heterogeneous or general participating medium");
-      if (!body->keep_surface)
-        throw std::runtime_error("invisible medium boundary");
       WFBoundary out;
       out.material = Material(body->geometry->mat_ptr.get());
-      if (!scene.materials[out.material].dielectric)
+      if (medium && medium->subsurface && !scene.materials[out.material].dielectric)
         throw std::runtime_error("non-dielectric subsurface boundary");
       if (medium) {
-        out.subsurface = medium->subsurface_diffusion ? 2 : 1;
+        out.subsurface = medium->subsurface ? (medium->subsurface_diffusion ? 2 : 1) : 3;
         out.sigma_a = Pack(medium->sigma_a);
         out.sigma_s = Pack(medium->sigma_s);
+        if (medium->legacy_albedo) {
+          auto properties = medium->SamplePoint(point3f(0));
+          out.sigma_a = Pack(properties.sigma_a);
+          out.sigma_s = Pack(properties.sigma_s);
+        }
         out.sigma_a.w = medium->subsurface_roughness;
         out.sigma_s.w = medium->g;
         out.color = Pack(medium->diffusion_color);
         out.radius = Pack(medium->diffusion_radius);
+        if (!medium->subsurface) {
+          out.radius.w = body->keep_surface;
+          out.medium = ExportMedium(*medium, placement * body->medium_to_world);
+        }
       }
       uint32_t previous = current_boundary;
       Float previous_orientation = boundary_orientation;
@@ -120,6 +128,17 @@ public:
     } else if (const auto *bvh = dynamic_cast<const BVHAggregate *>(&object)) {
       for (const auto &child : bvh->primitives)
         Geometry(*child, placement);
+    } else if (const auto *animated = dynamic_cast<const AnimatedHitable *>(&object)) {
+      if (!scene.motion) scene.motion = std::make_shared<WavefrontMotion>();
+      auto begin = WavefrontMotion::sizes(scene);
+      auto previous_motion = current_motion;
+      auto previous_placement = current_placement;
+      current_motion = scene.motion->Add(previous_motion, animated->PrimitiveToWorld, placement);
+      current_placement = ++next_placement;
+      Transform reference; animated->PrimitiveToWorld.Interpolate(0, &reference);
+      Geometry(*animated->primitive, placement * reference);
+      scene.motion->Claim(begin, WavefrontMotion::sizes(scene), current_motion);
+      current_motion = previous_motion; current_placement = previous_placement;
     } else if (const auto *inst = dynamic_cast<const instance *>(&object)) {
       const auto previous_placement = current_placement;
       current_placement = ++next_placement;
@@ -148,10 +167,14 @@ public:
       Quadric(object, placement, vec3f(s->radius), s->alpha_mask.get(), s->bump_tex.get(), 1);
     } else if (const auto *s = dynamic_cast<const ellipsoid *>(&object)) {
       Quadric(object, placement, s->axes, s->alpha_mask.get(), s->bump_tex.get(), 2);
+    } else if (const auto *s = dynamic_cast<const csg *>(&object)) {
+      Quadric(object, placement, vec3f(1), nullptr, nullptr, 0, s);
     } else if (const auto *light = dynamic_cast<const InfiniteAreaLight *>(&object)) {
-      if (light->light)
+      if (light->light) {
+        scene.environment_versions.emplace_back(light, light->light.get());
+        scene.owned_lights.push_back(light->light);
         Infinite(*light->light);
-      else {
+      } else {
         const auto *emitter = dynamic_cast<const diffuse_light *>(light->mat_ptr.get());
         if (!emitter || emitter->intensity != 1)
           throw std::runtime_error("unrecognized legacy background");
@@ -190,6 +213,11 @@ public:
   size_t tessellated_primitives = 0;
 
   void FinishMeshes() {
+    for (auto &q : scene.quadrics) if (q.csg_count) {
+      size_t offset=scene.quadrics.size()*sizeof(WFQuadric)+size_t(q.csg_offset)*sizeof(WFCsgInstruction);
+      if(offset>UINT32_MAX) throw std::runtime_error("Metal CSG program exceeds 32-bit offsets");
+      q.csg_offset=uint32_t(offset);
+    }
     scene.loose_triangles = scene.triangles.size();
     // Identity descriptors precede mesh placements in the TLAS. Their count=0
     // distinguishes flat triangles and baked-world quadrics from shared meshes.
@@ -213,6 +241,7 @@ public:
         light.instance += prefix;
       }
     scene.instances.insert(scene.instances.begin(), prefix, WFMeshInstance());
+    if (scene.motion) scene.motion->PrefixInstances(prefix);
     prototypes.clear(); // Release staging vertices before allocating GPU resources.
   }
 
@@ -261,6 +290,17 @@ public:
     }
   }
 
+  static void PrepareAtmosphere(WavefrontScene &scene) {
+#ifdef RAY_HAS_METAL_BVH
+    size_t count = 0;
+    for (const auto &light : scene.lights) count += (light.flags & 128) != 0;
+    const auto *sky = dynamic_cast<const PragueInfiniteLight *>(scene.atmosphere);
+    if (count != 1 || !sky) return;
+    scene.atmosphere_snapshot = sky->model->metalSnapshot();
+    scene.atmosphere_data.model = scene.atmosphere_snapshot->layout();
+    scene.gpu_atmosphere = true;
+#endif
+  }
   static void RefreshLights(WavefrontScene &scene) {
     for (size_t i = 0; i < scene.lights.size(); ++i) {
       auto &out = scene.lights[i];
@@ -275,19 +315,34 @@ public:
         out.up = transform(disk->up);
         // Horizon clipping is expressed in the environment frame.
         out.color = Pack(disk->WorldDirection(vec3f(0, 1, 0)));
+        out.color.w = uint32_t(source->RadianceSpectrum());
       } else if (const auto *image = dynamic_cast<const ImageInfiniteLight *>(source)) {
         out.forward = Pack(image->WorldDirection(image->light_to_world(vec3f(1, 0, 0))));
         out.right = Pack(image->WorldDirection(image->light_to_world(vec3f(0, 1, 0))));
         out.up = Pack(image->WorldDirection(image->light_to_world(vec3f(0, 0, 1))));
+      } else if (const auto *sky = dynamic_cast<const PragueInfiniteLight *>(source)) {
+        sky->ExportMetal(scene.atmosphere_data);
+        using V = skymodelr::PragueSkyModel::Vector3;
+        vec3f sun = sky->World(V(std::cos(sky->azimuth) * std::cos(sky->elevation),
+                                std::sin(sky->azimuth) * std::cos(sky->elevation),
+                                std::sin(sky->elevation)));
+        vec3f right = unit_vector(cross(std::abs(sun[0]) > .9 ? vec3f(0,1,0) : vec3f(1,0,0), sun));
+        out.forward = Pack(sun);
+        out.forward.w = sky->sun_fraction;
+        out.right = Pack(right);
+        out.right.w = 1 - std::cos(sky->sun_radius);
+        out.up = Pack(cross(sun, right));
       }
     }
   }
 
 private:
+#include "wavefront_medium_export.inc"
   WavefrontScene &scene;
   std::unordered_map<const material *, uint32_t> materials;
   std::unordered_map<const texture *, uint32_t> textures;
   uint32_t current_boundary = 0;
+  uint32_t current_motion = 0;
   Float boundary_orientation = 1;
 
 #include "wavefront_instances.inc"
@@ -509,7 +564,8 @@ private:
   }
 
   void Quadric(const hitable &object, const Transform &placement, vec3f axes,
-               const alpha_texture *alpha, const bump_texture *bump, float chart) {
+               const alpha_texture *alpha, const bump_texture *bump, float chart,
+               const csg *implicit = nullptr) {
     if (scene.quadrics.size() >= 0x7ffffffdu)
       throw std::runtime_error("Metal analytic primitive capacity exceeded");
     WFQuadric out;
@@ -551,6 +607,23 @@ private:
       out.measure.z = std::sqrt(radius2);
     if (!(out.measure.x > 0) || !std::isfinite(out.measure.x))
       throw std::runtime_error("singular or unrepresentable analytic transform");
+    if (implicit) {
+      scene.texture_features |= 64;
+      out.csg_offset=scene.csg_instructions.size();
+      ExportWavefrontCSG(*implicit->shapes,scene.csg_instructions);
+      out.csg_count=scene.csg_instructions.size()-out.csg_offset;
+      out.csg_lo=Pack(implicit->object_bounds.min());
+      out.csg_hi=Pack(implicit->object_bounds.max());
+      out.csg_lo.w=std::max(1e-7f,1e-6f*float((implicit->object_bounds.max()-implicit->object_bounds.min()).length()));
+      // Bounds include the isosurface acceptance band, including flat leaves.
+      for(int a=0;a<3;++a) {
+        (&out.csg_lo.x)[a]-=2*out.csg_lo.w;
+        (&out.csg_hi.x)[a]+=2*out.csg_lo.w;
+      }
+      out.measure.y=object.reverseOrientation ? -1 : 1;
+      out.measure.w=out.measure.y*(current_boundary ? boundary_orientation : 1);
+      WavefrontCSGBounds(out,lo,hi);
+    }
     if (current_boundary) {
       auto &body = scene.boundaries[current_boundary];
       if (body.material != out.material)
@@ -766,6 +839,10 @@ private:
       out.type = 0;
       out.texture = Texture(image->image.get());
       EnvironmentAlias(*image, out);
+    } else if (const auto *sky = dynamic_cast<const PragueInfiniteLight *>(&source)) {
+      out.type = 0;
+      out.flags = 128;
+      scene.atmosphere = sky;
     } else
       throw std::runtime_error("atmospheric or unrecognized infinite light");
     scene.lights.push_back(out);
@@ -779,19 +856,27 @@ std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, siz
 }
 #endif
 
+bool WavefrontLightsChanged(const WavefrontScene &scene) {
+  for (const auto &entry : scene.environment_versions)
+    if (entry.first->light.get() != entry.second) return true;
+  return false;
+}
+
 std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
                                                    const hitable_list &lights, RayCamera &camera,
                                                    size_t capacity, int sampler,
-                                                   WavefrontScene &scene, WavefrontReport &report) {
+                                                   WavefrontScene &scene, WavefrontReport &report,
+                                                   size_t workers) {
   auto started = Clock::now();
   report = WavefrontReport();
   report.requested = true;
   try {
-    if (lights.volume_scene &&
-        (lights.volume_scene->atmosphere || lights.volume_scene->transparent_background))
-      throw std::runtime_error("atmosphere or transparent background");
-    if (camera.get_fov() < 0 || camera.get_fov() == 360 || camera.get_camera_motion_blur())
-      throw std::runtime_error("realistic, panoramic, or motion-blurred camera");
+    if (lights.volume_scene && lights.volume_scene->transparent_background)
+      throw std::runtime_error("transparent background");
+    scene.workers = workers;
+    scene.volume_scene = lights.volume_scene.get();
+    scene.world = &world;
+    scene.transport_atmosphere = lights.volume_scene ? lights.volume_scene->atmosphere : nullptr;
     if (sampler == 1)
       throw std::runtime_error("stratified sampling");
     if (capacity > UINT32_MAX)
@@ -828,6 +913,10 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
           scene.environments += infinite;
         }
     WavefrontSceneCompiler::RefreshLights(scene);
+    WavefrontSceneCompiler::PrepareAtmosphere(scene);
+    WFCamera camera_data;
+    ExportWavefrontCamera(camera, camera_data, scene.camera_data);
+    if (scene.motion) scene.motion->Seal(scene);
     if (scene.triangles.empty() && scene.quadrics.empty())
       throw std::runtime_error("scene without renderable geometry");
     auto session = MakeMetalWavefront(scene, capacity);
@@ -866,24 +955,23 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   p.boundaries = scene.boundaries.size() - 1;
   p.boundary_lo = scene.boundary_lo;
   p.boundary_hi = scene.boundary_hi;
-  p.camera.flip_x = camera.get_camera_flip_x();
-  if (auto *cam = dynamic_cast<class camera *>(&camera)) {
-    p.camera.origin = Pack(cam->origin);
-    p.camera.lower_left = Pack(cam->lower_left_corner);
-    p.camera.horizontal = Pack(cam->horizontal);
-    p.camera.vertical = Pack(cam->vertical);
-    p.camera.right = Pack(cam->u);
-    p.camera.right.w = cam->lens_radius;
-    p.camera.up = Pack(cam->v);
-  } else if (auto *cam = dynamic_cast<ortho_camera *>(&camera)) {
-    p.camera.orthographic = 1;
-    p.camera.origin = Pack(cam->origin);
-    p.camera.lower_left = Pack(cam->lower_left_corner);
-    p.camera.horizontal = Pack(cam->horizontal);
-    p.camera.vertical = Pack(cam->vertical);
-    p.camera.forward = Pack(cam->w);
-  } else
-    throw std::runtime_error("Metal wavefront camera changed to an unsupported type");
+  ExportWavefrontCamera(camera, p.camera, scene.camera_data);
+  p.camera.shutter.w = -1; // Per-pixel shutter samples when geometry is stationary.
+  if (scene.motion) {
+    // Scrambled base-two radical inverse gives coherent, progressive temporal
+    // samples. A pixel keeps the same instant for its entire transport path.
+    uint32_t bits = uint32_t(sample);
+    bits = ((bits & 0x55555555u) << 1) | ((bits >> 1) & 0x55555555u);
+    bits = ((bits & 0x33333333u) << 2) | ((bits >> 2) & 0x33333333u);
+    bits = ((bits & 0x0f0f0f0fu) << 4) | ((bits >> 4) & 0x0f0f0f0fu);
+    bits = ((bits & 0x00ff00ffu) << 8) | ((bits >> 8) & 0x00ff00ffu);
+    bits = (bits << 16) | (bits >> 16);
+    bits ^= seed * 0x9e3779b9u;
+    p.camera.shutter.w = std::min(float((double(bits)+.5)*0x1p-32), std::nextafter(1.f,0.f))*p.camera.shutter.z;
+    float time = p.camera.shutter.x+(p.camera.shutter.y-p.camera.shutter.x)*p.camera.shutter.w;
+    scene.motion_changed = scene.motion->Update(scene,time);
+    p.boundary_lo = scene.boundary_lo; p.boundary_hi = scene.boundary_hi;
+  }
   WavefrontSceneCompiler::RefreshLights(scene);
   std::vector<uint32_t> active;
   for (const auto &block : film.pixel_chunks)
@@ -894,17 +982,24 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   p.camera.up.w = std::max(.125f, float(1 / std::sqrt(double(film.ns))));
   const WFPixel *pixels = nullptr;
   size_t previous_discarded = report.discarded_paths;
+  size_t previous_csg_failures = report.csg_failed_queries;
   if (!session.Render(p, active, scene.lights, cancelled, pixels, report))
     return false;
   if (!previous_discarded && report.discarded_paths)
     Rcpp::warning("Metal wavefront terminated rays with unresolvable positions, nonfinite weights, "
                   "or more than 16 "
                   "overlapping boundaries; rendering continues. See wavefront$discarded_paths.");
+  if (!previous_csg_failures && report.csg_failed_queries)
+    Rcpp::warning("Metal skipped CSG intersection queries that did not converge within the "
+                  "8192-step limit or produced nonfinite distances. Rendering continues; "
+                  "see wavefront$csg_failed_queries.");
   for (uint32_t index : active) {
     size_t x = index / film.ny, y = index % film.ny;
     const auto &value = pixels[index];
     point3f color(value.radiance.x, value.radiance.y, value.radiance.z);
-    color = clamp_point(de_nan(color), 0, clamp) * camera.get_iso();
+    Float floor = scene.transport_atmosphere ? -std::numeric_limits<Float>::infinity() : 0;
+    color = clamp_point(de_nan(color), floor, clamp) * camera.get_iso();
+    color *= value.normal.w;
     film.add_color_main(x, y, color);
     if (sample % 2 == 0)
       film.add_color_sec(x, y, color);

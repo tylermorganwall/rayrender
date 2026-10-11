@@ -94,7 +94,9 @@ R"MSL(
         reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
-    GeometryScene scene = {triangle_scene, functions, mixed_scene, mixed_functions, instances};
+    GeometryScene scene = {triangle_scene, functions, mixed_scene, mixed_functions, instances,
+      reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
+      reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
     GeometryProbe p = input[i];
     ray r;
     r.origin = p.origin.xyz;
@@ -118,4 +120,27 @@ R"MSL(
     output[i] = result;
   }
 
+)MSL"
+R"MSL(
+  struct CameraProbe { float4 film_lens,time; };
+  struct CameraResult { float4 origin,direction; };
+  kernel void probe_camera(device const CameraProbe *input [[buffer(0)]],device CameraResult *output [[buffer(1)]],
+                            device const float4 *data [[buffer(2)]],constant Camera &camera [[buffer(3)]],
+                            uint i [[thread_position_in_grid]]) {
+    auto p=input[i];float3 o,d;
+    float2 film=p.film_lens.xy;if(camera.flip_x) film.x=1-film.x;
+    float weight=camera_ray(camera,film,p.film_lens.zw,p.time.x*camera.shutter.z,data,o,d);
+    output[i]={float4(o,weight),float4(d,0)};
+  }
+  struct HazeProbe { float4 values[2],start,delta; };
+  kernel void probe_haze(device const HazeProbe *input [[buffer(0)]],device CameraResult *output [[buffer(1)]],
+                          uint i [[thread_position_in_grid]]) {
+    auto p=input[i];float values[8];for(uint j=0;j<8;++j) values[j]=p.values[j/4][j%4];
+    float edges[5]={};float4 polynomial;
+    uint count=haze_edges(values,p.start.xyz,p.delta.xyz,p.delta.w,edges,polynomial);
+    uint selected=0;
+    for(uint j=1;j<count;++j)
+      if(haze_polynomial(polynomial,(edges[j-1]+edges[j])*.5f)<0) selected|=1u<<(j-1);
+    output[i]={float4(edges[0],edges[1],edges[2],edges[3]),float4(edges[4],count,selected,0)};
+  }
 )MSL"

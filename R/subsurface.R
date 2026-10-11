@@ -240,6 +240,8 @@ prepare_subsurface = function(scene) {
             "box",
             "ellipsoid",
             "cylinder",
+            "csg_object",
+            11,
             "obj",
             "ply",
             "mesh3d",
@@ -255,7 +257,7 @@ prepare_subsurface = function(scene) {
           )
       ) {
         stop(
-          "Subsurface boundaries require spheres, cubes, ellipsoids, fully capped cylinders, or closed triangle meshes. Apply the material before creating instances.",
+          "Subsurface boundaries require spheres, cubes, ellipsoids, fully capped cylinders, closed CSG solids, or closed triangle meshes. Apply the material before creating instances.",
           call. = FALSE
         )
       }

@@ -15,6 +15,10 @@ public:
   static void Decompose(const Matrix4x4 &m, vec3f *T, Quaternion *R,
                         Matrix4x4 *S);
   void Interpolate(Float time, Transform *t) const;
+  bool SameMotion(const AnimatedTransform &other) const {
+    return startTime == other.startTime && endTime == other.endTime &&
+           *startTransform == *other.startTransform && *endTransform == *other.endTransform;
+  }
   Ray operator()(const Ray &r) const;
   // rayDifferential operator()(const rayDifferential &r) const;
   point3f operator()(Float time, const point3f &p) const;

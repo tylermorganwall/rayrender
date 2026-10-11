@@ -9,6 +9,7 @@
 #include <vector>
 
 class texture;
+struct WFMedium;
 struct PhaseFunctionSample {
   vec3f wi;
   Float p, pdf;
@@ -104,6 +105,7 @@ protected:
   MediumProperties Properties(Float density, const point3f &le, const point3f &p) const;
 };
 class GridMedium final : public Medium {
+  friend class WavefrontSceneCompiler;
 public:
   explicit GridMedium(const Rcpp::List &description);
   size_t MemoryBytes() const override;
@@ -132,6 +134,8 @@ public:
   DensityIndexRay DensityRay(const Ray &r) const override;
   std::array<double, 8> DensityCorners(const std::array<double, 3> &) const override;
   point3f Emission(const point3f &p) const override;
+  // Export sparse scalar lattices without expanding their bounding boxes.
+  void ExportWavefront(WFMedium &, std::vector<float> &) const;
 
 private:
   struct Data;

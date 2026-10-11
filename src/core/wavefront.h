@@ -6,7 +6,10 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
+#include <skymodelr/prague_metal.h>
+namespace skymodelr { class PragueMetalSnapshot; }
 
 class hitable_list;
 class RayCamera;
@@ -14,6 +17,11 @@ class adaptive_sampler;
 class InfiniteLight;
 class hitable;
 class Transform;
+class Atmosphere;
+class Medium;
+class VolumeScene;
+class InfiniteAreaLight;
+class WavefrontMotion;
 
 // Explicit float4 storage keeps the C++/MSL ABI independent of native Float,
 // SIMD configuration and Objective-C. No GPU record owns a native pointer.
@@ -55,7 +63,18 @@ struct WFQuadric {
   // boundary orientation. The determinant supplies the area-sampling Jacobian.
   WFVector measure;
   uint32_t material = 0, light = UINT32_MAX, boundary = 0, surface = 0;
+  // Nonzero count selects a distance-field program, stored immediately after
+  // the analytic records. Offset is in bytes from the start of that array.
+  uint32_t csg_offset = 0, csg_count = 0, reserved[2]{};
+  WFVector csg_lo, csg_hi;
 };
+struct WFCsgInstruction {
+  WFVector a, b, c, d;
+  uint32_t operation = 0, padding[3]{};
+};
+class ImplicitShape;
+void ExportWavefrontCSG(const ImplicitShape &, std::vector<WFCsgInstruction> &);
+void WavefrontCSGBounds(const WFQuadric &, WFVector &, WFVector &);
 // One affine placement references a shared triangle range and its own mapping,
 // emitter and medium metadata. IDs are TLAS descriptor indices plus one (0=flat).
 struct WFMeshInstance {
@@ -69,7 +88,26 @@ struct WFMeshRange {
   uint32_t start = 0, count = 0;
 };
 struct WFGeometryStorage {
-  uint32_t quadric_offset = 16, instance_offset = 16, padding[2]{};
+  uint32_t quadric_offset = 32, instance_offset = 32, medium_offset = 32, field_offset = 32;
+  uint32_t atmosphere_offset = 32, atmosphere_data_offset = 32, camera_offset = 32, motion_offset = 0;
+};
+struct WFAtmosphereData {
+  skymodelr_prague_gpu_layout model{};
+  WFVector transform[3], origin, gain, settings, options;
+  WFVector weights[16], transmission[16], solar[16], lunar[16], filter[129];
+  uint32_t channels = 0, sky = 0, sun = 0, haze = 0;
+  uint32_t query_altitude = 0, haze_filter = 0, haze_in_volumes = 0, padding = 0;
+};
+static_assert(sizeof(skymodelr_prague_gpu_layout) == 144 && sizeof(WFAtmosphereData) == 3376,
+              "Prague Metal layout mismatch");
+struct WFField {
+  uint32_t offset = 0, nx = 0, ny = 0, nz = 0;
+};
+// Fields retain their native sample lattice. Interpolate temperature before
+// converting it to RGB, and interpolate emission and its scale independently.
+struct WFMedium {
+  WFVector inverse[3], lo, hi, emission, controls;
+  WFField density, temperature, red, green, blue, scale, blackbody, majorant;
 };
 struct WFMaterial {
 
@@ -82,7 +120,7 @@ struct WFMaterial {
 };
 struct WFBoundary {
   WFVector sigma_a, sigma_s; // roughness in a.w, HG anisotropy in s.w.
-  uint32_t material = 0, subsurface = 0, diffusion_offset = 0, padding = 0;
+  uint32_t material = 0, subsurface = 0, diffusion_offset = 0, medium = 0;
   WFVector color, radius, lo{INFINITY, INFINITY, INFINITY, 0},
       hi{-INFINITY, -INFINITY, -INFINITY, 0};
 };
@@ -100,7 +138,11 @@ struct WFLight {
 struct WFCamera {
   WFVector origin, lower_left, horizontal, vertical, right, up, forward;
   uint32_t orthographic = 0, flip_x = 0, padding[2]{};
+  // Camera kind: perspective=0, orthographic=1, panorama=2, physical lens=3.
+  WFVector shutter, motion_origin[2], motion_rotation[2], lens;
+  uint32_t moving = 0, elements = 0, pupils = 0, simple_weighting = 0;
 };
+void ExportWavefrontCamera(RayCamera &, WFCamera &, std::vector<WFVector> &);
 struct WFParameters {
   WFCamera camera;
   uint32_t width = 0, height = 0, active = 0, sample = 0;
@@ -111,15 +153,36 @@ struct WFParameters {
 struct WFPixel {
   WFVector radiance, normal, albedo;
 };
-static_assert(sizeof(WFMeshInstance) == 128 && sizeof(WFGeometryStorage) == 16 &&
-              sizeof(WFQuadric) == 128 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
+struct WFPath {
+  WFVector origin, direction, beta, previous;
+  uint32_t dimension, depth, internal, flags;
+};
+struct WFAtmosphereRequest {
+  WFVector origin, direction, weight, radiance; // atmospheric segment request
+  uint32_t body = 0, glass = 0, event = 0, padding = 0;
+};
+struct WFShadow {
+  WFVector origin, direction, contribution;
+  uint32_t pixel, padding[3], ids[16], count, state_padding[3];
+};
+static_assert(sizeof(WFPath) == 80 && sizeof(WFAtmosphereRequest) == 80 && sizeof(WFShadow) == 144);
+static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
+              sizeof(WFMeshInstance) == 128 && sizeof(WFGeometryStorage) == 32 &&
+              sizeof(WFQuadric) == 176 && sizeof(WFCsgInstruction) == 80 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
               sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 && sizeof(WFBoundary) == 112 &&
-              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 96 && sizeof(WFCamera) == 128 &&
-              sizeof(WFParameters) == 208 && sizeof(WFPixel) == 48);
+              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 96 && sizeof(WFCamera) == 240 &&
+              sizeof(WFParameters) == 320 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {
+  std::shared_ptr<WavefrontMotion> motion;
+  bool motion_changed = false;
+  std::vector<WFVector> camera_data;
+  std::shared_ptr<const skymodelr::PragueMetalSnapshot> atmosphere_snapshot;
+  WFAtmosphereData atmosphere_data;
+  bool gpu_atmosphere = false;
   std::vector<WFTriangle> triangles;
   std::vector<WFQuadric> quadrics;
+  std::vector<WFCsgInstruction> csg_instructions;
   std::vector<WFMeshRange> meshes;
   std::vector<WFMeshInstance> instances;
   size_t loose_triangles = 0;
@@ -128,9 +191,19 @@ struct WavefrontScene {
   std::vector<WFTexture> textures;
   std::vector<WFVector> texels;
   std::vector<WFSurface> surfaces{WFSurface()};
-  uint32_t texture_features = 0; // Graphs=1, surface context=2, bump=4, alpha=8.
+  // Graphs=1, surface context=2, bump=4, alpha=8, general media=16,
+  // whole-assembly reference-frame traversal=32. Shared pipeline specialization key.
+  uint32_t texture_features = 0;
   std::vector<WFLight> lights;
   std::vector<WFVector> material_data;
+  std::vector<WFMedium> media{WFMedium()};
+  std::vector<float> fields;
+  std::vector<const Medium *> native_media{nullptr};
+  const Atmosphere *atmosphere = nullptr;
+  const Atmosphere *transport_atmosphere = nullptr;
+  const VolumeScene *volume_scene = nullptr;
+  const hitable_list *world = nullptr; // Native atmospheric shadow transport only.
+  size_t workers = 1;
   std::vector<WFDiffusionExit> diffusion_exits;
   std::vector<WFVector> diffusion_samples;
   std::vector<uint32_t> diffusion_pairs;
@@ -142,15 +215,17 @@ struct WavefrontScene {
   // Borrowed only on the host: refresh environment rotations after UI edits.
   std::vector<const InfiniteLight *> light_sources;
   std::vector<std::shared_ptr<InfiniteLight>> owned_lights;
+  std::vector<std::pair<const InfiniteAreaLight *, const InfiniteLight *>> environment_versions;
 };
 
 struct WavefrontReport {
   bool requested = false, used = false;
   std::string fallback;
-  double upload_seconds = 0, sample_seconds = 0;
+  double upload_seconds = 0, sample_seconds = 0, atmosphere_seconds = 0;
   size_t triangles = 0, completed_samples = 0;
   size_t tessellated_primitives = 0, discarded_paths = 0, scattering_events = 0;
   size_t analytic_primitives = 0, unique_meshes = 0, mesh_instances = 0;
+  size_t csg_failed_queries = 0;
 };
 
 // Device work is transactional: cancellation never commits a partial sample.
@@ -167,12 +242,34 @@ std::vector<WFTriangle> TriangulateWavefrontPrimitive(const hitable &, const Tra
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, size_t capacity);
 std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &, const hitable_list &,
                                                    RayCamera &, size_t capacity, int sampler,
-                                                   WavefrontScene &, WavefrontReport &);
+                                                   WavefrontScene &, WavefrontReport &, size_t workers = 1);
 bool RenderWavefrontSample(WavefrontSession &, WavefrontScene &, RayCamera &, adaptive_sampler &,
                            size_t sample, int sampler, uint32_t seed, size_t depth, size_t roulette,
                            float clamp, const std::function<bool()> &cancelled, WavefrontReport &);
+bool WavefrontLightsChanged(const WavefrontScene &);
+// Exact native Prague queries are an explicit wavefront service, not a fallback
+// integrator. Shared Metal buffers are accessed only after command completion.
+class WavefrontAtmosphere {
+public:
+  WavefrontAtmosphere(const WavefrontScene &, size_t capacity);
+  ~WavefrontAtmosphere();
+  void Begin(const std::vector<uint32_t> &active);
+  bool Paths(const WFParameters &, const uint32_t *queue, size_t count,
+             WFAtmosphereRequest *, WFPath *, WFPixel *, const std::function<bool()> &cancelled);
+  bool Shadows(const WFParameters &, WFShadow *, size_t count, WFPixel *,
+               const std::function<bool()> &cancelled);
+private:
+  struct Data;
+  std::unique_ptr<Data> data;
+};
 
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
+struct WFCameraProbe { WFVector film_lens, time; };
+struct WFCameraResult { WFVector origin, direction; };
+std::vector<WFCameraResult> ProbeMetalCamera(const WFCamera &,const std::vector<WFVector> &,
+                                            const std::vector<WFCameraProbe> &);
+struct WFHazeProbe { WFVector values[2], start, delta; };
+std::vector<WFCameraResult> ProbeMetalHaze(const std::vector<WFHazeProbe> &);
 // Development-only numerical cross-backend probes. No R API or CPU hot-path hook.
 struct WFGeometryProbe {
   WFVector origin, direction; // w holds minimum/maximum ray distance.

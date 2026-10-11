@@ -320,7 +320,7 @@ nanovdb_medium = vdb_medium
 #' media are detected automatically. A medium with zero absorption and scattering
 #' creates a vacuum cavity. Intersecting, non-nested volume boundaries are unsupported.
 #'
-#' @param scene A `ray_scene` containing closed spheres, cubes, ellipsoids, or
+#' @param scene A `ray_scene` containing closed spheres, cubes, ellipsoids, CSG solids, or
 #'   watertight consistently oriented triangle meshes.
 #' @param medium A description from [homogeneous_medium()], [grid_medium()], or
 #'   [vdb_medium()]. Use `NULL` to remove an attachment.
@@ -366,11 +366,20 @@ set_medium = function(scene, medium, keep_surface = FALSE) {
     !is.null(medium) &&
       any(
         !scene$shape %in%
-          c("sphere", "box", "ellipsoid", "obj", "ply", "mesh3d", "raymesh")
+          c(
+            "sphere",
+            "box",
+            "ellipsoid",
+            "csg_object",
+            "obj",
+            "ply",
+            "mesh3d",
+            "raymesh"
+          )
       )
   ) {
     stop(
-      "Medium boundaries require spheres, cubes, ellipsoids, or closed triangle meshes. Attach media before creating instances.",
+      "Medium boundaries require spheres, cubes, ellipsoids, closed CSG solids, or closed triangle meshes. Attach media before creating instances.",
       call. = FALSE
     )
   }

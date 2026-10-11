@@ -6,6 +6,10 @@ R"MSL(
   struct DiffusionEntry {
     float4 position, normal;
   };
+  struct AtmosphereRequest {
+    float4 origin, direction, weight, radiance;
+    uint body, glass, event, padding;
+  };
   struct DiffusionExit {
     float4 shape, normalization;
     uint offset, padding[3];
@@ -20,6 +24,16 @@ R"MSL(
                            device const Triangle *triangles, device const Quadric *quadrics,
                            device const Surface *surfaces, device const Boundary *boundaries,
                            GeometryScene scene) {
+    if ((texture_features & 16) && !entering && boundaries[boundary].subsurface) {
+      bool found = false;
+      for (uint j=0; j<adjacent.count; ++j) {
+        uint id=adjacent.ids[j];
+        if (id == boundary) found = true;
+        else if (found && boundaries[id].subsurface &&
+                 (boundaries[boundary].subsurface == 3 || boundaries[id].subsurface == 3))
+          return false; // Explicit volumes require disjoint or nested interiors.
+      }
+    }
     if (!cross_boundary(adjacent, boundary, entering))
       return false;
     if (p.boundary_lo.w != 0) {
@@ -41,7 +55,8 @@ R"MSL(
     uint active = active_boundary(state, boundaries, materials);
     if (active && boundaries[active].subsurface == 2) {
       float3 normal = dot(path.direction.xyz, geometric) > 0 ? -geometric : geometric;
-      entries[pixel] = {float4(position, 0), float4(normal, 0)};
+      entries[pixel].position = float4(position, 0);
+      entries[pixel].normal = float4(normal, 0);
       path.flags |= 8;
     } else
       path.flags &= ~8u;

@@ -16,6 +16,24 @@
 
 ## New features
 
+- `csg_object()` Renders directly on Metal, including smooth blends, shells,
+  procedural textures, emissive shapes, and animated transforms. Closed CSG
+  solids support dielectric priorities and subsurface or volume interiors.
+
+- `render_scene()` Supports physical lens cameras, panoramic cameras, camera motion
+  blur, and animated geometry on Metal. Animated scenes sample one shutter time
+  per image sample; camera-only motion
+  uses per-pixel times. Density-threshold haze now runs on the GPU for dense and
+  sparse volumes, retaining every crossing of the interpolated density cutoff.
+
+- `render_scene()` Supports homogeneous, dense-grid, and sparse OpenVDB/NanoVDB
+  volumes on Metal, including transformed density fields, scattering, and RGB or
+  thermal emission. Prague atmospheres evaluate skymodelr's spectral model and
+  finite haze directly on Metal, including atmospheric light before shadow blockers.
+  Multiple Prague skies retain batched CPU atmosphere queries.
+  Interactive haze and altitude controls remain available; `wavefront$atmosphere_seconds`
+  reports the CPU atmosphere portion of rendering time.
+
 - `render_scene()` Samples Metal image environments with luminance-weighted alias
   tables, reducing noise from compact bright sources and preserving interactive
   rotation. Mesh instances share GPU geometry and acceleration structures while
@@ -160,6 +178,10 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `csg_object()` Preserves later crossings on clipped rays and resolves thin
+  shells with scale-aware tolerances. Successive queries no longer count the
+  same grazing surface repeatedly, preventing excess diffusion brightness.
 
 - `glossy()` Samples bump-mapped surfaces in the same normal frame used to evaluate
   them, correcting dark edges and missing scattering directions.
@@ -547,6 +569,11 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `render_scene()` Reduces Metal density-threshold haze work by sharing density
+  lookups and reusing cutoff polynomials. Animated scenes upload and refit only
+  changing geometry; scenes with one shared motion transform rays into an
+  immutable reference acceleration structure.
 
 - `render_scene()` Uses constant-time alias sampling for CPU image environments,
   with finer blue-noise samples for image-light proposals. Large maps trade

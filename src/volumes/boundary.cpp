@@ -1,6 +1,7 @@
 #include "boundary.h"
 #include "../core/bvh.h"
 #include "../hitables/box.h"
+#include "../hitables/csg.h"
 #include "../hitables/cylinder.h"
 #include "../hitables/ellipsoid.h"
 #include "../hitables/mesh3d.h"
@@ -175,7 +176,7 @@ MediumBoundary::MediumBoundary(std::shared_ptr<hitable> geom, std::shared_ptr<co
   if (auto *mesh = boundary_mesh(geometry.get()))
     orientation_sign = signed_mesh_volume(*mesh) < 0 ? -1 : 1;
   else if ((dynamic_cast<sphere *>(geometry.get()) || dynamic_cast<ellipsoid *>(geometry.get()) ||
-            dynamic_cast<cylinder *>(geometry.get())) &&
+            dynamic_cast<cylinder *>(geometry.get()) || dynamic_cast<csg *>(geometry.get())) &&
            geometry->reverseOrientation)
     orientation_sign = -1;
 }
@@ -448,6 +449,10 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   return state;
 }
 bool ValidateMediumBoundary(hitable *geometry, bool required) {
+  if (auto *shape = dynamic_cast<csg *>(geometry)) {
+    if (shape->shapes->isClosed())
+      return true;
+  }
   if (dynamic_cast<sphere *>(geometry) || dynamic_cast<box *>(geometry) ||
       dynamic_cast<ellipsoid *>(geometry))
     return true;

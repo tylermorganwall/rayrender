@@ -7,7 +7,7 @@
 set_medium(scene, medium, keep_surface = FALSE)
 }
 \arguments{
-\item{scene}{A `ray_scene` containing closed spheres, cubes, ellipsoids, or
+\item{scene}{A `ray_scene` containing closed spheres, cubes, ellipsoids, CSG solids, or
 watertight consistently oriented triangle meshes.}
 
 \item{medium}{A description from [homogeneous_medium()], [grid_medium()], or

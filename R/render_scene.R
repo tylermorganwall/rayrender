@@ -149,22 +149,47 @@
 #' Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
 #' textures, and area emission. Cylinders, disks, and cylindrical/ribbon curves are triangulated
 #' automatically; curve silhouettes and fiber frames therefore approximate the native curves.
+#' [csg_object()] evaluates distance fields directly on the GPU, including blends,
+#' shells, emission, and closed dielectric/subsurface boundaries.
 #' It supports constant/checker/gradient/image textures, composable color and roughness graphs,
 #' image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
 #' and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
 #' point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
-#' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective
-#' and orthographic cameras are supported. Unsupported geometry, materials, media,
-#' Ptex, legacy noise and world/HSV gradients, stratified sampling, or motion blur produce a
-#' warning and use CPU `nee` for the whole scene. Enabling camera motion blur in the preview
-#' also switches to CPU rendering.
+#' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
+#' orthographic, panoramic, and physical lens cameras are supported, including camera motion
+#' blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
+#' Animated geometry uses one shared shutter time per image sample, with exact native transform
+#' interpolation. A single shared geometry motion keeps an immutable reference acceleration
+#' structure and transforms rays; independent motions refit only changing structures.
+#' Camera, shadows, emitters, and volumes use
+#' the same pose. This estimates the shutter integral with spatially correlated temporal noise;
+#' low sample counts can show distinct motion positions, and refits add cost for moving scenes.
+#' Camera-only motion uses independent per-pixel shutter samples. `shutter_speed = Inf` freezes
+#' time at the start of the shutter interval. Unsupported geometry, materials, media, Ptex,
+#' legacy noise and world/HSV gradients, or stratified sampling produce a warning and use CPU
+#' `nee` for the whole scene.
 #' GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
 #' but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
 #' buffers and acceleration structures, including nested placements. Image environments
 #' use luminance-weighted alias sampling in solid angle; interactive rotation reuses the table.
+#' Homogeneous, dense-grid, and sparse OpenVDB/NanoVDB media support absorption, HG scattering,
+#' RGB and thermal emission, invisible boundaries, transformed fields, and nested regions.
+#' Density and emission fields retain their native interpolation; sparse grids stay sparse.
+#' Thermal spectra use a 10 K lookup spacing; spatial temperature fields above 20,000 K
+#' and procedural legacy fog colors fall back to CPU rendering.
+#' Prague [sky_light()] evaluates skymodelr's spectral coefficients directly on Metal for
+#' altitude-dependent lighting and finite haze, preserving atmospheric light before blockers
+#' and within scattering volumes. GPU arithmetic uses floats; CPU evaluation uses doubles.
+#' Density-threshold haze splits the trilinear density field at every cutoff crossing on the GPU.
+#' Scenes with multiple Prague skies retain batched CPU atmosphere queries, which can be slower
+#' for small images. Camera movement, environment rotation,
+#' haze/altitude controls, and cancellation remain available.
 #' The returned image's `wavefront` attribute reports use/fallback, stored triangle,
 #' unique-mesh, mesh-placement, analytic-primitive, and tessellated-primitive counts,
-#' scattering events, discarded paths, upload time, and sampling time.
+#' scattering events, discarded paths, upload time, and sampling time. `atmosphere_seconds`
+#' records CPU atmosphere work within `sample_seconds`, excluding GPU synchronization.
+#' `csg_failed_queries` counts CSG queries skipped after nonfinite distances,
+#' stalled progress, or 8192 marching steps; the first failure also issues a warning.
 #' Other platforms retain the CPU renderer and do not require Metal.
 #' With `nee`, surfaces and participating media use RGB null-scattering transport;
 #' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
@@ -185,8 +210,9 @@
 #' with SAH. `"metal"` builds those treelets on a Metal GPU, with CPU SAH joining
 #' and layout packing. Metal requires a supported macOS build and available GPU;
 #' otherwise it reports an error (use `"hlbvh"` for the portable CPU path).
-#' HLBVH can reduce construction time at the cost of slower traversal. Ray tracing
-#' remains on the CPU for every method. CPU construction honors `parallel` and
+#' HLBVH can reduce construction time at the cost of slower traversal. This choice
+#' controls scene construction; `integrator_type` selects CPU or GPU transport.
+#' CPU construction honors `parallel` and
 #' the renderer's core limit. Set `RAYRENDER_DISABLE_METAL=true` when installing
 #' to omit the optional Metal backend. First Metal use includes shader compilation.
 #' @param progress Default `interactive()` if interactive session, `FALSE` otherwise.
@@ -231,12 +257,11 @@
 #' Camera origins inside bodies are classified on the GPU. Denoising guides use
 #' the first non-specular interaction, including scattering behind glass.
 #'
-#' Triangulation approximates curved geometry: spheres use 128 azimuth segments and
-#' 64 latitude intervals; cylinders/disks use 128 azimuth segments. Cylindrical curves
+#' Triangulation approximates curved geometry: cylinders/disks use 128 azimuth segments. Cylindrical curves
 #' use 16-sided tubes and ribbons use strips, with 64 longitudinal intervals per
 #' full Bezier span. Supply a mesh directly when finer control is needed. Ray-facing
-#' flat curves, hair materials, [subsurface_diffusion()], heterogeneous/explicit media,
-#' and other unsupported features still select CPU rendering for the whole scene.
+#' flat curves, procedurally textured legacy fog, grid temperatures above 20000 kelvin,
+#' transparent backgrounds, and other unsupported features still select CPU rendering for the whole scene.
 #' GPU membership supports up to 16 simultaneous overlapping closed boundaries.
 #' Overflow, unresolvable positions, and nonfinite transport weights terminate affected
 #' rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.

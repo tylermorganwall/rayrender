@@ -19,6 +19,13 @@ $(SHLIB): $(OBJECTS)
 
 # Keep virtual sampler/light interfaces consistent during incremental builds.
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
+$(CPP_OBJECTS): core/wavefront.h
+core/wavefront.o core/wavefront_motion.o: core/wavefront_motion.h
+core/wavefront_metal.o: core/wavefront_motion.h
+core/wavefront.o: core/wavefront_texture_export.inc core/wavefront_instances.inc core/wavefront_medium_export.inc
 
 # Make the shared object
 all: $(SHLIB)
+
+# CSG vtables are shared by construction, boundaries and CPU/GPU exporters.
+$(CPP_OBJECTS): hitables/csg.h

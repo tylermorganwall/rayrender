@@ -3,6 +3,7 @@
 #include "infinite.h"
 #include <skymodelr/prague.hpp>
 #include <array>
+struct WFAtmosphereData;
 
 // Require the consolidated provider SDK, including in manual source builds.
 // The wrapper validates the loaded provider's ABI and table size at runtime.
@@ -84,8 +85,10 @@ private:
 
 // The fitted model owns immutable coefficients. No R API is called in a query.
 class PragueInfiniteLight final : public InfiniteLight, public Atmosphere {
+  friend class WavefrontSceneCompiler;
 public:
   explicit PragueInfiniteLight(const Rcpp::List &, bool build_sampler = true);
+  void ExportMetal(WFAtmosphereData &) const;
   point3f Radiance(const point3f &, const vec3f &, Float) const override;
   vec3f Sample(const point3f &, vec2f, Float) const override;
   Float Pdf(const point3f &, const vec3f &, Float) const override;

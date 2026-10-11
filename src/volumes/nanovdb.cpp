@@ -1,4 +1,7 @@
 #include "medium.h"
+#include "../core/wavefront.h"
+#include <cstring>
+#include <tuple>
 #include <algorithm>
 #include <nanovdb/NanoVDB.h>
 #include <nanovdb/math/SampleFromVoxels.h>
@@ -213,6 +216,106 @@ RayMajorantIterator NanoVDBMedium::SampleRay(const Ray &r, double t_max) const {
 }
 
 size_t NanoVDBMedium::MemoryBytes() const {
-  return sizeof(*this) + sizeof(Data) + data->density_bytes +
-         data->temperature_bytes + sizeof(Float) * majorants.density.capacity();
+  return sizeof(*this) + sizeof(Data) + data->density_bytes + data->temperature_bytes +
+         sizeof(Float) * majorants.density.capacity();
+}
+
+namespace {
+float packed_uint(uint32_t value) {
+  float out;
+  std::memcpy(&out, &value, sizeof(out));
+  return out;
+}
+// Retain NanoVDB's 32^3 / 16^3 / 8^3 hierarchy, but replace native offsets and
+// masks with one 32-bit tagged entry. Nonnegative float values have a clear sign
+// bit; set sign bits encode child offsets. Inactive nonzero tiles are retained.
+template <class Node> uint32_t export_volume_node(const Node &node, std::vector<float> &values) {
+  constexpr size_t count = Node::LEVEL == 2 ? 32768 : (Node::LEVEL == 1 ? 4096 : 512);
+  if (values.size() + count >= 0x80000000ULL)
+    throw std::runtime_error("Metal sparse volume exceeds tagged offset capacity");
+  uint32_t offset = values.size();
+  values.resize(values.size() + count);
+  for (auto value = node.cbeginValueAll(); value; ++value) {
+    constexpr uint32_t shift = Node::LEVEL == 2 ? 7 : (Node::LEVEL == 1 ? 3 : 0);
+    constexpr uint32_t logdim = Node::LEVEL == 2 ? 5 : (Node::LEVEL == 1 ? 4 : 3);
+    auto p = value.getCoord();
+    uint32_t mask = (1u << logdim) - 1;
+    uint32_t x = (uint32_t(p[0]) >> shift) & mask, y = (uint32_t(p[1]) >> shift) & mask,
+             z = (uint32_t(p[2]) >> shift) & mask;
+    values[offset + (x << (2 * logdim)) + (y << logdim) + z] = *value == 0 ? 0 : *value;
+  }
+  if constexpr (Node::LEVEL > 0)
+    for (auto child = node.cbeginChild(); child; ++child) {
+      uint32_t child_offset = export_volume_node(*child, values);
+      values[offset + child.pos()] = packed_uint(child_offset | 0x80000000u);
+    }
+  return offset;
+}
+WFField export_volume_grid(const nanovdb::FloatGrid *grid, std::vector<float> &values) {
+  if (!grid)
+    return {};
+  uint32_t header = values.size();
+  values.resize(values.size() + 16);
+  // The three affine rows map medium coordinates to this grid's index space.
+  auto origin = grid->worldToIndex(nanovdb::Vec3d(0));
+  nanovdb::Vec3d axes[3];
+  for (int a = 0; a < 3; ++a) {
+    nanovdb::Vec3d p(0);
+    p[a] = 1;
+    axes[a] = grid->worldToIndex(p) - origin;
+  }
+  for (int a = 0; a < 3; ++a) {
+    for (int b = 0; b < 3; ++b)
+      values[header + 4 * a + b] = axes[b][a];
+    values[header + 4 * a + 3] = origin[a];
+  }
+  struct RootTile {
+    int32_t x, y, z;
+    float entry;
+  };
+  std::vector<RootTile> tiles;
+  const auto &root = grid->tree().root();
+  for (auto tile = root.cbeginValueAll(); tile; ++tile) {
+    auto p = tile.getCoord();
+    tiles.push_back({p[0] >> 12, p[1] >> 12, p[2] >> 12, *tile == 0 ? 0 : *tile});
+  }
+  for (auto child = root.cbeginChild(); child; ++child) {
+    Rcpp::checkUserInterrupt();
+    auto p = child.getCoord();
+    uint32_t offset = export_volume_node(*child, values);
+    tiles.push_back({p[0] >> 12, p[1] >> 12, p[2] >> 12, packed_uint(offset | 0x80000000u)});
+  }
+  std::sort(tiles.begin(), tiles.end(),
+            [](const auto &a, const auto &b) { return std::tie(a.x, a.y, a.z) < std::tie(b.x, b.y, b.z); });
+  values[header + 12] = packed_uint(values.size());
+  values[header + 13] = packed_uint(tiles.size());
+  values[header + 14] = root.background();
+  for (const auto &tile : tiles) {
+    values.push_back(packed_uint(uint32_t(tile.x)));
+    values.push_back(packed_uint(uint32_t(tile.y)));
+    values.push_back(packed_uint(uint32_t(tile.z)));
+    values.push_back(tile.entry);
+  }
+  return {header, UINT32_MAX, 0, 0};
+}
+} // namespace
+
+void NanoVDBMedium::ExportWavefront(WFMedium &out, std::vector<float> &values) const {
+  out.lo = {float(majorants.lo[0]), float(majorants.lo[1]), float(majorants.lo[2]), 0};
+  out.hi = {float(majorants.hi[0]), float(majorants.hi[1]), float(majorants.hi[2]),
+            *std::max_element(majorants.density.begin(), majorants.density.end())};
+  out.density = export_volume_grid(data->d, values);
+  out.temperature = export_volume_grid(data->t, values);
+  out.controls.w = 2;
+  uint32_t n = majorants.resolution;
+  out.majorant = {uint32_t(values.size()), n, n, n};
+  values.insert(values.end(), majorants.density.begin(), majorants.density.end());
+  if (data->t) {
+    auto validate = [&](const nanovdb::Coord &, int, float v) {
+      if ((v - temperature_offset) * temperature_scale > 20000)
+        throw std::runtime_error("Metal VDB temperature exceeds 20000 kelvin");
+    };
+    validate(nanovdb::Coord(0), 1, data->t->tree().background());
+    visit_values(data->t->tree().root(), validate);
+  }
 }

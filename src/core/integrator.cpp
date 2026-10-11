@@ -41,7 +41,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   std::unique_ptr<WavefrontSession> wavefront;
   if(wavefront_report && wavefront_report->requested)
     wavefront = PrepareWavefront(world, hlist, *cam, nx*ny, sample_method,
-                                 wavefront_scene, *wavefront_report);
+                                 wavefront_scene, *wavefront_report, numbercores);
 
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
@@ -335,12 +335,13 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto validate_wavefront_camera = [&]() {
-    if(wavefront && cam->get_camera_motion_blur()) {
+    if(wavefront && WavefrontLightsChanged(wavefront_scene)) {
+      // H/Y replace the native sky model. Recompile only after the current
+      // sample completes, so no query can retain stale atmospheric pointers.
       wavefront.reset();
-      wavefront_report->fallback = "interactive camera motion blur";
-      reset_sampler_state(nx, ny, seeds, rngs, samplers);
-      reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
-      Rcpp::warning("Metal wavefront: camera motion blur enabled; continuing with CPU NEE.");
+      wavefront_scene = WavefrontScene();
+      wavefront = PrepareWavefront(world, hlist, *cam, nx*ny, sample_method,
+                                   wavefront_scene, *wavefront_report, numbercores);
     }
   };
 

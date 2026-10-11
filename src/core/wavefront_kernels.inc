@@ -6,6 +6,7 @@ R"MSL(
   constant uint texture_features [[function_constant(1)]];
   constant bool scene_has_quadrics [[function_constant(2)]];
   constant bool scene_has_instances [[function_constant(3)]];
+  constant bool scene_has_atmosphere [[function_constant(4)]];
 #include <metal_raytracing>
 #include <metal_stdlib>
   using namespace metal;
@@ -27,7 +28,7 @@ R"MSL(
   };
   struct Boundary {
     float4 sigma_a, sigma_s;
-    uint material, subsurface, diffusion_offset, padding;
+    uint material, subsurface, diffusion_offset, medium;
     float4 color, radius, lo, hi;
   };
   // Bounded membership storage, not a walk-event limit. Overflow terminates only
@@ -43,6 +44,8 @@ R"MSL(
   struct Camera {
     float4 origin, lower_left, horizontal, vertical, right, up, forward;
     uint orthographic, flip_x, padding[2];
+    float4 shutter, motion_origin[2], motion_rotation[2], lens;
+    uint moving, elements, pupils, simple_weighting;
   };
   struct Params {
     Camera camera;
@@ -77,13 +80,13 @@ R"MSL(
   };
   // Counters: current ray queue, hit queue, shadow queue, next ray queue, error.
   struct Counts {
-    atomic_uint rays, hits, shadows, next, error, discarded, scattering;
+    atomic_uint rays, hits, shadows, next, error, discarded, scattering, csg_failed;
   };
   static_assert(sizeof(Triangle) == 160 && sizeof(Texture) == 80 && sizeof(Material) == 144 &&
                     sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 96 &&
-                    sizeof(Camera) == 128 && sizeof(Params) == 208 && sizeof(Pixel) == 48 &&
+                    sizeof(Camera) == 240 && sizeof(Params) == 320 && sizeof(Pixel) == 48 &&
                     sizeof(Path) == 80 && sizeof(Hit) == 32 && sizeof(Shadow) == 144 &&
-                    sizeof(Counts) == 28,
+                    sizeof(Counts) == 32,
                 "wavefront host/device ABI mismatch");
 
   uint hash_seed(uint x, uint seed) {
@@ -206,7 +209,9 @@ R"MSL(
 R"MSL(
 
   float3 environment(Light l, float3 wi, float3 position, device const Texture *textures,
-                     device const float4 *texels) {
+                     device const float4 *texels, bool evaluated = false) {
+    if (scene_has_atmosphere && !evaluated)
+      return 1; // Native radiance is multiplied into completed shadow requests.
     if (l.type == 0) {
       float3 local = float3(dot(wi, l.forward.xyz), dot(wi, l.right.xyz), dot(wi, l.up.xyz));
       float2 uv = float2(.5f - atan2(-local.x, -local.z) / (2 * pi),
@@ -229,6 +234,9 @@ R"MSL(
     return float2(fract(u), .5f + asin(clamp(local.y, -1.f, 1.f)) / pi);
   }
   float light_pdf(Light l, float3 wi, device const float4 *texels) {
+    if (l.flags & 128)
+      return (1-l.forward.w)/(4*pi) +
+             (dot(wi,l.forward.xyz) >= 1-l.right.w ? l.forward.w/(2*pi*l.right.w) : 0);
     if (l.type != 0)
       return 1 / (2 * pi * l.forward.w);
     if (l.alias_offset == UINT_MAX)
@@ -239,6 +247,17 @@ R"MSL(
     return texels[l.alias_offset + y * l.alias_width + x].z;
   }
   float3 sample_environment(Light l, uint bits, float latitude, device const float4 *texels) {
+    if (l.flags & 128) {
+      float u = min(float(bits) * 0x1p-32f, 0x1.fffffep-1f);
+      float phi = 2*pi*latitude;
+      if (u < l.forward.w) {
+        float d = (u / l.forward.w) * l.right.w;
+        return (1-d)*l.forward.xyz + sqrt(d*(2-d)) * (cos(phi)*l.right.xyz + sin(phi)*l.up.xyz);
+      }
+      u = (u - l.forward.w) / (1-l.forward.w);
+      float y = 1-2*u, r = sqrt(max(0.f, 1-y*y));
+      return float3(r*cos(phi), y, r*sin(phi));
+    }
     if (l.alias_offset == UINT_MAX) {
       float u = min(float(bits) * 0x1p-32f, 0x1.fffffep-1f);
       float y = 1 - 2 * u, r = sqrt(max(0.f, 1 - y * y)), phi = 2 * pi * latitude;
@@ -277,11 +296,25 @@ R"MSL(
     uint winner = 0;
     for (uint j = 0; j < state.count; ++j) {
       uint id = state.ids[j];
+      if ((texture_features & 16) && !materials[boundaries[id].material].dielectric)
+        continue;
+      if ((texture_features & 16) && boundaries[id].subsurface == 3 && boundaries[id].radius.w == 0)
+        continue;
       if (!winner || materials[boundaries[id].material].priority <=
                          materials[boundaries[winner].material].priority)
         winner = id;
     }
     return winner;
+  }
+  uint active_medium(thread const VolumeState &state, device const Boundary *boundaries,
+                     device const Material *materials) {
+    // Explicit media use nesting, while SSS follows the winning dielectric.
+    if (texture_features & 16)
+      for (uint j = state.count; j > 0; --j)
+        if (boundaries[state.ids[j - 1]].subsurface == 3)
+          return state.ids[j - 1];
+    uint body = active_boundary(state, boundaries, materials);
+    return body && boundaries[body].subsurface ? body : 0;
   }
   bool cross_boundary(thread VolumeState &state, uint id, bool entering) {
     uint found = state.count;
@@ -500,6 +533,10 @@ R"MSL(
 #include "wavefront_diffusion.inc"
 #include "wavefront_openpbr.inc"
 #include "wavefront_bump.inc"
+#include "wavefront_media.inc"
+#include "wavefront_atmosphere.inc"
+#include "wavefront_haze.inc"
+#include "wavefront_camera.inc"
     R"MSL(
 
 #define SCENE_ARGUMENTS                                                                            \
@@ -527,6 +564,9 @@ R"MSL(
       intersection_function_table<triangle_data, instancing> mixed_functions [[buffer(30)]],       \
       uint i [[thread_position_in_grid]]
 
+)MSL"
+#include "wavefront_atmosphere_paths.inc"
+R"MSL(
   kernel void primary(SCENE_ARGUMENTS) {
     device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
     device const Quadric *quadrics =
@@ -534,7 +574,9 @@ R"MSL(
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
-                           instances};
+                           instances,
+                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
+                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
     if (i == 0) {
       atomic_store_explicit(&counts.rays, p.active, memory_order_relaxed);
       atomic_store_explicit(&counts.hits, 0, memory_order_relaxed);
@@ -550,6 +592,11 @@ R"MSL(
     if (i >= p.active)
       return;
     uint pixel = active[i], dim = 0;
+    if (scene_has_atmosphere && (p.camera.padding[1] & 2)) {
+      device AirRay *air = reinterpret_cast<device AirRay *>(
+          reinterpret_cast<device AtmosphereRequest *>(diffusion_entries + p.camera.padding[0]) + p.camera.padding[0]);
+      air[pixel] = {};
+    }
     float u = (pixel / p.height + sample1(pixel, dim, p, directions, blue)) / p.width;
     float v = (pixel % p.height + sample1(pixel, dim, p, directions, blue)) / p.height;
     if (p.camera.flip_x)
@@ -557,7 +604,8 @@ R"MSL(
     float lu = sample1(pixel, dim, p, directions, blue),
           lv = sample1(pixel, dim, p, directions, blue);
     // Match the native thin-lens camera's uniform disk; unused time retains its dimension.
-    sample1(pixel, dim, p, directions, blue);
+    float time=sample1(pixel, dim, p, directions, blue)*p.camera.shutter.z;
+    if(p.camera.shutter.w>=0) time=p.camera.shutter.w;
     float r = sqrt(lu) * p.camera.right.w, phi = 2 * pi * lv;
     float3 lens = r * (cos(phi) * p.camera.right.xyz + sin(phi) * p.camera.up.xyz);
     float3 film = p.camera.lower_left.xyz + u * p.camera.horizontal.xyz + v * p.camera.vertical.xyz;
@@ -571,6 +619,16 @@ R"MSL(
     path.depth = 0;
     path.internal = 0;
     path.flags = 1; // delta predecessor, no guide yet.
+    bool complex_camera=p.camera.orthographic>=2 || p.camera.moving;
+    float camera_weight=1;
+    device const float4 *camera_data=reinterpret_cast<device const float4 *>(bytes+storage->camera_offset);
+    if(complex_camera) {
+      float3 origin,direction;
+      float weight=camera_ray(p.camera,float2(u,v),float2(lu,lv),time,camera_data,origin,direction);
+      camera_weight=weight;
+      path.origin=float4(origin,0);path.direction=float4(direction,0);path.beta=float4(weight>0 ? 1.f : 0.f);
+      path.previous=path.origin;
+    }
     if (texture_features & 4) {
       float scale = p.camera.up.w;
       float3 dx = p.camera.horizontal.xyz * (p.camera.flip_x ? -1.f : 1.f) / p.width * scale;
@@ -583,6 +641,24 @@ R"MSL(
       d.dy = float4(
           p.camera.orthographic ? path.direction.xyz : normalize(film + dy - path.origin.xyz), 0);
       differentials[pixel] = d;
+      if(complex_camera) {
+        d.ox.w=0;
+        float3 origins[2],directions[2];bool valid=path.beta.x>0;
+        for(uint axis=0;axis<2 && valid;++axis) {
+          bool found=false;
+          for(int sign=1;sign>=-1;sign-=2) {
+            float2 shifted=float2(u,v);
+            shifted[axis]+=sign*(axis ? 1.f/p.height : (p.camera.flip_x ? -1.f : 1.f)/p.width);
+            if(camera_ray(p.camera,shifted,float2(lu,lv),time,camera_data,origins[axis],directions[axis])<=0) continue;
+            origins[axis]=path.origin.xyz+sign*scale*(origins[axis]-path.origin.xyz);
+            directions[axis]=path.direction.xyz+sign*scale*(directions[axis]-path.direction.xyz);
+            found=true;break;
+          }
+          valid=found;
+        }
+        if(valid) d={float4(origins[0],1),float4(origins[1],0),float4(directions[0],0),float4(directions[1],0)};
+        differentials[pixel]=d;
+      }
     }
     if (scene_has_boundaries) {
       VolumeState state = {};
@@ -594,21 +670,29 @@ R"MSL(
     }
     paths[pixel] = path;
     pixels[pixel] = {float4(0), float4(0), float4(0)};
+    pixels[pixel].normal.w=camera_weight;
     ray_queue[i] = pixel;
   }
 
   kernel void intersect_paths(SCENE_ARGUMENTS) {
+    device AtmosphereRequest *air_requests = reinterpret_cast<device AtmosphereRequest *>(
+        diffusion_entries + p.camera.padding[0]);
     device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
     device const Quadric *quadrics =
         reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
-                           instances};
+                           instances,
+                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
+                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
     if (i >= atomic_load_explicit(&counts.rays, memory_order_relaxed))
       return;
     uint pixel = ray_queue[i];
     Path path = paths[pixel];
+    if (scene_has_atmosphere)
+      air_requests[pixel].event = 0;
+    if(all(path.beta.xyz==0)) return;
     if (path.flags & 4) {
       atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
       return;
@@ -617,8 +701,15 @@ R"MSL(
     state.count = 0;
     if (scene_has_boundaries)
       state = membership[pixel];
-    uint body = active_boundary(state, boundaries, materials);
+    uint glass = active_boundary(state, boundaries, materials);
+    uint body = active_medium(state, boundaries, materials);
     bool scattering = body && boundaries[body].subsurface;
+    device const Medium *media = reinterpret_cast<device const Medium *>(bytes + storage->medium_offset);
+    device const float *fields = reinterpret_cast<device const float *>(bytes + storage->field_offset);
+    Medium medium = {};
+    if ((texture_features & 16) && body)
+      medium = media[boundaries[body].medium];
+    bool heterogeneous = body && medium.controls.w != 0;
     if (body && boundaries[body].subsurface == 2) {
       if (!(path.flags & 8)) {
         atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
@@ -635,7 +726,11 @@ R"MSL(
     }
     float3 rates = scattering ? extinction(body, boundaries, materials) : float3(0);
     float flight = INFINITY;
-    if (scattering) {
+    float majorant = heterogeneous ? max(rates.x, max(rates.y, rates.z)) * medium.hi.w : 0;
+    if (heterogeneous) {
+      flight = medium_flight(medium,path.origin.xyz,path.direction.xyz,max(rates.x,max(rates.y,rates.z)),
+                             sample1(pixel,path.dimension,p,directions,blue),fields,majorant);
+    } else if (scattering) {
       // A fresh RGB-channel mixture at every segment, with the exact mixture
       // density below. Zero-rate channels retain their mass at infinity.
       uint channel = min(2u, uint(3 * sample1(pixel, path.dimension, p, directions, blue)));
@@ -686,7 +781,30 @@ R"MSL(
     float surface = hit.type == intersection_type::none ? INFINITY : hit.distance;
     bool collision = flight < surface;
     float distance = collision ? flight : surface;
-    if (scattering) {
+    if (scene_has_atmosphere) {
+      air_requests[pixel].origin = path.origin;
+      air_requests[pixel].direction = float4(r.direction, distance);
+      air_requests[pixel].weight = path.beta;
+      air_requests[pixel].weight.w = path.direction.w;
+      air_requests[pixel].radiance = pixels[pixel].radiance;
+      air_requests[pixel].body = body;
+      air_requests[pixel].glass = glass;
+      air_requests[pixel].event = isfinite(distance) ? 1 : 2;
+      air_requests[pixel].padding = path.flags;
+    }
+    bool null_collision = false;
+    if (heterogeneous && collision) {
+      float3 uvw = medium_coordinates(medium, r.origin + flight * r.direction);
+      float density = medium_density(medium, uvw, fields);
+      float3 sigma_a = boundaries[body].sigma_a.xyz * density;
+      float3 sigma_s = boundaries[body].sigma_s.xyz * density;
+      if (path.depth < p.max_depth)
+        pixels[pixel].radiance.xyz += path.beta.xyz * sigma_a * medium_emission(medium, uvw, fields) / majorant;
+      float accept = clamp(max(rates.x, max(rates.y, rates.z)) * density / majorant, 0.f, 1.f);
+      null_collision = sample1(pixel, path.dimension, p, directions, blue) >= accept;
+      path.beta.xyz *= null_collision ? (1 - (sigma_a + sigma_s) / majorant) / (1 - accept)
+                                      : sigma_s / (majorant * accept);
+    } else if (scattering && !heterogeneous) {
       // Remove a common exponential before normalizing. This is the same ratio
       // without underflow in an optically thick RGB segment.
       float low = min(rates.x, min(rates.y, rates.z));
@@ -695,10 +813,13 @@ R"MSL(
       float density = dot(relative * (collision ? rates : float3(1)), float3(1.f / 3));
       if (!(density > 0))
         return;
+      if ((texture_features & 16) && collision && boundaries[body].medium && path.depth < p.max_depth)
+        pixels[pixel].radiance.xyz += path.beta.xyz * relative * boundaries[body].sigma_a.xyz *
+                                     medium.emission.xyz / density;
       path.beta.xyz *= relative * (collision ? boundaries[body].sigma_s.xyz : float3(1)) / density;
     }
-    if (body) {
-      float3 absorption = materials[boundaries[body].material].attenuation.xyz;
+    if (glass) {
+      float3 absorption = materials[boundaries[glass].material].attenuation.xyz;
       path.beta.xyz *= isfinite(distance) ? exp(-absorption * distance)
                                           : select(float3(0), float3(1), absorption == 0);
     }
@@ -739,9 +860,15 @@ R"MSL(
       }
       path.origin.xyz = position;
       path.origin.w = 0;
-      ++path.internal;
-      atomic_fetch_add_explicit(&counts.scattering, 1, memory_order_relaxed);
+      if (!null_collision) {
+        ++path.internal;
+        atomic_fetch_add_explicit(&counts.scattering, 1, memory_order_relaxed);
+      }
     } else if (hit.type == intersection_type::none) {
+      if (scene_has_atmosphere) {
+        paths[pixel] = path;
+        return;
+      }
       float3 radiance = 0;
       for (uint j = 0; j < p.environments; ++j) {
         Light l = lights[j];
@@ -762,7 +889,7 @@ R"MSL(
       return;
     }
     hit_queue[slot] = {pixel,
-                       collision ? UINT_MAX : hit.primitive_id,
+                       collision ? (null_collision ? UINT_MAX - 2 : UINT_MAX) : hit.primitive_id,
                        collision ? 0 : hit.coordinates.x,
                        collision ? 0 : hit.coordinates.y,
                        distance,
@@ -778,7 +905,9 @@ R"MSL(
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
-                           instances};
+                           instances,
+                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
+                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
     if (i >= atomic_load_explicit(&counts.hits, memory_order_relaxed))
       return;
     Hit h = hit_queue[i];
@@ -786,7 +915,7 @@ R"MSL(
     if (is_diffusion != (features == 4))
       return;
     bool is_pbr =
-        h.primitive < UINT_MAX - 1 &&
+        h.primitive < UINT_MAX - 2 &&
         materials[geometry_material(h.primitive, triangles, quadrics)].type == bsdf_openpbr;
     if (is_pbr != (features == 2))
       return;
@@ -797,10 +926,15 @@ R"MSL(
     state.count = 0;
     if (scene_has_boundaries)
       state = membership[pixel];
+    if (h.primitive == UINT_MAX - 2) {
+      enqueue(pixel, path, state, p, paths, membership, next_queue, counts);
+      return;
+    }
     VolumeState adjacent = state;
     bool volume = scene_has_boundaries && h.primitive == UINT_MAX, interface = false,
          internal = volume;
-    uint body = active_boundary(state, boundaries, materials);
+    uint body = volume ? active_medium(state, boundaries, materials)
+                       : active_boundary(state, boundaries, materials);
     float3 position = path.origin.xyz, error = 0, g = 0, n = 0, rho = 0, wo = -path.direction.xyz;
     float eta = 1, roughness = 0, anisotropy = body ? boundaries[body].sigma_s.w : 0;
     bool entering = false;
@@ -831,7 +965,7 @@ R"MSL(
       atomic_fetch_add_explicit(&counts.scattering, 1, memory_order_relaxed);
       path.flags &= ~8u;
       if (!(path.flags & 2)) {
-        pixels[pixel].normal = 0;
+        pixels[pixel].normal.xyz = 0;
         pixels[pixel].albedo = float4(boundaries[body].color.xyz, 0);
         path.flags |= 2;
       }
@@ -855,9 +989,15 @@ R"MSL(
                             position, textures, texels);
       }
     } else if (volume) {
+      if (boundaries[body].subsurface == 3) {
+        if (path.depth >= p.max_depth)
+          return;
+        ++path.depth;
+        internal = false;
+      }
       if (!(path.flags & 2)) {
         float3 st = boundaries[body].sigma_a.xyz + boundaries[body].sigma_s.xyz;
-        pixels[pixel].normal = 0;
+        pixels[pixel].normal.xyz = 0;
         pixels[pixel].albedo = float4(
             select(float3(0), boundaries[body].sigma_s.xyz / max(st, float3(FLT_MIN)), st > 0), 0);
         path.flags |= 2;
@@ -872,6 +1012,20 @@ R"MSL(
       error = geometry.error;
       g = t.geometric.xyz;
       n = geometry.normal;
+      if ((texture_features & 16) && t.boundary && boundaries[t.boundary].subsurface == 3 &&
+          boundaries[t.boundary].radius.w == 0) {
+        entering = dot(g, wo) > 0;
+        if (!adjacent_membership(t.boundary, entering, position, error, g, adjacent, p,
+                                 triangles, quadrics, surfaces, boundaries, scene)) {
+          atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+          return;
+        }
+        path.origin = float4(offset_origin(position, error, entering ? -g : g),
+                             as_type<float>(h.primitive + 1));
+        path.previous.w = as_type<float>(h.padding[0]);
+        enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
+        return;
+      }
       TextureContext texture_hit = surface_context(t, bary, position, surfaces);
       base_normal = n;
       if (texture_features & 4) {
@@ -1019,7 +1173,7 @@ R"MSL(
         }
         interface = true;
         if (!(path.flags & 2)) {
-          pixels[pixel].normal = float4(n, 0);
+          pixels[pixel].normal.xyz = n;
           pixels[pixel].albedo = float4(1, 1, 1, 0);
           path.flags |= 2;
         }
@@ -1086,7 +1240,7 @@ R"MSL(
         }
         if (!(path.flags & 2) && !(m.type == bsdf_metal && m.parameters.z == 0) &&
             !(m.type == bsdf_transmission && m.eta.x == 1)) {
-          pixels[pixel].normal = float4(n, 0);
+          pixels[pixel].normal.xyz = n;
           pixels[pixel].albedo = float4(rho, 0);
           path.flags |= 2;
         }
@@ -1134,7 +1288,7 @@ R"MSL(
       } else {
         GeometrySurface source =
             sample_geometry_light(l.primitive, float2(u, v), position, triangles, quadrics,
-                                  surfaces, l.instance, scene.instances);
+                                  surfaces, l.instance, scene.instances, &counts.csg_failed);
         Triangle emitter = source.face;
         Material lm = materials[emitter.material];
         float3 b = float3(1 - source.coordinates.x - source.coordinates.y, source.coordinates.xy);
@@ -1236,7 +1390,7 @@ R"MSL(
                                 float4(shadow_direction, max_t),
                                 float4(contribution, 0),
                                 pixel,
-                                {volume ? 0 : h.padding[0], 0, 0},
+                                {volume ? 0 : h.padding[0], choice, 0},
                                 direct_state};
           atomic_fetch_max_explicit(&indirect[6], (slot + 64) / 64, memory_order_relaxed);
         }
@@ -1288,7 +1442,7 @@ R"MSL(
       if (m.dielectric && pbr_crossed(pbr, wi))
         state = adjacent;
       if (!(path.flags & 2) && !sample.delta) {
-        pixels[pixel].normal = float4(pbr.normal, 0);
+        pixels[pixel].normal.xyz = pbr.normal;
         pixels[pixel].albedo = float4(rho, 0);
         path.flags |= 2;
       }
@@ -1359,16 +1513,32 @@ R"MSL(
   template [[host_name("shade_diffusion")]] kernel void shade<4>(SCENE_ARGUMENTS);
 
   kernel void shadows(SCENE_ARGUMENTS) {
+    // Finite atmospheric source terms survive blocked connections. The native
+    // batch integrates these together with ordered medium shadow attenuation.
+    bool gpu_air = scene_has_atmosphere && (p.camera.padding[1] & 2);
+    uint lane=gpu_air ? i%32 : 0;
+    if(gpu_air) i/=32;
+    bool gpu_haze = gpu_air && (p.camera.padding[1] & 1);
+    if (scene_has_atmosphere && (p.camera.padding[1] & 1) && !gpu_air) return;
     device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
     device const Quadric *quadrics =
         reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
-                           instances};
+                           instances,
+                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
+                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
     if (i >= atomic_load_explicit(&counts.shadows, memory_order_relaxed))
       return;
     Shadow s = shadow_queue[i];
+    device const AtmosphereData &air = *reinterpret_cast<device const AtmosphereData *>(bytes + storage->atmosphere_offset);
+    device const float *air_data = reinterpret_cast<device const float *>(bytes + storage->atmosphere_data_offset);
+    AirRay air_ray = {};
+    bool infinite = s.padding[1] < p.environments;
+    bool sky_source = infinite && (lights[s.padding[1]].flags & 128);
+    if (scene_has_atmosphere)
+      if(lane==0) shadow_queue[i].contribution.xyz = 0;
     if (s.direction.w <= 0)
       return;
     ray r;
@@ -1376,14 +1546,24 @@ R"MSL(
     r.direction = s.direction.xyz;
     r.min_distance = FLT_MIN;
     r.max_distance = s.direction.w;
-    if (!scene_has_boundaries && !(texture_features & 8)) {
-      if (trace_geometry(r, scene, quadrics, 0, true).type == intersection_type::none)
-        pixels[s.pixel].radiance.xyz += s.contribution.xyz;
+    if (!scene_has_boundaries && !(texture_features & 8) && !gpu_haze) {
+      if (trace_geometry(r, scene, quadrics, 0, true).type == intersection_type::none) {
+        if (gpu_air) {
+          float3 value = infinite ? air_light(lights[s.padding[1]],r.origin,r.direction,air,air_data,textures,texels) : float3(1);
+          if(lane==0) pixels[s.pixel].radiance.xyz += s.contribution.xyz * value;
+        } else if (scene_has_atmosphere)
+          shadow_queue[i].contribution = s.contribution;
+        else
+          if(lane==0) pixels[s.pixel].radiance.xyz += s.contribution.xyz;
+      }
       return;
     }
     float previous = 0;
     float3 transmittance = 1;
     VolumeState state = s.state;
+    device const Medium *media = reinterpret_cast<device const Medium *>(bytes + storage->medium_offset);
+    device const float *fields = reinterpret_cast<device const float *>(bytes + storage->field_offset);
+    uint shadow_dimension = 0;
     while (true) {
       auto hit = trace_geometry(r, scene, quadrics);
       uint departed = as_type<uint>(s.origin.w);
@@ -1391,7 +1571,7 @@ R"MSL(
           hit.primitive_id == departed - 1 && hit.instance == s.padding[0]) {
         float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
         if (!(next > r.min_distance)) {
-          atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+          if(lane==0) atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
           return;
         }
         r.min_distance = next;
@@ -1399,17 +1579,78 @@ R"MSL(
       }
       float endpoint = hit.type == intersection_type::none ? r.max_distance : hit.distance;
       uint before = active_boundary(state, boundaries, materials);
+      uint medium_body = active_medium(state, boundaries, materials);
       // Diffusion integrates the interior nonlocally; it has no ballistic segment.
       if (before && boundaries[before].subsurface == 2)
         return;
-      float3 sigma = extinction(before, boundaries, materials);
+      float3 sigma = medium_body ? extinction(medium_body, boundaries, materials) : float3(0);
       float distance = endpoint - previous;
-      transmittance *=
-          isfinite(distance) ? exp(-sigma * distance) : select(float3(0), float3(1), sigma == 0);
+      Medium medium = {};
+      if ((texture_features & 16) && medium_body)
+        medium = media[boundaries[medium_body].medium];
+      bool air_enabled = gpu_haze && !before && (!medium_body || (medium.emission.w!=0 && air.haze_in_volumes));
+      float air_cursor = previous;
+      if (gpu_air && !isfinite(endpoint)) air_start(air_ray,r.origin+previous*r.direction,r.direction,air_enabled);
+      if (medium.controls.w != 0 || (air_enabled && medium_body)) {
+        // Ratio tracking estimates RGB transmittance with a common Poisson
+        // process. Its independent stream never changes the continuation path.
+        float majorant = max(sigma.x, max(sigma.y, sigma.z)) * (medium.controls.w!=0 ? medium.hi.w : 1.f);
+        float t = previous;
+        while (majorant > 0) {
+          uint bits = hash_seed(hash_seed(s.pixel, p.sample ^ p.seed),
+                                shadow_dimension++ ^ (p.depth * 0x9e3779b9u));
+          float u = (float(bits >> 8) + .5f) * 0x1p-24f;
+          float next = t + (medium.controls.w != 0 ? medium_flight(medium,r.origin+t*r.direction,r.direction,
+                                         max(sigma.x,max(sigma.y,sigma.z)),min(u,0x1.fffffep-1f),fields,majorant)
+                                         : -log(1-u)/majorant);
+          if (next >= endpoint)
+            break;
+          // A valid small flight may round to the current ray parameter. It
+          // still contributes a ratio-tracking event there. Reject only when
+          // even one mean free path is unresolvable, as in camera transport.
+          if (!(next > t) && !(t + 1 / majorant > t)) {
+            if(lane==0) atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+            return;
+          }
+          t = next;
+          if (gpu_haze) {
+            auto segment=air_walk(air_ray,r.origin+air_cursor*r.direction,r.direction,t-air_cursor,
+                                  air_enabled,medium,air_uniform(s.pixel^shadow_dimension,p),air,air_data,fields);
+            if(sky_source) if(lane==0) pixels[s.pixel].radiance.xyz+=s.contribution.xyz*transmittance*segment.radiance;
+            transmittance*=segment.transmission;
+            air_cursor=t;
+          }
+          float density = medium.controls.w != 0 ? medium_density(medium, medium_coordinates(medium, r.origin + t*r.direction), fields) : 1.f;
+          transmittance *= max(float3(0), 1 - sigma * density / majorant);
+          if (all(transmittance == 0))
+            return;
+        }
+      } else
+        transmittance *= isfinite(distance) ? exp(-sigma * distance)
+                                            : select(float3(0), float3(1), sigma == 0);
+      if(gpu_haze && isfinite(endpoint) && endpoint>air_cursor) {
+        auto segment=air_walk(air_ray,r.origin+air_cursor*r.direction,r.direction,endpoint-air_cursor,
+                              air_enabled,medium,air_uniform(s.pixel^shadow_dimension,p),air,air_data,fields);
+        if(sky_source) if(lane==0) pixels[s.pixel].radiance.xyz+=s.contribution.xyz*transmittance*segment.radiance;
+        transmittance*=segment.transmission;
+      }
+      if (before) {
+        float3 absorption = materials[boundaries[before].material].attenuation.xyz;
+        transmittance *= isfinite(distance) ? exp(-absorption * distance)
+                                            : select(float3(0), float3(1), absorption == 0);
+      }
       if (all(transmittance == 0))
         return;
       if (hit.type == intersection_type::none) {
-        pixels[s.pixel].radiance.xyz += transmittance * s.contribution.xyz;
+        if (gpu_air) {
+          float3 anchor=air_ray.direction.w ? air_ray.origin.xyz : r.origin+previous*r.direction;
+          float3 value=infinite ? air_light(lights[s.padding[1]],anchor,r.direction,air,air_data,textures,texels) : float3(1);
+          if(infinite) value=air_remaining(air_ray,value,sky_source);
+          if(lane==0) pixels[s.pixel].radiance.xyz+=transmittance*s.contribution.xyz*value;
+        } else if (scene_has_atmosphere)
+          shadow_queue[i].contribution.xyz = transmittance * s.contribution.xyz;
+        else
+          if(lane==0) pixels[s.pixel].radiance.xyz += transmittance * s.contribution.xyz;
         return;
       }
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
@@ -1451,11 +1692,14 @@ R"MSL(
       }
       if (!t.boundary)
         return;
+      if (boundaries[t.boundary].subsurface == 3 && boundaries[t.boundary].radius.w != 0 &&
+          !materials[t.material].dielectric)
+        return;
       bool entering = dot(r.direction, t.geometric.xyz) < 0;
       float3 position = contact.position, error = contact.error;
       if (!adjacent_membership(t.boundary, entering, position, error, t.geometric.xyz, state, p,
                                triangles, quadrics, surfaces, boundaries, scene)) {
-        atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+        if(lane==0) atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
         return;
       }
       uint after = active_boundary(state, boundaries, materials);
@@ -1480,7 +1724,7 @@ R"MSL(
       // the direct-light PDF. Refractive interfaces above block this estimator.
       float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
       if (!(next > r.min_distance) || !isfinite(next)) {
-        atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+        if(lane==0) atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
         return;
       }
       previous = endpoint;

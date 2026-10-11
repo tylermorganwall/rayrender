@@ -321,6 +321,7 @@ class environment_camera : public RayCamera {
 };
 
 class RealisticCamera  : public RayCamera {
+  friend void ExportWavefrontCamera(RayCamera &, struct WFCamera &, std::vector<struct WFVector> &);
 public:
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,

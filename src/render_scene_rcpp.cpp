@@ -1285,8 +1285,10 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
       _["mesh_instances"] = double(wavefront_report.mesh_instances),
       _["scattering_events"] = double(wavefront_report.scattering_events),
       _["discarded_paths"] = double(wavefront_report.discarded_paths),
+      _["csg_failed_queries"] = double(wavefront_report.csg_failed_queries),
       _["upload_seconds"] = wavefront_report.upload_seconds,
       _["sample_seconds"] = wavefront_report.sample_seconds,
+      _["atmosphere_seconds"] = wavefront_report.atmosphere_seconds,
       _["completed_samples"] = double(wavefront_report.completed_samples));
   }
   final_image.attr("render_cancelled") = Display.terminate;
