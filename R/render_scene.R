@@ -256,12 +256,18 @@
 #' reflections do not consume `max_depth`, and walks have no finite event cap.
 #' Camera origins inside bodies are classified on the GPU. Denoising guides use
 #' the first non-specular interaction, including scattering behind glass.
+#' Invisible [light()] emitters still illuminate objects but remain hidden from
+#' the camera and through purely specular paths. Transparent backgrounds use
+#' independent camera-ray coverage: exposed surfaces (including glass) are opaque
+#' in alpha, cutouts preserve holes, and volumes contribute partial opacity from
+#' extinction. Environment lights continue to illuminate objects when hidden from
+#' the camera. Finite atmospheric haze retains its radiance and opacity.
 #'
 #' Triangulation approximates curved geometry: cylinders/disks use 128 azimuth segments. Cylindrical curves
 #' use 16-sided tubes and ribbons use strips, with 64 longitudinal intervals per
 #' full Bezier span. Supply a mesh directly when finer control is needed. Ray-facing
 #' flat curves, procedurally textured legacy fog, grid temperatures above 20000 kelvin,
-#' transparent backgrounds, and other unsupported features still select CPU rendering for the whole scene.
+#' and other unsupported features still select CPU rendering for the whole scene.
 #' GPU membership supports up to 16 simultaneous overlapping closed boundaries.
 #' Overflow, unresolvable positions, and nonfinite transport weights terminate affected
 #' rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.

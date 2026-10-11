@@ -1004,6 +1004,10 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
 }
 } // namespace
 
+Float VolumePrimaryTransparency(const Ray &ray, const VolumeScene &scene, hitable *world,
+                                random_gen &rng, const std::atomic<bool> *cancel) {
+  return primary_transparency(ray, scene.InitialState(ray, cancel), world, rng, cancel, scene.atmosphere);
+}
 
 // Main radiance walk: alternate between medium candidates and surface vertices.
 // Absorption stops the path, real scattering creates a new direction, and null

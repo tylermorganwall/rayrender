@@ -151,10 +151,14 @@ struct WFParameters {
   WFVector boundary_lo, boundary_hi;
 };
 struct WFPixel {
+  // radiance.w is camera-ray transparency (1 = escaped, 0 = opaque), not
+  // opacity or RGB path throughput. normal.w carries camera importance weight.
   WFVector radiance, normal, albedo;
 };
 struct WFPath {
   WFVector origin, direction, beta, previous;
+  // Flags: delta predecessor=1, guide written=2, invalid membership=4,
+  // diffusion entry=8, any earlier non-specular scattering=16.
   uint32_t dimension, depth, internal, flags;
 };
 struct WFAtmosphereRequest {
@@ -174,6 +178,7 @@ static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
               sizeof(WFParameters) == 320 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {
+  bool transparent_background = false;
   std::shared_ptr<WavefrontMotion> motion;
   bool motion_changed = false;
   std::vector<WFVector> camera_data;
@@ -192,7 +197,8 @@ struct WavefrontScene {
   std::vector<WFVector> texels;
   std::vector<WFSurface> surfaces{WFSurface()};
   // Graphs=1, surface context=2, bump=4, alpha=8, general media=16,
-  // whole-assembly reference-frame traversal=32. Shared pipeline specialization key.
+  // whole-assembly reference-frame traversal=32, invisible area emitters=64.
+  // Shared pipeline specialization key.
   uint32_t texture_features = 0;
   std::vector<WFLight> lights;
   std::vector<WFVector> material_data;
@@ -202,7 +208,7 @@ struct WavefrontScene {
   const Atmosphere *atmosphere = nullptr;
   const Atmosphere *transport_atmosphere = nullptr;
   const VolumeScene *volume_scene = nullptr;
-  const hitable_list *world = nullptr; // Native atmospheric shadow transport only.
+  const hitable_list *world = nullptr; // Native atmospheric shadows and camera coverage.
   size_t workers = 1;
   std::vector<WFDiffusionExit> diffusion_exits;
   std::vector<WFVector> diffusion_samples;
@@ -254,6 +260,8 @@ public:
   WavefrontAtmosphere(const WavefrontScene &, size_t capacity);
   ~WavefrontAtmosphere();
   void Begin(const std::vector<uint32_t> &active);
+  bool Coverage(const WFParameters &, const std::vector<uint32_t> &active,
+                WFPath *, WFPixel *, const std::function<bool()> &cancelled);
   bool Paths(const WFParameters &, const uint32_t *queue, size_t count,
              WFAtmosphereRequest *, WFPath *, WFPixel *, const std::function<bool()> &cancelled);
   bool Shadows(const WFParameters &, WFShadow *, size_t count, WFPixel *,

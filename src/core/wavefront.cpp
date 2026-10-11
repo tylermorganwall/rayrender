@@ -490,11 +490,13 @@ private:
       out.diffuse = {float(diffuse->child.a), float(diffuse->child.b),
                      float(diffuse->child.average_loss), 0};
     } else if (const auto *light = dynamic_cast<const diffuse_light *>(input)) {
-      if (light->invisible)
-        throw std::runtime_error("invisible area light");
       out.texture = Texture(light->emit.get());
       out.emissive = 1;
       out.diffuse.w = light->intensity;
+      // Only emission-only materials use this lane. Keep invisible emitters in
+      // the light sampler; visibility depends on the path's scattering history.
+      out.extra.w = light->invisible;
+      if (light->invisible) scene.texture_features |= 64;
     } else if (const auto *pbr = dynamic_cast<const OpenPBRMaterial *>(input)) {
       // OpenPBR inherits dielectric for priority identity, not its BSDF.
       out.type = 7;
@@ -871,10 +873,9 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
   report = WavefrontReport();
   report.requested = true;
   try {
-    if (lights.volume_scene && lights.volume_scene->transparent_background)
-      throw std::runtime_error("transparent background");
     scene.workers = workers;
     scene.volume_scene = lights.volume_scene.get();
+    scene.transparent_background = scene.volume_scene && scene.volume_scene->transparent_background;
     scene.world = &world;
     scene.transport_atmosphere = lights.volume_scene ? lights.volume_scene->atmosphere : nullptr;
     if (sampler == 1)
@@ -956,6 +957,7 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   p.boundary_lo = scene.boundary_lo;
   p.boundary_hi = scene.boundary_hi;
   ExportWavefrontCamera(camera, p.camera, scene.camera_data);
+  p.camera.padding[1] = scene.transparent_background ? 4 : 0;
   p.camera.shutter.w = -1; // Per-pixel shutter samples when geometry is stationary.
   if (scene.motion) {
     // Scrambled base-two radical inverse gives coherent, progressive temporal

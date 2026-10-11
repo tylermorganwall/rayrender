@@ -8,6 +8,7 @@ R"MSL(
   constant bool scene_has_instances [[function_constant(3)]];
   constant bool scene_has_atmosphere [[function_constant(4)]];
   constant bool defer_shadow_lighting [[function_constant(5)]];
+  constant bool primary_coverage [[function_constant(6)]];
 #include <metal_raytracing>
 #include <metal_stdlib>
   using namespace metal;
@@ -753,6 +754,12 @@ R"MSL(
     while (hit.type != intersection_type::none) {
       bool skip = departed && !is_quadric(departed - 1) && hit.primitive_id == departed - 1 &&
                   hit.instance == as_type<uint>(path.previous.w);
+      if (!skip && (texture_features & 64) && !(path.flags & 16)) {
+        auto contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
+                                        surfaces, hit.instance, scene.instances);
+        Material emitter = materials[contact.face.material];
+        skip = emitter.emissive == 1 && emitter.extra.w != 0;
+      }
       if (!skip && (texture_features & 8)) {
         GeometrySurface contact =
             geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
@@ -873,6 +880,8 @@ R"MSL(
         paths[pixel] = path;
         return;
       }
+      if ((p.camera.padding[1] & 4) && path.depth == 0)
+        return;
       float3 radiance = 0;
       for (uint j = 0; j < p.environments; ++j) {
         Light l = lights[j];
@@ -1047,7 +1056,6 @@ R"MSL(
         else
           m.parameters.xy = rough.xy;
       }
-      pixels[pixel].radiance.w = 1;
       if (m.emissive == 1) {
         if (dot(n, wo) > 0) {
           float pdf =
@@ -1503,6 +1511,8 @@ R"MSL(
     path.flags &= ~1u;
     if (delta_sample)
       path.flags |= 1;
+    else if (texture_features & 64)
+      path.flags |= 16; // Persistent: later mirrors must not hide diffuse-path emission.
     if (!volume)
       remember_diffusion_entry(path, pixel, state, position, g, boundaries, materials,
                                diffusion_entries);
@@ -1536,15 +1546,31 @@ R"MSL(
                            instances,
                            reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
                            reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
-    if (i >= atomic_load_explicit(&counts.shadows, memory_order_relaxed))
+    if (i >= (primary_coverage ? p.active : atomic_load_explicit(&counts.shadows, memory_order_relaxed)))
       return;
-    Shadow s = shadow_queue[i];
+    Shadow s;
+    if (primary_coverage) {
+      // Reuse the exact generated camera ray, including lens and shutter samples.
+      // This independent straight-line estimator writes transparency only; it
+      // does not follow the refracted/scattered RGB path or consume its samples.
+      uint pixel = active[i];
+      Path path = paths[pixel];
+      if ((path.flags & 4) || pixels[pixel].normal.w <= 0) return;
+      s = {};
+      s.pixel = pixel;
+      s.origin = path.origin;
+      s.direction = float4(path.direction.xyz, INFINITY);
+      s.contribution = float4(1);
+      s.padding[1] = UINT_MAX;
+      if (scene_has_boundaries) s.state = membership[pixel];
+    } else
+      s = shadow_queue[i];
     device const AtmosphereData &air = *reinterpret_cast<device const AtmosphereData *>(bytes + storage->atmosphere_offset);
     device const float *air_data = reinterpret_cast<device const float *>(bytes + storage->atmosphere_data_offset);
     AirRay air_ray = {};
     bool infinite = s.padding[1] < p.environments;
     bool sky_source = infinite && (lights[s.padding[1]].flags & 128);
-    if (scene_has_atmosphere)
+    if (scene_has_atmosphere && !primary_coverage)
       if(lane==0) shadow_queue[i].contribution.xyz = 0;
     if (s.direction.w <= 0)
       return;
@@ -1553,9 +1579,11 @@ R"MSL(
     r.direction = s.direction.xyz;
     r.min_distance = FLT_MIN;
     r.max_distance = s.direction.w;
-    if (!scene_has_boundaries && !(texture_features & 8) && !gpu_haze) {
+    if (!scene_has_boundaries && !(texture_features & (8 | 64)) && !gpu_haze) {
       if (trace_spectral_shadow(r, scene, quadrics, gpu_air, lane, true).type == intersection_type::none) {
-        if (gpu_air) {
+        if (primary_coverage) {
+          if(lane==0) pixels[s.pixel].radiance.w = 1;
+        } else if (gpu_air) {
           float3 value = infinite ? air_light(lights[s.padding[1]],r.origin,r.direction,air,air_data,textures,texels) : float3(1);
           if(lane==0) pixels[s.pixel].radiance.xyz += s.contribution.xyz * value;
         } else if (scene_has_atmosphere)
@@ -1570,7 +1598,7 @@ R"MSL(
     VolumeState state = s.state;
     device const Medium *media = reinterpret_cast<device const Medium *>(bytes + storage->medium_offset);
     device const float *fields = reinterpret_cast<device const float *>(bytes + storage->field_offset);
-    uint shadow_dimension = 0;
+    uint shadow_dimension = primary_coverage ? 0x713ad591u : 0;
     while (true) {
       auto hit = trace_spectral_shadow(r, scene, quadrics, gpu_air, lane);
       uint departed = as_type<uint>(s.origin.w);
@@ -1653,7 +1681,12 @@ R"MSL(
       if (all(transmittance == 0))
         return;
       if (hit.type == intersection_type::none) {
-        if (gpu_air) {
+        if (primary_coverage) {
+          if (gpu_haze && air_ray.direction.w)
+            transmittance *= air_remaining(air_ray,
+                air_infinite_transmission(air_ray.origin.xyz, r.direction, air, air_data), false);
+          if(lane==0) pixels[s.pixel].radiance.w = clamp(dot(transmittance, float3(1.f/3)), 0.f, 1.f);
+        } else if (gpu_air) {
           float3 anchor=gpu_haze ? (air_ray.direction.w ? air_ray.origin.xyz : r.origin+previous*r.direction)
                                 : s.origin.xyz;
           float3 value=infinite ? air_light(lights[s.padding[1]],anchor,r.direction,air,air_data,textures,texels) : float3(1);
@@ -1668,6 +1701,12 @@ R"MSL(
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
                                                  quadrics, surfaces, hit.instance, scene.instances);
       Triangle t = contact.face;
+      Material surface_material = materials[t.material];
+      if ((texture_features & 64) && surface_material.emissive == 1 && surface_material.extra.w != 0) {
+        previous = endpoint;
+        r.min_distance = as_type<float>(as_type<uint>(hit.distance) + 1u);
+        continue;
+      }
       if (texture_features & 8) {
         uint alpha = surfaces[as_type<uint>(t.uv2.w)].alpha;
         if (alpha != UINT_MAX) {
@@ -1718,6 +1757,11 @@ R"MSL(
       bool hidden = before == after ||
                     (before && after && boundaries[before].material == boundaries[after].material);
       if (!hidden) {
+        // Camera coverage sees every exposed finite surface, including glass
+        // with matched IOR. Boundary-only media are not visible surfaces.
+        if (primary_coverage && !(boundaries[t.boundary].subsurface == 3 &&
+                                  boundaries[t.boundary].radius.w == 0))
+          return;
         if (boundary_ior(before, boundaries, materials) !=
             boundary_ior(after, boundaries, materials))
           return;

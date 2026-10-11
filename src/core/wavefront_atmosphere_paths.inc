@@ -54,6 +54,8 @@ R"MSL(
     bool enabled=air.haze && !request.glass && (!request.body ||
       (medium && media[medium].emission.w!=0 && air.haze_in_volumes));
     if(request.event==2) {
+      bool hide_background=(p.camera.padding[1]&4) && paths[pixel].depth==0;
+      if(hide_background && !air.haze) return;
       air_start(ray,request.origin.xyz,request.direction.xyz,enabled);
       // Invisible boundaries and null collisions are not lighting vertices.
       // With finite haze disabled, querying at the last ray origin would move
@@ -62,7 +64,9 @@ R"MSL(
                              : paths[pixel].previous.xyz;
       float3 sum=0;
       for(uint j=0;j<p.environments;++j) {
-        float3 value=air_light(lights[j],anchor,request.direction.xyz,air,data,textures,texels);
+        if(hide_background && !(lights[j].flags&128)) continue;
+        float3 value=hide_background ? air_radiance(anchor,request.direction.xyz,air,data,false)
+                                    : air_light(lights[j],anchor,request.direction.xyz,air,data,textures,texels);
         value=air_remaining(ray,value,lights[j].flags&128);
         float weight=(request.padding&1) ? 1 : mis(request.weight.w,light_pdf(lights[j],request.direction.xyz,texels)/p.lights);
         sum+=weight*value;

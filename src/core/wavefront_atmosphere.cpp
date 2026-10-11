@@ -2,6 +2,7 @@
 #include "../materials/material.h"
 #include "../volumes/boundary.h"
 #include "../volumes/haze.h"
+#include "../volumes/volpath.h"
 #include "wavefront.h"
 #include <RcppThread.h>
 
@@ -183,6 +184,9 @@ struct WavefrontAtmosphere::Data {
       previous = end;
       if (hit.alpha_miss)
         continue;
+      bool invisible = false;
+      if (hit.mat_ptr) hit.mat_ptr->emitted(ray, hit, hit.u, hit.v, hit.p, invisible);
+      if (invisible) continue;
       if (hit.medium_boundary && !hit.medium_boundary->keep_surface) {
         state.Cross(hit, w);
         continue;
@@ -217,6 +221,35 @@ void WavefrontAtmosphere::Begin(const std::vector<uint32_t> &active) {
     data->rays[pixel] = AtmosphereRay(data->scene.transport_atmosphere);
 }
 
+bool WavefrontAtmosphere::Coverage(const WFParameters &p, const std::vector<uint32_t> &active,
+                                   WFPath *paths, WFPixel *pixels,
+                                   const std::function<bool()> &cancelled) {
+  const auto &scene = data->scene;
+  for (size_t first = 0; first < active.size(); first += 2048) {
+    data->pool.parallelFor(first, std::min(active.size(), first + 2048), [&](size_t i) {
+      uint32_t pixel = active[i];
+      const auto &path = paths[pixel];
+      if ((path.flags & 4) || pixels[pixel].normal.w <= 0) return;
+      Float time = p.camera.shutter.x + (p.camera.shutter.y - p.camera.shutter.x) *
+                   std::max(0.f, p.camera.shutter.w);
+      Ray ray(point(path.origin), direction(path.direction), time);
+      random_gen rng(mix_bits(pixel ^ p.seed ^ mix_bits(p.sample) ^ 0x713ad591u));
+      try {
+        pixels[pixel].radiance.w = VolumePrimaryTransparency(
+            ray, *scene.volume_scene, const_cast<hitable_list *>(scene.world), rng, nullptr);
+      } catch (const PathFailure &) {
+        // Let the intersection pass terminate and count this failed path. Keep
+        // it opaque instead of punching an unearned hole in the output.
+        paths[pixel].flags |= 4;
+        pixels[pixel].radiance.w = 0;
+      }
+    });
+    data->pool.wait();
+    if (cancelled()) return false;
+  }
+  return true;
+}
+
 bool WavefrontAtmosphere::Paths(const WFParameters &p, const uint32_t *queue, size_t count,
                                 WFAtmosphereRequest *requests, WFPath *paths, WFPixel *pixels,
                                 const std::function<bool()> &cancelled) {
@@ -238,10 +271,14 @@ bool WavefrontAtmosphere::Paths(const WFParameters &p, const uint32_t *queue, si
                      (!request.body || (medium && medium->haze && scene.transport_atmosphere->IntegrateInVolumes()));
       air.Start(origin, w, enabled);
       if (request.event == 2) {
+        bool hide_background = (p.camera.padding[1] & 4) && path.depth == 0;
+        if (hide_background && !scene.transport_atmosphere) return;
         point3f anchor = scene.transport_atmosphere ? air.Origin(origin) : point(path.previous);
         point3f sum(0);
         for (uint32_t light = 0; light < scene.environments; ++light) {
-          point3f value = data->Radiance(light, anchor, w);
+          if (hide_background && !scene.light_sources[light]->GetAtmosphere()) continue;
+          point3f value = hide_background ? scene.transport_atmosphere->SkyRadiance(anchor, w)
+                                          : data->Radiance(light, anchor, w);
           double weight = (request.padding & 1)
                               ? 1
                               : mis_weight(request.weight.w,

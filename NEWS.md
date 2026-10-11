@@ -16,6 +16,10 @@
 
 ## New features
 
+- `render_scene()` Supports invisible area lights and transparent backgrounds on
+  Metal. Hidden emitters still illuminate the scene; camera coverage includes
+  alpha cutouts, volume extinction, and atmospheric haze.
+
 - `csg_object()` Renders directly on Metal, including smooth blends, shells,
   procedural textures, emissive shapes, and animated transforms. Closed CSG
   solids support dielectric priorities and subsurface or volume interiors.

@@ -65,10 +65,11 @@ R"MSL(
       result+=query.weights[j]*skymodelr_gpu::sky_prepared(query.sky[j],wavelength,a.model,data);
     return result;
   }
-  float3 air_radiance(float3 origin,float3 w,device const AtmosphereData &a,device const float *data) {
+  float3 air_radiance(float3 origin,float3 w,device const AtmosphereData &a,device const float *data,
+                      bool include_sun = true) {
     float3 position=air_position(origin,a,true),direction=air_direction(w,a),rgb=0;
     auto p=air_parameters(position,direction,a);
-    bool sun=a.sun && p.gamma<=a.options.x && !air_occluded(position,direction,INFINITY);
+    bool sun=include_sun && a.sun && p.gamma<=a.options.x && !air_occluded(position,direction,INFINITY);
     AirSpectrumQuery sky={};if(a.sky) sky=air_prepare_sky(position,direction,true,a,data);
     skymodelr_gpu::TransQuery transmission={};
     if(sun) transmission=skymodelr_gpu::prepare_transmission(p,INFINITY,a.model,data);
@@ -80,6 +81,25 @@ R"MSL(
       rgb+=a.weights[c].xyz*value;
     }
     return simd_sum(rgb)*a.gain.xyz;
+  }
+  // Camera coverage uses normalized, nonnegative RGB extinction weights, not
+  // the solar/lunar spectra used to illuminate the scene. Infinity needs its
+  // own query: constructing an endpoint as origin + infinity * direction can
+  // create NaNs, and finite-segment in-scattering is irrelevant to coverage.
+  float3 air_infinite_transmission(float3 origin,float3 w,device const AtmosphereData &a,
+                                    device const float *data) {
+    float3 position=air_position(origin,a,true),direction=air_direction(w,a),rgb=0;
+    if(air_occluded(position,direction,INFINITY)) return 0;
+    auto p=air_parameters(position,direction,a);
+    auto zero=skymodelr_gpu::prepare_transmission(p,1e-6f,a.model,data);
+    auto far=skymodelr_gpu::prepare_transmission(p,INFINITY,a.model,data);
+    for(uint c=simd_prefix_exclusive_sum(1u);c<a.channels;c+=32) {
+      float wavelength=a.weights[c].w;
+      rgb+=a.transmission[c].xyz*normalized_air_transmission(
+        skymodelr_gpu::transmission_prepared(zero,wavelength,a.model,data),
+        skymodelr_gpu::transmission_prepared(far,wavelength,a.model,data),INFINITY);
+    }
+    return clamp(simd_sum(rgb),0.f,1.f);
   }
   float3 air_celestial(float3 origin,float3 w,uint spectrum,device const AtmosphereData &a,device const float *data) {
     float3 position=air_position(origin,a,true),direction=air_direction(w,a),rgb=0;

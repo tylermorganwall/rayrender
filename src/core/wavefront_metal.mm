@@ -42,13 +42,14 @@ struct Pipelines {
   id<MTLFunction> analytic_function;
   id<MTLComputePipelineState> primary, intersect, shade, shade_materials, shade_pbr,
       shade_pbr_lights, shade_diffusion, shadow, shadow_transport, shadow_lights,
-      dispatch, atmosphere_paths, atmosphere_dispatch;
+      dispatch, atmosphere_paths, atmosphere_dispatch, coverage;
   id<MTLBuffer> directions, blue;
   bool boundary_support, analytic_support, instance_support, mixed_support, atmosphere_support;
   uint32_t texture_features;
   std::mutex material_mutex;
 
-  id<MTLComputePipelineState> Compile(NSString *name, bool defer_shadow_lighting = false) {
+  id<MTLComputePipelineState> Compile(NSString *name, bool defer_shadow_lighting = false,
+                                    bool primary_coverage = false) {
     NSError *error = nil;
     auto constants = [MTLFunctionConstantValues new];
     [constants setConstantValue:&boundary_support type:MTLDataTypeBool atIndex:0];
@@ -57,6 +58,7 @@ struct Pipelines {
     [constants setConstantValue:&instance_support type:MTLDataTypeBool atIndex:3];
     [constants setConstantValue:&atmosphere_support type:MTLDataTypeBool atIndex:4];
     [constants setConstantValue:&defer_shadow_lighting type:MTLDataTypeBool atIndex:5];
+    [constants setConstantValue:&primary_coverage type:MTLDataTypeBool atIndex:6];
     if (analytic_support && !analytic_function) {
       analytic_function=[library newFunctionWithName:@"intersect_quadric"
                                      constantValues:constants error:&error];
@@ -86,7 +88,7 @@ struct Pipelines {
       throw MetalError("wavefront pipeline compilation", error);
     return result;
   }
-  void PrepareMaterials(bool basic, bool pbr, bool emission, bool diffusion) {
+  void PrepareMaterials(bool basic, bool pbr, bool emission, bool diffusion, bool transparent) {
     std::lock_guard<std::mutex> lock(material_mutex);
     if (basic && !shade_materials)
       shade_materials = Compile(@"shade_materials");
@@ -96,6 +98,8 @@ struct Pipelines {
       shade_pbr_lights = Compile(@"shade_pbr_lights");
     if (diffusion && !shade_diffusion)
       shade_diffusion = Compile(@"shade_diffusion");
+    if (transparent && !coverage)
+      coverage = Compile(@"shadows", false, true);
   }
   explicit Pipelines(bool boundary_support, uint32_t textures, bool analytics, bool instances, bool atmosphere)
       : boundary_support(boundary_support), analytic_support(analytics),
@@ -132,7 +136,7 @@ struct Pipelines {
       atmosphere_dispatch = Compile(@"atmosphere_dispatch");
       // Opaque visibility already has a short any-hit path. An additional pass
       // pays off when boundary/alpha traversal also computes RGB attenuation.
-      if (boundary_support || (texture_features & 8)) {
+      if (boundary_support || (texture_features & (8 | 64))) {
         shadow_lights = Compile(@"shadow_lights");
         // Specialization removes unused spectral/haze state from scalar work.
         shadow_transport = Compile(@"shadows", true);
@@ -377,7 +381,7 @@ class MetalWavefront final : public WavefrontSession {
                 const WFParameters &parameters, bool primary = false) {
     bool spectral = gpu_atmosphere &&
         (pipeline == kernels.atmosphere_paths || pipeline == kernels.shadow_lights ||
-         pipeline == kernels.shadow);
+         pipeline == kernels.shadow || pipeline == kernels.coverage);
     if (spectral) {
       auto encoder = [command computeCommandEncoder];
       [encoder setComputePipelineState:kernels.atmosphere_dispatch];
@@ -396,6 +400,7 @@ class MetalWavefront final : public WavefrontSession {
                     : pipeline == kernels.shade_diffusion  ? @"Wavefront normalized diffusion"
                     : pipeline == kernels.atmosphere_paths ? @"Wavefront spectral atmosphere"
                     : pipeline == kernels.shadow_lights    ? @"Wavefront shadow lighting"
+                    : pipeline == kernels.coverage         ? @"Wavefront camera coverage"
                                                            : @"Wavefront shadow rays";
     [encoder setComputePipelineState:pipeline];
     for (size_t i = 0; i < buffers.size(); ++i)
@@ -423,7 +428,7 @@ class MetalWavefront final : public WavefrontSession {
       // Spectral queues expand each connection into one 32-lane SIMD group.
       NSUInteger offset = 0;
       if (spectral)
-        offset = pipeline == kernels.atmosphere_paths ? 36 : 48;
+        offset = pipeline == kernels.atmosphere_paths || pipeline == kernels.coverage ? 36 : 48;
       else if (pipeline == kernels.shade || pipeline == kernels.shade_materials ||
                pipeline == kernels.shade_pbr || pipeline == kernels.shade_pbr_lights ||
                pipeline == kernels.shade_diffusion)
@@ -450,9 +455,18 @@ public:
       moving_quadrics = changes(1);
       moving_instances = changes(3);
     }
+    for (const auto &material : scene.materials) {
+      has_materials |= material.type > 0 && material.type < 7;
+      has_pbr |= material.type == 7;
+      has_pbr_emission |= material.type == 7 && material.emissive;
+    }
+    has_diffusion = !scene.diffusion_exits.empty();
+    kernels.PrepareMaterials(has_materials, has_pbr, has_pbr_emission, has_diffusion,
+                            scene.transparent_background);
     gpu_atmosphere = scene.gpu_atmosphere;
     if (gpu_atmosphere && (kernels.atmosphere_paths.threadExecutionWidth != 32 ||
                            kernels.shadow.threadExecutionWidth != 32 ||
+                           (scene.transparent_background && kernels.coverage.threadExecutionWidth != 32) ||
                            (kernels.shadow_lights && kernels.shadow_lights.threadExecutionWidth != 32)))
       gpu_atmosphere = false;
     has_haze = scene.transport_atmosphere != nullptr;
@@ -479,7 +493,6 @@ public:
     indirect = Buffer(15 * sizeof(uint32_t));
     buffers[19] = indirect;
     buffers[20] = Upload(scene.material_data);
-    has_diffusion = !scene.diffusion_exits.empty();
     buffers[21] = Upload(scene.diffusion_exits);
     buffers[22] = Upload(scene.diffusion_samples);
     buffers[23] = Upload(scene.diffusion_pairs);
@@ -561,16 +574,10 @@ public:
                   scene.fields.size() * sizeof(float));
 
     buffers[27] = Buffer(scene.texture_features & 4 ? capacity * 64 : 64);
-    for (const auto &material : scene.materials) {
-      has_materials |= material.type > 0 && material.type < 7;
-      has_pbr |= material.type == 7;
-      has_pbr_emission |= material.type == 7 && material.emissive;
-    }
-    kernels.PrepareMaterials(has_materials, has_pbr, has_pbr_emission, has_diffusion);
     for (id<MTLComputePipelineState> pipeline :
          {kernels.primary, kernels.intersect, kernels.shade, kernels.shade_materials,
           kernels.shade_pbr, kernels.shade_pbr_lights, kernels.shade_diffusion,
-          kernels.shadow, kernels.shadow_transport}) {
+          kernels.shadow, kernels.shadow_transport, kernels.coverage}) {
       if (!pipeline || !(kernels.boundary_support || kernels.mixed_support))
         continue;
       RegisterIntersections(pipeline);
@@ -736,7 +743,7 @@ public:
         std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.camera_offset,
                     scene_data.camera_data.data(), scene_data.camera_data.size()*sizeof(WFVector));
       parameters.camera.padding[0] = static_cast<uint32_t>(capacity);
-      parameters.camera.padding[1] = uint32_t(has_haze) | (uint32_t(gpu_atmosphere) << 1);
+      parameters.camera.padding[1] |= uint32_t(has_haze) | (uint32_t(gpu_atmosphere) << 1);
       if (gpu_atmosphere)
         std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.atmosphere_offset,
                     &scene_data.atmosphere_data, sizeof(WFAtmosphereData));
@@ -750,8 +757,24 @@ public:
       for (uint64_t first = 0; input.boundaries || first <= input.max_depth; first += batch) {
         auto command = [queue commandBuffer];
         command.label = @"Wavefront transport batch";
-        if (first == 0)
+        if (first == 0) {
           Dispatch(command, kernels.primary, parameters, true);
+          if (parameters.camera.padding[1] & 4) {
+            if (atmosphere && has_haze) {
+              // The existing CPU spectral service also owns coverage for a
+              // hybrid sky. Read the generated rays only after GPU completion.
+              if (!Wait(command, cancelled)) return false;
+              auto atmosphere_started = std::chrono::steady_clock::now();
+              if (!atmosphere->Coverage(parameters, active,
+                      static_cast<WFPath *>(buffers[5].contents),
+                      static_cast<WFPixel *>(buffers[6].contents), cancelled)) return false;
+              report.atmosphere_seconds += std::chrono::duration<double>(
+                  std::chrono::steady_clock::now() - atmosphere_started).count();
+              command = [queue commandBuffer];
+            } else
+              Dispatch(command, kernels.coverage, parameters);
+          }
+        }
         const uint32_t events =
             input.boundaries ? batch : std::min<uint64_t>(batch, input.max_depth + 1ULL - first);
         for (uint32_t event = 0; event < events; ++event) {
