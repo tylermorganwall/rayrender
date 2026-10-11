@@ -990,8 +990,8 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
                   "or more than 16 "
                   "overlapping boundaries; rendering continues. See wavefront$discarded_paths.");
   if (!previous_csg_failures && report.csg_failed_queries)
-    Rcpp::warning("Metal skipped CSG intersection queries that did not converge within the "
-                  "8192-step limit or produced nonfinite distances. Rendering continues; "
+    Rcpp::warning("Metal skipped CSG intersection queries after nonfinite distances, stalled "
+                  "progress, or the 8192-step limit. Rendering continues; "
                   "see wavefront$csg_failed_queries.");
   for (uint32_t index : active) {
     size_t x = index / film.ny, y = index % film.ny;

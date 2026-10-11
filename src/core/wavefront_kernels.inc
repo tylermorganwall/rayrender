@@ -1547,7 +1547,7 @@ R"MSL(
     r.min_distance = FLT_MIN;
     r.max_distance = s.direction.w;
     if (!scene_has_boundaries && !(texture_features & 8) && !gpu_haze) {
-      if (trace_geometry(r, scene, quadrics, 0, true).type == intersection_type::none) {
+      if (trace_spectral_shadow(r, scene, quadrics, gpu_air, lane, true).type == intersection_type::none) {
         if (gpu_air) {
           float3 value = infinite ? air_light(lights[s.padding[1]],r.origin,r.direction,air,air_data,textures,texels) : float3(1);
           if(lane==0) pixels[s.pixel].radiance.xyz += s.contribution.xyz * value;
@@ -1565,7 +1565,7 @@ R"MSL(
     device const float *fields = reinterpret_cast<device const float *>(bytes + storage->field_offset);
     uint shadow_dimension = 0;
     while (true) {
-      auto hit = trace_geometry(r, scene, quadrics);
+      auto hit = trace_spectral_shadow(r, scene, quadrics, gpu_air, lane);
       uint departed = as_type<uint>(s.origin.w);
       if (hit.type != intersection_type::none && departed && !is_quadric(departed - 1) &&
           hit.primitive_id == departed - 1 && hit.instance == s.padding[0]) {
@@ -1643,7 +1643,8 @@ R"MSL(
         return;
       if (hit.type == intersection_type::none) {
         if (gpu_air) {
-          float3 anchor=air_ray.direction.w ? air_ray.origin.xyz : r.origin+previous*r.direction;
+          float3 anchor=gpu_haze ? (air_ray.direction.w ? air_ray.origin.xyz : r.origin+previous*r.direction)
+                                : s.origin.xyz;
           float3 value=infinite ? air_light(lights[s.padding[1]],anchor,r.direction,air,air_data,textures,texels) : float3(1);
           if(infinite) value=air_remaining(air_ray,value,sky_source);
           if(lane==0) pixels[s.pixel].radiance.xyz+=transmittance*s.contribution.xyz*value;

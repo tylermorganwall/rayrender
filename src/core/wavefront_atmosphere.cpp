@@ -238,7 +238,7 @@ bool WavefrontAtmosphere::Paths(const WFParameters &p, const uint32_t *queue, si
                      (!request.body || (medium && medium->haze && scene.transport_atmosphere->IntegrateInVolumes()));
       air.Start(origin, w, enabled);
       if (request.event == 2) {
-        point3f anchor = air.Origin(origin);
+        point3f anchor = scene.transport_atmosphere ? air.Origin(origin) : point(path.previous);
         point3f sum(0);
         for (uint32_t light = 0; light < scene.environments; ++light) {
           point3f value = data->Radiance(light, anchor, w);

@@ -32,7 +32,11 @@ R"MSL(
       (medium && media[medium].emission.w!=0 && air.haze_in_volumes));
     if(request.event==2) {
       air_start(ray,request.origin.xyz,request.direction.xyz,enabled);
-      float3 anchor=ray.direction.w ? ray.origin.xyz : request.origin.xyz;
+      // Invisible boundaries and null collisions are not lighting vertices.
+      // With finite haze disabled, querying at the last ray origin would move
+      // the observer up to a cloud's exit and change the background spectrum.
+      float3 anchor=air.haze ? (ray.direction.w ? ray.origin.xyz : request.origin.xyz)
+                             : paths[pixel].previous.xyz;
       float3 sum=0;
       for(uint j=0;j<p.environments;++j) {
         float3 value=air_light(lights[j],anchor,request.direction.xyz,air,data,textures,texels);

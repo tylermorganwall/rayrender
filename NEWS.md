@@ -179,6 +179,13 @@
 
 ## Bugfixes
 
+- `render_scene()` Preserves the sky observer position across invisible volume
+  boundaries and null collisions on Metal when finite haze is disabled. Empty
+  parts of high-altitude clouds no longer darken the sky or incident lighting.
+  Spectral shadow rays share geometry intersections across their GPU lanes.
+- `csg_object()` Measures marching steps from the bounding-box entry so small
+  objects remain intersectable from distant ray origins on CPU and Metal.
+
 - `csg_object()` Preserves later crossings on clipped rays and resolves thin
   shells with scale-aware tolerances. Successive queries no longer count the
   same grazing surface repeatedly, preventing excess diffusion brightness.

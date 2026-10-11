@@ -43,10 +43,56 @@ context("CSG boundary and sampling") {
       wrong_crossings += crossings != 2;
     }
     expect_true(wrong_crossings == 0);
+
+    // A small object viewed from tens of kilometres away still has resolvable
+    // local features. Every target lies strictly inside this capsule, so every
+    // ray must hit regardless of the sphere-tracing implementation.
+    csg distant(material, std::make_shared<csg_capsule>(point3f(-1.1, -.3, -5.6), point3f(-1.1, .4, -5.6), .3),
+                &identity, &identity, false);
+    size_t missed = 0;
+    for (int i = 0; i < 1000; ++i) {
+      Float angle = Float(i) * Float(2 * M_PI / 1000);
+      point3f target(-1.1 + .24 * std::cos(angle), -.25 + .6 * (i % 17) / 16, -5.6 + .24 * std::sin(angle));
+      point3f origin(35, 20, 56);
+      missed += !distant.hit(Ray(origin, unit_vector(target - origin)), 0, 150, hit, rng);
+    }
+    expect_true(missed == 0);
   }
 }
 #if defined(RAY_HAS_METAL_BVH)
 context("Metal CSG intersections") {
+  test_that("small distant CSG solids retain local marching precision") {
+    if (!MetalBVHAvailable())
+      return;
+    Transform identity;
+    auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
+    auto capsule = std::make_shared<csg_capsule>(point3f(-1.1, -.3, -5.6), point3f(-1.1, .4, -5.6), .3);
+    hitable_list world, lights;
+    world.add(std::make_shared<csg>(material, capsule, &identity, &identity, false));
+    camera cam({35, 20, 56}, {-1.1, .05, -5.6}, {0, 1, 0}, 30, 1, 0, 75, 0, 1, 1);
+    WavefrontScene scene;
+    WavefrontReport report;
+    auto session = PrepareWavefront(world, lights, cam, 1, 0, scene, report);
+    expect_true(bool(session));
+    if (!session)
+      return;
+    std::vector<WFGeometryProbe> probes;
+    for (int i = 0; i < 1000; ++i) {
+      Float angle = Float(i) * Float(2 * M_PI / 1000);
+      point3f target(-1.1 + .24 * std::cos(angle), -.25 + .6 * (i % 17) / 16, -5.6 + .24 * std::sin(angle));
+      point3f origin(35, 20, 56);
+      vec3f direction = unit_vector(target - origin);
+      WFGeometryProbe probe;
+      probe.origin = {35, 20, 56, 0};
+      probe.direction = {direction[0], direction[1], direction[2], 150};
+      probes.push_back(probe);
+    }
+    auto actual = ProbeMetalGeometry(scene, probes);
+    size_t missed = 0;
+    for (const auto &hit : actual)
+      missed += hit.primitive != 0x80000000u;
+    expect_true(missed == 0);
+  }
   test_that("all distance operations preserve CPU hits and normals") {
     if (!MetalBVHAvailable())
       return;

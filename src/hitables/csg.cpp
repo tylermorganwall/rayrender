@@ -104,13 +104,18 @@ inline bool march_csg(const csg &object, const Ray &r, Float t_min, Float t_max,
   }
 
   const vec3f dir = r2.direction() / ray_length;
-  Float t = t_enter * ray_length;
-  const Float max_t = t_exit * ray_length;
+  // Keep marching distances local to the bounded segment. Otherwise small
+  // valid steps at a distant object can round away in the large ray parameter.
+  point3f origin;
+  for (int axis = 0; axis < 3; ++axis)
+    origin[axis] = std::fma(t_enter, r2.d[axis], r2.o[axis]);
+  Float t = 0;
+  const Float max_t = (t_exit - t_enter) * ray_length;
   Float cut_lo = INFINITY, cut_hi = -INFINITY;
   // Convex cutters give a whole interval known to contain no resulting solid.
   // This particularly avoids tiny steps parallel to a subtracted box face.
   if (const auto *difference = dynamic_cast<const Subtract *>(object.shapes.get())) {
-    Ray normalized(r2.o, dir);
+    Ray normalized(origin, dir);
     if (const auto *box = dynamic_cast<const csg_box *>(difference->shape2.get())) {
       vec3f half = box->width / Float(2) - vec3f(2 * threshold);
       if (MinComponent(half) > 0) {
@@ -119,7 +124,7 @@ inline bool march_csg(const csg &object, const Ray &r, Float t_min, Float t_max,
           cut_lo = INFINITY;
       }
     } else if (const auto *sphere = dynamic_cast<const csg_sphere *>(difference->shape2.get())) {
-      vec3f v = r2.o - convert_to_point3(sphere->center);
+      vec3f v = origin - convert_to_point3(sphere->center);
       Float b = dot(v, dir), radius = sphere->radius - 2 * threshold;
       vec3f closest = v - b * dir;
       Float discriminant = radius * radius - closest.squared_length();
@@ -132,22 +137,26 @@ inline bool march_csg(const csg &object, const Ray &r, Float t_min, Float t_max,
   }
   // Start at the clipped interval, not the original origin. This is essential
   // for containment replay and diffusion chords that request later crossings.
-  bool departing = t_enter == t_min && std::abs(object.shapes->getDistance(r2.o + t * dir)) <= threshold;
+  bool departing = t_enter == t_min && std::abs(object.shapes->getDistance(origin)) <= threshold;
   while (t <= max_t) {
     if (t >= cut_lo && t < cut_hi) {
       t = cut_hi;
       if (t > max_t)
         return false;
     }
-    point3f from = r2.origin() + t * dir;
+    point3f from;
+    for (int axis = 0; axis < 3; ++axis)
+      from[axis] = std::fma(t, dir[axis], origin[axis]);
     Float distance = std::abs(object.shapes->getDistance(from));
     if (!std::isfinite(distance))
       return false;
     if (distance > threshold)
       departing = false;
     if (distance <= threshold && !departing) {
-      if (rec)
+      if (rec) {
         populate_hit_record(object, r2, from, t, ray_length, 2 * threshold, delta, *rec);
+        rec->t += t_enter;
+      }
       return true;
     }
     if (departing)

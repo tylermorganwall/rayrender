@@ -61,7 +61,13 @@ float csg_intersection(Quadric q, device const Quadric *quadrics, float3 origin,
   if (lower > upper)
     return INFINITY;
   auto code = csg_program(quadrics, q);
-  float epsilon = q.csg_lo.w, t = lower;
+  // March relative to the box entry, not the distant world-ray origin. At a
+  // large t, a perfectly resolvable distance step can be smaller than one ULP
+  // of t and round away. Rebasing preserves those local steps without relaxing
+  // the surface tolerance or skipping thin geometry.
+  o = fma(float3(lower), d, o);
+  upper -= lower;
+  float epsilon = q.csg_lo.w, t = 0;
   // A convex cutter in a hard difference excludes its entire interior ray
   // interval. Skip that known-empty interval instead of taking thousands of
   // tiny distance steps parallel to a box face. Shrink by two tolerances so
@@ -117,7 +123,7 @@ float csg_intersection(Quadric q, device const Quadric *quadrics, float3 origin,
     if (distance > epsilon)
       departing = false;
     if (distance <= epsilon && !departing)
-      return t;
+      return lower + t;
     // Leave the entire convergence band before accepting another hit. A
     // fixed one-step nudge counts the same grazing surface repeatedly in
     // diffusion chords and biases the reservoir toward those duplicates.
@@ -256,6 +262,24 @@ GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Qua
               float3(hit.triangle_barycentric_coord, 0)};
   }
   return result;
+}
+// A spectral shadow assigns one ray to all 32 lanes. Traverse once, then share
+// the hit before their cooperative spectral evaluation. Every lane must enter
+// this helper together when cooperative is true; ordinary shadows stay scalar.
+GeometryIntersection trace_spectral_shadow(ray r, GeometryScene scene,
+                                          device const Quadric *quadrics,
+                                          bool cooperative, uint lane, bool any_hit = false) {
+  GeometryIntersection hit = {};
+  if (!cooperative || lane == 0)
+    hit = trace_geometry(r, scene, quadrics, 0, any_hit);
+  if (cooperative) {
+    hit.type = intersection_type(simd_broadcast(uint(hit.type), 0));
+    hit.primitive_id = simd_broadcast(hit.primitive_id, 0);
+    hit.instance = simd_broadcast(hit.instance, 0);
+    hit.distance = simd_broadcast(hit.distance, 0);
+    hit.coordinates = simd_broadcast(hit.coordinates, 0);
+  }
+  return hit;
 }
 uint geometry_material(uint primitive, device const Triangle *triangles,
                        device const Quadric *quadrics) {
