@@ -360,7 +360,12 @@ void PragueInfiniteLight::ExportMetal(WFAtmosphereData &out) const {
   out.origin={float(origin[0]),float(origin[1]),float(origin[2]),float(altitude)};
   out.gain={float(gain[0]*intensity),float(gain[1]*intensity),float(gain[2]*intensity),float(meters_per_unit)};
   out.settings={float(elevation),float(azimuth),float(visibility),float(albedo)};
-  out.options={float(sun_radius),0,0,0};
+  // Share the exact float world-space solar axis and cone extent with the
+  // light sampler. Model-space angle rounding must not change PDF support.
+  Vector sun(std::cos(azimuth)*std::cos(elevation),std::sin(azimuth)*std::cos(elevation),std::sin(elevation));
+  auto world_sun=World(sun);
+  out.options={float(2*std::pow(std::sin(sun_radius/2),2)),
+               float(world_sun[0]),float(world_sun[1]),float(world_sun[2])};
   out.channels=wavelengths.size(); out.sky=include_sky; out.sun=include_sun;
   out.haze=haze; out.query_altitude=query_altitude; out.haze_filter=haze_filter; out.haze_in_volumes=haze_in_volumes;
   for(size_t i=0;i<wavelengths.size();++i) {

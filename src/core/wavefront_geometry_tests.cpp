@@ -2,12 +2,69 @@
 #include "../hitables/rectangle.h"
 #include "../hitables/curve.h"
 #include "../hitables/sphere.h"
+#include "../hitables/triangle.h"
+#include "../hitables/instance.h"
 #include "camera.h"
 #include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 
 context("Metal analytic intersections") {
+  test_that("mesh consistent normals preserve the native view-dependent frame") {
+    if (!MetalBVHAvailable()) return;
+    float vertices[] = {-2,-2,0, 2,-2,0, 0,2,0};
+    float normals[] = {-.4f,0,.916515f, .6f,0,.8f, 0,.3f,.953939f};
+    int indices[] = {0,1,2};
+    auto material = std::make_shared<glossy>(std::make_shared<constant_texture>(point3f(.7)),
+        new TrowbridgeReitzDistribution(.1,.1,nullptr,false), point3f(.06), point3f(1));
+    camera cam({0,0,4},{0,0,0},{0,1,0},30,1,0,4,0,1,1);
+    for (bool consistent : {false, true}) for (bool reversed : {false, true})
+      for (bool instanced : {false, true}) {
+      Transform transform=RotateY(23)*Scale(1.2,.7,1.5), inverse=Inverse(transform);
+      TriangleMesh mesh(vertices,indices,normals,nullptr,3,3,nullptr,nullptr,material,
+                        &transform,&inverse,reversed,consistent);
+      auto face=std::make_shared<triangle>(&mesh,mesh.vertexIndices.data(),mesh.normalIndices.data(),
+                         mesh.texIndices.data(),0,&transform,&inverse,reversed);
+      hitable_list world,lights,prototype; prototype.add(face);
+      Transform placement = instanced ? Translate(vec3f(.2,-.1,.3))*RotateX(17)*Scale(.8,1.4,.9)
+                                     : Transform();
+      std::shared_ptr<hitable> target = instanced
+          ? std::static_pointer_cast<hitable>(std::make_shared<instance>(&prototype,&placement,&lights))
+          : face;
+      world.add(target);
+      WavefrontScene scene; WavefrontReport report;
+      auto session=PrepareWavefront(world,lights,cam,1,0,scene,report);
+      expect_true(bool(session));
+      if (!session) continue;
+      std::vector<WFGeometryProbe> probes;
+      std::vector<normal3f> expected;
+      random_gen rng(19);
+      for (float side : {-1.f,1.f}) for (float x : {-.5f,0.f,.5f})
+        for (float slope : {-.8f,0.f,.8f}) {
+          vec3f direction=unit_vector(placement(transform(vec3f(slope,0,-side))));
+          point3f origin=placement(transform(point3f(x,0,0)))-direction*3;
+          hit_record hit;
+          expect_true(target->hit(Ray(origin,direction),0,10,hit,rng));
+          WFGeometryProbe probe;
+          probe.origin={float(origin[0]),float(origin[1]),float(origin[2]),0};
+          probe.direction={float(direction[0]),float(direction[1]),float(direction[2]),10};
+          probe.padding[0]=1;
+          probes.push_back(probe); expected.push_back(hit.normal);
+        }
+      auto result=ProbeMetalGeometry(scene,probes);
+      double error=0;
+      for (size_t i=0;i<result.size();++i) {
+        if (!result[i].normal.w) Rcpp::Rcout << "Normal probe miss at " << i << "\n";
+        expect_true(result[i].normal.w!=0);
+        for (int c=0;c<3;++c)
+          error=std::max(error,std::abs(double((&result[i].normal.x)[c])-expected[i][c]));
+      }
+      Rcpp::Rcout << "Consistent normal probe: enabled=" << consistent << " reversed=" << reversed
+                  << " instanced=" << instanced
+                  << " max error=" << error << "\n";
+      expect_true(error<3e-5);
+    }
+  }
   test_that("mixed traversal preserves both roots, transforms, normals, and clipped segments") {
     if (!MetalBVHAvailable())
       return;

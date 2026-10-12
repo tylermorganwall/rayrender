@@ -236,10 +236,17 @@ R"MSL(
     float u = .5f - atan2(-local.x, -local.z) / (2 * pi);
     return float2(fract(u), .5f + asin(clamp(local.y, -1.f, 1.f)) / pi);
   }
+  // A tiny solar cone loses several bits in 1-dot(w,axis). Compare its
+  // squared chord instead, and use this same predicate for solar radiance.
+  // Otherwise a bright rim sample can receive only the uniform-sky density.
+  bool solar_disk_contains(float3 wi, float3 axis, float one_minus_cosine) {
+    float3 chord = normalize(wi) - normalize(axis);
+    return dot(chord, chord) <= 2 * one_minus_cosine;
+  }
   float light_pdf(Light l, float3 wi, device const float4 *texels) {
     if (l.flags & 128)
       return (1-l.forward.w)/(4*pi) +
-             (dot(wi,l.forward.xyz) >= 1-l.right.w ? l.forward.w/(2*pi*l.right.w) : 0);
+             (solar_disk_contains(wi,l.forward.xyz,l.right.w) ? l.forward.w/(2*pi*l.right.w) : 0);
     if (l.type != 0)
       return 1 / (2 * pi * l.forward.w);
     if (l.alias_offset == UINT_MAX)
@@ -255,7 +262,15 @@ R"MSL(
       float phi = 2*pi*latitude;
       if (u < l.forward.w) {
         float d = (u / l.forward.w) * l.right.w;
-        return (1-d)*l.forward.xyz + sqrt(d*(2-d)) * (cos(phi)*l.right.xyz + sin(phi)*l.up.xyz);
+        float3 radial = cos(phi)*l.right.xyz + sin(phi)*l.up.xyz;
+        float3 direction = normalize((1-d)*l.forward.xyz + sqrt(d*(2-d)) * radial);
+        // As on CPU, move only samples rounded outside the cone inward.
+        if (!solar_disk_contains(direction,l.forward.xyz,l.right.w)) {
+          float angle = max(0.f, 2 * asin(sqrt(.5f*l.right.w)) - 4 * FLT_EPSILON);
+          d = 2 * sin(.5f*angle) * sin(.5f*angle);
+          direction = normalize((1-d)*l.forward.xyz + sqrt(d*(2-d)) * radial);
+        }
+        return direction;
       }
       u = (u - l.forward.w) / (1-l.forward.w);
       float y = 1-2*u, r = sqrt(max(0.f, 1-y*y));
@@ -1081,6 +1096,13 @@ R"MSL(
         mapped_surface = mapping.bump != UINT_MAX;
       }
       rho = texture_value(m.texture, texture_hit, textures, texels);
+      float3 feature_normal = mapped_surface ? n :
+          consistent_normal(t, surfaces[as_type<uint>(t.uv2.w)], bary, n, wo, texels);
+      // Physical diffuse/OpenPBR and sheet transmission keep their own frame.
+      // Legacy reflective BSDFs and emission use triangle::hit's normal.
+      if (!mapped_surface && (m.emissive == 1 ||
+          (m.type != 0 && m.type != bsdf_openpbr && m.type != bsdf_translucent)))
+        n = feature_normal;
       float mapped_roughness = -1;
       if (m.second_texture != UINT_MAX && m.type != bsdf_translucent) {
         float3 rough = texture_value(m.second_texture, texture_hit, textures, texels);
@@ -1262,7 +1284,7 @@ R"MSL(
         }
         if (!(path.flags & 2) && !(m.type == bsdf_metal && m.parameters.z == 0) &&
             !(m.type == bsdf_transmission && m.eta.x == 1)) {
-          pixels[pixel].normal.xyz = n;
+          pixels[pixel].normal.xyz = feature_normal;
           pixels[pixel].albedo = float4(rho, 0);
           path.flags |= 2;
         }

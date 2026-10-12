@@ -8,6 +8,46 @@
 #include <testthat.h>
 
 context("Metal image environment proposals") {
+  test_that("tiny solar-cone samples retain their solar mixture density") {
+    if (!MetalBVHAvailable()) return;
+    WavefrontScene scene;
+    WFLight light; light.flags=128;
+    double radius=.53*M_PI/360;
+    double elevation=28*M_PI/180, azimuth=100*M_PI/180;
+    vec3f sun(-std::sin(azimuth)*std::cos(elevation),std::sin(elevation),
+               std::cos(azimuth)*std::cos(elevation));
+    vec3f right=unit_vector(cross(sun,vec3f(1,0,0))), up=cross(sun,right);
+    light.forward={float(sun[0]),float(sun[1]),float(sun[2]),.5};
+    light.right={float(right[0]),float(right[1]),float(right[2]),float(2*std::pow(std::sin(radius/2),2))};
+    light.up={float(up[0]),float(up[1]),float(up[2]),0};
+    const size_t count=262144;
+    std::vector<WFEnvironmentProbe> samples(count);
+    for (size_t i=0;i<count;++i) {
+      // Concentrate on the outer 1% of the solar proposal. Cancellation in
+      // dot(w,sun) used to assign sky-only density to some of these samples.
+      double u=.5*(.99+.01*(i+.5)/count);
+      // Keep the float variate strictly inside the solar mixture branch:
+      // integer-to-float conversion can otherwise round the last value to .5.
+      samples[i]={std::min(uint32_t(u*4294967296.),uint32_t(0x7fffff80)),
+                  float(((i*7919)%count+.5)/count),{}};
+    }
+    auto result=ProbeMetalEnvironment(scene,light,samples);
+    double expected=.5/(4*M_PI)+.5/(2*M_PI*light.right.w), error=0;
+    size_t lost=0;
+    for (auto value : result) {
+      lost+=value.w<expected*.5;
+      error=std::max(error,std::abs(value.w/expected-1));
+    }
+    Rcpp::Rcout << "Solar rim samples assigned sky-only PDF: " << lost << "/" << count << "\n";
+    expect_true(lost==0);
+    expect_true(error<2e-6);
+    for (auto &sample : samples) sample.padding[0]=1;
+    auto old=ProbeMetalEnvironment(scene,light,samples);
+    size_t old_lost=0;
+    for (auto value : old) old_lost+=value.w<expected*.5;
+    Rcpp::Rcout << "Old dot-product solar PDF loses " << old_lost << " rim samples\n";
+    expect_true(old_lost>0);
+  }
   test_that("finite light BVH sampling and emitter-hit probabilities agree") {
     if (!MetalBVHAvailable()) return;
     Transform identity;

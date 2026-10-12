@@ -69,7 +69,8 @@ R"MSL(
                       bool include_sun = true) {
     float3 position=air_position(origin,a,true),direction=air_direction(w,a),rgb=0;
     auto p=air_parameters(position,direction,a);
-    bool sun=include_sun && a.sun && p.gamma<=a.options.x && !air_occluded(position,direction,INFINITY);
+    bool sun=include_sun && a.sun && solar_disk_contains(w,a.options.yzw,a.options.x) &&
+             !air_occluded(position,direction,INFINITY);
     AirSpectrumQuery sky={};if(a.sky) sky=air_prepare_sky(position,direction,true,a,data);
     skymodelr_gpu::TransQuery transmission={};
     if(sun) transmission=skymodelr_gpu::prepare_transmission(p,INFINITY,a.model,data);

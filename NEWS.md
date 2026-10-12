@@ -199,6 +199,11 @@
 
 ## Bugfixes
 
+- `render_scene()` Applies consistent mesh normals on Metal to match CPU glossy
+  and metallic shading, including nonuniform mesh placements. Prague sunlight
+  uses matching disk support for radiance and sampling density, preventing bright
+  outliers and distorted denoised images near the solar disk's edge.
+
 - `render_scene()` Preserves the sky observer position across invisible volume
   boundaries and null collisions on Metal when finite haze is disabled. Empty
   parts of high-altitude clouds no longer darken the sky or incident lighting.

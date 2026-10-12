@@ -41,6 +41,11 @@ R"MSL(
                                 uint i [[thread_position_in_grid]]) {
     float3 direction = sample_environment(light, inputs[i].bits, inputs[i].latitude, texels);
     outputs[i] = float4(direction, light_pdf(light, direction, texels));
+    // Development-only reproduction of the old cancellation-prone solar PDF.
+    if (inputs[i].padding[0] && (light.flags & 128))
+      outputs[i].w = (1-light.forward.w)/(4*pi) +
+          (dot(direction,light.forward.xyz) >= 1-light.right.w ?
+           light.forward.w/(2*pi*light.right.w) : 0);
   }
   struct TextureProbe {
     float4 uv, position, object_position, normal, object_normal, footprint;
@@ -110,6 +115,7 @@ R"MSL(
   kernel void probe_geometry(device const Triangle *triangles [[buffer(0)]],
                              device const GeometryProbe *input [[buffer(1)]],
                              device GeometryResult *output [[buffer(2)]],
+                             device const float4 *texels [[buffer(3)]],
                              primitive_acceleration_structure triangle_scene [[buffer(16)]],
                              intersection_function_table<triangle_data> functions [[buffer(25)]],
                              device const Surface *surfaces [[buffer(26)]],
@@ -141,6 +147,9 @@ R"MSL(
       result.point = float4(surface.position, hit.distance);
       result.normal = float4(surface.normal, 1);
       float3 bary = float3(1 - hit.coordinates.x - hit.coordinates.y, hit.coordinates.xy);
+      if (p.padding[0])
+        result.normal.xyz = consistent_normal(surface.face,
+            surfaces[as_type<uint>(surface.face.uv2.w)], bary, surface.normal, -r.direction, texels);
       result.uv.xy = surface_context(surface.face, bary, surface.position, surfaces).uv;
       result.primitive = hit.primitive_id;
       result.material = surface.face.material;

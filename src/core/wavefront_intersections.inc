@@ -306,6 +306,35 @@ struct GeometrySurface {
   Triangle face; // Native triangle/curve attributes, or analytic material/chart metadata.
   float3 position, error, normal, tangent, coordinates;
 };
+// Match triangle::hit's view-dependent consistent normal. This is the legacy
+// material/denoising frame, distinct from the physical normal used by diffuse,
+// OpenPBR and bump mapping. Cone angles belong to the native mesh frame, before
+// instance or animation transforms; perform the correction in that same frame.
+float3 consistent_normal(Triangle face, Surface mapping, float3 bary, float3 normal,
+                          float3 view, device const float4 *data) {
+  if (!(face.flags & 128)) return normal;
+  if (mapping.bump_transformed) {
+    normal = normalize(mapping.bump_forward[0].xyz * normal.x +
+                       mapping.bump_forward[1].xyz * normal.y +
+                       mapping.bump_forward[2].xyz * normal.z);
+    view = normalize(float3(dot(mapping.bump_inverse[0].xyz, view),
+                             dot(mapping.bump_inverse[1].xyz, view),
+                             dot(mapping.bump_inverse[2].xyz, view)));
+  }
+  if (dot(normal, view) < 0) view = -view;
+  float angle = dot(bary, data[as_type<uint>(face.geometric.w)].xyz);
+  float cosine = dot(view, normal);
+  float q = (1 - 2 / pi * angle) * (1 - 2 / pi * angle) /
+            (1 + 2 * (1 - 2 / pi) * angle);
+  float g = 1 + q * (cosine - 1);
+  float rho = sqrt(q * (1 + g) / (1 + cosine));
+  normal = normalize((1 - rho) * view + (g + rho * cosine) * normal);
+  if (mapping.bump_transformed)
+    normal = normalize(mapping.bump_inverse[0].xyz * normal.x +
+                       mapping.bump_inverse[1].xyz * normal.y +
+                       mapping.bump_inverse[2].xyz * normal.z);
+  return normal;
+}
 GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                                  device const Triangle *triangles, device const Quadric *quadrics,
                                  device const Surface *surfaces, uint instance,

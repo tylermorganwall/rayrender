@@ -708,7 +708,8 @@ public:
 #ifdef NOT_CRAN
   std::vector<WFGeometryResult> Probe(const std::vector<WFGeometryProbe> &input) {
     auto pipeline = kernels.Compile(@"probe_geometry");
-    RegisterIntersections(pipeline);
+    if (kernels.boundary_support || kernels.mixed_support)
+      RegisterIntersections(pipeline);
     auto probes = Upload(input);
     auto results = Buffer(input.size() * sizeof(WFGeometryResult));
     auto command = [queue commandBuffer];
@@ -718,6 +719,7 @@ public:
     [encoder setBuffer:buffers[0] offset:0 atIndex:0];
     [encoder setBuffer:probes offset:0 atIndex:1];
     [encoder setBuffer:results offset:0 atIndex:2];
+    [encoder setBuffer:buffers[3] offset:0 atIndex:3];
     // TLAS references do not make their BLAS resources resident automatically.
     // Declare every indirect child for each encoder, including after preview
     // edits or denoising has submitted work on another command queue.
@@ -727,8 +729,9 @@ public:
     [encoder setAccelerationStructure:acceleration atBufferIndex:16];
     if (kernels.mixed_support)
       [encoder setAccelerationStructure:mixed_acceleration atBufferIndex:29];
-    [encoder setIntersectionFunctionTable:intersection_tables.back().second
-                            atBufferIndex:kernels.mixed_support ? 30 : 25];
+    if (kernels.boundary_support || kernels.mixed_support)
+      [encoder setIntersectionFunctionTable:intersection_tables.back().second
+                              atBufferIndex:kernels.mixed_support ? 30 : 25];
     [encoder setBuffer:buffers[26] offset:0 atIndex:26];
     [encoder setBuffer:buffers[28] offset:0 atIndex:28];
     [encoder dispatchThreads:MTLSizeMake(input.size(), 1, 1)

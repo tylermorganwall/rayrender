@@ -64,6 +64,8 @@ public:
       bool smooth = mesh.has_normals && tri->n;
       for (int k = 0; k < 3 && smooth; ++k)
         smooth = tri->n[k] >= 0 && tri->n[k] < mesh.nNormals;
+      const bool placed = !placement.IsIdentity();
+      const auto &normal_matrix = placement.GetInverseMatrix();
       for (int k = 0; k < 3; ++k) {
         output.p[k] = Pack(placement(mesh.p[tri->v[k]]));
         normal3f n = geometric;
@@ -72,7 +74,18 @@ public:
           if (tri->reverseOrientation)
             n = -n;
         }
-        output.n[k] = Pack(placement(n));
+        if (placed) {
+          // CPU instances transform the interpolated normal. Preserve lengths
+          // here so nonuniform scaling commutes with interpolation; normalizing
+          // each transformed vertex separately changes the shading direction.
+          normal3f transformed;
+          for (int axis = 0; axis < 3; ++axis)
+            transformed[axis] = normal_matrix.m[0][axis] * n[0] +
+                                normal_matrix.m[1][axis] * n[1] +
+                                normal_matrix.m[2][axis] * n[2];
+          output.n[k] = Pack(transformed);
+        } else
+          output.n[k] = Pack(placement(n));
       }
       point2f uv[3];
       tri->GetUVs(uv);
@@ -95,6 +108,16 @@ public:
       output.flags |= 64; // A native mesh has face-local Ptex coordinates.
       if (smooth)
         output.flags |= 8;
+      if (smooth && mesh.has_consistent_normals) {
+        // Keep the triangle ABI unchanged: the spare geometric lane addresses
+        // the three native normal-cone angles in the shared float4 data buffer.
+        uint32_t normal_data = scene.texels.size();
+        scene.texels.push_back({float(mesh.alpha_v[tri->n[0]]),
+                                float(mesh.alpha_v[tri->n[1]]),
+                                float(mesh.alpha_v[tri->n[2]]), 0});
+        std::memcpy(&output.geometric.w, &normal_data, sizeof(normal_data));
+        output.flags |= 128;
+      }
       output.material = Material(mesh.mesh_materials[material_id].get());
       SetSurface(output, MeshSurface(*tri, material_id, placement));
       AddTriangle(output);
@@ -355,7 +378,7 @@ public:
         out.forward = Pack(sun);
         out.forward.w = sky->sun_fraction;
         out.right = Pack(right);
-        out.right.w = 1 - std::cos(sky->sun_radius);
+        out.right.w = 2 * std::pow(std::sin(sky->sun_radius / 2), 2);
         out.up = Pack(cross(sun, right));
       }
     }
