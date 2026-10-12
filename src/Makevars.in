@@ -21,6 +21,8 @@ $(SHLIB): $(OBJECTS)
 # An incremental install must not mix old sampler/light vtables with new ones.
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): core/wavefront.h
+# Per-hit closures change scatter_record layout across material/integrator calls.
+$(CPP_OBJECTS): materials/material.h materials/normalmap.h math/pdf.h
 
 core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@

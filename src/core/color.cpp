@@ -121,7 +121,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
           break;
         }
 
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
+        throughput *= (srec.distribution ? srec.distribution->Evaluate(r2.direction()) : hrec.mat_ptr->f(r1, hrec, r2.direction())) / pdf_val;
 
       } else {
         color = final_color;
@@ -255,7 +255,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
           break;
         }
 
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
+        throughput *= (srec.distribution ? srec.distribution->Evaluate(r2.direction()) : hrec.mat_ptr->f(r1, hrec, r2.direction())) / pdf_val;
       } else {
         color = final_color;
         return;

@@ -4,7 +4,8 @@
 namespace {
 normalmap::Vector vector(const vec3f& v) { return {v[0],v[1],v[2]}; }
 normalmap::Vector vector(const normal3f& v) { return {v[0],v[1],v[2]}; }
-normalmap::Model interaction(const Ray& ray, const hit_record& h) {
+}
+normalmap::Model NormalMapInteraction(const Ray& ray, const hit_record& h) {
   const normal3f base = h.base_shading_normal.squared_length() > 0
       ? h.base_shading_normal : h.geometric_normal;
   const auto outgoing = -vector(ray.direction());
@@ -21,22 +22,46 @@ normalmap::Model interaction(const Ray& ray, const hit_record& h) {
   // using a triangle's flat normal here makes triangulation visible in lighting.
   return normalmap::Model(vector(base), vector(shading), outgoing);
 }
-class normalmap_pdf final : public pdf {
+namespace {
+class normalmap_pdf final : public ScatteringDistribution {
 public:
-  normalmap_pdf(normalmap::Model model, const Ray& ray, const hit_record& h)
-      : model(std::move(model)), boundary(dot(h.geometric_normal, ray.direction()) > 0
-                                         ? -h.geometric_normal : h.geometric_normal) {}
+  template<class Next>
+  normalmap_pdf(normalmap::Model model, const Ray& ray, const hit_record& h,
+                normalmap::DiffuseChild child, point3f color, Next next)
+      : scattering(std::move(model)), boundary(dot(h.geometric_normal, ray.direction()) > 0
+                                         ? -h.geometric_normal : h.geometric_normal),
+        child(child), color(color) {
+    scattering.Prepare([&](const normalmap::Vector& view, const normalmap::Vector& normal) {
+      const double u = next(), v = next();
+      const auto wi = ChildSample(normal, u, v);
+      point3f weight;
+      for (int c=0; c<3; ++c) weight[c] = child.eval(view, wi, normal, color[c]) / normalmap::inv_pi;
+      return normalmap::Scattering::ChildSample{wi, weight};
+    });
+  }
+  point3f Evaluate(const vec3f& d) const override {
+    if (dot(boundary, d) <= 0) return point3f(0);
+    return scattering.Evaluate(normalmap::normalized(vector(d)),
+        [&](const normalmap::Vector& view, const normalmap::Vector& wi, const normalmap::Vector& normal) {
+          point3f value;
+          for (int c=0; c<3; ++c)
+            value[c] = child.eval(view, wi, normal, color[c]) * std::max(0.0, dot(normal, wi));
+          return value;
+        });
+  }
   Float value(const vec3f& d, random_gen&, Float) override {
-    return dot(boundary, d) > 0 ? model.pdf(vector(d)) : 0;
+    return Value(d);
   }
   Float value(const vec3f& d, Sampler*, Float) override {
-    return dot(boundary, d) > 0 ? model.pdf(vector(d)) : 0;
+    return Value(d);
   }
   vec3f generate(random_gen& rng, bool& diffuse, Float) override {
     const double u = rng.unif_rand(), v = rng.unif_rand();
     const double facet = rng.unif_rand(), escape = rng.unif_rand();
     diffuse = true;
-    auto d = model.sample(u,v,facet,escape);
+    auto d = scattering.Sample(facet, escape, [&](const normalmap::Vector&, const normalmap::Vector& n) {
+      return ChildSample(n, u, v);
+    });
     const vec3f direction(d[0],d[1],d[2]);
     return dot(boundary, direction) > 0 ? direction : vec3f(0);
   }
@@ -44,15 +69,33 @@ public:
     auto uv = sampler->Get2D();
     const double facet = sampler->Get1D(), escape = sampler->Get1D();
     diffuse = true;
-    auto d = model.sample(uv[0],uv[1],facet,escape);
+    auto d = scattering.Sample(facet, escape, [&](const normalmap::Vector&, const normalmap::Vector& n) {
+      return ChildSample(n, uv[0], uv[1]);
+    });
     const vec3f direction(d[0],d[1],d[2]);
     return dot(boundary, direction) > 0 ? direction : vec3f(0);
   }
 private:
-  const normalmap::Model model;
+  static normalmap::Vector ChildSample(const normalmap::Vector& n, double u, double v) {
+    onb basis;
+    basis.build_from_w_normalized(normal3f(n[0],n[1],n[2]));
+    const double radius = std::sqrt(u), phi = 2*M_PI*v;
+    return vector(basis.local(vec3f(radius*std::cos(phi), radius*std::sin(phi),
+                                   std::sqrt(std::max(0.0,1-u)))));
+  }
+  Float Value(const vec3f& d) const {
+    if (dot(boundary, d) <= 0) return 0;
+    return scattering.Pdf(normalmap::normalized(vector(d)),
+        [](const normalmap::Vector&, const normalmap::Vector& wi, const normalmap::Vector& n) {
+          return std::max(0.0, dot(n, wi)) * normalmap::inv_pi;
+        });
+  }
+  normalmap::Scattering scattering;
   // Geometric clipping adds null events, without resampling or renormalizing
   // the PDF. This preserves the energy bound and prevents wrong-side reflection.
   const normal3f boundary;
+  const normalmap::DiffuseChild child;
+  const point3f color;
 };
 }
 
@@ -66,7 +109,7 @@ point3f diffuse_material::get_albedo(const hit_record& h) const {
 point3f diffuse_material::f(const Ray& ray, const hit_record& h, const vec3f& direction) const {
   if (dot(h.geometric_normal, ray.direction()) * dot(h.geometric_normal, direction) >= 0)
     return point3f(0);
-  auto model = interaction(ray,h);
+  auto model = NormalMapInteraction(ray,h);
   auto wi = normalmap::normalized(vector(direction));
   const double cosine = std::max(0.0,dot(model.geometric(),wi));
   point3f result = get_albedo(h);
@@ -74,20 +117,26 @@ point3f diffuse_material::f(const Ray& ray, const hit_record& h, const vec3f& di
     result[channel] = model.eval_raw(wi,child,result[channel])*cosine;
   return result;
 }
-bool diffuse_material::scatter(const Ray& ray, const hit_record& h, scatter_record& s, random_gen&) {
-  auto model = interaction(ray,h);
+bool diffuse_material::scatter(const Ray& ray, const hit_record& h, scatter_record& s, random_gen& rng) {
+  auto model = NormalMapInteraction(ray,h);
   if (!model.is_valid()) return false;
   s.is_specular = false;
   s.attenuation = get_albedo(h);
-  s.pdf_ptr = new normalmap_pdf(std::move(model), ray, h);
+  auto closure = new normalmap_pdf(std::move(model), ray, h, child, s.attenuation,
+                                 [&] { return rng.unif_rand(); });
+  s.pdf_ptr = closure;
+  s.distribution = closure;
   return true;
 }
-bool diffuse_material::scatter(const Ray& ray, const hit_record& h, scatter_record& s, Sampler*) {
-  auto model = interaction(ray,h);
+bool diffuse_material::scatter(const Ray& ray, const hit_record& h, scatter_record& s, Sampler* sampler) {
+  auto model = NormalMapInteraction(ray,h);
   if (!model.is_valid()) return false;
   s.is_specular = false;
   s.attenuation = get_albedo(h);
-  s.pdf_ptr = new normalmap_pdf(std::move(model), ray, h);
+  auto closure = new normalmap_pdf(std::move(model), ray, h, child, s.attenuation,
+                                 [&] { return sampler->Get1D(); });
+  s.pdf_ptr = closure;
+  s.distribution = closure;
   return true;
 }
 

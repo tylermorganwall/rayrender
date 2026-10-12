@@ -1005,6 +1005,8 @@ R"MSL(
     SurfaceBsdf bsdf = {};
     SurfaceDerivatives derivatives = {};
     MappedDiffuse mapped;
+    MappedScattering mapped_scattering;
+    bool use_mapped_scattering = false;
     float3 base_normal = 0;
     bool mapped_surface = false;
     PbrState pbr;
@@ -1098,10 +1100,11 @@ R"MSL(
       rho = texture_value(m.texture, texture_hit, textures, texels);
       float3 feature_normal = mapped_surface ? n :
           consistent_normal(t, surfaces[as_type<uint>(t.uv2.w)], bary, n, wo, texels);
-      // Physical diffuse/OpenPBR and sheet transmission keep their own frame.
+      // Physical diffuse/glossy/OpenPBR and sheet transmission keep their own frame.
       // Legacy reflective BSDFs and emission use triangle::hit's normal.
       if (!mapped_surface && (m.emissive == 1 ||
-          (m.type != 0 && m.type != bsdf_openpbr && m.type != bsdf_translucent)))
+          (m.type != 0 && m.type != bsdf_openpbr && m.type != bsdf_translucent &&
+           m.type != bsdf_glossy)))
         n = feature_normal;
       float mapped_roughness = -1;
       if (m.second_texture != UINT_MAX && m.type != bsdf_translucent) {
@@ -1252,7 +1255,7 @@ R"MSL(
         ++path.depth;
         rho = select(float3(0), clamp(rho, 0.f, 1.f), isfinite(rho));
         extended = (features == 1 || features == 3) && m.type != 0;
-        if (!extended && dot(g, wo) * dot(base_normal, wo) <= 0)
+        if ((!extended || m.type == bsdf_glossy) && dot(g, wo) * dot(base_normal, wo) <= 0)
           return;
         if (!extended && dot(g, wo) < 0) {
           g = -g;
@@ -1260,6 +1263,8 @@ R"MSL(
         }
         if ((texture_features & 4) && !extended)
           mapped = mapped_diffuse(dot(base_normal, wo) < 0 ? -base_normal : base_normal, n, wo);
+        if (m.type == bsdf_glossy)
+          mapped = mapped_diffuse(base_normal, n, wo);
         if (extended) {
           bsdf.material = m;
           bsdf.frame = normal_frame(m.type == bsdf_translucent ? g : n);
@@ -1289,6 +1294,16 @@ R"MSL(
           path.flags |= 2;
         }
       }
+    }
+    use_mapped_scattering = !volume && !interface && features != 2 && features != 4 &&
+        ((extended && m.type == bsdf_glossy) || (!extended && (texture_features & 4)));
+    if (use_mapped_scattering) {
+      if (!extended) {
+        bsdf.material = m;
+        bsdf.rho = rho;
+      }
+      uint seed = sample_bits(pixel, dim, p, directions, blue);
+      prepare_mapped_scattering(mapped_scattering, mapped, bsdf, seed);
     }
     // One light proposal per vertex. Each emitter has its own competing BSDF
     // technique; evaluating emission individually on a miss avoids mixture bias.
@@ -1381,8 +1396,11 @@ R"MSL(
       BsdfValue mapped_value = {0, 0};
       if ((texture_features & 4) && !volume && !interface && !extended && features != 2 &&
           features != 4)
-        mapped_value = mapped_eval(mapped, wi, rho, m);
+        mapped_value = mapped_scattering_eval(mapped_scattering, mapped, bsdf, wi);
       BsdfValue surface = extended ? surface_eval(bsdf, wi) : BsdfValue{0, 0};
+      if (extended && m.type == bsdf_glossy)
+        surface = dot(g, wo) * dot(g, wi) > 0 ? mapped_scattering_eval(mapped_scattering, mapped, bsdf, wi)
+                                             : BsdfValue{0, 0};
       if (features == 2)
         surface = pbr_eval(pbr, wi);
       if (features == 4)
@@ -1503,11 +1521,15 @@ R"MSL(
         path.flags |= 2;
       }
     } else if (extended) {
-      BsdfSample sample =
-          surface_sample(bsdf, float4(branch, u, v, sample1(pixel, dim, p, directions, blue)));
+      float4 uniforms = float4(branch, u, v, sample1(pixel, dim, p, directions, blue));
+      BsdfSample sample = m.type == bsdf_glossy ? mapped_scattering_sample(mapped_scattering, mapped, bsdf,
+          uniforms.x, uniforms.w, float3(sample1(pixel, dim, p, directions, blue), uniforms.yz))
+                                               : surface_sample(bsdf, uniforms);
       if (!(sample.pdf > 0) || !all(isfinite(sample.weight)))
         return;
       wi = sample.direction;
+      if (m.type == bsdf_glossy && dot(g, wo) * dot(g, wi) <= 0)
+        return;
       pdf = sample.pdf;
       path.beta.xyz *= sample.weight;
       path.beta.w *= sample.eta_squared;
@@ -1517,12 +1539,12 @@ R"MSL(
       if (texture_features & 4) {
         float facet = sample1(pixel, dim, p, directions, blue),
               escape = sample1(pixel, dim, p, directions, blue);
-        wi = mapped_sample(mapped, float2(u, v), facet, escape);
-        BsdfValue value = mapped_eval(mapped, wi, rho, m);
-        pdf = value.pdf;
-        if (dot(g, wi) <= 0 || pdf <= 0)
-          return;
-        path.beta.xyz *= value.value / pdf;
+        BsdfSample sample = mapped_scattering_sample(mapped_scattering, mapped, bsdf,
+                                                       facet, escape, float3(0, u, v));
+        wi = sample.direction;
+        pdf = sample.pdf;
+        if (dot(g, wi) <= 0 || pdf <= 0) return;
+        path.beta.xyz *= sample.weight;
       } else {
         wi = basis_direction(n, float2(u, v));
         pdf = dot(wi, n) / pi;

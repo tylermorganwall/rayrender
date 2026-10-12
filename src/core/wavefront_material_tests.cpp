@@ -109,6 +109,12 @@ context("Metal material evaluation") {
       if (!session)
         continue;
       std::vector<WFBsdfProbe> probes;
+      // Steep bump maps and secondary rays can see the back of the glossy
+      // shading frame even when the original camera sees the mesh exterior.
+      const std::vector<float> view_sides = dynamic_cast<const glossy *>(model.get())
+                                              ? std::vector<float>{-1.f, 1.f}
+                                              : std::vector<float>{1.f};
+      for (float side : view_sides)
       for (float view_sine : {0.f, .4f, .85f})
         for (float cosine : {-.8f, -.2f, .2f, .8f})
           for (float phi : {0.f, 1.1f, 2.8f}) {
@@ -116,7 +122,7 @@ context("Metal material evaluation") {
             probe.material = scene.materials[0];
             probe.rho = {.3, .5, .7, 0};
             probe.transmission = {.4, .3, .2, 0};
-            probe.view = {view_sine, 0, std::sqrt(1 - view_sine * view_sine), 0};
+            probe.view = {view_sine, 0, side * std::sqrt(1 - view_sine * view_sine), 0};
             probe.direction = {std::sqrt(1 - cosine * cosine) * std::cos(phi),
                                std::sqrt(1 - cosine * cosine) * std::sin(phi), cosine, 0};
             probe.context = {.7, .37, 1.2, 0};
@@ -124,6 +130,13 @@ context("Metal material evaluation") {
                             .79f};
             probes.push_back(probe);
           }
+      if (dynamic_cast<const glossy *>(model.get())) {
+        const auto smooth = probes;
+        for (float tilt : {.2f, .8f, 1.3f}) for (auto probe : smooth) {
+          probe.context = {std::sin(tilt), 0, std::cos(tilt), 1};
+          probes.push_back(probe);
+        }
+      }
       auto results = ProbeMetalMaterials(probes, scene.material_data);
       float eval_error = 0, pdf_error = 0, weight_error = 0;
       random_gen rng(17);
@@ -137,6 +150,12 @@ context("Metal material evaluation") {
         hit.dpdu = vec3f(1, 0, 0);
         hit.dpdv = vec3f(0, 1, 0);
         hit.has_bump = false;
+        if (dynamic_cast<const glossy *>(model.get()) && p.context.w > 0) {
+          hit.base_shading_normal = hit.normal;
+          hit.bump_normal = hit.physical_shading_normal =
+              normal3f(p.context.x, p.context.y, p.context.z);
+          hit.has_bump = true;
+        }
         hit.u = .3;
         hit.v = (p.context.y + 1) / 2;
         hit.mat_ptr = model.get();
@@ -170,6 +189,29 @@ context("Metal material evaluation") {
             sampled_value = model->f(ray, hit, sampled);
             sampled_pdf = scattering.pdf_ptr->value(sampled, rng);
           }
+        }
+        if (dynamic_cast<const glossy *>(model.get()) && hit.has_bump) {
+          // This probe deliberately retains the analytic two-hit reference.
+          // Production scatter() now prepares a stochastic order-16 closure;
+          // its conditional PDF is tested separately, not equated to this one.
+          std::unique_ptr<MicrofacetDistribution> dist(p.material.distribution
+              ? static_cast<MicrofacetDistribution*>(new BeckmannDistribution(.2,.35,nullptr,false))
+              : new TrowbridgeReitzDistribution(.2,.35,nullptr,false));
+          const auto reference = NormalMapInteraction(ray, hit);
+          auto reference_pdf = [&](const vec3f& direction) {
+            if (dot(hit.geometric_normal, direction)*dot(hit.geometric_normal, view)<=0)
+              return 0.0;
+            return reference.pdf(normalmap::Vector(direction[0],direction[1],direction[2]),
+                [&](const normalmap::Vector& wo, const normalmap::Vector& wi,
+                    const normalmap::Vector& n) {
+                  if (dot(n,wo)<=0 || dot(n,wi)<=0) return Float(0);
+                  glossy_pdf child(normal3f(n[0],n[1],n[2]),
+                                   -vec3f(wo[0],wo[1],wo[2]),dist.get(),0,0);
+                  return child.Value(vec3f(wi[0],wi[1],wi[2]));
+                });
+          };
+          pdf = reference_pdf(wi);
+          if (r.direction.w > 0) sampled_pdf = reference_pdf(sampled);
         }
         const float channels[] = {r.evaluated.x, r.evaluated.y, r.evaluated.z};
         const float weights[] = {r.weight.x, r.weight.y, r.weight.z};

@@ -58,6 +58,7 @@ struct scatter_record {
   Float eta = 1; // transmitted IOR / incident IOR; NEE uses radiance transport
   point3f attenuation;
   pdf *pdf_ptr = nullptr;
+  const ScatteringDistribution *distribution = nullptr; // Non-owning alias of pdf_ptr.
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
 };
 
@@ -119,8 +120,10 @@ private:
   std::shared_ptr<texture> albedo;
   normalmap::DiffuseChild child;
 };
-// Metric bump input for diffuse analytic primitives.
+// Metric bump input for analytic primitives, with a physical frame for materials
+// that use projected-area normal mapping.
 void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump, const Ray& ray);
+normalmap::Model NormalMapInteraction(const Ray& ray, const hit_record& hit);
 
 // A thin sheet with independent Lambertian reflection and transmission lobes.
 // It has no refractive interior and uses geometric normals on both sides.
@@ -310,19 +313,23 @@ public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          point3f Rs, point3f Rd2)
     : albedo(a), distribution(distribution), Rs(Rs), Rd(Rd2) {}
-  ~glossy() {
+  ~glossy() override {
     if(distribution) delete distribution;
   }
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
+  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) override;
+  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) override;
+  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const override;
   point3f SchlickFresnel(Float cosTheta) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
+  point3f get_albedo(const hit_record& rec) const override;
+  bool physical_normal_mapping() const override { return true; }
+  size_t GetSize() override;
+  const std::string GetName() override {
     return(std::string("glossy"));
   };
   
+  // Raw primary-facet BRDF, shared with the per-hit normal-map closure.
+  point3f Evaluate(const normalmap::Vector& view, const normalmap::Vector& incoming,
+                  const normalmap::Vector& normal, point3f color, point2f alphas) const;
 private:
   std::shared_ptr<texture>  albedo;
   MicrofacetDistribution *distribution;

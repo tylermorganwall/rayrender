@@ -21,6 +21,15 @@ public:
   virtual ~pdf(){};
 };
 
+// A per-hit scattering closure can contain sampled internal microgeometry.
+// Evaluation and its proposal must share that state for conditional MIS to be
+// valid. Ownership remains with scatter_record::pdf_ptr.
+class ScatteringDistribution : public pdf {
+public:
+  // Projected BSDF (f times the surface cosine), matching material::f.
+  virtual point3f Evaluate(const vec3f& direction) const = 0;
+};
+
 class cosine_pdf : public pdf {
 public:
   cosine_pdf(const normal3f& w) {
@@ -82,6 +91,8 @@ public:
   virtual Float value(const vec3f& direction, Sampler* sampler, Float time = 0);
   virtual vec3f generate(random_gen& rng, bool& diffuse_bounce, Float time = 0);
   virtual vec3f generate(Sampler* sampler, bool& diffuse_bounce, Float time = 0);
+  Float Value(const vec3f& direction) const;
+  vec3f Generate(Float u, Float v, Float branch, bool& diffuse_bounce) const;
   onb uvw;
   vec3f wi;
   MicrofacetDistribution *distribution;

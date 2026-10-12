@@ -301,3 +301,104 @@ test_that('Metal bump heights scale with nonuniform and mirrored instances', {
     ))
   expect_wavefront_texture(scene, .02, ambient_light = FALSE)
 })
+
+test_that('Glossy height ramps conserve energy and affect both renderers', {
+  height_file = tempfile(fileext = '.png')
+  on.exit(unlink(height_file))
+  png::writePNG(
+    matrix(rep(seq(0, 1, length.out = 128), each = 128), 128),
+    height_file
+  )
+  means = matrix(0, 2, 2)
+  for (bumped in c(FALSE, TRUE)) {
+    scene = xy_rect(
+      xwidth = 4,
+      ywidth = 4,
+      material = glossy(
+        color = 'white',
+        gloss = .55,
+        reflectance = .035,
+        bump_texture = if (bumped) height_file else '',
+        bump_intensity = 4
+      )
+    )
+    for (backend in c('nee', 'metal')) {
+      set.seed(373)
+      img = render_scene(
+        scene,
+        integrator_type = backend,
+        width = 16,
+        height = 16,
+        samples = 256,
+        lookfrom = c(3, 0, 1),
+        lookat = c(0, 0, 0),
+        fov = 0,
+        ortho_dimensions = c(.2, .2),
+        max_depth = 2,
+        ambient_light = TRUE,
+        backgroundlow = 'white',
+        backgroundhigh = 'white',
+        tonemap = 'raw',
+        bloom = FALSE,
+        denoise = FALSE,
+        min_variance = 0,
+        preview = FALSE,
+        plot_scene = FALSE,
+        progress = FALSE
+      )
+      if (backend == 'metal' && !isTRUE(attr(img, 'wavefront')$used)) {
+        skip('Metal ray tracing is unavailable')
+      }
+      expect_true(all(is.finite(img)))
+      response = mean(img[,, 1:3])
+      expect_gt(response, 0)
+      expect_lt(response, 1.01)
+      means[
+        as.integer(bumped) + 1,
+        match(backend, c('nee', 'metal'))
+      ] = response
+    }
+  }
+  expect_lt(max(abs(means[, 1] - means[, 2])), .025)
+  # Glossy directional albedo can increase when the bump changes the local view.
+  # The furnace bound and CPU/Metal agreement above test conservation.
+  expect_gt(min(means[2, ]), .1)
+})
+
+test_that('Order-16 bump closures retain point and spot lighting', {
+  height = matrix(rep(seq(0, 1, length.out = 64), each = 64), 64)
+  # Use the lemon roughness: a near-mirror point highlight is undersampled at 32 px.
+  for (make_material in list(diffuse, function(...) glossy(..., gloss = .55))) {
+    scene = xy_rect(
+      xwidth = 4,
+      ywidth = 4,
+      material = make_material(
+        'white',
+        bump_texture = height,
+        bump_intensity = .6
+      )
+    ) |>
+      add_light(point_light(c(-1, 1, 3), intensity = 40)) |>
+      add_light(spot_light(
+        c(1, 1, 3),
+        direction = c(-1, -1, -3),
+        intensity = 40
+      ))
+    images = lapply(c('nee', 'metal'), function(backend) {
+      render_wavefront_texture(
+        scene,
+        backend,
+        samples = 256L,
+        ambient_light = FALSE,
+        tonemap = 'raw'
+      )
+    })
+    if (!isTRUE(attr(images[[2]], 'wavefront')$used)) {
+      skip('Metal ray tracing is unavailable')
+    }
+    means = vapply(images, function(image) mean(image[,, 1:3]), numeric(1))
+    expect_true(all(is.finite(means)))
+    expect_gt(min(means), .01)
+    expect_lt(abs(diff(means)) / mean(means), .04)
+  }
+})

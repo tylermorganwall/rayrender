@@ -164,54 +164,57 @@ Float glossy_pdf::value(const vec3f& direction, random_gen& rng, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("GlossyPDF Value");
   
-  vec3f wo = unit_vector(uvw.world_to_local(direction));
-  if(!SameHemisphere(wo,wi)) {
-    return(0);
-  }
-  vec3f wh = unit_vector(wi + wo);
-  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, alphas) / (4 * dot(wo, wh))));
+  return Value(direction);
 }
 
 Float glossy_pdf::value(const vec3f& direction, Sampler* sampler, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("GlossyPDF Value");
   
-  vec3f wo = unit_vector(uvw.world_to_local(direction));
-  if(!SameHemisphere(wo,wi)) {
-    return(0);
+  return Value(direction);
+}
+
+Float glossy_pdf::Value(const vec3f& direction) const {
+  if (!(direction.squared_length() > 0)) return 0;
+  const vec3f outgoing = unit_vector(uvw.world_to_local(direction));
+  if (!SameHemisphere(wi, outgoing)) return 0;
+  vec3f half = unit_vector(wi + outgoing);
+  if (half[2] < 0) half = -half;
+  // Sample_wh draws visible normals conditioned on the view (wi here).
+  // Reflection contributes a 1/(4 |view.h|) solid-angle Jacobian. The diffuse
+  // half of the mixture depends on the sampled direction, not the fixed view.
+  const Float jacobian = 4 * AbsDot(wi, half);
+  const Float specular = jacobian > 0
+      ? distribution->VisibleNormalPdf(wi, half, alphas) / jacobian : 0;
+  return Float(.5) * (AbsCosTheta(outgoing) * Float(M_1_PI) + specular);
+}
+
+vec3f glossy_pdf::Generate(Float u, Float v, Float branch, bool& diffuse_bounce) const {
+  if (branch < .5f) {
+    const vec3f half = distribution->Sample_wh(wi, u, v, alphas);
+    const vec3f outgoing = Reflect(wi, half);
+    return SameHemisphere(wi, outgoing) ? uvw.local_to_world(outgoing) : vec3f(0);
   }
-  vec3f wh = unit_vector(wi + wo);
-  return(0.5f * (AbsCosTheta(wi) * M_1_PI + distribution->Pdf(wo, wi, wh, alphas) / (4 * dot(wo, wh))) );
+  diffuse_bounce = true;
+  vec3f outgoing = rand_cosine_direction(vec2f(u, v));
+  if (wi[2] < 0) outgoing[2] *= -1;
+  return uvw.local_to_world(outgoing);
 }
 
 vec3f glossy_pdf::generate(random_gen& rng, bool& diffuse_bounce, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("GlossyPDF Generate");
   
-  if(rng.unif_rand() < 0.5) {
-    vec3f wh = distribution->Sample_wh(wi, rng.unif_rand(), rng.unif_rand(), alphas);
-    return(uvw.local_to_world(Reflect(wi, wh)));
-  } else {
-    diffuse_bounce = true;
-    vec3f wo = uvw.local_to_world(rng.random_cosine_direction());
-    if (wi.xyz.z < 0) wo.e[2] *= -1;
-    return(wo);
-  }
+  const Float branch = rng.unif_rand(), u = rng.unif_rand(), v = rng.unif_rand();
+  return Generate(u, v, branch, diffuse_bounce);
 }
 vec3f glossy_pdf::generate(Sampler* sampler, bool& diffuse_bounce, Float time) {
   SCOPED_CONTEXT("PDF");
   SCOPED_TIMER_COUNTER("GlossyPDF Generate");
   
-  if(sampler->Get1D() < 0.5) {
-    vec2f u_r = sampler->Get2D();
-    vec3f wh = distribution->Sample_wh(wi, u_r.xy.x, u_r.xy.y, alphas);
-    return(uvw.local_to_world(Reflect(wi, wh)));
-  } else {
-    diffuse_bounce = true;
-    vec3f wo = uvw.local_to_world(rand_cosine_direction(sampler->Get2D()));
-    if (wi.xyz.z < 0) wo.e[2] *= -1;
-    return(wo);
-  }
+  const Float branch = sampler->Get1D();
+  const vec2f uv = sampler->Get2D();
+  return Generate(uv[0], uv[1], branch, diffuse_bounce);
 }
 
 Float hitable_pdf::value(const vec3f& direction, random_gen& rng, Float time) {

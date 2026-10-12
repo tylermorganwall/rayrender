@@ -20,6 +20,8 @@ $(SHLIB): $(OBJECTS)
 # Keep virtual sampler/light interfaces consistent during incremental builds.
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): core/wavefront.h
+# Per-hit closures change scatter_record layout across material/integrator calls.
+$(CPP_OBJECTS): materials/material.h materials/normalmap.h math/pdf.h
 core/wavefront.o core/wavefront_motion.o core/wavefront_camera_tests.o: core/wavefront_motion.h
 core/wavefront_metal.o: core/wavefront_motion.h
 core/wavefront.o: core/wavefront_texture_export.inc core/wavefront_instances.inc core/wavefront_medium_export.inc core/wavefront_light_bvh.inc

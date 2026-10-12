@@ -86,26 +86,9 @@ double Model::masking(const Vector& w) const {
   return area > 0 ? std::min(1.0, std::max(0.0,dot(g,w))*c/area) : 0;
 }
 double Model::eval_raw(const Vector& direction, const DiffuseChild& child, double rho) const {
-  if (!usable || !valid(direction)) return 0;
-  const Vector wi = normalized(direction);
-  const double cosine = dot(g,wi);
-  if (!(cosine > 0)) return 0;
-  if (identity) return child.eval(wo,wi,g,rho);
-  // Eq.23: primary, primary→mirror, mirror→primary. Each child is raw;
-  // the primary-facet cosine and macro masking are explicit here.
-  const double cp = std::max(0.0,dot(p,wi));
-  double value = lambda * child.eval(wo,wi,p,rho) * cp;
-  if (dot(t,wi) > 0) {
-    const Vector reflected = mirror(wi);
-    value += lambda * child.eval(wo,reflected,p,rho) *
-             std::max(0.0,dot(p,reflected)) * (1-masking(reflected));
-  }
-  if (dot(t,wo) > 0)
-    value += (1-lambda) * child.eval(mirror(wo),wi,p,rho) * cp;
-  // G(wi)/cosine analytically cancels the grazing cosine in Eq.13.
-  // Evaluating this ratio directly avoids 0/0 and lost significant digits.
-  const double area = cp + s*std::max(0.0,dot(t,wi));
-  return value * std::min(1/cosine, c/area);
+  return evaluate(direction, [&](const Vector& view, const Vector& wi, const Vector& n) {
+    return child.eval(view, wi, n, rho);
+  });
 }
 double Model::pdf(const Vector& direction) const {
   if (!usable || !valid(direction)) return 0;

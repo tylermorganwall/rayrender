@@ -189,13 +189,13 @@ context("Analytic diffuse normal mapping") {
   auto tex=std::make_shared<constant_texture>(point3f(2,.5,-1));
   diffuse_material mat(tex,.8);auto h=fixture();
   h.physical_shading_normal=h.bump_normal;
-  random_gen rng(19),copy(19),rng2(91);RandomSampler sampler(rng2);
+  random_gen rng(19),copy(19),rng2(19);RandomSampler sampler(rng2);
   Ray ray(point3f(0),vec3f(0,0,-2));vec3f wi(.3,.2,1);
   scatter_record a,b;
   expect_true(mat.scatter(ray,h,a,rng));expect_true(mat.scatter(ray,h,b,&sampler));
   expect_true(opaque_shadow_material(&mat)==OpaqueShadowType::Opaque);
   expect_true((mat.get_albedo(h)[0]==1&&mat.get_albedo(h)[2]==0));
-  Float density=a.pdf_ptr->value(wi,rng);
+  copy = rng; Float density=a.pdf_ptr->value(wi,rng);
   normalmap::Model expected({0,0,1},{.5,0,std::sqrt(.75)},{0,0,1});
   const auto input=normalmap::normalized(Vector(wi[0],wi[1],wi[2]));
   expect_true(std::abs(mat.f(ray,h,wi)[1]-expected.eval_raw(input,normalmap::DiffuseChild(.8),.5)*input[2])<2e-6);
@@ -359,7 +359,7 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
     h.has_bump=bumped;
     const vec3f wo(0,0,side);
     const Ray ray(point3f(0),-wo);
-    random_gen rng(493),other_rng(73); RandomSampler sampler(other_rng);
+    random_gen rng(493),other_rng(493); RandomSampler sampler(other_rng);
     scatter_record a,b;
     expect_true(mat.scatter(ray,h,a,rng));
     expect_true(mat.scatter(ray,h,b,&sampler));
@@ -471,11 +471,15 @@ test_that("raw mesh arrays count vectors rather than scalar components") {
 
 }
 context("Glossy bump sampling frame") {
-  test_that("both glossy samplers use the same normal as evaluation") {
+  test_that("neutral glossy bumps preserve the physical smooth frame in both samplers") {
     auto color = std::make_shared<constant_texture>(point3f(.6));
     glossy material(color, new TrowbridgeReitzDistribution(.2, .3, nullptr, false), point3f(.04),
                     point3f(.8));
-    auto bumped = fixture(), oriented = bumped;
+    auto bumped = fixture();
+    // A zero-tilt bump agrees with its physical base. A genuinely tilted bump
+    // now has facet masking and must not be equated to simply rotating a BRDF.
+    bumped.base_shading_normal = bumped.physical_shading_normal = bumped.bump_normal;
+    auto oriented = bumped;
     oriented.normal = oriented.bump_normal;
     oriented.has_bump = false;
     Ray ray(point3f(0, 0, 2), vec3f(0, 0, -1));
@@ -502,5 +506,57 @@ context("Glossy bump sampling frame") {
       expect_true(max_error < 1e-6);
     }
   }
+}
+#endif
+#ifdef NOT_CRAN
+context("Order-16 normal-map transport") {
+ test_that("conditional closures recover the independent Lambertian geometric series") {
+  using normalmap::Vector;
+  const Vector g(0,0,1);
+  for (double tilt : {.5235987755982988, 1.0471975511965976})
+    for (double rho : {1., .5}) {
+      const Vector n(std::sin(tilt),0,std::cos(tilt));
+      onb frame; frame.build_from_w_normalized(normal3f(n[0],n[1],n[2]));
+      random_gen rng(318);
+      auto draw = [&](const Vector&, const Vector&) {
+        const auto d = frame.local_to_world(rng.random_cosine_direction());
+        return Vector(d[0],d[1],d[2]);
+      };
+      auto child = [&](const Vector&, const Vector& wi, const Vector& normal) {
+        return point3f(rho*normalmap::inv_pi*std::max(0.0,dot(normal,wi)));
+      };
+      auto density = [&](const Vector&, const Vector& wi, const Vector& normal) {
+        return normalmap::inv_pi*std::max(0.0,dot(normal,wi));
+      };
+      const int count=100000;
+      double sum=0, squares=0, direct=0, direct_squares=0;
+      bool finite=true;
+      for(int i=0;i<count;++i) {
+        normalmap::Scattering closure(normalmap::Model(g,n,g));
+        closure.Prepare([&](const Vector& view,const Vector& normal) {
+          return normalmap::Scattering::ChildSample{draw(view,normal),point3f(rho)};
+        });
+        const double component=rng.unif_rand(),escape=rng.unif_rand();
+        const auto wi=closure.Sample(component,escape,draw);
+        const double pdf=closure.Pdf(wi,density);
+        const double sample=pdf>0?closure.Evaluate(wi,child)[0]/pdf:0;
+        const double z=rng.unif_rand(),phi=2*M_PI*rng.unif_rand();
+        const Vector light(std::sqrt(1-z*z)*std::cos(phi),std::sqrt(1-z*z)*std::sin(phi),z);
+        const double nee=2*M_PI*closure.Evaluate(light,child)[0];
+        finite=finite&&std::isfinite(sample)&&sample>=0&&std::isfinite(nee)&&nee>=0;
+        sum+=sample;squares+=sample*sample;direct+=nee;direct_squares+=nee*nee;
+      }
+      const double ratio=rho*(1-std::cos(tilt));
+      const double expected=rho*std::cos(tilt)*(1-std::pow(ratio,8))/(1-ratio);
+      const double error=std::sqrt(std::max(0.0,squares/count-(sum/count)*(sum/count))/count);
+      const double direct_error=std::sqrt(std::max(0.0,direct_squares/count-(direct/count)*(direct/count))/count);
+      expect_true(finite);
+      expect_true(std::abs(sum/count-expected)<6*error+.001);
+      expect_true(std::abs(direct/count-expected)<6*direct_error+.001);
+      std::cout << "Order 16 diffuse: tilt=" << tilt << " rho=" << rho
+                << " reference=" << expected << " sampled=" << sum/count
+                << " direct=" << direct/count << "\n";
+    }
+ }
 }
 #endif

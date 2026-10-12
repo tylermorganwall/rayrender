@@ -1,6 +1,6 @@
 # rayrender 0.42.3.9000
 
-* Diffuse materials now always use the analytic normal-mapping model of
+* Diffuse materials now always use the normal-mapping model of
   Schuessler et al. (2017), including imported diffuse face materials and vertex
   colors. Removed the legacy diffuse bump implementation and the beta
   `normal_mapping` argument; ordinary `diffuse(bump_texture = ...)` uses the
@@ -199,6 +199,41 @@
 
 ## Bugfixes
 
+- Overall: Diffuse and glossy bump mapping includes up to 16 local facet
+  interactions on CPU and Metal, reducing darkening from truncated scattering.
+  This applies to both Lambertian and EON diffuse reflection and retains material
+  color and absorption. Local interactions do not consume `max_depth`; very steep
+  bumps can still lose energy through truncation or geometric clipping.
+
+- Overall: Higher-order normal mapping retains direct illumination from point,
+  spot, area, and environment lights. Light sampling and surface scattering use
+  matching evaluation and directional probabilities for multiple importance
+  sampling (MIS). CPU basic and guided rendering also use the higher-order
+  scattering evaluation.
+
+- `glossy()` Corrects excessive brightness on CPU and Metal by applying the
+  outgoing surface cosine once and matching sampling probabilities to the
+  diffuse/microfacet mixture. This affects unbumped surfaces as well as bump maps,
+  with both GGX and Beckmann distributions. CPU samples use the local shading
+  hemisphere, fixing incorrect directions on rotated surfaces.
+
+- `glossy()` Uses energy-conserving bump mapping relative to the unperturbed
+  smooth surface normal on CPU and Metal. Evaluation and sampling share that
+  frame, preserving smooth mesh shading and preventing back-facing bumps from
+  amplifying light or reflecting through the surface. Texture reflectance is
+  bounded to [0, 1], with nonfinite values treated as absorbing.
+
+- `render_scene()` Preserves camera ray differentials when normalizing rays in
+  the CPU NEE integrator, restoring the pixel footprints used to filter bump maps.
+
+- Overall: Correctly transforms normal derivatives without normalizing them as
+  surface normals. Flat surfaces retain finite zero derivatives instead of NaNs,
+  and curved surfaces retain the correct bump response under nonuniform scaling.
+
+- `render_ao()` Uses the incoming viewing ray when preparing colored surface
+  scattering. Colored AO and bounce-count diagnostics use the same higher-order
+  normal-mapping evaluation as the CPU renderers.
+
 - `render_scene()` Applies consistent mesh normals on Metal to match CPU glossy
   and metallic shading, including nonuniform mesh placements. Prague sunlight
   uses matching disk support for radiance and sampling density, preventing bright
@@ -215,8 +250,6 @@
   shells with scale-aware tolerances. Successive queries no longer count the
   same grazing surface repeatedly, preventing excess diffusion brightness.
 
-- `glossy()` Samples bump-mapped surfaces in the same normal frame used to evaluate
-  them, correcting dark edges and missing scattering directions.
 - `render_scene()` Preserves large ground spheres and their checker-pattern
   alignment with analytic Metal intersections.
 
@@ -230,7 +263,7 @@
   accounting. Distinct closed bodies retain both memberships when their first
   containment intersections have identical distances.
 
-- `diffuse()` Preserves smooth mesh shading by applying analytic bump mapping
+- `diffuse()` Preserves smooth mesh shading by applying bump mapping
   relative to the interpolated surface normal. Geometric sidedness remains
   enforced, and bump textures retain the energy-conserving model.
 
@@ -601,6 +634,10 @@
   material-input and filtering limitations.
 
 ## Other
+
+- Overall: Tracks material, normal-mapping, and sampling header dependencies in
+  Unix and Windows builds so incremental compilation rebuilds affected C++ files
+  instead of mixing incompatible scattering-record layouts.
 
 - `render_scene()` Further reduces Metal render times for heterogeneous volumes
   and Prague skies by reusing shadow grid traversal and skipping finite-segment

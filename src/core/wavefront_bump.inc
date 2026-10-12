@@ -227,6 +227,159 @@ R"MSL(
       wi -= 2 * dot(wi, m.t) * m.t;
     return wi;
   }
+  // The same three facet paths as mapped_eval, with a directional glossy
+  // child instead of the diffuse child's view-independent cosine proposal.
+  // Child evaluation already includes the primary-facet cosine.
+  BsdfValue mapped_glossy_child(SurfaceBsdf b, float3 view, float3 wi) {
+    b.view = b.frame.local(view);
+    if (b.view.z <= 0 || b.frame.local(wi).z <= 0)
+      return {0, 0};
+    return surface_eval(b, wi);
+  }
+  BsdfValue mapped_glossy_eval(MappedDiffuse m, SurfaceBsdf b, float3 wi) {
+    if (dot(m.g, wi) <= 0)
+      return {0, 0};
+    b.frame = normal_frame(m.p);
+    BsdfValue primary = mapped_glossy_child(b, m.wo, wi);
+    if (m.identity) return primary;
+    BsdfValue result = {m.lambda * primary.value,
+                        m.lambda * primary.pdf * mapped_mask(m, wi)};
+    if (dot(m.t, wi) > 0) {
+      float3 reflected = wi - 2 * dot(m.t, wi) * m.t;
+      BsdfValue child = mapped_glossy_child(b, m.wo, reflected);
+      float weight = m.lambda * (1 - mapped_mask(m, reflected));
+      result.value += weight * child.value;
+      result.pdf += weight * child.pdf;
+    }
+    if (dot(m.t, m.wo) > 0) {
+      float3 reflected = m.wo - 2 * dot(m.t, m.wo) * m.t;
+      BsdfValue child = mapped_glossy_child(b, reflected, wi);
+      result.value += (1 - m.lambda) * child.value;
+      result.pdf += (1 - m.lambda) * child.pdf;
+    }
+    result.value *= mapped_mask(m, wi);
+    return result;
+  }
+  BsdfSample mapped_glossy_sample(MappedDiffuse m, SurfaceBsdf b, float4 u) {
+    bool primary = m.identity || u.x < m.lambda;
+    if (!m.identity)
+      u.x = primary ? u.x / m.lambda : (u.x - m.lambda) / (1 - m.lambda);
+    b.frame = normal_frame(m.p);
+    b.view = b.frame.local(primary ? m.wo : m.wo - 2 * dot(m.t, m.wo) * m.t);
+    BsdfSample sampled = surface_sample(b, u);
+    if (!(sampled.pdf > 0) || b.frame.local(sampled.direction).z <= 0)
+      return {0, 0, 0, 1, false};
+    float3 wi = sampled.direction;
+    if (!m.identity && primary && u.w >= mapped_mask(m, wi))
+      wi -= 2 * dot(m.t, wi) * m.t;
+    BsdfValue evaluated = mapped_glossy_eval(m, b, wi);
+    return {wi, evaluated.pdf > 0 ? evaluated.value / evaluated.pdf : float3(0),
+             evaluated.pdf, 1, false};
+  }
+  // Conditional 16-hit scattering closure, matching normalmap::Scattering.
+  // Prefix randomness is sampled once, before NEE. Both direct-light evaluation
+  // and continuation use this same positive expansion and normalized mixture.
+  struct MappedLobe {
+    float3 view, weight;
+    float mass;
+    bool mirror_exit;
+  };
+  struct MappedScattering {
+    MappedLobe lobes[16];
+    uint count;
+    float total;
+  };
+  float mapped_random(thread uint& state) {
+    state = state * 747796405u + 2891336453u;
+    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+    word = (word >> 22u) ^ word;
+    return float(word >> 8u) * 0x1p-24f;
+  }
+  BsdfValue mapped_child_value(MappedDiffuse m, SurfaceBsdf b, float3 view, float3 wi) {
+    if (dot(m.p, view) <= 0 || dot(m.p, wi) <= 0) return {0, 0};
+    if (b.material.type == bsdf_glossy) {
+      b.frame = normal_frame(m.p);
+      return mapped_glossy_child(b, view, wi);
+    }
+    float cosine = dot(m.p, wi);
+    return {brdf(view, wi, m.p, b.rho, b.material) * cosine, cosine / pi};
+  }
+  BsdfSample mapped_child_sample(MappedDiffuse m, SurfaceBsdf b, float3 view, float3 u) {
+    if (dot(m.p, view) <= 0) return {0, 0, 0, 1, false};
+    if (b.material.type == bsdf_glossy) {
+      b.frame = normal_frame(m.p);
+      b.view = b.frame.local(view);
+      return surface_sample(b, float4(u, 0));
+    }
+    float3 wi = basis_direction(m.p, u.yz);
+    BsdfValue value = mapped_child_value(m, b, view, wi);
+    return {wi, value.pdf > 0 ? value.value / value.pdf : float3(0), value.pdf, 1, false};
+  }
+  void prepare_mapped_scattering(thread MappedScattering& out, MappedDiffuse m,
+                                SurfaceBsdf b, uint seed) {
+    out.count = 0;
+    out.total = 0;
+    for (uint branch = 0; branch < 2; ++branch) {
+      if (branch && m.identity) break;
+      float3 view = branch ? m.wo - 2 * dot(m.t, m.wo) * m.t : m.wo;
+      float3 weight = branch ? 1 - m.lambda : m.lambda;
+      uint remaining = m.identity ? 1 : 16 - branch;
+      while (remaining > 0) {
+        float mass = max(weight.x, max(weight.y, weight.z));
+        if (!(mass > 0) || !isfinite(mass)) break;
+        out.lobes[out.count++] = {view, weight, mass, remaining > 1};
+        out.total += mass;
+        if (remaining <= 2) break;
+        float u = mapped_random(seed), v = mapped_random(seed), w = mapped_random(seed);
+        BsdfSample child = mapped_child_sample(m, b, view, float3(u, v, w));
+        if (!(child.pdf > 0) || dot(m.p, child.direction) <= 0) break;
+        float3 reflected = child.direction - 2 * dot(m.t, child.direction) * m.t;
+        weight *= child.weight * (1 - mapped_mask(m, child.direction)) * (1 - mapped_mask(m, reflected));
+        view = -reflected;
+        remaining -= 2;
+      }
+    }
+  }
+  BsdfValue mapped_scattering_eval(thread const MappedScattering& state, MappedDiffuse m,
+                                   SurfaceBsdf b, float3 wi) {
+    if (!(state.total > 0) || dot(m.g, wi) <= 0) return {0, 0};
+    float3 reflected = wi - 2 * dot(m.t, wi) * m.t;
+    float escape = mapped_mask(m, wi);
+    BsdfValue result = {0, 0};
+    for (uint i = 0; i < state.count; ++i) {
+      MappedLobe lobe = state.lobes[i];
+      BsdfValue term = mapped_child_value(m, b, lobe.view, wi);
+      if (lobe.mirror_exit) {
+        term.pdf *= escape;
+        if (dot(m.t, wi) > 0) {
+          BsdfValue mirror = mapped_child_value(m, b, lobe.view, reflected);
+          float probability = 1 - mapped_mask(m, reflected);
+          term.value += mirror.value * probability;
+          term.pdf += mirror.pdf * probability;
+        }
+      }
+      result.value += lobe.weight * term.value;
+      result.pdf += lobe.mass * term.pdf;
+    }
+    result.value *= escape;
+    result.pdf /= state.total;
+    return result;
+  }
+  BsdfSample mapped_scattering_sample(thread const MappedScattering& state, MappedDiffuse m,
+                                       SurfaceBsdf b, float component, float escape, float3 u) {
+    if (!(state.total > 0)) return {0, 0, 0, 1, false};
+    float target = component * state.total;
+    uint selected = 0;
+    while (selected + 1 < state.count && target >= state.lobes[selected].mass)
+      target -= state.lobes[selected++].mass;
+    MappedLobe lobe = state.lobes[selected];
+    BsdfSample child = mapped_child_sample(m, b, lobe.view, u);
+    if (!(child.pdf > 0) || dot(m.p, child.direction) <= 0) return {0, 0, 0, 1, false};
+    float3 wi = child.direction;
+    if (lobe.mirror_exit && escape >= mapped_mask(m, wi)) wi -= 2 * dot(m.t, wi) * m.t;
+    BsdfValue value = mapped_scattering_eval(state, m, b, wi);
+    return {wi, value.pdf > 0 ? value.value / value.pdf : float3(0), value.pdf, 1, false};
+  }
   Differential propagate_differential(Differential incoming, SurfaceDerivatives d, float3 n,
                                       float3 old_direction, float3 origin, float3 direction,
                                       bool transmission, float eta) {

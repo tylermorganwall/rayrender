@@ -109,6 +109,13 @@ Single row of a tibble describing the glossy material.
 \description{
 Glossy Material
 }
+\details{
+Bump textures use up to 16 local facet interactions on CPU and Metal
+  to reduce truncation loss while preserving the material's absorption.
+  These interactions do not consume scene-level `max_depth`. Direct-light
+  sampling and multiple importance sampling remain active. Very steep bumps
+  can still lose energy through truncation or geometric clipping.
+}
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
 #Generate a glossy sphere

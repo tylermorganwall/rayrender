@@ -101,16 +101,19 @@ Single row of a tibble describing the diffuse material.
 Diffuse Material
 }
 \details{
-Diffuse surfaces use energy-conserving analytic normal mapping for
+Diffuse surfaces use energy-conserving normal mapping for
   bump textures relative to the unperturbed smooth surface normal. Interpolated
   mesh normals define that base surface, so smooth shading does not acquire
   triangle facets from the bump correction. Reflection remains on the same
-  side of the geometric surface; rejected samples absorb energy. Energy is
-  bounded in the smooth surface frame. Positive `sigma` uses EON rough
+  side of the geometric surface; rejected samples absorb energy. Expected
+  reflected energy is bounded in the smooth surface frame. Positive `sigma` uses EON rough
   diffuse with color-dependent multiple scattering; zero uses Lambertian
   reflection. Image and procedural reflectance is bounded to [0, 1], with
-  nonfinite values treated as absorbing. The analytic normal-mapping model
-  can lose energy because it truncates higher scattering orders.
+  nonfinite values treated as absorbing. CPU and Metal rendering include up to
+  16 local facet interactions to reduce energy loss from truncating the
+  normal-mapping model. These interactions do not consume scene-level
+  `max_depth`. Direct-light sampling is retained. Very steep bumps can still
+  lose energy through truncation or geometric clipping.
   Imported diffuse face materials and vertex colors use the same model.
   Fog uses volumetric scattering instead of a surface bump model.
 }

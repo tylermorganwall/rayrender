@@ -167,7 +167,11 @@ R"MSL(
                      (1 - pow5(1 - .5f * abs(view.z))) * (1 - pow5(1 - .5f * abs(wi.z)));
     float3 specular = D / (4 * abs(dot(view, h)) * max(abs(view.z), abs(wi.z))) *
                       (m.eta.xyz + pow5(1 - dot(wi, h)) * (1 - m.eta.xyz));
-    return {(diffuse + specular) * dot(h, view), .5f * (abs(view.z) / pi + pdf)};
+    // Glossy samples a cosine hemisphere mixed with a view-conditioned VNDF.
+    // Its density is not the legacy two-direction masking term above, and the
+    // transport cosine belongs to the outgoing direction, not the half vector.
+    float glossy_pdf = D / (4 * abs(view.z) * (1 + micro_lambda(view, alpha, m.distribution)));
+    return {(diffuse + specular) * abs(wi.z), .5f * (abs(wi.z) / pi + glossy_pdf)};
   }
   // Four-lobe fiber model, matching math/mathinline.h and hair_pdf. Hair uses a
   // longitudinal frame and has no surface-hemisphere rejection or extra cosine.

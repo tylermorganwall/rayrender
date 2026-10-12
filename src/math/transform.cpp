@@ -731,14 +731,21 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.dudy = r.dudy;
   hr.dvdy = r.dvdy;
   hr.has_differentials = r.has_differentials;
+  // Differentiate normalize(M^-T n). Normal derivatives are not unit normals:
+  // normalizing them loses curvature magnitude and turns planar zeros into NaNs.
+  auto raw_normal = [&](const normal3f& n) {
+    return normal3f(mInv.m[0][0]*n[0]+mInv.m[1][0]*n[1]+mInv.m[2][0]*n[2],
+                    mInv.m[0][1]*n[0]+mInv.m[1][1]*n[1]+mInv.m[2][1]*n[2],
+                    mInv.m[0][2]*n[0]+mInv.m[1][2]*n[1]+mInv.m[2][2]*n[2]);
+  };
   const auto transformed_n =
-      (*this)(r.physical_shading_normal.squared_length() > 0 ? r.physical_shading_normal
+      raw_normal(r.physical_shading_normal.squared_length() > 0 ? r.physical_shading_normal
               : r.geometric_normal.squared_length() > 0      ? r.geometric_normal
                                                              : r.normal);
   const Float normal_length = transformed_n.length();
   if (normal_length > 0) {
     const auto n = transformed_n / normal_length;
-    const auto du = (*this)(r.dndu), dv = (*this)(r.dndv);
+    const auto du = raw_normal(r.dndu), dv = raw_normal(r.dndv);
     hr.dndu = (du - dot(du, n) * n) / normal_length;
     hr.dndv = (dv - dot(dv, n) * n) / normal_length;
   }

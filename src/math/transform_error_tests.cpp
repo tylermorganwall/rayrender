@@ -2,12 +2,33 @@
 #include <Rcpp.h>
 #include "transform.h"
 #include "transformcache.h"
+#include "../hitables/hitable.h"
 #include <cmath>
 #include <testthat.h>
 
 // Keep these calls outside transform.cpp: a definition available only through
 // inlining in that file cannot satisfy geometry's references to these overloads.
 context("Transform error bounds across translation units") {
+  test_that("normal derivatives retain zero and match transformed finite differences") {
+    hit_record hit;
+    hit.p = point3f(0); hit.pError = vec3f(0); hit.u = hit.v = hit.t = 0;
+    hit.mat_ptr = nullptr;
+    hit.normal = hit.geometric_normal = unit_vector(normal3f(.3,.4,1));
+    hit.dpdu = vec3f(1,0,0); hit.dpdv = vec3f(0,1,0);
+    for (const auto& transform : {Transform(), Scale(2,.7,1.3)}) {
+      hit.dndu = hit.dndv = normal3f(0);
+      auto flat = transform(hit);
+      expect_true(flat.dndu.squared_length() == 0);
+      expect_true(flat.dndv.squared_length() == 0);
+      auto tangent = normal3f(1,0,0);
+      hit.dndu = Float(.3)*(tangent-dot(tangent,hit.normal)*hit.normal);
+      const auto curved = transform(hit);
+      const Float step = .001;
+      const auto before = transform(unit_vector(hit.normal-step*hit.dndu));
+      const auto after = transform(unit_vector(hit.normal+step*hit.dndu));
+      expect_true((curved.dndu-(after-before)/(2*step)).length() < .0001);
+    }
+  }
   test_that("point and vector overloads preserve positions and propagate errors") {
     const Transform transform = Translate(vec3f(1, 2, 3)) * Scale(2, -3, 4);
     const point3f point(1, -2, .5);

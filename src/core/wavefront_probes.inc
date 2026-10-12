@@ -80,6 +80,16 @@ R"MSL(
       float3 wi = mapped_sample(mapped, probe.random.xy, probe.random.z, probe.random.w);
       sample = {};
       sample.direction = dot(mapped.g, wi) > 0 ? wi : float3(0);
+      if (probe.context.w == 2) {
+        SurfaceBsdf b = {};
+        b.material = probe.material;
+        b.rho = probe.rho.xyz;
+        MappedScattering closure;
+        prepare_mapped_scattering(closure, mapped, b, hash_seed(i, 1729));
+        value = mapped_scattering_eval(closure, mapped, b, probe.direction.xyz);
+        sample = mapped_scattering_sample(closure, mapped, b, probe.random.x, probe.random.w,
+                                          float3(0, probe.random.yz));
+      }
     } else if (probe.material.type == bsdf_openpbr) {
       PbrState b = prepare_pbr(probe.material, probe.rho.xyz, probe.view.xyz, float3(0, 0, 1),
                                float3(0, 0, 1), float3(1, 0, 0), probe.context.z, -1, data);
@@ -96,6 +106,19 @@ R"MSL(
       b.impact = probe.context.y;
       value = surface_eval(b, probe.direction.xyz);
       sample = surface_sample(b, probe.random);
+      if (probe.material.type == bsdf_glossy && probe.context.w > 0) {
+        auto mapped = mapped_diffuse(float3(0, 0, 1), probe.context.xyz, probe.view.xyz);
+        value = mapped_glossy_eval(mapped, b, probe.direction.xyz);
+        sample = mapped_glossy_sample(mapped, b, probe.random);
+        if (probe.context.w == 2) {
+          MappedScattering closure;
+          prepare_mapped_scattering(closure, mapped, b, hash_seed(i, 1729));
+          value = mapped_scattering_eval(closure, mapped, b, probe.direction.xyz);
+          uint seed = hash_seed(i, 331);
+          sample = mapped_scattering_sample(closure, mapped, b, probe.random.x, probe.random.w,
+                                            float3(mapped_random(seed), probe.random.yz));
+        }
+      }
     }
     outputs[i] = {float4(value.value, value.pdf), float4(sample.direction, sample.pdf),
                   float4(sample.weight, sample.delta ? 1.f : 0.f)};

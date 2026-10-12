@@ -593,7 +593,8 @@ RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *sur
                  const SubsurfaceProposal *sss_proposal = nullptr,
                  const SubsurfaceBoundaryBSDF *sss_bsdf = nullptr,
                  const DiffusionExitBSDF *diffusion_exit = nullptr,
-                 const OpenPBRInteraction *openpbr = nullptr) {
+                 const OpenPBRInteraction *openpbr = nullptr,
+                 const ScatteringDistribution *distribution = nullptr) {
   if (!lights->size() || !use_light_sampling())
     return RGB(0);
   VolumeStatistics *stats = lights->volume_scene && lights->volume_scene->collect_statistics
@@ -648,7 +649,8 @@ RGB direct_area_light(const Ray &parent, const point3f &p, const hit_record *sur
     if (dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
       cross_subsurface(state, *surface, sample.wi);
   } else if (surface) {
-    f = RGB(surface->mat_ptr->f(parent, *surface, sample.wi));
+    f = RGB(distribution ? distribution->Evaluate(sample.wi) :
+            surface->mat_ptr->f(parent, *surface, sample.wi));
     ps = RGB(bsdf_pdf->value(sample.wi, rng, parent.time()));
     cross_if_transmitted(state, *surface, parent.d, sample.wi);
   } else {
@@ -917,7 +919,7 @@ RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *su
                        const std::atomic<bool> *cancel,
                        const SubsurfaceBoundaryBSDF *sss_bsdf,
                        const DiffusionExitBSDF *diffusion_exit,
-                       const OpenPBRInteraction *openpbr) {
+                       const OpenPBRInteraction *openpbr, const ScatteringDistribution *distribution) {
   if (!scene || scene->point_lights.Empty() || !use_light_sampling()) return RGB(0);
   const auto sample = scene->point_lights.Sample(p, sampler->Get1D());
   if (!(sample.pmf > 0) || !(RGB(sample.radiance).Max() > 0)) return RGB(0);
@@ -934,7 +936,8 @@ RGB direct_point_light(const Ray &parent, const point3f &p, const hit_record *su
     if (dot(parent.d, surface->geometric_normal) * dot(sample.wi, surface->geometric_normal) > 0)
       cross_subsurface(state, *surface, sample.wi);
   } else if (surface) {
-    f = RGB(surface->mat_ptr->f(parent, *surface, sample.wi));
+    f = RGB(distribution ? distribution->Evaluate(sample.wi) :
+            surface->mat_ptr->f(parent, *surface, sample.wi));
     cross_if_transmitted(state, *surface, parent.d, sample.wi);
   } else {
     f = RGB(phase->p(-parent.d, sample.wi));
@@ -992,14 +995,15 @@ RGB direct_light(const Ray &parent, const point3f &p, const hit_record *surface,
                  const SubsurfaceProposal *sss_proposal = nullptr,
                  const SubsurfaceBoundaryBSDF *sss_bsdf = nullptr,
                  const DiffusionExitBSDF *diffusion_exit = nullptr,
-                 const OpenPBRInteraction *openpbr = nullptr) {
+                 const OpenPBRInteraction *openpbr = nullptr,
+                 const ScatteringDistribution *distribution = nullptr) {
   if (!lights->volume_scene || lights->volume_scene->point_lights.Empty())
     return direct_area_light(parent, p, surface, bsdf_pdf, phase, std::move(state), beta, rp,
-        world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr);
+        world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr, distribution);
   RGB result = direct_area_light(parent, p, surface, bsdf_pdf, phase, state, beta, rp,
-      world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr);
+      world, lights, hero, rng, sampler, cancel, sss_proposal, sss_bsdf, diffusion_exit, openpbr, distribution);
   result += direct_point_light(parent, p, surface, phase, std::move(state), beta, rp, world,
-      lights->volume_scene.get(), rng, sampler, cancel, sss_bsdf, diffusion_exit, openpbr);
+      lights->volume_scene.get(), rng, sampler, cancel, sss_bsdf, diffusion_exit, openpbr, distribution);
   return result;
 }
 } // namespace
@@ -1027,6 +1031,13 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
     stats->paths.fetch_add(1, std::memory_order_relaxed);
   RGB L(0);
   Ray ray(input.o, unit_vector(input.d), input.time());
+  // Normalizing the central ray must not discard the camera's pixel footprint.
+  // Neighboring rays describe lines, so their directions need not be normalized.
+  ray.has_differentials = input.has_differentials;
+  ray.rx_origin = input.rx_origin;
+  ray.ry_origin = input.ry_origin;
+  ray.rx_direction = input.rx_direction;
+  ray.ry_direction = input.ry_direction;
   VolumePathState state;
   size_t depth = 0;
   uint64_t internal_events = 0;
@@ -1757,7 +1768,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       // Nondelta surfaces use both light sampling and BSDF continuation. Keep
       // the continuation PDF for the competing strategy at the next vertex.
       L += direct_light(ray, h.p, &h, s.pdf_ptr, nullptr, state, beta, ru, world, lights, hero, rng,
-                        sampler, cancel);
+                        sampler, cancel, nullptr, nullptr, nullptr, nullptr, s.distribution);
       vec3f wi = s.pdf_ptr->generate(sampler, any_diffuse, ray.time());
       if (!(wi.squared_length() > 0))
         break;
@@ -1765,7 +1776,7 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
       Float p = s.pdf_ptr->value(wi, rng, ray.time());
       if (!(p > 0) || !std::isfinite(p))
         break;
-      beta *= RGB(h.mat_ptr->f(ray, h, wi)) / p;
+      beta *= RGB(s.distribution ? s.distribution->Evaluate(wi) : h.mat_ptr->f(ray, h, wi)) / p;
       rl = ru / p;
       previous_light_context = {h.p, h.has_bump ? h.bump_normal : h.normal, ray.time()};
       specular = false;
@@ -1818,8 +1829,43 @@ void color_volume(const Ray &input, hitable *world, hitable_list *lights, size_t
 
 #ifdef NOT_CRAN
 #include "../hitables/box.h"
+#include "../hitables/rectangle.h"
 #include "../materials/texture.h"
 #include <testthat.h>
+context("Camera footprint at NEE shading") {
+  test_that("normalizing the camera ray preserves first-hit UV differentials") {
+    struct FootprintMaterial : glossy {
+      FootprintMaterial() : glossy(std::make_shared<constant_texture>(point3f(1)),
+          new TrowbridgeReitzDistribution(.2,.2,nullptr,false),point3f(.035),point3f(1)) {}
+      bool scatter(const Ray&, const hit_record& hit, scatter_record&, Sampler*) override {
+        recorded = hit;
+        called = true;
+        return false;
+      }
+      hit_record recorded;
+      bool called = false;
+    };
+    auto mat = std::make_shared<FootprintMaterial>();
+    Transform identity;
+    xy_rect plane(-2,2,-2,2,0,mat,nullptr,nullptr,&identity,&identity,false);
+    hitable_list lights;
+    random_gen rng(27);
+    RandomSampler sampler(rng);
+    Ray ray(point3f(0,0,2),vec3f(0,0,-2));
+    ray.has_differentials = true;
+    ray.rx_origin = point3f(.04,0,2);
+    ray.ry_origin = point3f(0,.08,2);
+    ray.rx_direction = ray.ry_direction = ray.d;
+    point3f radiance, albedo;
+    normal3f normal;
+    Float transparency;
+    color_volume(ray,&plane,&lights,2,2,rng,&sampler,transparency,radiance,normal,albedo,nullptr);
+    expect_true(mat->called);
+    expect_true(mat->recorded.has_differentials);
+    expect_true(std::abs(mat->recorded.dudx-.01) < 1e-6);
+    expect_true(std::abs(mat->recorded.dvdy-.02) < 1e-6);
+  }
+}
 context("Index-matched dielectric connections") {
   test_that("equal active IORs change absorption and tint without hiding the boundary") {
     dielectric outside(point3f(1), 1.5, point3f(.1), 5);
