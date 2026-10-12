@@ -7,6 +7,64 @@
 #include <testthat.h>
 
 context("Metal texture evaluation") {
+  test_that("Ptex atlas lookups preserve face IDs and decode after interpolation") {
+    if (!MetalBVHAvailable()) return;
+    Rcpp::Function temporary = Rcpp::Environment::base_env()["tempfile"];
+    Rcpp::Function remove = Rcpp::Environment::base_env()["unlink"];
+    Rcpp::Function write = Rcpp::Environment::namespace_env("ptexr")["ptex_write"];
+    Rcpp::Function ptex = Rcpp::Environment::namespace_env("rayrender")["texture_ptex"];
+    auto filename = temporary(Rcpp::Named("fileext") = ".ptx");
+    Rcpp::NumericVector image(32 * 32 * 3);
+    image.attr("dim") = Rcpp::IntegerVector::create(32, 32, 3);
+    for (int c = 0; c < 3; ++c)
+      for (int y = 0; y < 32; ++y)
+        for (int x = 0; x < 32; ++x)
+          image[x + 32 * y + 1024 * c] = c == 0 ? (x + .5) / 32 :
+                                         c == 1 ? (y + .5) / 32 : .375;
+    write(filename, Rcpp::List::create(image, image));
+    Transform identity;
+    camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
+    for (bool scalar : {false, true})
+      for (bool quantize : {false, true}) {
+        Rcpp::List description = ptex(filename, Rcpp::Named("encoding") = "gamma 2.2",
+                                      Rcpp::Named("type") = scalar ? "scalar" : "color");
+        description["pbrt_encoding"] = quantize;
+        TextureCache cache;
+        TextureGraphBuilder builder(cache);
+        auto node = builder.Build(description);
+        auto material = std::make_shared<diffuse_material>(std::make_shared<graph_texture>(node));
+        hitable_list world, lights;
+        world.add(std::make_shared<xy_rect>(-2, 2, -2, 2, 0, material, nullptr, nullptr,
+                                            &identity, &identity, false));
+        WavefrontScene scene;
+        WavefrontReport report;
+        auto session = PrepareWavefront(world, lights, cam, 1, 0, scene, report);
+        expect_true(bool(session));
+        if (!session) continue;
+        std::vector<WFTextureProbe> probes;
+        std::vector<point3f> expected;
+        for (int i = 0; i < 61; ++i) {
+          TextureEvalContext context;
+          context.face_index = i % 2;
+          // Stay away from chart edges. An affine ramp must survive both
+          // reconstruction filters; nonlinear decoding must follow filtering.
+          context.u = .2f + .6f * (i % 17) / 16;
+          context.v = .2f + .6f * (i % 11) / 10;
+          probes.push_back({{float(context.u), float(context.v),
+                             float(scene.materials[0].texture), float(context.face_index)},
+                            {}, {}, {}, {}, {}});
+          expected.push_back(node->Evaluate(context));
+        }
+        auto actual = ProbeMetalTextures(scene, probes);
+        double error = 0;
+        for (size_t i = 0; i < actual.size(); ++i)
+          for (int c = 0; c < 3; ++c)
+            error = std::max(error, std::abs(double((&actual[i].x)[c]) - expected[i][c]));
+        // Quantization may straddle a single 8-bit bin after float rounding.
+        expect_true(error < (quantize ? .008 : 2e-5));
+      }
+    remove(filename);
+  }
   test_that("graph instructions reproduce native values before shading and tonemapping") {
     if (!MetalBVHAvailable())
       return;

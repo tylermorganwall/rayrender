@@ -1,5 +1,6 @@
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 #include "../hitables/rectangle.h"
+#include "../hitables/curve.h"
 #include "../hitables/sphere.h"
 #include "camera.h"
 #include "hlbvh.h"
@@ -101,6 +102,124 @@ context("Metal analytic intersections") {
       expect_true(classification_errors == 0);
       expect_true(distance_error < 1e-4);
       expect_true(normal_error < 2e-4);
+    }
+  }
+}
+context("Metal native curves") {
+  test_that("Bezier hits preserve CPU distance, UV, normal, taper and transformations") {
+    if (!MetalBVHAvailable())
+      return;
+    auto material = std::make_shared<hair>(point3f(.4), 1.55, .3, .4, 2);
+    camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
+    random_gen rng(714);
+    size_t mismatches = 0, hits = 0;
+    double distance_error = 0, normal_error = 0, uv_error = 0;
+    for (auto type : {CurveType::Flat, CurveType::Cylinder, CurveType::Ribbon}) {
+      for (bool flipped : {false, true}) {
+        for (Transform transform : {Transform(), Translate(vec3f(.3, -.2, .4)) * RotateY(31) * Scale(-1.3, .7, .9)}) {
+          Transform inverse = Inverse(transform);
+          for (bool curved : {false, true}) {
+            point3f cp[4] = {point3f(-.4, -1, 0), point3f(.7, -.4, .3), point3f(-.5, .5, -.2), point3f(.5, 1, 0)};
+            if (!curved)
+              for (int k = 0; k < 4; ++k)
+                cp[k] = point3f(0, -1 + 2 * k / 3.f, 0);
+            vec3f normals[2] = {vec3f(.1, 0, 1), vec3f(-.1, 0, 1)};
+            auto common = std::make_shared<CurveCommon>(cp, .12, .035, type, normals);
+            hitable_list world, lights;
+            for (int k = 0; k < 8; ++k)
+              world.add(
+                  std::make_shared<curve>(k / 8.f, (k + 1) / 8.f, common, material, &transform, &inverse, flipped));
+            WavefrontScene scene;
+            WavefrontReport report;
+            auto session = PrepareWavefront(world, lights, cam, 1, 0, scene, report);
+            expect_true(bool(session));
+            if (!session)
+              continue;
+            expect_true((scene.curves.size() == 8 && scene.triangles.empty()));
+            std::vector<WFGeometryProbe> probes;
+            std::vector<hit_record> expected;
+            std::vector<bool> found;
+            for (int i = 0; i < 384; ++i) {
+              // Include tilted rays, subcurve endpoints, width edges and clipping.
+              Float y = -.99 + 1.98 * rng.unif_rand();
+              Float u = (y + 1) * .5;
+              Float center = curved ? std::pow(1 - u, 3) * cp[0][0] + 3 * (1 - u) * (1 - u) * u * cp[1][0] +
+                                          3 * (1 - u) * u * u * cp[2][0] + u * u * u * cp[3][0]
+                                    : 0;
+              point3f o = transform(point3f(center + .16 * (rng.unif_rand() - .5), y, 3));
+              vec3f d = transform(vec3f(0, 0, -1));
+              WFGeometryProbe p;
+              p.origin = {float(o[0]), float(o[1]), float(o[2]), i % 13 == 0 ? 3.05f : 0.f};
+              p.direction = {float(d[0]), float(d[1]), float(d[2]), i % 17 == 0 ? 2.8f : 5.f};
+              probes.push_back(p);
+              Ray ray(point3f(p.origin.x, p.origin.y, p.origin.z), vec3f(p.direction.x, p.direction.y, p.direction.z));
+              hit_record hit;
+              found.push_back(world.hit(ray, p.origin.w, p.direction.w, hit, rng));
+              expected.push_back(hit);
+            }
+            auto actual = ProbeMetalGeometry(scene, probes);
+            expect_true(actual.size() == probes.size());
+            for (size_t i = 0; i < actual.size(); ++i) {
+              bool gpu = actual[i].normal.w != 0;
+              mismatches += gpu != found[i];
+              if (!(gpu && found[i]))
+                continue;
+              ++hits;
+              distance_error = std::max(distance_error, double(std::abs(actual[i].point.w - expected[i].t)));
+              vec3f n(actual[i].normal.x, actual[i].normal.y, actual[i].normal.z);
+              normal_error =
+                  std::max(normal_error, double((n - unit_vector(convert_to_vec3(expected[i].normal))).length()));
+              uv_error = std::max(uv_error, double(std::max(std::abs(actual[i].uv.x - expected[i].u),
+                                                            std::abs(actual[i].uv.y - expected[i].v))));
+            }
+          }
+        }
+      }
+    }
+    Rcpp::Rcout << "Curve probe hits " << hits << "; classifications " << mismatches << "; distance " << distance_error
+                << "; normal " << normal_error << "; UV " << uv_error << "\n";
+    expect_true(hits > 1000);
+    expect_true(mismatches == 0);
+    expect_true(distance_error < 2e-4);
+    expect_true(normal_error < .005);
+    expect_true(uv_error < .002);
+  }
+  test_that("direct curves keep the closest folded segment and reject degenerate curves") {
+    if (!MetalBVHAvailable())
+      return;
+    Transform identity;
+    camera cam({0, 0, 0}, {0, 0, 1}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
+    auto material = std::make_shared<hair>(point3f(.4), 1.55, .3, .4, 2);
+    point3f cp[4] = {point3f(-1, 0, 4), point3f(2, 0, 4), point3f(-2, 0, 1), point3f(1, 0, 1)};
+    auto common = std::make_shared<CurveCommon>(cp, .025, .025, CurveType::Cylinder, nullptr);
+    hitable_list world, lights;
+    world.add(std::make_shared<curve>(0, 1, common, material, &identity, &identity, false));
+    point3f zero[4] = {point3f(0), point3f(0), point3f(0), point3f(0)};
+    for (float width : {0.f, .1f}) {
+      auto degenerate = std::make_shared<CurveCommon>(zero, width, width, CurveType::Flat, nullptr);
+      world.add(std::make_shared<curve>(0, 1, degenerate, material, &identity, &identity, false));
+    }
+    WavefrontScene scene;
+    WavefrontReport report;
+    auto session = PrepareWavefront(world, lights, cam, 1, 0, scene, report);
+    expect_true(bool(session));
+    if (!session)
+      return;
+    std::vector<WFGeometryProbe> probes;
+    for (float minimum : {0.f, 2.f, 3.f, 4.1f}) {
+      WFGeometryProbe p;
+      p.origin = {0, 0, 0, minimum};
+      p.direction = {0, 0, 1, 10};
+      probes.push_back(p);
+    }
+    auto actual = ProbeMetalGeometry(scene, probes);
+    random_gen rng(3);
+    for (size_t i = 0; i < probes.size(); ++i) {
+      hit_record hit;
+      bool found = world.hit(Ray(point3f(0), vec3f(0, 0, 1)), probes[i].origin.w, 10, hit, rng);
+      expect_true((actual[i].normal.w != 0) == found);
+      if (found)
+        expect_true(std::abs(actual[i].point.w - hit.t) < 2e-5);
     }
   }
 }

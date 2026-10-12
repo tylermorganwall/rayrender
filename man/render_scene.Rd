@@ -281,8 +281,10 @@ It traces static meshes and instances with [diffuse()] (including rough diffuse)
 [translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
 random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
 Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
-textures, and area emission. Cylinders, disks, and cylindrical/ribbon curves are triangulated
-automatically; curve silhouettes and fiber frames therefore approximate the native curves.
+textures, and area emission. Flat, cylindrical, and ribbon [bezier_curve()] objects
+use direct GPU intersections with the CPU curve model, preserving tapered widths,
+texture coordinates, hair shading, and animated transforms. Cylinders and disks
+are triangulated automatically.
 [csg_object()] evaluates distance fields directly on the GPU, including blends,
 shells, emission, and closed dielectric/subsurface boundaries.
 It supports constant/checker/gradient/image textures, composable color and roughness graphs,
@@ -295,11 +297,16 @@ blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric w
 Animated geometry uses one shared shutter time per image sample, with exact native transform
 interpolation. A single shared geometry motion keeps an immutable reference acceleration
 structure and transforms rays; independent motions refit only changing structures.
+Metal updates moving vertices, analytic bounds, texture frames, and instance transforms
+on the GPU. The CPU interpolates the small transform hierarchy and updates light and
+medium metadata. This supports animated transforms, not deforming vertex keyframes.
 Camera, shadows, emitters, and volumes use
 the same pose. This estimates the shutter integral with spatially correlated temporal noise;
 low sample counts can show distinct motion positions, and refits add cost for moving scenes.
 Camera-only motion uses independent per-pixel shutter samples. `shutter_speed = Inf` freezes
-time at the start of the shutter interval. Unsupported geometry, materials, media, Ptex,
+time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
+approximation; see its documentation for filtering differences and memory limits.
+Unsupported geometry, materials, media,
 legacy noise and world/HSV gradients, or stratified sampling produce a warning and use CPU
 `nee` for the whole scene.
 GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
@@ -373,8 +380,14 @@ Scene validation errors and unclassified exceptions remain errors.
 
 Metal uses the same homogeneous SSS coefficients, HG phase function, dielectric
 Fresnel boundary, and priority convention as CPU rendering. Its RGB free-flight
-mixture is an unguided estimator, including when `method = "guided"` is requested;
-the physical transport model is unchanged. Internal scattering and SSS boundary
+mixture supports `method = "guided"` using entry-normal direction and flight
+proposals for eligible isotropic bodies. Missing entry guides and nonzero `g`
+use ordinary sampling; the physical transport model is unchanged.
+CPU and Metal use independent random sequences, so equal seeds do not produce
+pixel-identical images. With eight or more finite emitters, Metal selects lights
+through a spatial, power-weighted light BVH with a small uniform component;
+infinite lights retain their individual selection probabilities.
+Internal scattering and SSS boundary
 reflections do not consume `max_depth`, and walks have no finite event cap.
 Camera origins inside bodies are classified on the GPU. Denoising guides use
 the first non-specular interaction, including scattering behind glass.
@@ -385,10 +398,11 @@ in alpha, cutouts preserve holes, and volumes contribute partial opacity from
 extinction. Environment lights continue to illuminate objects when hidden from
 the camera. Finite atmospheric haze retains its radiance and opacity.
 
-Triangulation approximates curved geometry: cylinders/disks use 128 azimuth segments. Cylindrical curves
-use 16-sided tubes and ribbons use strips, with 64 longitudinal intervals per
-full Bezier span. Supply a mesh directly when finer control is needed. Ray-facing
-flat curves, procedurally textured legacy fog, grid temperatures above 20000 kelvin,
+Triangulation approximates cylinders/disks using 128 azimuth segments.
+Supply a mesh directly when finer control is needed. Curves retain the same
+width-dependent intersection refinement and `split_depth` as CPU rendering;
+they are open surfaces and cannot bound dielectric/subsurface interiors.
+Procedurally textured legacy fog, grid temperatures above 20000 kelvin,
 and other unsupported features still select CPU rendering for the whole scene.
 GPU membership supports up to 16 simultaneous overlapping closed boundaries.
 Overflow, unresolvable positions, and nonfinite transport weights terminate affected

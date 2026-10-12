@@ -29,10 +29,8 @@ struct alignas(16) WFVector {
   float x = 0, y = 0, z = 0, w = 0;
 };
 struct WFTriangle {
-  // Curve-only metadata in unused float4 lanes: p[].w transforms a unit error
-  // cube; geometric.w/uv2.z hold endpoint widths, n[].w the world radius.
-  // Positions remain xyz float3s.
-  // Vertex-colored native meshes instead retain source UVs in p[k].w/n[k].w.
+  // Vertex-colored native meshes retain source UVs in p[k].w/n[k].w.
+  // Native curve contacts synthesize derivative vertices only for shading.
   WFVector p[3], n[3], uv01, uv2, geometric;
   uint32_t material = 0, light = UINT32_MAX, boundary = 0, flags = 0;
 };
@@ -65,9 +63,18 @@ struct WFQuadric {
   uint32_t material = 0, light = UINT32_MAX, boundary = 0, surface = 0;
   // Nonzero count selects a distance-field program, stored immediately after
   // the analytic records. Offset is in bytes from the start of that array.
-  uint32_t csg_offset = 0, csg_count = 0, reserved[2]{};
+  uint32_t csg_offset = 0, csg_count = 0, curve_offset = 0, reserved = 0;
   WFVector csg_lo, csg_hi;
 };
+// Native cubic segment in object space. Width endpoints and ribbon normals
+// belong to the original curve; width.zw retains this segment's global u range.
+// Appended to the analytic buffer, addressed relative to the Quadric array.
+struct WFCurve {
+  WFVector cp[4], normal[2], width, fallback;
+  uint32_t type = 0, padding[3]{};
+};
+class curve;
+WFCurve ExportWavefrontCurve(const curve &);
 struct WFCsgInstruction {
   WFVector a, b, c, d;
   uint32_t operation = 0, padding[3]{};
@@ -88,8 +95,16 @@ struct WFMeshRange {
   uint32_t start = 0, count = 0;
 };
 struct WFGeometryStorage {
-  uint32_t quadric_offset = 32, instance_offset = 32, medium_offset = 32, field_offset = 32;
-  uint32_t atmosphere_offset = 32, atmosphere_data_offset = 32, camera_offset = 32, motion_offset = 0;
+  uint32_t quadric_offset = 48, instance_offset = 48, medium_offset = 48, field_offset = 48;
+  uint32_t atmosphere_offset = 48, atmosphere_data_offset = 48, camera_offset = 48, motion_offset = 0;
+  uint32_t light_offset = 48, padding[3]{};
+};
+// Leaves precede internal nodes; parent links allow emitter-hit MIS to evaluate
+// the same position-dependent PMF as downward sampling, without a search.
+struct WFLightNode {
+  WFVector center_radius2;
+  float power = 0;
+  uint32_t left = UINT32_MAX, right = UINT32_MAX, parent = UINT32_MAX;
 };
 struct WFAtmosphereData {
   skymodelr_prague_gpu_layout model{};
@@ -121,6 +136,9 @@ struct WFMaterial {
 struct WFBoundary {
   WFVector sigma_a, sigma_s; // roughness in a.w, HG anisotropy in s.w.
   uint32_t material = 0, subsurface = 0, diffusion_offset = 0, medium = 0;
+  // Diffusion uses RGB color/radius. Guided random walks use color.xyz for the
+  // proposal poles and radius.w as eligibility; explicit media use radius.w
+  // for keep_surface. Tags keep these layouts disjoint without enlarging them.
   WFVector color, radius, lo{INFINITY, INFINITY, INFINITY, 0},
       hi{-INFINITY, -INFINITY, -INFINITY, 0};
 };
@@ -171,8 +189,9 @@ struct WFShadow {
 };
 static_assert(sizeof(WFPath) == 80 && sizeof(WFAtmosphereRequest) == 80 && sizeof(WFShadow) == 144);
 static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
-              sizeof(WFMeshInstance) == 128 && sizeof(WFGeometryStorage) == 32 &&
-              sizeof(WFQuadric) == 176 && sizeof(WFCsgInstruction) == 80 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
+              sizeof(WFMeshInstance) == 128 && sizeof(WFGeometryStorage) == 48 &&
+              sizeof(WFLightNode) == 32 &&
+              sizeof(WFQuadric) == 176 && sizeof(WFCurve) == 144 && sizeof(WFCsgInstruction) == 80 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
               sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 && sizeof(WFBoundary) == 112 &&
               sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 96 && sizeof(WFCamera) == 240 &&
               sizeof(WFParameters) == 320 && sizeof(WFPixel) == 48);
@@ -188,6 +207,7 @@ struct WavefrontScene {
   std::vector<WFTriangle> triangles;
   std::vector<WFQuadric> quadrics;
   std::vector<WFCsgInstruction> csg_instructions;
+  std::vector<WFCurve> curves;
   std::vector<WFMeshRange> meshes;
   std::vector<WFMeshInstance> instances;
   size_t loose_triangles = 0;
@@ -197,10 +217,13 @@ struct WavefrontScene {
   std::vector<WFVector> texels;
   std::vector<WFSurface> surfaces{WFSurface()};
   // Graphs=1, surface context=2, bump=4, alpha=8, general media=16,
-  // whole-assembly reference-frame traversal=32, invisible area emitters=64.
+  // whole-assembly reference-frame traversal=32, invisible area emitters=64,
+  // finite light BVH=128, guided random walks=256, native curves=512.
   // Shared pipeline specialization key.
   uint32_t texture_features = 0;
   std::vector<WFLight> lights;
+  std::vector<WFLightNode> light_nodes;
+  std::vector<double> emission_estimates;
   std::vector<WFVector> material_data;
   std::vector<WFMedium> media{WFMedium()};
   std::vector<float> fields;
@@ -278,6 +301,8 @@ std::vector<WFCameraResult> ProbeMetalCamera(const WFCamera &,const std::vector<
                                             const std::vector<WFCameraProbe> &);
 struct WFHazeProbe { WFVector values[2], start, delta; };
 std::vector<WFCameraResult> ProbeMetalHaze(const std::vector<WFHazeProbe> &);
+struct WFSubsurfaceProbe { WFVector pole, axis, random, wi, rates; };
+std::vector<WFCameraResult> ProbeMetalSubsurface(const std::vector<WFSubsurfaceProbe> &);
 // Development-only numerical cross-backend probes. No R API or CPU hot-path hook.
 struct WFGeometryProbe {
   WFVector origin, direction; // w holds minimum/maximum ray distance.
@@ -301,6 +326,7 @@ struct WFEnvironmentProbe {
   float latitude = 0;
   uint32_t padding[2]{};
 };
+std::vector<WFVector> ProbeMetalLightSelection(const WavefrontScene &, const std::vector<WFVector> &);
 std::vector<WFVector> ProbeMetalEnvironment(const WavefrontScene &, const WFLight &,
                                             const std::vector<WFEnvironmentProbe> &);
 struct WFTextureProbe {

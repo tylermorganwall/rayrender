@@ -2,6 +2,9 @@
 #define RAYRENDER_VOLUME_LIGHTS_H
 #include "../hitables/hitablelist.h"
 
+// Proposal power only; actual emission is always evaluated at the sampled hit.
+double EstimateLightEmission(const material *, const point3f &);
+
 // Shape adapters supply solid-angle direction proposals. The sampler can use
 // their full mixture for atmospheric transport or retain a selected emitter
 // and its joint probability for ordinary endpoint emission.

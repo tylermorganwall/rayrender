@@ -16,6 +16,22 @@
 
 ## New features
 
+- `render_scene()` Updates animated geometry on the Metal device before refitting
+  acceleration structures, while retaining native transform interpolation and
+  interactive cancellation.
+
+- `texture_ptex()` Supports Metal through a bounded, mipmapped GPU atlas.
+  Filtering approximates native Ptex; atlas resolution and memory limits are
+  configurable without changing CPU rendering.
+
+- `render_scene()` Intersects flat, cylindrical, and ribbon Bézier curves directly
+  on Metal, preserving the CPU curve model and avoiding tube/strip tessellation.
+  Curves support hair shading, tapered widths, textures, and animated transforms.
+
+- `render_scene()` Uses a spatial light BVH for Metal scenes with many finite
+  emitters, reducing noise from uneven lighting. Metal also honors guided
+  direction and free-flight sampling in `subsurface(method = "guided")`.
+
 - `render_scene()` Supports invisible area lights and transparent backgrounds on
   Metal. Hidden emitters still illuminate the scene; camera coverage includes
   alpha cutouts, volume extinction, and atmospheric haze.

@@ -208,6 +208,7 @@ R"MSL(
 
 )MSL"
 #include "wavefront_intersections.inc"
+#include "wavefront_light_sampling.inc"
 R"MSL(
 
   float3 environment(Light l, float3 wi, float3 position, device const Texture *textures,
@@ -457,7 +458,7 @@ R"MSL(
         auto hit = trace_geometry(probe, scene, quadrics, body);
         if (hit.type != intersection_type::none &&
             dot(direction, geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                            surfaces, hit.instance, scene.instances)
+                                            surfaces, hit.instance, scene.instances, probe.origin, probe.direction)
                                .face.geometric.xyz) > 0) {
           if (!cross_boundary(state, id, true))
             return false;
@@ -493,7 +494,7 @@ R"MSL(
       if (hit.type == intersection_type::none)
         return true;
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances);
+                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction);
       Triangle t = contact.face;
       float facing = dot(direction, t.geometric.xyz);
       bool before_endpoint = hit.distance < distance - endpoint_guard ||
@@ -533,12 +534,14 @@ R"MSL(
 )MSL"
 #include "wavefront_bsdf.inc"
 #include "wavefront_diffusion.inc"
+#include "wavefront_subsurface_sampling.inc"
 #include "wavefront_openpbr.inc"
 #include "wavefront_bump.inc"
 #include "wavefront_media.inc"
 #include "wavefront_atmosphere.inc"
 #include "wavefront_haze.inc"
 #include "wavefront_camera.inc"
+#include "wavefront_motion.inc"
     R"MSL(
 
 #define SCENE_ARGUMENTS                                                                            \
@@ -594,6 +597,7 @@ R"MSL(
     if (i >= p.active)
       return;
     uint pixel = active[i], dim = 0;
+    if (texture_features & 256) diffusion_entries[pixel] = {};
     if (scene_has_atmosphere && (p.camera.padding[1] & 2)) {
       device AirRay *air = reinterpret_cast<device AirRay *>(
           reinterpret_cast<device AtmosphereRequest *>(diffusion_entries + p.camera.padding[0]) + p.camera.padding[0]);
@@ -727,6 +731,13 @@ R"MSL(
       return;
     }
     float3 rates = scattering ? extinction(body, boundaries, materials) : float3(0);
+    bool guided_flight = (texture_features & 256) && (path.flags & 32) && body &&
+        boundaries[body].subsurface == 1 && boundaries[body].radius.w != 0 &&
+        as_type<uint>(diffusion_entries[pixel].position.w) == body;
+    float3 guided_rates = rates, ordinary_weights = float3(1.f/3), guided_weights = 0;
+    if (guided_flight)
+      subsurface_flight_mixture(boundaries[body].color.xyz,diffusion_entries[pixel].normal.xyz,
+                                path.direction.xyz,rates,guided_rates,ordinary_weights,guided_weights);
     float flight = INFINITY;
     float majorant = heterogeneous ? max(rates.x, max(rates.y, rates.z)) * medium.hi.w : 0;
     if (heterogeneous) {
@@ -735,10 +746,20 @@ R"MSL(
     } else if (scattering) {
       // A fresh RGB-channel mixture at every segment, with the exact mixture
       // density below. Zero-rate channels retain their mass at infinity.
-      uint channel = min(2u, uint(3 * sample1(pixel, path.dimension, p, directions, blue)));
+      float selector = sample1(pixel, path.dimension, p, directions, blue);
+      uint channel = min(2u, uint(3 * selector));
+      float rate = rates[channel];
+      if (guided_flight) {
+        float cumulative=0;
+        rate=guided_rates.z;
+        for (uint c=0;c<6;++c) {
+          cumulative += c<3 ? ordinary_weights[c] : guided_weights[c-3];
+          if (selector < cumulative) { rate=c<3 ? rates[c] : guided_rates[c-3]; break; }
+        }
+      }
       float u = sample1(pixel, path.dimension, p, directions, blue);
-      if (rates[channel] > 0)
-        flight = -log(1 - u) / rates[channel];
+      if (rate > 0)
+        flight = -log(1 - u) / rate;
     }
     ray r;
     r.origin = path.origin.xyz;
@@ -756,14 +777,14 @@ R"MSL(
                   hit.instance == as_type<uint>(path.previous.w);
       if (!skip && (texture_features & 64) && !(path.flags & 16)) {
         auto contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                        surfaces, hit.instance, scene.instances);
+                                        surfaces, hit.instance, scene.instances, r.origin, r.direction);
         Material emitter = materials[contact.face.material];
         skip = emitter.emissive == 1 && emitter.extra.w != 0;
       }
       if (!skip && (texture_features & 8)) {
         GeometrySurface contact =
             geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
-                             hit.instance, scene.instances);
+                             hit.instance, scene.instances, r.origin, r.direction);
         Triangle face = contact.face;
         uint alpha = surfaces[as_type<uint>(face.uv2.w)].alpha;
         if (alpha != UINT_MAX) {
@@ -819,9 +840,16 @@ R"MSL(
       // Remove a common exponential before normalizing. This is the same ratio
       // without underflow in an optically thick RGB segment.
       float low = min(rates.x, min(rates.y, rates.z));
+      if (guided_flight) low=min(low,min(guided_rates.x,min(guided_rates.y,guided_rates.z)));
       float3 relative = isfinite(distance) ? exp(-(rates - low) * distance)
                                            : select(float3(0), float3(1), rates == 0);
       float density = dot(relative * (collision ? rates : float3(1)), float3(1.f / 3));
+      if (guided_flight) {
+        float3 guided_relative = isfinite(distance) ? exp(-(guided_rates-low)*distance)
+            : select(float3(0),float3(1),guided_rates == 0);
+        density = dot(relative*(collision ? rates : float3(1)),ordinary_weights) +
+                  dot(guided_relative*(collision ? guided_rates : float3(1)),guided_weights);
+      }
       if (!(density > 0))
         return;
       if ((texture_features & 16) && collision && boundaries[body].medium && path.depth < p.max_depth)
@@ -848,7 +876,7 @@ R"MSL(
         // distance/PDF and move only an uncertain position onto the incident side.
         GeometrySurface contact =
             geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
-                             hit.instance, scene.instances);
+                             hit.instance, scene.instances, r.origin, r.direction);
         Triangle endpoint = contact.face;
         float3 surface_position = contact.position, error = contact.error;
         error += 3 * FLT_EPSILON * (abs(r.origin) + abs(flight * r.direction));
@@ -913,6 +941,8 @@ R"MSL(
 
   template <ushort features> kernel void shade(SCENE_ARGUMENTS) {
     device const uchar *bytes = reinterpret_cast<device const uchar *>(storage);
+    device const LightNode *light_nodes =
+        reinterpret_cast<device const LightNode *>(bytes + storage->light_offset);
     device const Quadric *quadrics =
         reinterpret_cast<device const Quadric *>(bytes + storage->quadric_offset);
     device const MeshInstance *instances =
@@ -950,6 +980,9 @@ R"MSL(
                        : active_boundary(state, boundaries, materials);
     float3 position = path.origin.xyz, error = 0, g = 0, n = 0, rho = 0, wo = -path.direction.xyz;
     float eta = 1, roughness = 0, anisotropy = body ? boundaries[body].sigma_s.w : 0;
+    bool guided_scatter = (texture_features & 256) && volume &&
+        boundaries[body].subsurface == 1 && boundaries[body].radius.w != 0 &&
+        as_type<uint>(diffusion_entries[pixel].position.w) == body;
     bool entering = false;
     Triangle t = {};
     GeometrySurface geometry = {};
@@ -985,7 +1018,7 @@ R"MSL(
       path.beta.xyz *= exit.weight;
       h = exit.hit;
       geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
-                                  h.padding[0], scene.instances);
+                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz);
       t = geometry.face;
       position = exit.position;
       error = exit.error;
@@ -1017,7 +1050,7 @@ R"MSL(
       }
     } else {
       geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
-                                  h.padding[0], scene.instances);
+                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz);
       t = geometry.face;
       m = materials[t.material];
       float3 bary = float3(1 - h.u - h.v, h.u, h.v);
@@ -1059,7 +1092,8 @@ R"MSL(
       if (m.emissive == 1) {
         if (dot(n, wo) > 0) {
           float pdf =
-              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) / p.lights;
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) *
+              light_selection_pdf(t.light, path.previous.xyz, p, light_nodes);
           float weight = (path.flags & 1) ? 1 : mis(path.direction.w, pdf);
           pixels[pixel].radiance.xyz += path.beta.xyz * rho * m.diffuse.w * weight;
         }
@@ -1083,7 +1117,7 @@ R"MSL(
             path.origin = float4(offset_origin(position, error, entering ? -g : g),
                                  as_type<float>(h.primitive + 1));
             path.previous.w = as_type<float>(h.padding[0]);
-            remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
+            remember_subsurface_entry(path, pixel, adjacent, body, t.boundary, position, g, boundaries, materials,
                                      diffusion_entries);
             enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
             return;
@@ -1095,7 +1129,8 @@ R"MSL(
         float weight = 1;
         if (m.emissive && !(path.flags & 1)) {
           float pdf =
-              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) / p.lights;
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) *
+              light_selection_pdf(t.light, path.previous.xyz, p, light_nodes);
           weight = mis(path.direction.w, pdf);
         }
         pixels[pixel].radiance.xyz += path.beta.xyz * pbr.prepared.emission * weight;
@@ -1128,7 +1163,7 @@ R"MSL(
                                as_type<float>(h.primitive + 1));
           path.previous.w = as_type<float>(h.padding[0]);
           path.dimension = dim;
-          remember_diffusion_entry(path, pixel, adjacent, position, g, boundaries, materials,
+          remember_subsurface_entry(path, pixel, adjacent, body, t.boundary, position, g, boundaries, materials,
                                    diffusion_entries);
           enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
           return;
@@ -1175,7 +1210,7 @@ R"MSL(
                 propagate_differential(differentials[pixel], derivatives, n, path.direction.xyz,
                                        path.origin.xyz, wi, transmission, eta);
           path.direction = float4(wi, pdf);
-          remember_diffusion_entry(path, pixel, state, position, g, boundaries, materials,
+          remember_subsurface_entry(path, pixel, state, body, t.boundary, position, g, boundaries, materials,
                                    diffusion_entries);
           path.flags |= 1;
           path.dimension = dim;
@@ -1210,37 +1245,12 @@ R"MSL(
             float3 tangent = normalize(geometry.tangent);
             float3 normal = n - tangent * dot(n, tangent);
             normal = dot(normal, normal) < 1e-12f ? normal_frame(tangent).y : normalize(normal);
-            if (t.flags & 6) {
-              float3 view_plane = wo - tangent * dot(tangent, wo);
-              float projected_length = length(view_plane);
-              if (projected_length == 0)
-                return;
-              view_plane /= projected_length;
-              float impact =
-                  (t.flags & 2)
-                      ? clamp(dot(normal, cross(tangent, view_plane)), -1.f, 1.f)
-                      : (1 - 2 * triangle_uv(t, bary).y) * (dot(normal, wo) >= 0 ? 1.f : -1.f);
-              float width = mix(t.geometric.w, t.uv2.z, triangle_uv(t, bary).x);
-              error = width * float3(t.p[0].w, t.p[1].w, t.p[2].w);
-              if (t.flags & 2) {
-                // PBRT's cylindrical curve rotates its frame by 90*h degrees.
-                // Recover h from the projected cross-section, not its static UV v.
-                normal = cos(.5f * pi * impact) * view_plane +
-                         sin(.5f * pi * impact) * cross(tangent, view_plane);
-                float radius = dot(bary, float3(t.n[0].w, t.n[1].w, t.n[2].w));
-                position -= wo * (radius * sqrt(max(0.f, 1 - impact * impact)) / projected_length);
-              } else if (dot(normal, wo) < 0)
-                normal = -normal;
-              g = normal;
-              bsdf.impact = impact;
-            }
             bsdf.frame = {tangent, cross(normal, tangent), normal};
           }
           bsdf.view = bsdf.frame.local(wo);
           bsdf.rho = rho;
           bsdf.distance = h.distance;
-          if (!(m.type == bsdf_hair && (t.flags & 6)))
-            bsdf.impact = clamp(2 * triangle_uv(t, bary).y - 1, -1.f, 1.f);
+          bsdf.impact = clamp(2 * triangle_uv(t, bary).y - 1, -1.f, 1.f);
           if (m.type == bsdf_translucent) {
             bsdf.transmission =
                 clamp(texture_value(m.second_texture, texture_hit, textures, texels), 0.f, 1.f);
@@ -1261,7 +1271,8 @@ R"MSL(
     // One light proposal per vertex. Each emitter has its own competing BSDF
     // technique; evaluating emission individually on a miss avoids mixture bias.
     if (p.lights) {
-      uint choice = min(uint(sample1(pixel, dim, p, directions, blue) * p.lights), p.lights - 1);
+      uint choice = select_light(sample1(pixel, dim, p, directions, blue),position,p,light_nodes);
+      float selection_pdf = light_selection_pdf(choice,position,p,light_nodes);
       Light l = lights[choice];
       bool continuous = l.type == 0 && l.alias_offset != UINT_MAX;
       uint environment_bits = sample_bits(pixel, dim, p, directions, blue, continuous);
@@ -1273,12 +1284,12 @@ R"MSL(
       if (l.type == 0) {
         wi = sample_environment(l, environment_bits, v, texels);
         emitted = environment(l, wi, position, textures, texels);
-        pdf = light_pdf(l, wi, texels) / p.lights;
+        pdf = light_pdf(l, wi, texels) * selection_pdf;
       } else if (l.type == 1) {
         float d = u * l.forward.w, s = sqrt(d * (2 - d)), phi = 2 * pi * v;
         wi = (1 - d) * l.forward.xyz + s * (cos(phi) * l.right.xyz + sin(phi) * l.up.xyz);
         emitted = environment(l, wi, position, textures, texels);
-        pdf = light_pdf(l, wi, texels) / p.lights;
+        pdf = light_pdf(l, wi, texels) * selection_pdf;
       } else if (l.type == 2) {
         light_target = l.forward.xyz;
         float3 delta = l.forward.xyz - position;
@@ -1296,7 +1307,7 @@ R"MSL(
           }
         }
         emitted = l.color.xyz * falloff / distance2;
-        pdf = 1.f / p.lights;
+        pdf = selection_pdf;
       } else {
         GeometrySurface source =
             sample_geometry_light(l.primitive, float2(u, v), position, triangles, quadrics,
@@ -1341,7 +1352,7 @@ R"MSL(
                                    .x,
                                0.f, 1.f);
           }
-          pdf = geometry_light_pdf(l.primitive, source, position, quadrics) / p.lights;
+          pdf = geometry_light_pdf(l.primitive, source, position, quadrics) * selection_pdf;
         }
       }
       float cosine = dot(n, wi);
@@ -1366,6 +1377,9 @@ R"MSL(
                                    ? surface.value
                                    : ((texture_features & 4) ? mapped_value.value
                                                              : brdf(wo, wi, n, rho, m) * cosine));
+      if (guided_scatter)
+        competing = subsurface_direction_pdf(boundaries[body].color.xyz,
+                                             diffusion_entries[pixel].normal.xyz,wi);
       if (pdf > 0 && any(value > 0) &&
           (volume || interface || extended || features == 2 || features == 4 ||
            (((texture_features & 4) ? dot(mapped.g, wi) > 0 : cosine > 0) && dot(g, wi) > 0)) &&
@@ -1427,6 +1441,14 @@ R"MSL(
     } else if (volume) {
       wi = phase_sample(-wo, anisotropy, u, v);
       pdf = phase_pdf(-wo, wi, anisotropy);
+      if (guided_scatter) {
+        wi = subsurface_direction(boundaries[body].color.xyz,diffusion_entries[pixel].normal.xyz,
+                                  sample1(pixel,dim,p,directions,blue),u,v,wi);
+        pdf = subsurface_direction_pdf(boundaries[body].color.xyz,
+                                       diffusion_entries[pixel].normal.xyz,wi);
+        path.beta.xyz *= (1/(4*pi))/pdf;
+        path.flags |= 32;
+      } else path.flags &= ~32u;
     } else if (interface) {
       float weight;
       if (!boundary_sample(wo, n, eta, roughness, branch, u, v, wi, weight, pdf))
@@ -1514,7 +1536,7 @@ R"MSL(
     else if (texture_features & 64)
       path.flags |= 16; // Persistent: later mirrors must not hide diffuse-path emission.
     if (!volume)
-      remember_diffusion_entry(path, pixel, state, position, g, boundaries, materials,
+      remember_subsurface_entry(path, pixel, state, body, t.boundary, position, g, boundaries, materials,
                                diffusion_entries);
     if (roulette(path, pixel, p, directions, blue, internal))
       enqueue(pixel, path, state, p, paths, membership, next_queue, counts);
@@ -1699,7 +1721,7 @@ R"MSL(
         return;
       }
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances);
+                                                 quadrics, surfaces, hit.instance, scene.instances, r.origin, r.direction);
       Triangle t = contact.face;
       Material surface_material = materials[t.material];
       if ((texture_features & 64) && surface_material.emissive == 1 && surface_material.extra.w != 0) {

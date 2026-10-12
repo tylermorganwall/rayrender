@@ -17,6 +17,10 @@
 #' @param filter Default `"bspline"`. Ptex reconstruction filter: `"point"`,
 #' `"bilinear"`, `"box"`, `"gaussian"`, `"bicubic"`, `"bspline"`,
 #' `"catmullrom"`, or `"mitchell"`.
+#' @return A composable `ray_texture` descriptor.
+#' @importFrom ptexr ptex_api
+#' @export
+#' @md
 #' @details
 #' Face images can have different resolutions, letting an artist allocate more
 #' pixels to detailed areas and fewer to plain surfaces. Adjacency stored in the
@@ -54,6 +58,18 @@
 #' centers are clamped to the face, including finite-difference bump probes;
 #' filter taps still use Ptex adjacency. There is no additional image v flip.
 #'
+#' The Metal integrator prepares a GPU atlas using native Ptex samples, then
+#' performs face-local lookups on the GPU. This approximates native filtering:
+#' mip levels are isotropic, and seams, triangular charts, and fine details under
+#' minification can differ from the CPU's adjacency-aware anisotropic filters.
+#' Color decoding and scalar conversion still happen after filtering.
+#' Set `options(rayrender.metal_ptex_max_resolution = 256,
+#' rayrender.metal_ptex_memory = 256 * 1024^2)` to control the maximum face
+#' dimension and total atlas budget in bytes. Dimensions round down to a power
+#' of two; the renderer lowers the resolution with a warning if necessary to
+#' fit the budget. If even the smallest atlas cannot fit, rendering falls back
+#' to CPU with a warning. These limits do not change CPU Ptex filtering.
+#'
 #' Each render shares one cache across its workers. Set
 #' `options(rayrender.ptex_cache_memory = 256 * 1024^2,
 #' rayrender.ptex_cache_files = 100)` to change its soft eviction limits (bytes
@@ -61,10 +77,6 @@
 #' an aggregated warning after rendering; missing files fail during setup.
 #' Verbose rendering reports cache statistics. The provider stays loaded for
 #' the render; do not explicitly unload its DLL while rendering.
-#' @return A composable `ray_texture` descriptor.
-#' @importFrom ptexr ptex_api
-#' @export
-#' @md
 #' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Two tiny quilt panels, each painted in its own Ptex face.
 #' file = tempfile(fileext = ".ptx")

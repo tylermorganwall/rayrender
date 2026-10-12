@@ -8,6 +8,47 @@
 #include <testthat.h>
 
 context("Metal image environment proposals") {
+  test_that("finite light BVH sampling and emitter-hit probabilities agree") {
+    if (!MetalBVHAvailable()) return;
+    Transform identity;
+    camera cam({0,0,4},{0,0,0},{0,1,0},30,1,0,4,0,1,1);
+    for (bool black : {false,true}) {
+      hitable_list world,lights;
+      for (int i=0;i<10;++i) {
+        auto emission=std::make_shared<constant_texture>(point3f(black ? 0 : (i==5 ? 100 : 1)));
+        auto material=std::make_shared<diffuse_light>(emission,1,false);
+        world.add(std::make_shared<xy_rect>(2*i,2*i+1,-1,1,0,material,nullptr,nullptr,
+                                            &identity,&identity,false));
+      }
+      auto sky=std::make_shared<ImageInfiniteLight>(std::make_shared<constant_texture>(point3f(.1)),1,1,0);
+      world.add(std::make_shared<InfiniteAreaLight>(sky,100,point3f(0),&identity,&identity));
+      WavefrontScene scene; WavefrontReport report;
+      auto session=PrepareWavefront(world,lights,cam,1,0,scene,report);
+      expect_true(bool(session)); if (!session) continue;
+      expect_true(scene.light_nodes.size()==39);
+      const size_t count=65536;
+      for (float x : {0.f,10.f,100.f}) {
+        std::vector<WFVector> inputs(count);
+        for (size_t i=0;i<count;++i) inputs[i]={x,0,3,float((i+.5)/count)};
+        auto result=ProbeMetalLightSelection(scene,inputs);
+        std::vector<size_t> frequencies(scene.lights.size());
+        double error=0;
+        bool valid=true;
+        for (const auto &v : result) {
+          valid &= v.x>=0 && v.x<scene.lights.size() && std::isfinite(v.y) && v.y>0;
+          if (valid) ++frequencies[size_t(v.x)];
+          error=std::max(error,std::abs(double(v.z)-1));
+        }
+        expect_true(valid); expect_true(error<2e-6);
+        for (size_t i=0;i<frequencies.size();++i)
+          error=std::max(error,std::abs(double(frequencies[i])/count-result[i].w));
+        // Stratified inverse-CDF counts differ by at most a few endpoints:
+        // the tree branch and 5% uniform component each partition [0,1).
+        expect_true(error<5./count);
+        expect_true(std::abs(result[0].w-1./scene.lights.size())<1e-7);
+      }
+    }
+  }
   test_that("alias frequencies, solid-angle PDFs, seams and rotation agree") {
     if (!MetalBVHAvailable())
       return;

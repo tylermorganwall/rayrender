@@ -335,6 +335,9 @@ double emission_estimate(const material *mat, const point3f &p) {
 }
 } // namespace
 // The directional mixture above remains available for atmospheric source terms.
+double EstimateLightEmission(const material *mat, const point3f &p) {
+  return emission_estimate(mat, p);
+}
 // Finite emission instead lives on (emitter, direction): a selected lamp cannot
 // collect another lamp's emission when that lamp blocks the connection.
 struct VolumeLightSampler::Emitters {

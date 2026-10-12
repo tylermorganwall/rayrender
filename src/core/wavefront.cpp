@@ -3,6 +3,7 @@
 #include "../hitables/box.h"
 #include "../hitables/cylinder.h"
 #include "../hitables/csg.h"
+#include "../hitables/curve.h"
 #include "../hitables/disk.h"
 #include "../hitables/ellipsoid.h"
 #include "../hitables/infinite_area_light.h"
@@ -16,8 +17,10 @@
 #include "../hitables/trimesh.h"
 #include "../materials/openpbr.h"
 #include "../materials/texturegraph.h"
+#include "../materials/ptextexture.h"
 #include "../volumes/boundary.h"
 #include "../volumes/subsurface.h"
+#include "../volumes/lights.h"
 #include "../lights/atmosphere.h"
 #include "adaptivesampler.h"
 #include "bvh.h"
@@ -25,12 +28,14 @@
 #include <chrono>
 #include <cstring>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 #include <unordered_map>
 
 namespace {
 template <class T> WFVector Pack(const T &v) { return {float(v[0]), float(v[1]), float(v[2]), 0}; }
 using Clock = std::chrono::steady_clock;
+#include "wavefront_light_bvh.inc"
 } // namespace
 
 // This compiler is the only reader of native implementation details. It runs
@@ -85,6 +90,9 @@ public:
       }
       output.uv01 = {float(uv[0][0]), float(uv[0][1]), float(uv[1][0]), float(uv[1][1])};
       output.uv2 = {float(uv[2][0]), float(uv[2][1]), 0, 0};
+      uint32_t face_index=uint32_t(tri->TextureFaceIndex());
+      std::memcpy(&output.uv2.z, &face_index, sizeof(face_index));
+      output.flags |= 64; // A native mesh has face-local Ptex coordinates.
       if (smooth)
         output.flags |= 8;
       output.material = Material(mesh.mesh_materials[material_id].get());
@@ -109,6 +117,12 @@ public:
         out.sigma_s.w = medium->g;
         out.color = Pack(medium->diffusion_color);
         out.radius = Pack(medium->diffusion_radius);
+        if (medium->subsurface_guided && medium->subsurface_guide_eligible && out.subsurface == 1) {
+          out.color = {float(medium->subsurface_pole[0]),float(medium->subsurface_pole[1]),
+                        float(medium->subsurface_pole[2]),0};
+          out.radius.w = 1;
+          scene.texture_features |= 256;
+        }
         if (!medium->subsurface) {
           out.radius.w = body->keep_surface;
           out.medium = ExportMedium(*medium, placement * body->medium_to_world);
@@ -169,6 +183,8 @@ public:
       Quadric(object, placement, s->axes, s->alpha_mask.get(), s->bump_tex.get(), 2);
     } else if (const auto *s = dynamic_cast<const csg *>(&object)) {
       Quadric(object, placement, vec3f(1), nullptr, nullptr, 0, s);
+    } else if (const auto *s = dynamic_cast<const curve *>(&object)) {
+      Quadric(object, placement, vec3f(1), nullptr, nullptr, 0, nullptr, s);
     } else if (const auto *light = dynamic_cast<const InfiniteAreaLight *>(&object)) {
       if (light->light) {
         scene.environment_versions.emplace_back(light, light->light.get());
@@ -213,6 +229,15 @@ public:
   size_t tessellated_primitives = 0;
 
   void FinishMeshes() {
+    FinishPtex();
+    for (auto &q : scene.quadrics) if (q.curve_offset) {
+      size_t offset = scene.quadrics.size() * sizeof(WFQuadric) +
+                      scene.csg_instructions.size() * sizeof(WFCsgInstruction) +
+                      size_t(q.curve_offset - 1) * sizeof(WFCurve);
+      if (offset > UINT32_MAX)
+        throw std::runtime_error("Metal curve data exceeds 32-bit offsets");
+      q.curve_offset = uint32_t(offset);
+    }
     for (auto &q : scene.quadrics) if (q.csg_count) {
       size_t offset=scene.quadrics.size()*sizeof(WFQuadric)+size_t(q.csg_offset)*sizeof(WFCsgInstruction);
       if(offset>UINT32_MAX) throw std::runtime_error("Metal CSG program exceeds 32-bit offsets");
@@ -561,13 +586,14 @@ private:
       throw std::runtime_error("unsupported material");
     uint32_t id = scene.materials.size();
     scene.materials.push_back(out);
+    scene.emission_estimates.push_back(out.emissive ? EstimateLightEmission(input, point3f(0)) : 0);
     materials[input] = id;
     return id;
   }
 
   void Quadric(const hitable &object, const Transform &placement, vec3f axes,
                const alpha_texture *alpha, const bump_texture *bump, float chart,
-               const csg *implicit = nullptr) {
+               const csg *implicit = nullptr, const curve *fiber = nullptr) {
     if (scene.quadrics.size() >= 0x7ffffffdu)
       throw std::runtime_error("Metal analytic primitive capacity exceeded");
     WFQuadric out;
@@ -625,6 +651,31 @@ private:
       out.measure.y=object.reverseOrientation ? -1 : 1;
       out.measure.w=out.measure.y*(current_boundary ? boundary_orientation : 1);
       WavefrontCSGBounds(out,lo,hi);
+    }
+    if (fiber) {
+      if (current_boundary)
+        throw std::runtime_error("open curve cannot bound a dielectric/SSS interior on Metal");
+      WFCurve data = ExportWavefrontCurve(*fiber);
+      if (!(data.width.z < data.width.w))
+        return;
+      scene.texture_features |= 512;
+      out.curve_offset = uint32_t(scene.curves.size() + 1);
+      scene.curves.push_back(data);
+      float radius = .5f * std::max(
+          (1 - data.width.z) * data.width.x + data.width.z * data.width.y,
+          (1 - data.width.w) * data.width.x + data.width.w * data.width.y);
+      for (int a = 0; a < 3; ++a) {
+        float low = INFINITY, high = -INFINITY;
+        for (const auto &p : data.cp) {
+          low = std::min(low, (&p.x)[a]);
+          high = std::max(high, (&p.x)[a]);
+        }
+        (&out.csg_lo.x)[a] = low - radius;
+        (&out.csg_hi.x)[a] = high + radius;
+      }
+      out.measure.y = object.reverseOrientation ? -1 : 1;
+      out.measure.w = out.measure.y;
+      WavefrontCSGBounds(out, lo, hi);
     }
     if (current_boundary) {
       auto &body = scene.boundaries[current_boundary];
@@ -914,6 +965,7 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
           scene.environments += infinite;
         }
     WavefrontSceneCompiler::RefreshLights(scene);
+    BuildWavefrontLightBVH(scene);
     WavefrontSceneCompiler::PrepareAtmosphere(scene);
     WFCamera camera_data;
     ExportWavefrontCamera(camera, camera_data, scene.camera_data);
@@ -975,6 +1027,7 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
     p.boundary_lo = scene.boundary_lo; p.boundary_hi = scene.boundary_hi;
   }
   WavefrontSceneCompiler::RefreshLights(scene);
+  if (scene.motion_changed && !scene.light_nodes.empty()) RefitWavefrontLightBVH(scene);
   std::vector<uint32_t> active;
   for (const auto &block : film.pixel_chunks)
     for (int x = block.startx; x < block.endx; ++x)

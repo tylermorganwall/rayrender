@@ -2,6 +2,7 @@
 #include "../hitables/hitablelist.h"
 #include "../hitables/rectangle.h"
 #include "../materials/openpbr.h"
+#include "../volumes/subsurface.h"
 #include "camera.h"
 #include "hlbvh.h"
 #include "wavefront.h"
@@ -15,6 +16,44 @@ float probe_error(float actual, float expected) {
 }
 } // namespace
 context("Metal material evaluation") {
+  test_that("guided SSS uses normalized RGB proposal mixtures") {
+    if (!MetalBVHAvailable()) return;
+    const size_t count=65536;
+    std::vector<WFSubsurfaceProbe> inputs(count);
+    SubsurfaceProposal proposal;
+    proposal.pole={0,.3,.95}; proposal.axis=vec3f(0,0,1); proposal.guided=true;
+    for (size_t i=0;i<count;++i) {
+      double cosine=2*(i+.5)/count-1;
+      inputs[i].pole={0,.3,.95,0}; inputs[i].axis={0,0,1,0};
+      inputs[i].wi={float(std::sqrt(1-cosine*cosine)),0,float(cosine),0};
+      inputs[i].rates={1,3,10,0};
+      inputs[i].random={float((i+.5)/count),float(((i*7919)%count+.5)/count),
+                        float(((i*3571)%count+.5)/count),0};
+    }
+    auto result=ProbeMetalSubsurface(inputs);
+    double error=0, integral[3]{}, moment=0;
+    for (size_t i=0;i<count;++i) {
+      const auto &sample=result[i].origin;
+      const auto &guide=result[i].direction;
+      vec3f wi(inputs[i].wi.x,inputs[i].wi.y,inputs[i].wi.z);
+      vec3f direction(sample.x,sample.y,sample.z);
+      double pdf=0;
+      for (int c=0;c<3;++c) {
+        pdf+=proposal.DirectionPdf(c,direction)/3;
+        error=std::max(error,std::abs(double((&guide.x)[c])-proposal.GuidePdf(c,wi)));
+        integral[c]+=(&guide.x)[c]*4*M_PI/count;
+      }
+      error=std::max(error,std::abs(double(sample.w)-pdf));
+      error=std::max(error,std::abs(double(guide.w)-1));
+      error=std::max(error,std::abs(double(direction.length())-1));
+      moment+=sample.z/count;
+    }
+    expect_true(error<2e-5);
+    for (double value : integral) expect_true(std::abs(value-1)<2e-5);
+    // E[cos] of each pole component is 1/k - 1/atanh(k).
+    double expected=((1/.3-1/std::atanh(.3))+(1/.95-1/std::atanh(.95)))/6;
+    expect_true(std::abs(moment-expected)<.001);
+  }
   test_that("GPU BSDF values and reported PDFs match the native models") {
     if (!MetalBVHAvailable())
       return;

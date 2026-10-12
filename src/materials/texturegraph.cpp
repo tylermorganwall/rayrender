@@ -26,7 +26,7 @@ TextureEvalContext TextureEvalContext::FromHit(const hit_record& h) {
 }
 
 TextureNodeDescription TextureNode::Describe() const {
-  throw std::runtime_error("Ptex or unsupported texture graph node");
+  throw std::runtime_error("unsupported texture graph node");
 }
 
 namespace {
@@ -81,6 +81,16 @@ class PtexNode final : public TextureNode {
   Float gamma;
   bool quantize;
 public:
+  TextureNodeDescription Describe() const override {
+    TextureNodeDescription out;
+    out.operation=TextureNodeDescription::Ptex;
+    out.ptex=resource;
+    out.argument=filter;
+    out.seed=encoding == "linear" ? 0 : encoding == "srgb" ? 1 : 2;
+    out.value=point3f(gamma);
+    out.flag=quantize;
+    return out;
+  }
   PtexNode(const Rcpp::List& p, TextureCache& cache, bool scalar)
     : TextureNode(scalar), resource(cache.LookupPtex(Rcpp::as<std::string>(p["filename"]))),
       filter(Rcpp::as<int>(p["filter"])), encoding(Rcpp::as<std::string>(p["encoding"])),

@@ -21,8 +21,9 @@ struct CurveCommon {
   Float normalAngle, invSinNormalAngle;
 };
 
+struct WFCurve;
 class curve: public hitable {
-  friend class WavefrontCurveTessellator;
+  friend WFCurve ExportWavefrontCurve(const curve &);
   public:
     curve() : uMin(0), uMax(0) {}
     ~curve() {

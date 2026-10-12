@@ -69,6 +69,17 @@ face are uniformly reduced to fit the runtime's one-face limit. Lookup
 centers are clamped to the face, including finite-difference bump probes;
 filter taps still use Ptex adjacency. There is no additional image v flip.
 
+The Metal integrator prepares a GPU atlas using native Ptex samples, then
+performs face-local lookups on the GPU. This approximates native filtering:
+mip levels are isotropic, and seams, triangular charts, and fine details under
+minification can differ from the CPU's adjacency-aware anisotropic filters.
+Color decoding and scalar conversion still happen after filtering.
+Set \code{options(rayrender.metal_ptex_max_resolution = 256, rayrender.metal_ptex_memory = 256 * 1024^2)} to control the maximum face
+dimension and total atlas budget in bytes. Dimensions round down to a power
+of two; the renderer lowers the resolution with a warning if necessary to
+fit the budget. If even the smallest atlas cannot fit, rendering falls back
+to CPU with a warning. These limits do not change CPU Ptex filtering.
+
 Each render shares one cache across its workers. Set
 \code{options(rayrender.ptex_cache_memory = 256 * 1024^2, rayrender.ptex_cache_files = 100)} to change its soft eviction limits (bytes
 and open files). Workers never call R. Failed lookups return zero and produce

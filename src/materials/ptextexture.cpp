@@ -74,6 +74,15 @@ PtexTextureResource::~PtexTextureResource() {
   if (handle) runtime->api->texture_destroy(handle);
 }
 
+std::vector<ptex_face_v1> PtexTextureResource::Faces() const {
+  std::vector<ptex_face_v1> faces(info.faces);
+  ptex_error error{};
+  for (int i=0; i<info.faces; ++i)
+    if (runtime->api->face_info(handle, i, &faces[i], &error) != PTEX_OK)
+      throw std::runtime_error("Cannot read Ptex face metadata: " + std::string(error.message));
+  return faces;
+}
+
 point3f PtexTextureResource::Sample(const TextureEvalContext& context, int filter) const {
   if (context.face_index < 0) {
     runtime->RecordFailure(filename, "Ptex requires a mesh face and face-local UV coordinates");

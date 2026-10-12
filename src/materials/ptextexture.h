@@ -6,6 +6,7 @@
 #include <atomic>
 #include <mutex>
 #include <string>
+#include <vector>
 
 // The provider owns its implementation. Only opaque handles and the versioned
 // C function table cross the package boundary (no Ptex C++ ABI or static link).
@@ -33,6 +34,8 @@ public:
   PtexTextureResource(const PtexTextureResource&) = delete;
   PtexTextureResource& operator=(const PtexTextureResource&) = delete;
   point3f Sample(const TextureEvalContext& context, int filter) const;
+  const ptex_info_v1 &Info() const { return info; }
+  std::vector<ptex_face_v1> Faces() const;
 private:
   std::shared_ptr<PtexRuntime> runtime;
   std::string filename;

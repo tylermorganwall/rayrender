@@ -6,6 +6,120 @@ std::unordered_map<const DecodedTextureImage *, uint32_t> graph_images;
 std::unordered_map<const alpha_texture *, uint32_t> alpha_maps;
 std::unordered_map<const bump_texture *, uint32_t> bump_maps;
 
+struct PtexUpload {
+  std::shared_ptr<const PtexTextureResource> resource;
+  int filter;
+  std::vector<ptex_face_v1> faces;
+};
+std::vector<PtexUpload> ptex_uploads;
+
+// Ptex's native sampler prepares each level, including adjacency at face edges.
+// The device then interpolates these samples; this is a bounded approximation
+// to the native anisotropic filter, not a replacement Ptex implementation.
+void FinishPtex() {
+  if (ptex_uploads.empty())
+    return;
+  Rcpp::Function option = Rcpp::Environment::base_env()["getOption"];
+  double requested = Rcpp::as<double>(option("rayrender.metal_ptex_max_resolution", 256));
+  double memory = Rcpp::as<double>(option("rayrender.metal_ptex_memory", 256.0 * 1024 * 1024));
+  if (!std::isfinite(requested) || requested < 1 || requested > 16384 || requested != std::floor(requested) ||
+      !std::isfinite(memory) || memory < 1024 || memory > double(UINT32_MAX) || memory != std::floor(memory))
+    throw std::runtime_error("Invalid Metal Ptex atlas limits (resolution 1..16384; memory 1024..2^32-1 bytes)");
+  uint32_t cap = 1;
+  while (cap * 2 <= requested)
+    cap *= 2;
+  for (auto &upload : ptex_uploads)
+    upload.faces = upload.resource->Faces();
+  auto size_for = [&](uint32_t limit) {
+    uint64_t size = 0;
+    for (const auto &upload : ptex_uploads) {
+      size += upload.faces.size(); // One header per face, including face zero.
+      for (const auto &face : upload.faces) {
+        uint32_t w = std::min(uint32_t(face.width), limit), h = std::min(uint32_t(face.height), limit);
+        do {
+          size += 1 + uint64_t(w + 2) * (h + 2); // Level header plus a one-sample gutter.
+          if ((w == 1 && h == 1) || upload.filter == PTEX_POINT)
+            break;
+          w = std::max(1u, w / 2);
+          h = std::max(1u, h / 2);
+        } while (true);
+      }
+    }
+    return size;
+  };
+  uint64_t budget = uint64_t(memory) / sizeof(WFVector);
+  uint32_t original_cap = cap;
+  while (cap > 1 && size_for(cap) > budget)
+    cap /= 2;
+  uint64_t count = size_for(cap);
+  if (count > budget || count + scene.texels.size() > UINT32_MAX / sizeof(WFVector))
+    throw std::runtime_error("Metal Ptex face metadata exceeds the atlas memory budget");
+  if (cap < original_cap)
+    Rcpp::warning(
+        "Metal Ptex atlas reduced its maximum face resolution from %u to %u to fit rayrender.metal_ptex_memory.",
+        original_cap, cap);
+  scene.texels.reserve(scene.texels.size() + count);
+  auto metadata = [](uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    uint32_t words[4] = {a, b, c, d};
+    WFVector value;
+    std::memcpy(&value, words, sizeof(value));
+    return value;
+  };
+  std::vector<uint32_t> offsets;
+  for (const auto &upload : ptex_uploads) {
+    uint32_t header = scene.texels.size();
+    offsets.push_back(header);
+    scene.texels.resize(scene.texels.size() + upload.faces.size());
+    for (size_t face_id = 0; face_id < upload.faces.size(); ++face_id) {
+      if (face_id % 256 == 0)
+        Rcpp::checkUserInterrupt();
+      const auto &face = upload.faces[face_id];
+      uint32_t w = std::min(uint32_t(face.width), cap), h = std::min(uint32_t(face.height), cap);
+      uint32_t base_w = w, base_h = h, levels = 1;
+      if (upload.filter != PTEX_POINT)
+        for (uint32_t extent = std::max(w, h); extent > 1; extent /= 2)
+          ++levels;
+      uint32_t level_header = scene.texels.size();
+      scene.texels[header + face_id] = metadata(level_header, levels, w, h);
+      scene.texels.resize(scene.texels.size() + levels);
+      for (uint32_t level = 0; level < levels; ++level) {
+        uint32_t pixels = scene.texels.size();
+        scene.texels[level_header + level] = metadata(pixels, w, h, 0);
+        for (uint32_t y = 0; y < h + 2; ++y) {
+          if (y % 32 == 0)
+            Rcpp::checkUserInterrupt();
+          for (uint32_t x = 0; x < w + 2; ++x) {
+            TextureEvalContext context;
+            context.face_index = face_id;
+            context.u = std::clamp((float(x) - .5f) / w, 0.f, 1.f);
+            context.v = std::clamp((float(y) - .5f) / h, 0.f, 1.f);
+            if (upload.resource->Info().mesh_type == 0 && context.u + context.v > 1) {
+              Float sum = context.u + context.v;
+              context.u /= sum;
+              context.v /= sum;
+            }
+            // Unreduced level zero has the native minimum filter. Reduced levels
+            // sample a face-sized grid footprint before any color decoding.
+            if (level || base_w < uint32_t(face.width) || base_h < uint32_t(face.height))
+              context.footprint = {Float(1) / w, 0, 0, Float(1) / h, true};
+            scene.texels.push_back(Pack(upload.resource->Sample(context, upload.filter)));
+          }
+        }
+        w = std::max(1u, w / 2);
+        h = std::max(1u, h / 2);
+      }
+    }
+  }
+  for (auto &instruction : scene.textures)
+    if ((instruction.type & 255) == 16 + TextureNodeDescription::Ptex) {
+      const auto &upload = ptex_uploads[instruction.offset];
+      instruction.b.w = upload.filter == PTEX_POINT;
+      instruction.c.w = upload.resource->Info().mesh_type;
+      instruction.width = upload.faces.size();
+      instruction.offset = offsets[instruction.offset];
+    }
+}
+
 const TriangleMesh *surface_mesh = nullptr;
 const Transform *surface_object_transform = nullptr;
 const alpha_texture *surface_alpha = nullptr;
@@ -61,6 +175,15 @@ uint32_t Graph(const TextureNode &root) {
                            float(first)};
     instruction.width = description.argument;
     instruction.offset = description.seed;
+    if (description.ptex) {
+      size_t id=0;
+      while (id<ptex_uploads.size() && (ptex_uploads[id].resource!=description.ptex ||
+                                      ptex_uploads[id].filter!=int(description.argument))) ++id;
+      if (id==ptex_uploads.size()) ptex_uploads.push_back({description.ptex,int(description.argument),{}});
+      instruction.offset=id;
+      instruction.height=description.seed; // Color encoding, applied after GPU filtering.
+      scene.texture_features |= 4; // Ray differentials select atlas mip levels.
+    }
     if (description.image) {
       const auto &image = *description.image;
       auto uploaded = graph_images.find(&image);

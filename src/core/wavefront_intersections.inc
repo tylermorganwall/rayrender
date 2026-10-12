@@ -1,13 +1,13 @@
 #include "wavefront_csg.inc"
 R"MSL(
 
-// IDs below 2^31 are triangle indices; the high bit selects a unit-sphere
+// IDs below 2^31 are triangle indices; the high bit selects an analytic
 // primitive. UINT_MAX and UINT_MAX-1 remain volume/diffusion queue sentinels.
 constant uint quadric_bit = 0x80000000u;
 struct Quadric {
   float4 inverse[3], forward[3], measure;
   uint material, light, boundary, surface;
-  uint csg_offset, csg_count, reserved[2];
+  uint csg_offset, csg_count, curve_offset, reserved;
   float4 csg_lo, csg_hi;
 };
 static_assert(sizeof(Quadric) == 176, "wavefront quadric ABI mismatch");
@@ -21,6 +21,7 @@ struct MeshInstance {
 struct GeometryStorage {
   uint quadric_offset, instance_offset, medium_offset, field_offset;
   uint atmosphere_offset, atmosphere_data_offset, camera_offset, motion_offset;
+  uint light_offset, padding[3];
 };
 static_assert(sizeof(MeshInstance) == 128, "wavefront instance ABI mismatch");
 bool is_quadric(uint primitive) { return scene_has_quadrics && (primitive & quadric_bit); }
@@ -38,6 +39,9 @@ float3 quadric_direction(Quadric q, float3 d) {
 float3 quadric_normal(Quadric q, float3 p) {
   return q.inverse[0].xyz * p.x + q.inverse[1].xyz * p.y + q.inverse[2].xyz * p.z;
 }
+)MSL"
+#include "wavefront_curves.inc"
+R"MSL(
 device const CsgInstruction *csg_program(device const Quadric *quadrics, Quadric q) {
   return reinterpret_cast<device const CsgInstruction *>(
       reinterpret_cast<device const uchar *>(quadrics) + q.csg_offset);
@@ -173,6 +177,10 @@ intersect_quadric(float3 origin [[origin]], float3 direction [[direction]],
   Quadric q = quadrics[primitive];
   if (body && q.boundary != body)
     return {false, 0};
+  if ((texture_features & 512) && q.curve_offset) {
+    float distance = curve_intersection(q, quadrics, origin, direction, minimum, maximum).z;
+    return {isfinite(distance), distance};
+  }
   if ((texture_features & 64) && q.csg_count) {
     float distance = csg_intersection(q, quadrics, origin, direction, minimum, maximum, failed);
     return {isfinite(distance), distance};
@@ -243,10 +251,18 @@ GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Qua
     } else if (hit.type == intersection_type::bounding_box) {
       result.primitive_id |= quadric_bit;
       Quadric q = quadrics[hit.primitive_id];
-      result.coordinates =
+      if ((texture_features & 512) && q.curve_offset) {
+        // Intersection callbacks return only distance. Recover attributes for
+        // the winning curve, never for visibility-only any-hit queries.
+        if (!any_hit)
+          result.coordinates = curve_intersection(q, quadrics, r.origin, r.direction,
+                                                   r.min_distance, r.max_distance);
+      } else {
+        result.coordinates =
           fma(float3(hit.distance), quadric_direction(q, r.direction), quadric_local(q, r.origin));
-      if (!((texture_features & 64) && q.csg_count))
-        result.coordinates = normalize(result.coordinates);
+        if (!((texture_features & 64) && q.csg_count))
+          result.coordinates = normalize(result.coordinates);
+      }
     }
   } else {
     intersector<triangle_data> query;
@@ -293,11 +309,39 @@ struct GeometrySurface {
 GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                                  device const Triangle *triangles, device const Quadric *quadrics,
                                  device const Surface *surfaces, uint instance,
-                                 device const MeshInstance *instances) {
+                                 device const MeshInstance *instances,
+                                 float3 ray_origin, float3 ray_direction) {
   GeometrySurface out = {};
   out.coordinates = coordinates;
   if (is_quadric(primitive)) {
     Quadric q = quadrics[primitive & ~quadric_bit];
+    if ((texture_features & 512) && q.curve_offset) {
+      CurveFrame frame = curve_frame(curve_data(quadrics, q), coordinates.xy,
+                                      quadric_direction(q, ray_direction));
+      out.position = fma(float3(coordinates.z), ray_direction, ray_origin);
+      out.normal = q.measure.y * normalize(quadric_normal(q, frame.normal));
+      float3 du, dv;
+      float3 local_position = quadric_local(q, out.position);
+      for (uint a = 0; a < 3; ++a) {
+        du[a] = dot(q.forward[a].xyz, frame.du);
+        dv[a] = dot(q.forward[a].xyz, frame.dv);
+        out.error[a] = frame.width * dot(abs(q.forward[a].xyz), float3(1)) +
+          8 * FLT_EPSILON * (dot(abs(q.forward[a].xyz), abs(local_position)) + abs(q.forward[a].w));
+        out.face.n[a] = float4(out.normal, 0);
+      }
+      out.tangent = du;
+      out.face.p[0] = float4(out.position, 0);
+      out.face.p[1] = float4(out.position + du, 0);
+      out.face.p[2] = float4(out.position + dv, 0);
+      out.face.material = q.material;
+      out.face.light = q.light;
+      out.face.boundary = 0;
+      out.face.flags = 1 | 32;
+      out.face.geometric = float4(out.normal, 0);
+      out.face.uv01 = coordinates.xyxy;
+      out.face.uv2 = float4(coordinates.xy, 0, as_type<float>(q.surface));
+      return out;
+    }
     if ((texture_features & 64) && q.csg_count) {
       auto code = csg_program(quadrics, q);
       float e = q.csg_lo.w, gradient[3];
@@ -418,7 +462,7 @@ float geometry_light_pdf(uint primitive, GeometrySurface surface, float3 referen
         cosine = abs(dot(surface.face.geometric.xyz, normalize(delta)));
   if (is_quadric(primitive)) {
     Quadric q = quadrics[primitive & ~quadric_bit];
-    if ((texture_features & 64) && q.csg_count) {
+    if (((texture_features & 64) && q.csg_count) || ((texture_features & 512) && q.curve_offset)) {
       float3 center = quadric_point(q, .5f * (q.csg_lo.xyz + q.csg_hi.xyz));
       float3 halfwidth = .5f * (q.csg_hi.xyz - q.csg_lo.xyz);
       float3 extent =
@@ -449,7 +493,7 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
   float3 coordinates;
   if (is_quadric(primitive)) {
     Quadric q = quadrics[primitive & ~quadric_bit];
-    if ((texture_features & 64) && q.csg_count) {
+    if (((texture_features & 64) && q.csg_count) || ((texture_features & 512) && q.curve_offset)) {
       float3 center = quadric_point(q, .5f * (q.csg_lo.xyz + q.csg_hi.xyz));
       float3 halfwidth = .5f * (q.csg_hi.xyz - q.csg_lo.xyz);
       float3 extent =
@@ -464,7 +508,11 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
       float3 direction =
           (1 - dc) * forward +
           sqrt(dc * (2 - dc)) * (cos(2 * pi * u.y) * x + sin(2 * pi * u.y) * cross(forward, x));
-      float distance = csg_intersection(q, quadrics, reference, direction, 0, INFINITY, failed);
+      float3 curve_hit = float3(0, 0, INFINITY);
+      if ((texture_features & 512) && q.curve_offset)
+        curve_hit = curve_intersection(q, quadrics, reference, direction, 0, INFINITY);
+      float distance = q.curve_offset ? curve_hit.z :
+          csg_intersection(q, quadrics, reference, direction, 0, INFINITY, failed);
       if (!isfinite(distance)) {
         // Rejection is a zero-contribution sample. Do not resample: that would
         // condition on the unknown projected area and invalidate the PDF.
@@ -473,10 +521,10 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
         miss.position = reference + direction;
         return miss;
       }
-      coordinates =
+      coordinates = q.curve_offset ? curve_hit :
           fma(float3(distance), quadric_direction(q, direction), quadric_local(q, reference));
       return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces, instance,
-                              instances);
+                              instances, reference, direction);
     }
     float3 center = float3(q.forward[0].w, q.forward[1].w, q.forward[2].w);
     float center2 = distance_squared(reference, center), radius2 = q.measure.z * q.measure.z;
@@ -501,6 +549,6 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
     coordinates = float3(root * (1 - u.y), root * u.y, 0);
   }
   return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces, instance,
-                          instances);
+                          instances, float3(0), float3(0));
 }
 )MSL"

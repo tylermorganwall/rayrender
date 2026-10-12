@@ -16,6 +16,7 @@ render_wavefront_body = function(
     width = width,
     height = width,
     samples = samples,
+    sample_method = if (samples > 256) 'sobol' else 'sobol_blue',
     lookfrom = lookfrom,
     lookat = lookat,
     fov = 0,
@@ -151,7 +152,76 @@ test_that('Metal random walks agree with CPU transport for rough anisotropic bod
   expect_equal(attr(gpu, 'wavefront')$discarded_paths, 0)
 })
 
-test_that('Metal exports analytic spheres and triangulates other shapes and curves', {
+test_that('Metal guided SSS retains radiance and ordinary fallback cases', {
+  for (priority in c(FALSE, TRUE)) {
+    make_scene = function(method, g = 0) {
+      body = sphere(
+        material = subsurface(
+          sigma_a = c(.1, .2, .4),
+          sigma_s = c(2, 3, 4),
+          method = method,
+          roughness = .15,
+          g = g,
+          priority = 2
+        )
+      )
+      if (priority) {
+        body = add_object(
+          body,
+          sphere(z = .8, radius = .6, material = dielectric(priority = 1))
+        )
+      }
+      body
+    }
+    reference = suppressWarnings(render_wavefront_body(
+      make_scene('random_walk'),
+      samples = 512
+    ))
+    guided = render_wavefront_body(make_scene('guided'), samples = 512)
+    cpu = render_wavefront_body(make_scene('guided'), 'nee', samples = 512)
+    expect_equal(attr(guided, 'wavefront')$discarded_paths, 0)
+    expect_lt(
+      max(abs(
+        apply(guided[,, 1:3], 3, mean) - apply(reference[,, 1:3], 3, mean)
+      )),
+      .04
+    )
+    expect_lt(
+      max(abs(apply(guided[,, 1:3], 3, mean) - apply(cpu[,, 1:3], 3, mean))),
+      .05
+    )
+  }
+  ordinary = render_wavefront_body(make_scene('random_walk', .4), samples = 16)
+  fallback = render_wavefront_body(make_scene('guided', .4), samples = 16)
+  expect_equal(as.vector(ordinary), as.vector(fallback), tolerance = 0)
+  # Camera-inside rays have no entry guide. A zero-index-contrast body allows
+  # a direct test before any later surface could initialize a guide.
+  make_inside = function(method) {
+    sphere(
+      material = subsurface(
+        sigma_a = c(.1, .2, .4),
+        sigma_s = 2,
+        refraction = 1,
+        method = method
+      )
+    )
+  }
+  ordinary = render_wavefront_body(
+    make_inside('random_walk'),
+    samples = 64,
+    lookfrom = c(0, 0, 0),
+    lookat = c(0, 0, -1)
+  )
+  fallback = render_wavefront_body(
+    make_inside('guided'),
+    samples = 64,
+    lookfrom = c(0, 0, 0),
+    lookat = c(0, 0, -1)
+  )
+  expect_equal(as.vector(ordinary), as.vector(fallback), tolerance = 0)
+})
+
+test_that('Metal exports native spheres and curves and triangulates cylinders and disks', {
   shapes = list(
     sphere(),
     ellipsoid(a = 1, b = .8, c = .6),
@@ -166,8 +236,11 @@ test_that('Metal exports analytic spheres and triangulates other shapes and curv
     if (!isTRUE(attr(gpu, 'wavefront')$used)) {
       skip('Metal is unavailable')
     }
-    if (index <= 2) {
-      expect_equal(attr(gpu, 'wavefront')$analytic_primitives, 1)
+    if (index <= 2 || index >= 5) {
+      expect_equal(
+        attr(gpu, 'wavefront')$analytic_primitives,
+        if (index >= 5) 8 else 1
+      )
       expect_equal(attr(gpu, 'wavefront')$triangles, 0)
     } else {
       expect_gt(attr(gpu, 'wavefront')$tessellated_primitives, 0)

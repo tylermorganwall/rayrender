@@ -9,10 +9,11 @@ R"MSL(
     float2 uv;
     float3 position, object_position, normal, object_normal;
     float4 footprint; // dudx, dvdx, dudy, dvdy; zero means no differentials.
+    int face_index;
   };
   static_assert(sizeof(Surface) == 240, "wavefront surface ABI mismatch");
   TextureContext texture_context(float2 uv, float3 position) {
-    return {uv, position, position, float3(0, 1, 0), float3(0, 1, 0), float4(0)};
+    return {uv, position, position, float3(0, 1, 0), float3(0, 1, 0), float4(0), -1};
   }
   float3 object_point(Surface s, float3 p) {
     return float3(dot(s.inverse[0], float4(p, 1)), dot(s.inverse[1], float4(p, 1)),
@@ -23,6 +24,7 @@ R"MSL(
     TextureContext h =
         texture_context(bary.x * t.uv01.xy + bary.y * t.uv01.zw + bary.z * t.uv2.xy, position);
     h.normal = t.geometric.xyz;
+    h.face_index = (t.flags & 64) ? as_type<int>(t.uv2.z) : -1;
     if (texture_features & 2) {
       Surface s = surfaces[as_type<uint>(t.uv2.w)];
       h.object_position = object_point(s, position);
@@ -89,6 +91,38 @@ R"MSL(
         }
     return result;
   }
+  float3 ptex_atlas(Texture t, TextureContext h, device const float4 *texels) {
+    if (h.face_index<0 || uint(h.face_index)>=t.width) return float3(0);
+    uint4 face=as_type<uint4>(texels[t.offset+uint(h.face_index)]);
+    float2 uv=clamp(h.uv,0.f,1.f);
+    if (t.c.w==0 && uv.x+uv.y>1) uv/=uv.x+uv.y;
+    // Isotropic mip selection bounds the larger differential axis. Native
+    // Ptex instead filters anisotropically across explicit face adjacency.
+    float4 footprint=h.footprint/max(1.f,max(max(abs(h.footprint.x),abs(h.footprint.y)),
+                                          max(abs(h.footprint.z),abs(h.footprint.w))));
+    float extent=max((abs(footprint.x)+abs(footprint.z))*face.z,
+                     (abs(footprint.y)+abs(footprint.w))*face.w);
+    float lod=clamp(log2(max(1.f,extent)),0.f,float(face.y-1));
+    if (t.b.w>0) {
+      uint4 mip=as_type<uint4>(texels[face.x]);
+      uint2 cell=min(uint2(uv*float2(mip.y,mip.z)),mip.yz-1)+1;
+      return texels[mip.x+cell.y*(mip.y+2)+cell.x].xyz;
+    }
+    // Blend adjacent levels to avoid discrete texture changes during camera or
+    // geometry motion. Filtering stays in the file's encoded color space.
+    float3 result=0;
+    for(uint level=0;level<2;++level) {
+      float weight=level ? fract(lod) : 1-fract(lod);
+      if(weight==0) continue;
+      uint4 mip=as_type<uint4>(texels[face.x+min(uint(lod)+level,face.y-1)]);
+      float2 point=uv*float2(mip.y,mip.z)+.5f;
+      uint2 lower=uint2(floor(point)); float2 f=fract(point);
+      for(uint y=0;y<2;++y) for(uint x=0;x<2;++x)
+        result+=weight*texels[mip.x+(lower.y+y)*(mip.y+2)+lower.x+x].xyz *
+          (x ? f.x : 1-f.x)*(y ? f.y : 1-f.y);
+    }
+    return result;
+  }
   float3 graph_value(Texture root, TextureContext h, device const Texture *textures,
                      device const float4 *texels) {
     float3 values[128];
@@ -153,6 +187,15 @@ R"MSL(
         result = image_centers(t, p.xy, flag, texels);
         if (scalar)
           result = float3(dot(result, float3(1.f / 3)));
+        break;
+      case 10:
+        result=ptex_atlas(t,h,texels);
+        if (t.height) {
+          if (flag) result=floor(clamp(result*255+.5f,0.f,255.f))/255;
+          if (t.height==2) result=pow(max(result,0.f),float3(t.a.x));
+          else result=select(pow((result+.055f)/1.055f,float3(2.4f)),result/12.92f,result<=.04045f);
+        }
+        if (scalar) result=float3(dot(result,float3(1.f/3)));
         break;
       }
       values[reg.w] = result;

@@ -29,12 +29,12 @@ core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 # Rebuild them on layout changes even during an incremental R installation.
 render_scene_rcpp.o render_animation_rcpp.o core/integrator.o core/wavefront_geometry.o core/wavefront_tests.o core/wavefront_material_tests.o core/wavefront_texture_tests.o core/wavefront_geometry_tests.o core/wavefront_environment_tests.o: core/wavefront.h
 
-core/wavefront.o: core/wavefront.h core/wavefront_texture_export.inc core/wavefront_instances.inc core/wavefront_medium_export.inc
-core/wavefront.o core/wavefront_motion.o: core/wavefront_motion.h
+core/wavefront.o: core/wavefront.h core/wavefront_texture_export.inc core/wavefront_instances.inc core/wavefront_medium_export.inc core/wavefront_light_bvh.inc
+core/wavefront.o core/wavefront_motion.o core/wavefront_camera_tests.o: core/wavefront_motion.h
 core/wavefront_metal.o: core/wavefront_motion.h
 core/wavefront_metal.o core/wavefront_medium_tests.o: core/wavefront_medium_probe.h
 
-core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_csg.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc core/wavefront_media.inc core/wavefront_atmosphere.inc core/wavefront_atmosphere_paths.inc core/wavefront_haze.inc core/wavefront_camera.inc
+core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_csg.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc core/wavefront_media.inc core/wavefront_atmosphere.inc core/wavefront_atmosphere_paths.inc core/wavefront_haze.inc core/wavefront_camera.inc core/wavefront_light_sampling.inc core/wavefront_subsurface_sampling.inc core/wavefront_curves.inc core/wavefront_motion.inc
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
 # Make the shared object
@@ -42,3 +42,6 @@ all: $(SHLIB)
 
 # CSG vtables are shared by construction, boundaries and CPU/GPU exporters.
 $(CPP_OBJECTS): hitables/csg.h
+
+# Texture descriptors cross exporter/material translation units.
+$(CPP_OBJECTS): materials/texturegraph.h materials/ptextexture.h

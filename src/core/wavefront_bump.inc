@@ -22,7 +22,12 @@ R"MSL(
     }
     float3 p0 = t.p[0].xyz - t.p[2].xyz, p1 = t.p[1].xyz - t.p[2].xyz;
     float det = uv0.x * uv1.y - uv0.y * uv1.x;
-    if (abs(det) >= 1e-8f) {
+    if (t.flags & 32) {
+      // Native curves carry their CPU-compatible derivatives explicitly;
+      // their UV copies are equal so material lookup never interpolates u/v.
+      d.du = t.p[1].xyz - t.p[0].xyz;
+      d.dv = t.p[2].xyz - t.p[0].xyz;
+    } else if (abs(det) >= 1e-8f) {
       d.du = (uv1.y * p0 - uv0.y * p1) / det;
       d.dv = (-uv1.x * p0 + uv0.x * p1) / det;
       d.nu = (uv1.y * (t.n[0].xyz - t.n[2].xyz) - uv0.y * (t.n[1].xyz - t.n[2].xyz)) / det;

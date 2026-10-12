@@ -1,5 +1,34 @@
 R"MSL(
 
+  struct SubsurfaceProbe { float4 pole,axis,random,wi,rates; };
+  struct SubsurfaceResult { float4 direction,guide; };
+  kernel void probe_subsurface(device const SubsurfaceProbe *inputs [[buffer(0)]],
+                               device SubsurfaceResult *outputs [[buffer(1)]],
+                               uint i [[thread_position_in_grid]]) {
+    SubsurfaceProbe s=inputs[i];
+    float3 ordinary=phase_sample(float3(0,0,1),0,s.random.y,s.random.z);
+    float3 direction=subsurface_direction(s.pole.xyz,s.axis.xyz,s.random.x,
+                                          s.random.y,s.random.z,ordinary);
+    outputs[i].direction=float4(direction,subsurface_direction_pdf(s.pole.xyz,s.axis.xyz,direction));
+    float3 rates,ordinary_weights,guided_weights;
+    subsurface_flight_mixture(s.pole.xyz,s.axis.xyz,s.wi.xyz,s.rates.xyz,
+                              rates,ordinary_weights,guided_weights);
+    outputs[i].guide=float4(subsurface_guide_pdf(s.pole.xyz,dot(s.axis.xyz,s.wi.xyz)),
+                            dot(ordinary_weights+guided_weights,float3(1)));
+  }
+
+  kernel void probe_light_selection(device const float4 *inputs [[buffer(0)]],
+                                    device float4 *outputs [[buffer(1)]],
+                                    constant Params &p [[buffer(2)]],
+                                    device const LightNode *nodes [[buffer(3)]],
+                                    uint i [[thread_position_in_grid]]) {
+    uint choice=select_light(inputs[i].w,inputs[i].xyz,p,nodes);
+    float sum=0;
+    for (uint j=0;j<p.lights;++j) sum+=light_selection_pdf(j,inputs[i].xyz,p,nodes);
+    outputs[i]=float4(choice,light_selection_pdf(choice,inputs[i].xyz,p,nodes),sum,
+                      light_selection_pdf(i%p.lights,inputs[i].xyz,p,nodes));
+  }
+
   struct EnvironmentProbe {
     uint bits;
     float latitude;
@@ -23,7 +52,7 @@ R"MSL(
                              uint i [[thread_position_in_grid]]) {
     TextureProbe p = inputs[i];
     TextureContext h = {p.uv.xy,      p.position.xyz,      p.object_position.xyz,
-                        p.normal.xyz, p.object_normal.xyz, p.footprint};
+                        p.normal.xyz, p.object_normal.xyz, p.footprint, int(p.uv.w)};
     outputs[i] = float4(texture_value(uint(p.uv.z), h, textures, texels), 0);
   }
   struct BsdfProbe {
@@ -108,7 +137,7 @@ R"MSL(
     result.primitive = UINT_MAX;
     if (hit.type != intersection_type::none) {
       auto surface = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                      surfaces, hit.instance, scene.instances);
+                                      surfaces, hit.instance, scene.instances, r.origin, r.direction);
       result.point = float4(surface.position, hit.distance);
       result.normal = float4(surface.normal, 1);
       float3 bary = float3(1 - hit.coordinates.x - hit.coordinates.y, hit.coordinates.xy);

@@ -48,11 +48,27 @@ R"MSL(
     }
     return true;
   }
-  void remember_diffusion_entry(thread Path &path, uint pixel, thread const VolumeState &state,
+  void remember_subsurface_entry(thread Path &path, uint pixel, thread const VolumeState &state,
+                                uint previous, uint crossed,
                                 float3 position, float3 geometric,
                                 device const Boundary *boundaries, device const Material *materials,
                                 device DiffusionEntry *entries) {
     uint active = active_boundary(state, boundaries, materials);
+    if (texture_features & 256) {
+      // Entry normals guide eligible random walks back toward the entry side.
+      // Retain the axis through reflection. Hidden entry followed by emergence
+      // from a different glass boundary has no valid entry guide (as on CPU).
+      // Cameras starting inside likewise use ordinary sampling.
+      path.flags &= ~32u;
+      if (active && boundaries[active].subsurface == 1 && boundaries[active].radius.w != 0) {
+        if (active != previous && active == crossed) {
+          float3 normal = dot(path.direction.xyz,geometric) > 0 ? -geometric : geometric;
+          entries[pixel].normal = float4(normal,0);
+          entries[pixel].position.w = as_type<float>(active);
+        } else if (as_type<uint>(entries[pixel].position.w) != active)
+          entries[pixel].position.w = 0;
+      } else entries[pixel].position.w = 0;
+    }
     if (active && boundaries[active].subsurface == 2) {
       float3 normal = dot(path.direction.xyz, geometric) > 0 ? -geometric : geometric;
       entries[pixel].position = float4(position, 0);
@@ -121,7 +137,7 @@ R"MSL(
       if (hit.type == intersection_type::none)
         break;
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances);
+                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction);
       Triangle t = contact.face;
       if (t.boundary) {
         float3 position = contact.position, error = contact.error;

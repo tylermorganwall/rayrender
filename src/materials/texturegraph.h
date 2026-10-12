@@ -7,10 +7,11 @@
 #include <cstdint>
 
 class TextureNode;
+class PtexTextureResource;
 // Cold, renderer-independent description of an immutable node. Consumers can
 // compile a graph without retaining R objects or changing its CPU evaluator.
 struct TextureNodeDescription {
-  enum Operation { Constant, Mix, Scale, Power, Channel, Direction, Checker, Gradient, Noise, Image };
+  enum Operation { Constant, Mix, Scale, Power, Channel, Direction, Checker, Gradient, Noise, Image, Ptex };
   Operation operation = Constant;
   const TextureNode *children[3]{};
   point3f value{0}, scale{1}, offset{0};
@@ -18,6 +19,7 @@ struct TextureNodeDescription {
   uint32_t space = 0, argument = 0, seed = 0;
   bool flag = false;
   std::shared_ptr<const DecodedTextureImage> image;
+  std::shared_ptr<const PtexTextureResource> ptex;
 };
 
 // Immutable nodes have scalar or linear RGB output. Scalar nodes replicate their
