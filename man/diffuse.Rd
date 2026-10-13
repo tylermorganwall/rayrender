@@ -23,8 +23,6 @@ diffuse(
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
-  fog = FALSE,
-  fogdensity = 0.01,
   sigma = NULL,
   importance_sample = FALSE
 )
@@ -80,10 +78,6 @@ be used to specify a bump map for the surface.}
 
 \item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
-\item{fog}{Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.}
-
-\item{fogdensity}{Default `0.01`. The density of the fog. Higher values will produce more opaque objects.}
-
 \item{sigma}{Default `NULL`. Nonnegative finite roughness control in degrees
 for energy-preserving Oren-Nayar (EON). EON roughness is `min(sigma / 90, 1)`;
 values at or above 90 give maximum roughness. `NULL` or zero uses Lambertian
@@ -98,7 +92,10 @@ this will help with the convergence of the image.}
 Single row of a tibble describing the diffuse material.
 }
 \description{
-Diffuse Material
+A reflecting surface with optional roughness and texture. For fog or other
+participating volumes, attach an explicit medium with \code{\link{set_medium}()}
+and \code{\link{homogeneous_medium}()}, \code{\link{grid_medium}()}, or
+\code{\link{vdb_medium}()}.
 }
 \details{
 Diffuse surfaces use energy-conserving normal mapping for

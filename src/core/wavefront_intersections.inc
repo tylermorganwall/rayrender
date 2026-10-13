@@ -24,6 +24,36 @@ struct GeometryStorage {
   uint light_offset, padding[3];
 };
 static_assert(sizeof(MeshInstance) == 128, "wavefront instance ABI mismatch");
+MeshInstance motion_instance(MeshInstance s, MotionContext m, uint id) {
+  uint owner = motion_owner(m, 3, id);
+  if (owner)
+    motion_compose(motion_pose(m, owner), s.forward, s.inverse);
+  return s;
+}
+Quadric motion_quadric(Quadric q, MotionContext m, uint id) {
+  uint owner = motion_owner(m, 1, id);
+  if (owner) {
+    motion_compose(motion_pose(m, owner), q.forward, q.inverse);
+    float3 x = float3(q.forward[0].x, q.forward[1].x, q.forward[2].x);
+    float3 y = float3(q.forward[0].y, q.forward[1].y, q.forward[2].y);
+    float3 z = float3(q.forward[0].z, q.forward[1].z, q.forward[2].z);
+    float radius = length(x);
+    q.measure.x = abs(dot(x, cross(y, z)));
+    q.measure.z = abs(length(y) - radius) < 1e-6f * radius &&
+                          abs(length(z) - radius) < 1e-6f * radius &&
+                          abs(dot(x, y)) + abs(dot(x, z)) + abs(dot(y, z)) < 1e-6f * radius * radius
+                      ? radius
+                      : 0;
+  }
+  return q;
+}
+struct GeometryQuery {
+  uint body, owner;
+};
+uint query_owner(device const uchar *data, uint kind, uint id) {
+  auto header = reinterpret_cast<device const MotionHeader *>(data);
+  return reinterpret_cast<device const uint *>(data + header->owners[kind])[id];
+}
 bool is_quadric(uint primitive) { return scene_has_quadrics && (primitive & quadric_bit); }
 float3 quadric_point(Quadric q, float3 p) {
   return float3(dot(q.forward[0], float4(p, 1)), dot(q.forward[1], float4(p, 1)),
@@ -171,11 +201,13 @@ struct QuadricIntersection {
 QuadricIntersection
 intersect_quadric(float3 origin [[origin]], float3 direction [[direction]],
                   float minimum [[min_distance]], float maximum [[max_distance]],
-                  uint primitive [[primitive_id]], ray_data uint &body [[payload]],
+                  uint primitive [[primitive_id]], ray_data GeometryQuery &query [[payload]],
                   device const Quadric *quadrics [[buffer(1)]],
-                  device atomic_uint *failed [[buffer(3)]]) {
+                  device atomic_uint *failed [[buffer(3)]],
+                  device const uchar *motion [[buffer(4)]]) {
   Quadric q = quadrics[primitive];
-  if (body && q.boundary != body)
+  if ((query.body && q.boundary != query.body) ||
+      (query.owner != UINT_MAX && query_owner(motion,1,primitive) != query.owner))
     return {false, 0};
   if ((texture_features & 512) && q.curve_offset) {
     float distance = curve_intersection(q, quadrics, origin, direction, minimum, maximum).z;
@@ -190,19 +222,22 @@ intersect_quadric(float3 origin [[origin]], float3 direction [[direction]],
   return {isfinite(distance) && distance >= minimum && distance <= maximum, distance};
 }
 [[intersection(triangle, triangle_data)]]
-bool containment_face(uint primitive [[primitive_id]], ray_data uint &body [[payload]],
-                      device const Triangle *triangles [[buffer(0)]]) {
-  return !body || triangles[primitive].boundary == body;
+bool containment_face(uint primitive [[primitive_id]], ray_data GeometryQuery &query [[payload]],
+                      device const Triangle *triangles [[buffer(0)]],
+                      device const uchar *motion [[buffer(4)]]) {
+  return (!query.body || triangles[primitive].boundary == query.body) &&
+    (query.owner == UINT_MAX || query_owner(motion,0,primitive) == query.owner);
 }
 [[intersection(triangle, triangle_data, instancing)]]
 bool containment_face_instanced(uint primitive [[primitive_id]], uint instance [[instance_id]],
-                                ray_data uint &body [[payload]],
+                                ray_data GeometryQuery &query [[payload]],
                                 device const Triangle *triangles [[buffer(0)]],
-                                device const MeshInstance *instances [[buffer(2)]]) {
-  if (!body)
-    return true;
+                                device const MeshInstance *instances [[buffer(2)]],
+                                device const uchar *motion [[buffer(4)]]) {
   MeshInstance placement = instances[instance];
-  return (placement.triangle_count ? placement.boundary : triangles[primitive].boundary) == body;
+  uint boundary=placement.triangle_count ? placement.boundary : triangles[primitive].boundary;
+  uint owner=query.owner==UINT_MAX ? UINT_MAX : query_owner(motion,placement.triangle_count ? 3 : 0,placement.triangle_count ? instance : primitive);
+  return (!query.body || boundary==query.body) && owner==query.owner;
 }
 // Metal's primitive structures are homogeneous. Mixed scenes traverse one
 // top-level structure over triangle and bounding-box leaves. The original
@@ -213,8 +248,7 @@ struct GeometryScene {
   instance_acceleration_structure mixed;
   intersection_function_table<triangle_data, instancing> mixed_functions;
   device const MeshInstance *instances;
-  device const float4 *motion_inverse;
-  device const Quadric *reference_quadrics;
+  MotionContext motion;
 };
 struct GeometryIntersection {
   intersection_type type;
@@ -222,24 +256,15 @@ struct GeometryIntersection {
   float distance;
   float3 coordinates; // triangle barycentric pair, or unit-sphere point
 };
-GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Quadric *quadrics,
-                                    uint body = 0, bool any_hit = false) {
-  if (texture_features & 32) {
-    // Keep the immutable reference BVH tight. An affine ray transform retains
-    // its world-distance parameter provided the direction is not normalized.
-    float3 origin = r.origin, direction = r.direction;
-    for (uint a = 0; a < 3; ++a) {
-      r.origin[a] = dot(scene.motion_inverse[a], float4(origin, 1));
-      r.direction[a] = dot(scene.motion_inverse[a].xyz, direction);
-    }
-    quadrics = scene.reference_quadrics;
-  }
+GeometryIntersection trace_reference(ray r, GeometryScene scene, device const Quadric *quadrics,
+                                    uint body, bool any_hit, uint owner = UINT_MAX) {
+  GeometryQuery payload = {body, owner};
   GeometryIntersection result;
   if (scene_has_quadrics || scene_has_instances) {
     intersector<triangle_data, instancing> query;
-    query.force_opacity(body ? forced_opacity::non_opaque : forced_opacity::opaque);
+    query.force_opacity(body || owner != UINT_MAX ? forced_opacity::non_opaque : forced_opacity::opaque);
     query.accept_any_intersection(any_hit);
-    auto hit = query.intersect(r, scene.mixed, 0xff, scene.mixed_functions, body);
+    auto hit = query.intersect(r, scene.mixed, 0xff, scene.mixed_functions, payload);
     result = {hit.type, hit.primitive_id, 0, hit.distance, float3(0)};
     if (hit.type == intersection_type::triangle) {
       MeshInstance placement = scene.instances[hit.instance_id];
@@ -267,17 +292,62 @@ GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Qua
   } else {
     intersector<triangle_data> query;
     query.assume_geometry_type(geometry_type::triangle);
-    query.force_opacity(body ? forced_opacity::non_opaque : forced_opacity::opaque);
+    query.force_opacity(body || owner != UINT_MAX ? forced_opacity::non_opaque : forced_opacity::opaque);
     query.accept_any_intersection(any_hit);
     intersection_result<triangle_data> hit;
-    if (body)
-      hit = query.intersect(r, scene.triangles, scene.triangle_functions, body);
+    if (body || owner != UINT_MAX)
+      hit = query.intersect(r, scene.triangles, scene.triangle_functions, payload);
     else
       hit = query.intersect(r, scene.triangles);
     result = {hit.type, hit.primitive_id, 0, hit.distance,
               float3(hit.triangle_barycentric_coord, 0)};
   }
   return result;
+}
+// Query each intersected reference-frame owner at this path's exact time.
+// This retains hardware triangle/instance traversal and native analytic tests;
+// no acceleration structure is refitted or transformed geometry uploaded.
+GeometryIntersection trace_geometry(ray r, GeometryScene scene, device const Quadric *quadrics,
+                                    uint body = 0, bool any_hit = false) {
+  if (!(texture_features & 1024))
+    return trace_reference(r, scene, quadrics, body, any_hit);
+  auto header = reinterpret_cast<device const MotionHeader *>(scene.motion.data);
+  auto boxes = reinterpret_cast<device const float4 *>(scene.motion.data + header->bounds);
+  GeometryIntersection nearest = {};
+  nearest.type = intersection_type::none;
+  nearest.distance = r.max_distance;
+  for (uint owner = 0; owner <= header->count; ++owner) {
+    auto pose = motion_pose(scene.motion, owner);
+    ray local = r;
+    for (uint k = 0; k < 3; ++k) {
+      local.origin[k] = dot(pose.inverse[k], float4(r.origin, 1));
+      local.direction[k] = dot(pose.inverse[k].xyz, r.direction);
+    }
+    float lower = r.min_distance, upper = nearest.distance;
+    for (uint k = 0; k < 3; ++k) {
+      float lo = boxes[2 * owner][k], hi = boxes[2 * owner + 1][k];
+      if (lo > hi || (local.direction[k] == 0 && (local.origin[k] < lo || local.origin[k] > hi))) {
+        upper = -INFINITY;
+        break;
+      }
+      if (local.direction[k] != 0) {
+        float a = (lo - local.origin[k]) / local.direction[k],
+              b = (hi - local.origin[k]) / local.direction[k];
+        lower = max(lower, min(a, b));
+        upper = min(upper, max(a, b));
+      }
+    }
+    if (lower > upper)
+      continue;
+    local.max_distance = nearest.distance;
+    auto hit = trace_reference(local, scene, quadrics, body, any_hit, owner);
+    if (hit.type != intersection_type::none && hit.distance <= nearest.distance) {
+      nearest = hit;
+      if (any_hit)
+        return nearest;
+    }
+  }
+  return nearest;
 }
 // A spectral shadow assigns one ray to all 32 lanes. Traverse once, then share
 // the hit before their cooperative spectral evaluation. Every lane must enter
@@ -339,11 +409,11 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                                  device const Triangle *triangles, device const Quadric *quadrics,
                                  device const Surface *surfaces, uint instance,
                                  device const MeshInstance *instances,
-                                 float3 ray_origin, float3 ray_direction) {
+                                 float3 ray_origin, float3 ray_direction, MotionContext motion = {}) {
   GeometrySurface out = {};
   out.coordinates = coordinates;
   if (is_quadric(primitive)) {
-    Quadric q = quadrics[primitive & ~quadric_bit];
+    Quadric q = motion_quadric(quadrics[primitive & ~quadric_bit],motion,primitive & ~quadric_bit);
     if ((texture_features & 512) && q.curve_offset) {
       CurveFrame frame = curve_frame(curve_data(quadrics, q), coordinates.xy,
                                       quadric_direction(q, ray_direction));
@@ -411,7 +481,7 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
     out.face.boundary = q.boundary;
     out.face.flags = 1;
     out.face.geometric = float4(q.measure.w * normalize(quadric_normal(q, unit)), 0);
-    Surface s = surfaces[q.surface];
+    Surface s = motion_surface(surfaces[q.surface],motion,q.surface);
     float3 chart = s.axes.w == 1 ? unit : normalize(unit / s.axes.xyz);
     float2 uv = float2(1 - (atan2(chart.z, chart.x) + pi) / (2 * pi),
                        .5f + asin(clamp(chart.y, -1.f, 1.f)) / pi);
@@ -438,9 +508,9 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                          dot(s.forward[2].xyz, tangent));
     return out;
   }
-  out.face = triangles[primitive];
+  out.face = motion_triangle(triangles[primitive],motion,primitive);
   if (scene_has_instances && instance) {
-    MeshInstance placement = instances[instance - 1];
+    MeshInstance placement = motion_instance(instances[instance - 1],motion,instance - 1);
     Triangle local = out.face;
     for (uint k = 0; k < 3; ++k) {
       float3 p = local.p[k].xyz, n = local.n[k].xyz;
@@ -463,7 +533,7 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
   float3 bary = float3(1 - coordinates.x - coordinates.y, coordinates.xy);
   surface_point(out.face, coordinates.xy, out.position, out.error);
   if (scene_has_instances && instance) {
-    MeshInstance placement = instances[instance - 1];
+    MeshInstance placement = motion_instance(instances[instance - 1],motion,instance - 1);
     Triangle local = triangles[primitive];
     float3 magnitude =
         bary.x * abs(local.p[0].xyz) + bary.y * abs(local.p[1].xyz) + bary.z * abs(local.p[2].xyz);
@@ -485,12 +555,12 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
   return out;
 }
 float geometry_light_pdf(uint primitive, GeometrySurface surface, float3 reference,
-                         device const Quadric *quadrics) {
+                         device const Quadric *quadrics, MotionContext motion = {}) {
   float3 delta = reference - surface.position;
   float distance2 = dot(delta, delta),
         cosine = abs(dot(surface.face.geometric.xyz, normalize(delta)));
   if (is_quadric(primitive)) {
-    Quadric q = quadrics[primitive & ~quadric_bit];
+    Quadric q = motion_quadric(quadrics[primitive & ~quadric_bit],motion,primitive & ~quadric_bit);
     if (((texture_features & 64) && q.csg_count) || ((texture_features & 512) && q.curve_offset)) {
       float3 center = quadric_point(q, .5f * (q.csg_lo.xyz + q.csg_hi.xyz));
       float3 halfwidth = .5f * (q.csg_hi.xyz - q.csg_lo.xyz);
@@ -518,10 +588,10 @@ float geometry_light_pdf(uint primitive, GeometrySurface surface, float3 referen
 GeometrySurface
 sample_geometry_light(uint primitive, float2 u, float3 reference, device const Triangle *triangles,
                       device const Quadric *quadrics, device const Surface *surfaces, uint instance,
-                      device const MeshInstance *instances, device atomic_uint *failed) {
+                      device const MeshInstance *instances, device atomic_uint *failed, MotionContext motion = {}) {
   float3 coordinates;
   if (is_quadric(primitive)) {
-    Quadric q = quadrics[primitive & ~quadric_bit];
+    Quadric q = motion_quadric(quadrics[primitive & ~quadric_bit],motion,primitive & ~quadric_bit);
     if (((texture_features & 64) && q.csg_count) || ((texture_features & 512) && q.curve_offset)) {
       float3 center = quadric_point(q, .5f * (q.csg_lo.xyz + q.csg_hi.xyz));
       float3 halfwidth = .5f * (q.csg_hi.xyz - q.csg_lo.xyz);
@@ -553,7 +623,7 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
       coordinates = q.curve_offset ? curve_hit :
           fma(float3(distance), quadric_direction(q, direction), quadric_local(q, reference));
       return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces, instance,
-                              instances, reference, direction);
+                              instances, reference, direction, motion);
     }
     float3 center = float3(q.forward[0].w, q.forward[1].w, q.forward[2].w);
     float center2 = distance_squared(reference, center), radius2 = q.measure.z * q.measure.z;
@@ -578,6 +648,6 @@ sample_geometry_light(uint primitive, float2 u, float3 reference, device const T
     coordinates = float3(root * (1 - u.y), root * u.y, 0);
   }
   return geometry_surface(primitive, coordinates, triangles, quadrics, surfaces, instance,
-                          instances, float3(0), float3(0));
+                          instances, float3(0), float3(0), motion);
 }
 )MSL"

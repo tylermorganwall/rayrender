@@ -1,5 +1,10 @@
 #' Diffuse Material
 #'
+#' A reflecting surface with optional roughness and texture. For fog or other
+#' participating volumes, attach an explicit medium with \code{\link{set_medium}()}
+#' and \code{\link{homogeneous_medium}()}, \code{\link{grid_medium}()}, or
+#' \code{\link{vdb_medium}()}.
+#'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
@@ -32,8 +37,6 @@
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
 #' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
-#' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
-#' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
 #' @param sigma Default `NULL`. Nonnegative finite roughness control in degrees
 #'   for energy-preserving Oren-Nayar (EON). EON roughness is `min(sigma / 90, 1)`;
 #'   values at or above 90 give maximum roughness. `NULL` or zero uses Lambertian
@@ -117,8 +120,6 @@ diffuse = function(
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
-  fog = FALSE,
-  fogdensity = 0.01,
   sigma = NULL,
   importance_sample = FALSE
 ) {
@@ -200,8 +201,6 @@ diffuse = function(
     image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = fog,
-    fogdensity = fogdensity,
     implicit_sample = importance_sample,
     sigma = sigma,
     glossyinfo = list(NA),
@@ -382,8 +381,6 @@ metal = function(
     image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = 0.01,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = glossyinfo,
@@ -513,8 +510,6 @@ dielectric = function(
     image_offset = list(check_image_offset(image_offset)),
     alphaimage = "",
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = list(NA),
@@ -801,8 +796,6 @@ microfacet = function(
         image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
-        fog = FALSE,
-        fogdensity = NA_real_,
         implicit_sample = importance_sample,
         sigma = 0,
         glossyinfo = glossyinfo,
@@ -830,8 +823,6 @@ microfacet = function(
         image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
-        fog = FALSE,
-        fogdensity = NA_real_,
         implicit_sample = importance_sample,
         sigma = 0,
         glossyinfo = glossyinfo,
@@ -865,8 +856,6 @@ microfacet = function(
       image_offset = list(check_image_offset(image_offset)),
       alphaimage = alpha_texture,
       lightintensity = NA_real_,
-      fog = FALSE,
-      fogdensity = NA_real_,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = glossyinfo,
@@ -1009,8 +998,6 @@ light = function(
       image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
-      fog = FALSE,
-      fogdensity = 0.01,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = list(NA_real_),
@@ -1038,8 +1025,6 @@ light = function(
       image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
-      fog = FALSE,
-      fogdensity = 0.01,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = list(NA_real_),
@@ -1257,8 +1242,6 @@ glossy = function(
     image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = glossyinfo,
@@ -1428,8 +1411,6 @@ hair = function(
     image_repeat = list(NA_real_),
     alphaimage = "",
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = FALSE,
     sigma = NA_real_,
     glossyinfo = list(NA_real_),

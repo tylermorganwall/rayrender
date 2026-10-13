@@ -18,23 +18,6 @@ void pack(const Matrix4x4 &m, WFVector *rows) {
   for (int i = 0; i < 3; ++i)
     rows[i] = {float(m.m[i][0]), float(m.m[i][1]), float(m.m[i][2]), float(m.m[i][3])};
 }
-void compose(const Transform &delta, WFVector *forward, WFVector *inverse) {
-  Transform result = delta * unpack(forward);
-  pack(result.GetMatrix(), forward);
-  pack(result.GetInverseMatrix(), inverse);
-}
-void point(const Transform &t, WFVector &v) {
-  auto p = t(point3f(v.x, v.y, v.z));
-  v.x = p[0];
-  v.y = p[1];
-  v.z = p[2];
-}
-void normal(const Transform &t, WFVector &v) {
-  auto n = t(normal3f(v.x, v.y, v.z));
-  v.x = n[0];
-  v.y = n[1];
-  v.z = n[2];
-}
 void extend(WFVector &lo, WFVector &hi, const WFVector &p) {
   lo.x = std::min(lo.x, p.x);
   lo.y = std::min(lo.y, p.y);
@@ -45,147 +28,132 @@ void extend(WFVector &lo, WFVector &hi, const WFVector &p) {
 }
 } // namespace
 
-void WavefrontMotion::EnableGPU() {
-  // Keep only geometry needed by the host light-selection tree. Boundary
-  // bounds can be conservatively transformed once per body/owner, rather than
-  // revisiting every triangle. Metal already owns all immutable references.
-  std::set<std::pair<uint32_t, uint32_t>> groups;
-  auto collect = [&](const auto &records) {
-    for (const auto &r : records)
-      if (r.value.boundary)
-        groups.emplace(r.value.boundary, r.owner);
+std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
+  struct Header {
+    uint32_t count, owners[5], nodes, bounds;
+  } header{};
+  struct Animation {
+    WFVector endpoints[2][3], translation[2], rotation[2], scale[2][3];
+    WFVector before[3], reference_inverse[3];
+    uint32_t parent;
+    float start, end;
+    uint32_t padding = 0;
   };
-  collect(triangles);
-  collect(quadrics);
-  collect(instances);
-  boundary_owners.assign(groups.begin(), groups.end());
-  host_triangles.clear();
-  host_quadrics.clear();
-  for (const auto &r : triangles)
-    if (r.value.light != UINT32_MAX)
-      host_triangles.push_back(r);
-  for (const auto &r : quadrics)
-    if (r.value.light != UINT32_MAX)
-      host_quadrics.push_back(r);
-  gpu_geometry = true;
-}
+  static_assert(sizeof(Header) == 32 && sizeof(Animation) == 368, "motion ABI mismatch");
+  std::vector<unsigned char> bytes(sizeof(header));
+  auto append = [&](const void *data, size_t size) {
+    size_t offset = (bytes.size() + 15) & ~size_t(15);
+    if (offset + size > UINT32_MAX)
+      throw std::runtime_error("Metal motion metadata exceeds 32-bit capacity");
+    bytes.resize(offset + size);
+    if (size)
+      std::memcpy(bytes.data() + offset, data, size);
+    return uint32_t(offset);
+  };
+  auto counts = sizes(scene);
+  for (size_t k = 0; k < 5; ++k) {
+    owners[k].resize(counts[k]);
+    header.owners[k] = append(owners[k].data(), owners[k].size() * sizeof(uint32_t));
+  }
+  std::vector<Animation> animations;
+  for (const auto &node : nodes) {
+    Animation a{};
+    a.parent = node.parent;
+    a.start = node.animation->StartTime();
+    a.end = node.animation->EndTime();
+    pack(node.before.GetMatrix(), a.before);
+    pack(node.reference_inverse.GetMatrix(), a.reference_inverse);
+    Quaternion rotations[2];
+    for (int k = 0; k < 2; ++k) {
+      const auto &t = k ? node.animation->EndTransform() : node.animation->StartTransform();
+      pack(t.GetMatrix(), a.endpoints[k]);
+      vec3f translation;
+      Matrix4x4 scale;
+      AnimatedTransform::Decompose(t.GetMatrix(), &translation, &rotations[k], &scale);
+      a.translation[k] = {float(translation[0]), float(translation[1]), float(translation[2]), 0};
+      pack(scale, a.scale[k]);
+    }
+    if (dot(rotations[0], rotations[1]) < 0)
+      rotations[1] = -rotations[1];
+    for (int k = 0; k < 2; ++k)
+      a.rotation[k] = {float(rotations[k].v[0]), float(rotations[k].v[1]), float(rotations[k].v[2]),
+                       float(rotations[k].w)};
+    animations.push_back(a);
+  }
+  header.count = nodes.size();
+  header.nodes = append(animations.data(), animations.size() * sizeof(Animation));
 
-bool WavefrontMotion::Update(WavefrontScene &scene, float time) {
-  if (time == last_time)
-    return false;
-  std::vector<Transform> transforms(nodes.size() + 1);
-  for (size_t i = 0; i < nodes.size(); ++i) {
-    const auto &n = nodes[i];
-    Transform value;
-    n.animation->Interpolate(time, &value);
-    transforms[i + 1] = transforms[n.parent] * n.before * value * n.reference_inverse;
+  // Bounds in each owner's reference frame reject unrelated animation groups
+  // before querying the shared immutable hardware BVH. Prototype bounds are
+  // computed once, irrespective of the number of placements.
+  std::vector<aabb> groups(nodes.size() + 1), meshes(scene.meshes.size());
+  for (size_t i = 0; i < scene.meshes.size(); ++i) {
+    const auto &mesh = scene.meshes[i];
+    for (uint32_t j = 0; j < mesh.count; ++j)
+      for (const auto &p : scene.triangles[mesh.start + j].p)
+        meshes[i] = surrounding_box(meshes[i], aabb(point3f(p.x, p.y, p.z)));
   }
-  if (whole_scene_frame)
-    pack(transforms[1].GetInverseMatrix(), inverse_frame);
-  poses.resize(transforms.size());
-  for (size_t i = 0; i < transforms.size(); ++i) {
-    pack(transforms[i].GetMatrix(), poses[i].forward);
-    pack(transforms[i].GetInverseMatrix(), poses[i].inverse);
+  size_t loose = scene.meshes.empty() ? scene.triangles.size() : scene.loose_triangles;
+  for (size_t i = 0; i < loose; ++i)
+    for (const auto &p : scene.triangles[i].p)
+      groups[owners[0][i]] = surrounding_box(groups[owners[0][i]], aabb(point3f(p.x, p.y, p.z)));
+  for (size_t i = 0; i < scene.quadrics.size(); ++i) {
+    const auto &lo = scene.quadric_bounds[2 * i], &hi = scene.quadric_bounds[2 * i + 1];
+    groups[owners[1][i]] =
+        surrounding_box(groups[owners[1][i]], aabb(point3f(lo.x, lo.y, lo.z), point3f(hi.x, hi.y, hi.z)));
   }
-  scene.boundaries = reference_bounds;
-  scene.boundary_lo = reference_lo;
-  scene.boundary_hi = reference_hi;
-  auto bounds = [&](uint32_t body, const WFVector &p) {
-    if (!body)
-      return;
-    extend(scene.boundaries[body].lo, scene.boundaries[body].hi, p);
-    extend(scene.boundary_lo, scene.boundary_hi, p);
+  for (size_t i = 0; i < scene.instances.size(); ++i) {
+    const auto &instance = scene.instances[i];
+    if (instance.triangle_count)
+      groups[owners[3][i]] = surrounding_box(groups[owners[3][i]], unpack(instance.forward)(meshes[instance.mesh]));
+  }
+  std::vector<WFVector> boxes;
+  for (const auto &box : groups) {
+    auto lo = box.min(), hi = box.max();
+    if (lo[0] > hi[0]) {
+      boxes.push_back({INFINITY, INFINITY, INFINITY, 0});
+      boxes.push_back({-INFINITY, -INFINITY, -INFINITY, 0});
+      continue;
+    }
+    Float pad = 64 * std::numeric_limits<float>::epsilon() *
+                std::max(Float(1), std::max(MaxComponent(Abs(lo)), MaxComponent(Abs(hi))));
+    boxes.push_back({float(lo[0] - pad), float(lo[1] - pad), float(lo[2] - pad), 0});
+    boxes.push_back({float(hi[0] + pad), float(hi[1] + pad), float(hi[2] + pad), 0});
+  }
+  header.bounds = append(boxes.data(), boxes.size() * sizeof(WFVector));
+  std::memcpy(bytes.data(), &header, sizeof(header));
+
+  // Membership and diffusion bounds enclose the full native motion, including
+  // nested rotation. They are only broad-phase bounds; membership still tests
+  // the exact geometry at the path's time.
+  std::set<std::pair<uint32_t, uint32_t>> bodies;
+  auto collect = [&](const auto &values, size_t kind) {
+    for (size_t i = 0; i < values.size(); ++i)
+      if (values[i].boundary && owners[kind][i])
+        bodies.emplace(values[i].boundary, owners[kind][i]);
   };
-  if (gpu_geometry)
-    for (const auto &group : boundary_owners) {
-      const auto &reference = reference_bounds[group.first];
-      for (int corner = 0; corner < 8; ++corner) {
-        WFVector p{corner & 1 ? reference.hi.x : reference.lo.x, corner & 2 ? reference.hi.y : reference.lo.y,
-                   corner & 4 ? reference.hi.z : reference.lo.z, 0};
-        point(transforms[group.second], p);
-        // Device positions use float arithmetic. Expand host membership bounds
-        // past both rounding paths, including cancellation around the origin.
-        float scale = 1;
-        for (const auto &row : poses[group.second].forward)
-          scale = std::max(scale, std::abs(row.w) +
-                                      std::abs(row.x) * std::max(std::abs(reference.lo.x), std::abs(reference.hi.x)) +
-                                      std::abs(row.y) * std::max(std::abs(reference.lo.y), std::abs(reference.hi.y)) +
-                                      std::abs(row.z) * std::max(std::abs(reference.lo.z), std::abs(reference.hi.z)));
-        float pad = 64 * std::numeric_limits<float>::epsilon() * scale;
-        bounds(group.first, {p.x - pad, p.y - pad, p.z - pad, 0});
-        bounds(group.first, {p.x + pad, p.y + pad, p.z + pad, 0});
-      }
+  collect(scene.triangles, 0);
+  collect(scene.quadrics, 1);
+  collect(scene.instances, 3);
+  const auto reference_bounds = scene.boundaries;
+  for (const auto &body : bodies) {
+    const auto &b = reference_bounds[body.first];
+    aabb box(point3f(b.lo.x, b.lo.y, b.lo.z), point3f(b.hi.x, b.hi.y, b.hi.z));
+    for (uint32_t owner = body.second; owner; owner = nodes[owner - 1].parent) {
+      const auto &node = nodes[owner - 1];
+      box = node.before(node.animation->MotionBounds(node.reference_inverse(box)));
     }
-  for (const auto &r : gpu_geometry ? host_triangles : triangles) {
-    auto value = r.value;
-    const auto &t = transforms[r.owner];
-    for (int k = 0; k < 3; ++k) {
-      point(t, value.p[k]);
-      normal(t, value.n[k]);
-      bounds(value.boundary, value.p[k]);
-    }
-    normal(t, value.geometric);
-    scene.triangles[r.index] = value;
+    auto lo = box.min(), hi = box.max();
+    float pad = 64 * std::numeric_limits<float>::epsilon();
+    for (int k = 0; k < 3; ++k)
+      pad =
+          std::max(pad, 64 * std::numeric_limits<float>::epsilon() * float(std::max(std::abs(lo[k]), std::abs(hi[k]))));
+    WFVector l{float(lo[0]) - pad, float(lo[1]) - pad, float(lo[2]) - pad, 0};
+    WFVector h{float(hi[0]) + pad, float(hi[1]) + pad, float(hi[2]) + pad, 0};
+    extend(scene.boundaries[body.first].lo, scene.boundaries[body.first].hi, l);
+    extend(scene.boundaries[body.first].lo, scene.boundaries[body.first].hi, h);
+    extend(scene.boundary_lo, scene.boundary_hi, l);
+    extend(scene.boundary_lo, scene.boundary_hi, h);
   }
-  for (const auto &r : gpu_geometry ? host_quadrics : quadrics) {
-    auto value = r.value;
-    compose(transforms[r.owner], value.forward, value.inverse);
-    auto m = unpack(value.forward).GetMatrix();
-    vec3f x(m.m[0][0], m.m[1][0], m.m[2][0]), y(m.m[0][1], m.m[1][1], m.m[2][1]), z(m.m[0][2], m.m[1][2], m.m[2][2]);
-    value.measure.x = std::abs(dot(x, cross(y, z)));
-    Float radius = x.length();
-    value.measure.z = std::abs(y.length() - radius) < 1e-6 * radius && std::abs(z.length() - radius) < 1e-6 * radius &&
-                              std::abs(dot(x, y)) + std::abs(dot(x, z)) + std::abs(dot(y, z)) < 1e-6 * radius * radius
-                          ? radius
-                          : 0;
-    std::array<float, 3> l, h;
-    for (int a = 0; a < 3; ++a) {
-      const auto &row = value.forward[a];
-      // Match the compiler's conservative bounds: forward/inverse transforms
-      // round separately on upload, including after a shutter pose update.
-      double extent = std::sqrt(double(row.x) * row.x + double(row.y) * row.y + double(row.z) * row.z);
-      double padding = 8 * std::numeric_limits<float>::epsilon() * (std::abs(row.w) + extent);
-      l[a] = std::nextafter(float(double(row.w) - extent - padding), -INFINITY);
-      h[a] = std::nextafter(float(double(row.w) + extent + padding), INFINITY);
-    }
-    WFVector lo{l[0], l[1], l[2], 0}, hi{h[0], h[1], h[2], 0};
-    if (value.csg_count || value.curve_offset)
-      WavefrontCSGBounds(value, lo, hi);
-    scene.quadric_bounds[2 * r.index] = lo;
-    scene.quadric_bounds[2 * r.index + 1] = hi;
-    bounds(value.boundary, lo);
-    bounds(value.boundary, hi);
-    scene.quadrics[r.index] = value;
-  }
-  if (!gpu_geometry)
-    for (const auto &r : surfaces) {
-      auto value = r.value;
-      const auto &t = transforms[r.owner];
-      compose(t, value.forward, value.inverse);
-      compose(t, value.bump_forward, value.bump_inverse);
-      value.bump_transformed = 1;
-      scene.surfaces[r.index] = value;
-    }
-  for (const auto &r : instances) {
-    auto value = r.value;
-    const auto &t = transforms[r.owner];
-    compose(t, value.forward, value.inverse);
-    scene.instances[r.index] = value;
-    if (value.boundary) {
-      const auto &body = reference_bounds[value.boundary];
-      for (int c = 0; c < 8; ++c) {
-        WFVector p = {c & 1 ? body.hi.x : body.lo.x, c & 2 ? body.hi.y : body.lo.y, c & 4 ? body.hi.z : body.lo.z, 0};
-        point(t, p);
-        bounds(value.boundary, p);
-      }
-    }
-  }
-  for (const auto &r : media) {
-    auto value = r.value;
-    auto transform = unpack(value.inverse) * Inverse(transforms[r.owner]);
-    pack(transform.GetMatrix(), value.inverse);
-    scene.media[r.index] = value;
-  }
-  last_time = time;
-  return true;
+  return bytes;
 }

@@ -143,6 +143,7 @@ R"MSL(
   }
 
 )MSL"
+#include "wavefront_ray_motion.inc"
 #include "wavefront_textures.inc"
 R"MSL(
 
@@ -473,7 +474,7 @@ R"MSL(
         auto hit = trace_geometry(probe, scene, quadrics, body);
         if (hit.type != intersection_type::none &&
             dot(direction, geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                            surfaces, hit.instance, scene.instances, probe.origin, probe.direction)
+                                            surfaces, hit.instance, scene.instances, probe.origin, probe.direction, scene.motion)
                                .face.geometric.xyz) > 0) {
           if (!cross_boundary(state, id, true))
             return false;
@@ -509,7 +510,7 @@ R"MSL(
       if (hit.type == intersection_type::none)
         return true;
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction);
+                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction, scene.motion);
       Triangle t = contact.face;
       float facing = dot(direction, t.geometric.xyz);
       bool before_endpoint = hit.distance < distance - endpoint_guard ||
@@ -556,7 +557,7 @@ R"MSL(
 #include "wavefront_atmosphere.inc"
 #include "wavefront_haze.inc"
 #include "wavefront_camera.inc"
-#include "wavefront_motion.inc"
+
     R"MSL(
 
 #define SCENE_ARGUMENTS                                                                            \
@@ -595,8 +596,7 @@ R"MSL(
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
                            instances,
-                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
-                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
+                           {bytes + storage->motion_offset, 0}};
     if (i == 0) {
       atomic_store_explicit(&counts.rays, p.active, memory_order_relaxed);
       atomic_store_explicit(&counts.hits, 0, memory_order_relaxed);
@@ -626,7 +626,10 @@ R"MSL(
           lv = sample1(pixel, dim, p, directions, blue);
     // Match the native thin-lens camera's uniform disk; unused time retains its dimension.
     float time=sample1(pixel, dim, p, directions, blue)*p.camera.shutter.z;
-    if(p.camera.shutter.w>=0) time=p.camera.shutter.w;
+    if (texture_features & 1024) {
+      scene.motion.time = mix(p.camera.shutter.x,p.camera.shutter.y,time);
+      reinterpret_cast<device float *>(const_cast<device uchar *>(bytes) + storage->padding[0])[pixel] = scene.motion.time;
+    }
     float r = sqrt(lu) * p.camera.right.w, phi = 2 * pi * lv;
     float3 lens = r * (cos(phi) * p.camera.right.xyz + sin(phi) * p.camera.up.xyz);
     float3 film = p.camera.lower_left.xyz + u * p.camera.horizontal.xyz + v * p.camera.vertical.xyz;
@@ -705,12 +708,13 @@ R"MSL(
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
                            instances,
-                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
-                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
+                           {bytes + storage->motion_offset, 0}};
     if (i >= atomic_load_explicit(&counts.rays, memory_order_relaxed))
       return;
     uint pixel = ray_queue[i];
     Path path = paths[pixel];
+    if (texture_features & 1024)
+      scene.motion.time = reinterpret_cast<device const float *>(bytes + storage->padding[0])[pixel];
     if (scene_has_atmosphere)
       air_requests[pixel].event = 0;
     if(all(path.beta.xyz==0)) return;
@@ -729,7 +733,7 @@ R"MSL(
     device const float *fields = reinterpret_cast<device const float *>(bytes + storage->field_offset);
     Medium medium = {};
     if ((texture_features & 16) && body)
-      medium = media[boundaries[body].medium];
+      medium = motion_medium(media[boundaries[body].medium],scene.motion,boundaries[body].medium);
     bool heterogeneous = body && medium.controls.w != 0;
     if (body && boundaries[body].subsurface == 2) {
       if (!(path.flags & 8)) {
@@ -792,21 +796,21 @@ R"MSL(
                   hit.instance == as_type<uint>(path.previous.w);
       if (!skip && (texture_features & 64) && !(path.flags & 16)) {
         auto contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                        surfaces, hit.instance, scene.instances, r.origin, r.direction);
+                                        surfaces, hit.instance, scene.instances, r.origin, r.direction, scene.motion);
         Material emitter = materials[contact.face.material];
         skip = emitter.emissive == 1 && emitter.extra.w != 0;
       }
       if (!skip && (texture_features & 8)) {
         GeometrySurface contact =
             geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
-                             hit.instance, scene.instances, r.origin, r.direction);
+                             hit.instance, scene.instances, r.origin, r.direction, scene.motion);
         Triangle face = contact.face;
         uint alpha = surfaces[as_type<uint>(face.uv2.w)].alpha;
         if (alpha != UINT_MAX) {
           float2 uv = hit.coordinates.xy;
           float3 bary = float3(1 - uv.x - uv.y, uv);
           float3 position = contact.position;
-          float opacity = texture_value(alpha, surface_context(face, bary, position, surfaces),
+          float opacity = texture_value(alpha, surface_context(face, bary, position, surfaces, scene.motion),
                                         textures, texels)
                               .x;
           skip = opacity < sample1(pixel, path.dimension, p, directions, blue);
@@ -891,7 +895,7 @@ R"MSL(
         // distance/PDF and move only an uncertain position onto the incident side.
         GeometrySurface contact =
             geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics, surfaces,
-                             hit.instance, scene.instances, r.origin, r.direction);
+                             hit.instance, scene.instances, r.origin, r.direction, scene.motion);
         Triangle endpoint = contact.face;
         float3 surface_position = contact.position, error = contact.error;
         error += 3 * FLT_EPSILON * (abs(r.origin) + abs(flight * r.direction));
@@ -964,8 +968,7 @@ R"MSL(
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
                            instances,
-                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
-                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
+                           {bytes + storage->motion_offset, 0}};
     if (i >= atomic_load_explicit(&counts.hits, memory_order_relaxed))
       return;
     Hit h = hit_queue[i];
@@ -979,6 +982,8 @@ R"MSL(
       return;
     uint pixel = h.pixel;
     Path path = paths[pixel];
+    if (texture_features & 1024)
+      scene.motion.time = reinterpret_cast<device const float *>(bytes + storage->padding[0])[pixel];
     uint dim = path.dimension;
     VolumeState state = {};
     state.count = 0;
@@ -1035,7 +1040,7 @@ R"MSL(
       path.beta.xyz *= exit.weight;
       h = exit.hit;
       geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
-                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz);
+                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz, scene.motion);
       t = geometry.face;
       position = exit.position;
       error = exit.error;
@@ -1067,7 +1072,7 @@ R"MSL(
       }
     } else {
       geometry = geometry_surface(h.primitive, float3(h.u, h.v, h.w), triangles, quadrics, surfaces,
-                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz);
+                                  h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz, scene.motion);
       t = geometry.face;
       m = materials[t.material];
       float3 bary = float3(1 - h.u - h.v, h.u, h.v);
@@ -1089,17 +1094,17 @@ R"MSL(
         enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
         return;
       }
-      TextureContext texture_hit = surface_context(t, bary, position, surfaces);
+      TextureContext texture_hit = surface_context(t, bary, position, surfaces, scene.motion);
       base_normal = n;
       if (texture_features & 4) {
-        Surface mapping = surfaces[as_type<uint>(t.uv2.w)];
+        Surface mapping = motion_surface(surfaces[as_type<uint>(t.uv2.w)],scene.motion,as_type<uint>(t.uv2.w));
         derivatives = surface_derivatives(t, mapping, texture_hit, n, differentials[pixel]);
         n = bump_normal(t, mapping, texture_hit, n, derivatives, textures, texels);
         mapped_surface = mapping.bump != UINT_MAX;
       }
       rho = texture_value(m.texture, texture_hit, textures, texels);
       float3 feature_normal = mapped_surface ? n :
-          consistent_normal(t, surfaces[as_type<uint>(t.uv2.w)], bary, n, wo, texels);
+          consistent_normal(t, motion_surface(surfaces[as_type<uint>(t.uv2.w)],scene.motion,as_type<uint>(t.uv2.w)), bary, n, wo, texels);
       // Physical diffuse/glossy/OpenPBR and sheet transmission keep their own frame.
       // Legacy reflective BSDFs and emission use triangle::hit's normal.
       if (!mapped_surface && (m.emissive == 1 ||
@@ -1117,7 +1122,7 @@ R"MSL(
       if (m.emissive == 1) {
         if (dot(n, wo) > 0) {
           float pdf =
-              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) *
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics, scene.motion) *
               light_selection_pdf(t.light, path.previous.xyz, p, light_nodes);
           float weight = (path.flags & 1) ? 1 : mis(path.direction.w, pdf);
           pixels[pixel].radiance.xyz += path.beta.xyz * rho * m.diffuse.w * weight;
@@ -1154,7 +1159,7 @@ R"MSL(
         float weight = 1;
         if (m.emissive && !(path.flags & 1)) {
           float pdf =
-              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics) *
+              geometry_light_pdf(h.primitive, geometry, path.previous.xyz, quadrics, scene.motion) *
               light_selection_pdf(t.light, path.previous.xyz, p, light_nodes);
           weight = mis(path.direction.w, pdf);
         }
@@ -1348,7 +1353,7 @@ R"MSL(
       } else {
         GeometrySurface source =
             sample_geometry_light(l.primitive, float2(u, v), position, triangles, quadrics,
-                                  surfaces, l.instance, scene.instances, &counts.csg_failed);
+                                  surfaces, l.instance, scene.instances, &counts.csg_failed, scene.motion);
         Triangle emitter = source.face;
         Material lm = materials[emitter.material];
         float3 b = float3(1 - source.coordinates.x - source.coordinates.y, source.coordinates.xy);
@@ -1366,30 +1371,30 @@ R"MSL(
             // Emission is view dependent under OpenPBR's coating layers.
             auto emitter_pbr = prepare_pbr(
                 lm,
-                texture_value(lm.texture, surface_context(emitter, b, target, surfaces), textures,
+                texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion), textures,
                               texels),
                 -wi, en, emitter.geometric.xyz, source.tangent,
                 boundary_ior(body, boundaries, materials),
                 lm.second_texture == UINT_MAX
                     ? -1.f
                     : texture_value(lm.second_texture,
-                                    surface_context(emitter, b, target, surfaces), textures, texels)
+                                    surface_context(emitter, b, target, surfaces, scene.motion), textures, texels)
                           .x,
                 material_data);
             emitted = emitter_pbr.prepared.emission;
           } else
-            emitted = texture_value(lm.texture, surface_context(emitter, b, target, surfaces),
+            emitted = texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion),
                                     textures, texels) *
                       lm.diffuse.w;
           if (texture_features & 8) {
             uint alpha = surfaces[as_type<uint>(emitter.uv2.w)].alpha;
             if (alpha != UINT_MAX)
-              emitted *= clamp(texture_value(alpha, surface_context(emitter, b, target, surfaces),
+              emitted *= clamp(texture_value(alpha, surface_context(emitter, b, target, surfaces, scene.motion),
                                              textures, texels)
                                    .x,
                                0.f, 1.f);
           }
-          pdf = geometry_light_pdf(l.primitive, source, position, quadrics) * selection_pdf;
+          pdf = geometry_light_pdf(l.primitive, source, position, quadrics, scene.motion) * selection_pdf;
         }
       }
       float cosine = dot(n, wi);
@@ -1610,8 +1615,7 @@ R"MSL(
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, triangle_functions, mixed_scene, mixed_functions,
                            instances,
-                           reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
-                           reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
+                           {bytes + storage->motion_offset, 0}};
     if (i >= (primary_coverage ? p.active : atomic_load_explicit(&counts.shadows, memory_order_relaxed)))
       return;
     Shadow s;
@@ -1621,6 +1625,8 @@ R"MSL(
       // does not follow the refracted/scattered RGB path or consume its samples.
       uint pixel = active[i];
       Path path = paths[pixel];
+    if (texture_features & 1024)
+      scene.motion.time = reinterpret_cast<device const float *>(bytes + storage->padding[0])[pixel];
       if ((path.flags & 4) || pixels[pixel].normal.w <= 0) return;
       s = {};
       s.pixel = pixel;
@@ -1631,6 +1637,8 @@ R"MSL(
       if (scene_has_boundaries) s.state = membership[pixel];
     } else
       s = shadow_queue[i];
+    if (texture_features & 1024)
+      scene.motion.time = reinterpret_cast<device const float *>(bytes + storage->padding[0])[s.pixel];
     device const AtmosphereData &air = *reinterpret_cast<device const AtmosphereData *>(bytes + storage->atmosphere_offset);
     device const float *air_data = reinterpret_cast<device const float *>(bytes + storage->atmosphere_data_offset);
     AirRay air_ray = {};
@@ -1688,7 +1696,7 @@ R"MSL(
       float distance = endpoint - previous;
       Medium medium = {};
       if ((texture_features & 16) && medium_body)
-        medium = media[boundaries[medium_body].medium];
+        medium = motion_medium(media[boundaries[medium_body].medium],scene.motion,boundaries[medium_body].medium);
       bool air_enabled = gpu_haze && !before && (!medium_body || (medium.emission.w!=0 && air.haze_in_volumes));
       float air_cursor = previous;
       if (gpu_air && !isfinite(endpoint)) air_start(air_ray,r.origin+previous*r.direction,r.direction,air_enabled);
@@ -1765,7 +1773,7 @@ R"MSL(
         return;
       }
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances, r.origin, r.direction);
+                                                 quadrics, surfaces, hit.instance, scene.instances, r.origin, r.direction, scene.motion);
       Triangle t = contact.face;
       Material surface_material = materials[t.material];
       if ((texture_features & 64) && surface_material.emissive == 1 && surface_material.extra.w != 0) {
@@ -1780,7 +1788,7 @@ R"MSL(
           float opacity =
               clamp(texture_value(alpha,
                                   surface_context(t, float3(1 - uv.x - uv.y, uv),
-                                                  r.origin + endpoint * r.direction, surfaces),
+                                                  r.origin + endpoint * r.direction, surfaces, scene.motion),
                                   textures, texels)
                         .x,
                     0.f, 1.f);

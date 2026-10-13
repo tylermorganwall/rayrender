@@ -199,7 +199,6 @@ static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
 struct WavefrontScene {
   bool transparent_background = false;
   std::shared_ptr<WavefrontMotion> motion;
-  bool motion_changed = false;
   std::vector<WFVector> camera_data;
   std::shared_ptr<const skymodelr::PragueMetalSnapshot> atmosphere_snapshot;
   WFAtmosphereData atmosphere_data;
@@ -217,8 +216,8 @@ struct WavefrontScene {
   std::vector<WFVector> texels;
   std::vector<WFSurface> surfaces{WFSurface()};
   // Graphs=1, surface context=2, bump=4, alpha=8, general media=16,
-  // whole-assembly reference-frame traversal=32, invisible area emitters=64,
-  // finite light BVH=128, guided random walks=256, native curves=512.
+  // invisible area emitters=64, finite light BVH=128, guided random walks=256,
+  // native curves=512, independent geometry shutter times=1024.
   // Shared pipeline specialization key.
   uint32_t texture_features = 0;
   std::vector<WFLight> lights;
@@ -248,7 +247,7 @@ struct WavefrontScene {
 };
 
 struct WavefrontReport {
-  bool requested = false, used = false;
+  bool requested = false, used = false, scene_reused = false;
   std::string fallback;
   double upload_seconds = 0, sample_seconds = 0, atmosphere_seconds = 0;
   size_t triangles = 0, completed_samples = 0;
@@ -266,6 +265,25 @@ public:
                       const std::vector<WFLight> &lights, const std::function<bool()> &cancelled,
                       const WFPixel *&pixels, WavefrontReport &report) = 0;
 };
+
+// Own the host descriptors and their dependent device session together. An
+// animation keeps this object alive across frames; ordinary renders use a local
+// one. The scene must not move while a session holds references into it.
+class WavefrontContext {
+public:
+  WavefrontScene scene;
+  std::unique_ptr<WavefrontSession> session;
+  WavefrontContext() = default;
+  WavefrontContext(const WavefrontContext &) = delete;
+  WavefrontContext &operator=(const WavefrontContext &) = delete;
+  void BeginFrame(const hitable_list &, const hitable_list &, RayCamera &,
+                  size_t capacity, int sampler, WavefrontReport &, size_t workers);
+private:
+  const hitable_list *world = nullptr, *lights = nullptr;
+  size_t pixel_capacity = 0, camera_capacity = 0;
+  int sampling_method = -1;
+  WavefrontReport setup_report;
+};
 // Empty output means this primitive has no faithful static triangulation.
 std::vector<WFTriangle> TriangulateWavefrontPrimitive(const hitable &, const Transform &);
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, size_t capacity);
@@ -282,7 +300,7 @@ class WavefrontAtmosphere {
 public:
   WavefrontAtmosphere(const WavefrontScene &, size_t capacity);
   ~WavefrontAtmosphere();
-  void Begin(const std::vector<uint32_t> &active);
+  void Begin(const std::vector<uint32_t> &active, const float *times = nullptr);
   bool Coverage(const WFParameters &, const std::vector<uint32_t> &active,
                 WFPath *, WFPixel *, const std::function<bool()> &cancelled);
   bool Paths(const WFParameters &, const uint32_t *queue, size_t count,
@@ -306,7 +324,7 @@ std::vector<WFCameraResult> ProbeMetalSubsurface(const std::vector<WFSubsurfaceP
 // Development-only numerical cross-backend probes. No R API or CPU hot-path hook.
 struct WFGeometryProbe {
   WFVector origin, direction; // w holds minimum/maximum ray distance.
-  uint32_t body = 0, padding[3]{};
+  uint32_t body = 0, padding[3]{}; // padding[1]: absolute shutter time as float bits.
 };
 struct WFGeometryResult {
   WFVector point, normal, uv; // point.w is ray distance; normal.w is hit/miss.

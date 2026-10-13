@@ -24,8 +24,6 @@
 #include <future>
 #include <limits>
 
-static const size_t FAST_INTERACTIVE_PREVIEW_SAMPLES = 4;
-
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size,
                 RayMatrix& rgb_output, RayMatrix& normalOutput, RayMatrix& albedoOutput,
@@ -36,12 +34,21 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override, WavefrontReport* wavefront_report) {
-  WavefrontScene wavefront_scene;
-  std::unique_ptr<WavefrontSession> wavefront;
+                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override,
+                WavefrontReport* wavefront_report, WavefrontContext* retained_wavefront) {
+  display.volume_scene = hlist.volume_scene;
+  display.InitializeNavigation(&world);
+  WavefrontContext local_wavefront;
+  auto &context = retained_wavefront ? *retained_wavefront : local_wavefront;
+  auto &wavefront_scene = context.scene;
+  auto &wavefront = context.session;
   if(wavefront_report && wavefront_report->requested)
-    wavefront = PrepareWavefront(world, hlist, *cam, nx*ny, sample_method,
-                                 wavefront_scene, *wavefront_report, numbercores);
+    context.BeginFrame(world, hlist, *cam, nx*ny, sample_method,
+                       *wavefront_report, numbercores);
+
+  const char* cpu_integrator = integrator_type == IntegratorType::ShadowRays ? "CPU (NEE)" :
+    integrator_type == IntegratorType::BasicPathGuiding ? "CPU (RTIOW)" : "CPU (basic)";
+  display.integrator_name = wavefront ? "Metal" : cpu_integrator;
 
   RProgress::RProgress pb_sampler("Generating Samples [:bar] :percent%");
   pb_sampler.set_width(70);
@@ -94,7 +101,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   RayMatrix alpha_output_small(nx_small,ny_small,1);
 
   adaptive_sampler adaptive_pixel_sampler_small(numbercores, nx_small, ny_small,
-                                                FAST_INTERACTIVE_PREVIEW_SAMPLES, debug_channel,
+                                                1, debug_channel,
                                                 0, 1,
                                                 rgb_output_small,
                                                 rgb_output_small2,
@@ -292,9 +299,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       for(size_t jj = 0; jj < ny; jj++) {
         int iii = (Float)ii * ratio_x;
         int jjj = (Float)jj * ratio_y;
-        target(ii,jj,0) = source(iii,jjj,0) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        target(ii,jj,1) = source(iii,jjj,1) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        target(ii,jj,2) = source(iii,jjj,2) / (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
+        target(ii,jj,0) = source(iii,jjj,0);
+        target(ii,jj,1) = source(iii,jjj,1);
+        target(ii,jj,2) = source(iii,jjj,2);
       }
     }
   };
@@ -306,8 +313,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       for(size_t jj = 0; jj < ny; jj++) {
         int iii = (Float)ii * ratio_x;
         int jjj = (Float)jj * ratio_y;
-        adaptive_pixel_sampler.a(ii,jj,0) = adaptive_pixel_sampler_small.a(iii,jjj,0) /
-          (Float)FAST_INTERACTIVE_PREVIEW_SAMPLES;
+        adaptive_pixel_sampler.a(ii,jj,0) = adaptive_pixel_sampler_small.a(iii,jjj,0);
       }
     }
   };
@@ -338,10 +344,9 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     if(wavefront && WavefrontLightsChanged(wavefront_scene)) {
       // H/Y replace the native sky model. Recompile only after the current
       // sample completes, so no query can retain stale atmospheric pointers.
-      wavefront.reset();
-      wavefront_scene = WavefrontScene();
-      wavefront = PrepareWavefront(world, hlist, *cam, nx*ny, sample_method,
-                                   wavefront_scene, *wavefront_report, numbercores);
+      context.BeginFrame(world, hlist, *cam, nx*ny, sample_method,
+                         *wavefront_report, numbercores);
+      display.integrator_name = wavefront ? "Metal" : cpu_integrator;
     }
   };
 
@@ -562,15 +567,12 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                                      &ensure_fast_preview_oidn_aux
 #endif
                                      ] (size_t s) -> bool {
-    for(size_t sample_offset = 0;
-        sample_offset < FAST_INTERACTIVE_PREVIEW_SAMPLES;
-        sample_offset++) {
-      if(display.PollCloseEvent()) {
-        return false;
-      }
-      if(!render_small_sample(s * FAST_INTERACTIVE_PREVIEW_SAMPLES + sample_offset)) {
-        return false;
-      }
+    // Show each sample before processing camera input again. Batching several
+    // low-resolution samples repeats GPU submission costs and delays movement.
+    // Both films now accumulate one sample per display update, so their color,
+    // denoising features, and alpha share the display's (s + 1) normalization.
+    if(display.PollCloseEvent() || !render_small_sample(s)) {
+      return false;
     }
     if(display.PollCloseEvent()) {
       return false;

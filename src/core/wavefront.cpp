@@ -131,11 +131,6 @@ public:
         out.subsurface = medium->subsurface ? (medium->subsurface_diffusion ? 2 : 1) : 3;
         out.sigma_a = Pack(medium->sigma_a);
         out.sigma_s = Pack(medium->sigma_s);
-        if (medium->legacy_albedo) {
-          auto properties = medium->SamplePoint(point3f(0));
-          out.sigma_a = Pack(properties.sigma_a);
-          out.sigma_s = Pack(properties.sigma_s);
-        }
         out.sigma_a.w = medium->subsurface_roughness;
         out.sigma_s.w = medium->g;
         out.color = Pack(medium->diffusion_color);
@@ -389,6 +384,7 @@ private:
   WavefrontScene &scene;
   std::unordered_map<const material *, uint32_t> materials;
   std::unordered_map<const texture *, uint32_t> textures;
+  uint32_t legacy_noise_offset = UINT32_MAX;
   uint32_t current_boundary = 0;
   uint32_t current_motion = 0;
   Float boundary_orientation = 1;
@@ -421,18 +417,47 @@ private:
     } else if (const auto *t = dynamic_cast<const checker_texture *>(input)) {
       auto *even = dynamic_cast<const constant_texture *>(t->even.get());
       auto *odd = dynamic_cast<const constant_texture *>(t->odd.get());
-      if (!even || !odd)
-        throw std::runtime_error("nested checker texture");
-      out.type = 1;
-      out.a = Pack(even->color);
-      out.b = Pack(odd->color);
+      if (even && odd) {
+        out.type = 1;
+        out.a = Pack(even->color);
+        out.b = Pack(odd->color);
+      } else {
+        // Checker evaluation selects one child at the same coordinates. Export
+        // children first so the device can follow indices without recursion.
+        out.type = 14;
+        out.offset = Texture(t->even.get());
+        out.width = Texture(t->odd.get());
+      }
       out.a.w = t->period;
     } else if (const auto *t = dynamic_cast<const gradient_texture *>(input)) {
-      if (t->hsv)
-        throw std::runtime_error("HSV gradient texture");
       out.type = t->aligned_v ? 2 : 3;
       out.a = Pack(t->gamma_color1);
       out.b = Pack(t->gamma_color2);
+      out.height = t->hsv;
+    } else if (const auto *t = dynamic_cast<const world_gradient_texture *>(input)) {
+      out.type = 13;
+      out.a = Pack(t->gamma_color1);
+      out.b = Pack(t->gamma_color2);
+      out.c = Pack(t->point1);
+      out.mapping = Pack(t->dir);
+      out.mapping.w = t->inv_trans_length;
+      out.height = t->hsv;
+    } else if (const auto *t = dynamic_cast<const noise_texture *>(input)) {
+      // Copy the native Perlin tables, not a newly seeded approximation or the
+      // composable value-noise algorithm. All legacy textures share these tables.
+      if (legacy_noise_offset == UINT32_MAX) {
+        legacy_noise_offset = scene.texels.size();
+        for (int i = 0; i < 256; ++i)
+          scene.texels.push_back(Pack(perlin::ranvec[i]));
+        for (int i = 0; i < 256; ++i)
+          scene.texels.push_back({float(perlin::perm_x[i]), float(perlin::perm_y[i]),
+                                  float(perlin::perm_z[i]), 0});
+      }
+      out.type = 12;
+      out.offset = legacy_noise_offset;
+      out.a = Pack(t->color);
+      out.b = Pack(t->color2);
+      out.c = {float(t->scale), float(t->phase), float(t->intensity), 0};
     } else if (const auto *t = dynamic_cast<const triangle_texture *>(input)) {
       out.type = 4;
       out.a = Pack(t->a);
@@ -1013,6 +1038,44 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
   }
 }
 
+void WavefrontContext::BeginFrame(const hitable_list &new_world, const hitable_list &new_lights,
+                                 RayCamera &camera, size_t capacity, int sampler,
+                                 WavefrontReport &report, size_t workers) {
+  bool reusable = session && world == &new_world && lights == &new_lights &&
+                  capacity <= pixel_capacity && sampler == sampling_method &&
+                  !WavefrontLightsChanged(scene);
+  if (reusable) {
+    // Lens tables share a packed buffer with lights and atmosphere. A larger
+    // camera payload needs a new allocation; camera values and smaller payloads
+    // can be uploaded in place by Render(). Projection changes alone are safe.
+    try {
+      WFCamera descriptor{};
+      ExportWavefrontCamera(camera, descriptor, scene.camera_data);
+      reusable = scene.camera_data.size() <= camera_capacity;
+    } catch (const std::exception &) {
+      reusable = false; // PrepareWavefront owns the normal CPU-fallback policy.
+    }
+  }
+  if (reusable) {
+    report = setup_report; // Reset per-frame counters, not resident resources.
+    report.upload_seconds = 0;
+    report.scene_reused = true;
+    return;
+  }
+  // Release the device session before replacing data it references. The same
+  // ordering is guaranteed by member destruction at animation exit/cancel.
+  session.reset();
+  scene = WavefrontScene();
+  session = PrepareWavefront(new_world, new_lights, camera, capacity, sampler,
+                             scene, report, workers);
+  world = &new_world;
+  lights = &new_lights;
+  pixel_capacity = capacity;
+  camera_capacity = scene.camera_data.size();
+  sampling_method = sampler;
+  setup_report = report;
+}
+
 bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, RayCamera &camera,
                            adaptive_sampler &film, size_t sample, int sampler, uint32_t seed,
                            size_t depth, size_t roulette, float clamp,
@@ -1033,24 +1096,9 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   p.boundary_hi = scene.boundary_hi;
   ExportWavefrontCamera(camera, p.camera, scene.camera_data);
   p.camera.padding[1] = scene.transparent_background ? 4 : 0;
-  p.camera.shutter.w = -1; // Per-pixel shutter samples when geometry is stationary.
-  if (scene.motion) {
-    // Scrambled base-two radical inverse gives coherent, progressive temporal
-    // samples. A pixel keeps the same instant for its entire transport path.
-    uint32_t bits = uint32_t(sample);
-    bits = ((bits & 0x55555555u) << 1) | ((bits >> 1) & 0x55555555u);
-    bits = ((bits & 0x33333333u) << 2) | ((bits >> 2) & 0x33333333u);
-    bits = ((bits & 0x0f0f0f0fu) << 4) | ((bits >> 4) & 0x0f0f0f0fu);
-    bits = ((bits & 0x00ff00ffu) << 8) | ((bits >> 8) & 0x00ff00ffu);
-    bits = (bits << 16) | (bits >> 16);
-    bits ^= seed * 0x9e3779b9u;
-    p.camera.shutter.w = std::min(float((double(bits)+.5)*0x1p-32), std::nextafter(1.f,0.f))*p.camera.shutter.z;
-    float time = p.camera.shutter.x+(p.camera.shutter.y-p.camera.shutter.x)*p.camera.shutter.w;
-    scene.motion_changed = scene.motion->Update(scene,time);
-    p.boundary_lo = scene.boundary_lo; p.boundary_hi = scene.boundary_hi;
-  }
+  // Geometry stays at its reference pose on the host. Its light tree remains
+  // a valid positive proposal; device emitter evaluation and PDFs use ray time.
   WavefrontSceneCompiler::RefreshLights(scene);
-  if (scene.motion_changed && !scene.light_nodes.empty()) RefitWavefrontLightBVH(scene);
   std::vector<uint32_t> active;
   for (const auto &block : film.pixel_chunks)
     for (int x = block.startx; x < block.endx; ++x)

@@ -9,6 +9,8 @@
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "../core/camera.h"
+#include "preview_navigation.h"
+#include <chrono>
 #include "../hitables/hitable.h"
 
 class VolumeScene;
@@ -76,7 +78,7 @@ class PreviewDisplay {
 public: 
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                 bool _deferred_render, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                  RayOidnDenoiser* _denoiser,
                  RayMatrix* _oidn_albedo_output,
@@ -84,7 +86,7 @@ public:
                  bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                 bool _deferred_render, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                  bool _auto_exposure);
 #endif
@@ -92,6 +94,11 @@ public:
   void SetCamera(RayCamera* _cam);
   // Coordinates match the renderer's film samples, independent of window API.
   bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
+  void InitializeNavigation(hitable* world);
+  void QueueNavigationTap(char key, bool shifted);
+  bool PollNavigation();
+  PreviewNavigation navigation;
+  aabb navigation_bounds; // Finite scene bounds, before adding environment proxies.
   std::shared_ptr<VolumeScene> volume_scene;
   void SetSnapshotFilename(const std::string& filename);
   void SavePreviewSnapshot() const;
@@ -137,6 +144,7 @@ public:
   bool DeleteCurrentKeyframe(Float* env_rotation);
   void PrintCameraInfo(Float env_rotation) const;
   std::string PreviewStatusText(Float env_rotation) const;
+  unsigned int StatusBarHeight() const;
   void SetKeyframeMotionArgs(const Rcpp::List& args);
   bool ToggleKeyframeMotionClosed();
   bool KeyframeMotionClosed() const { return keyframe_motion_closed; }
@@ -205,7 +213,6 @@ public:
   unsigned int height;
   Float speed;
   bool orbit;
-  Float base_step;
   int s;
 #endif
 #if !defined(RAY_HAS_X11) && !defined(RAY_WINDOWS)
@@ -225,6 +232,7 @@ public:
   Float preview_exposure_scale;
   Float preview_exposure_adjustment;
   bool write_fast_output;
+  std::string integrator_name = "CPU (NEE)";
   bool interactive;
   bool deferred_render;
   bool render_requested;
@@ -263,6 +271,10 @@ public:
   std::vector<PreviewLineOverlay> line_overlays;
 
 private:
+  bool navigation_initialized = false;
+  unsigned int navigation_taps = 0, navigation_shifted_taps = 0;
+  unsigned int navigation_previous_keys = 0;
+  std::chrono::steady_clock::time_point navigation_clock = std::chrono::steady_clock::now();
   bool UpdateAtmosphere(bool haze, bool query_altitude);
   std::function<void(bool, bool)> update_atmosphere;
   bool atmosphere_haze = false, atmosphere_query_altitude = false;

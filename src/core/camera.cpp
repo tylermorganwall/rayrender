@@ -1583,6 +1583,42 @@ context("Camera shutter speed temporal mapping") {
 
 #ifdef NOT_CRAN
 context("Camera ray differentials") {
+  test_that("navigation follows reflected film while preserving the camera frame") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, 0, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      const vec3f original_u = cam->get_u();
+      const vec3f original_w = cam->get_w();
+      const vec3f original_v = cam->get_v();
+      for (bool reflected : {false, true}) {
+        cam->reset();
+        cam->set_camera_flip_x(reflected);
+        expect_true((cam->get_u() - original_u).squared_length() < 1e-10);
+        expect_true((cam->get_w() - original_w).squared_length() < 1e-10);
+        expect_true((cam->get_v() - original_v).squared_length() < 1e-10);
+        // The displayed raster reverses film x. Moving left must point along
+        // the differential from screen center toward its left neighbor.
+        Ray center = cam->get_ray(.5, .5, point3f(0), .5);
+        Ray left = cam->get_ray(.501, .5, point3f(0), .5);
+        vec3f screen_left = (left.o + left.d) - (center.o + center.d);
+        expect_true(dot(screen_left, cam->get_navigation_u()) > 0);
+        for (bool orbit : {false, true}) {
+          cam->reset();
+          point3f origin = cam->get_origin();
+          cam->update_position(cam->get_navigation_u(), orbit);
+          expect_true(dot(cam->get_origin() - origin, screen_left) > 0);
+        }
+        cam->reset();
+        cam->rotate_navigation_up(5);
+        // The same roll key tilts up toward the same displayed side under
+        // either handedness. Forward movement and pitch need no reflection.
+        expect_true(dot(cam->get_v(), screen_left) < 0);
+      }
+    }
+  }
   test_that("film reflection preserves camera pose and reverses the x differential") {
     camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
     ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);

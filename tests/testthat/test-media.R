@@ -83,6 +83,20 @@ medium_test_render = function(scene, samples = 64, ...) {
   )
 }
 
+test_that("volume creation requires an explicit medium", {
+  expect_error(diffuse(fog = TRUE), "unused argument")
+  expect_error(diffuse(fogdensity = .1), "unused argument")
+  expect_false(any(c("fog", "fogdensity") %in% names(diffuse()[[1]])))
+  # An old serialized fog material must fail rather than silently become opaque.
+  old_material = diffuse()
+  old_material[[1]]$fog = TRUE
+  old_material[[1]]$fogdensity = .1
+  expect_error(
+    medium_test_render(sphere(material = old_material), samples = 1),
+    "Material fog.*set_medium"
+  )
+})
+
 test_that("primary alpha measures world distance, nesting, and surface coverage", {
   a = c(0, 1, 2)
   medium = homogeneous_medium(sigma_a = a, sigma_s = 0)

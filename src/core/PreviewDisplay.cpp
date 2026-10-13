@@ -174,6 +174,7 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
     // This updates both the stored orbit point and the camera frame. Updating
     // just the direction would snap back to the previous pivot on the next orbit.
     cam->update_lookat(target->p);
+    if(!target->background) navigation.SetDistance((target->p - cam->get_origin()).length());
     ApplyStaticPreviewCameraMotionRange(cam);
     return true;
   } catch(const std::exception& error) {
@@ -272,7 +273,6 @@ static std::vector<Float> rgb;
 static RayCamera* cam_w;
 static Float speed;
 static bool orbit;
-static Float base_step;
 static bool blanked;
 static bool interactive_w;
 static adaptive_sampler* aps;
@@ -300,6 +300,75 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif
 
+
+void PreviewDisplay::InitializeNavigation(hitable* world) {
+  if(!preview || !interactive || !cam || navigation_initialized) return;
+  navigation.Initialize(*cam, world, volume_scene.get(), navigation_bounds, [&]() {
+    return PollCloseEvent() || RcppThread::isInterrupted();
+  });
+  navigation_initialized = true;
+  navigation_clock = std::chrono::steady_clock::now();
+}
+
+void PreviewDisplay::QueueNavigationTap(char key, bool shifted) {
+  const std::string keys = "wasdqz";
+  size_t index = keys.find(key);
+  if(index == std::string::npos) return;
+  unsigned int bit = 1u << index;
+  if(navigation_previous_keys & bit) return; // Ignore OS key-repeat events.
+  (shifted ? navigation_shifted_taps : navigation_taps) |= bit;
+}
+
+bool PreviewDisplay::PollNavigation() {
+#if defined(RAY_HAS_X11) || defined(RAY_WINDOWS)
+  auto now = std::chrono::steady_clock::now();
+  double seconds = std::chrono::duration<double>(now - navigation_clock).count();
+  navigation_clock = now;
+  unsigned int held = 0;
+  bool shift = false, focused = false;
+  const char* keys = "wasdqz";
+#ifdef RAY_HAS_X11
+  focused = d && PreviewDisplayHasKeyboardFocus(d, w);
+  if(focused) {
+    char state[32];
+    XQueryKeymap(d, state);
+    auto down = [&](KeySym key) {
+      KeyCode code = XKeysymToKeycode(d, key);
+      return code && (state[code/8] & (1 << (code%8)));
+    };
+    for(int i = 0; i < 6; ++i) if(down(keys[i])) held |= 1u << i;
+    shift = down(XK_Shift_L) || down(XK_Shift_R);
+  }
+#else
+  focused = GetForegroundWindow() == hwnd && GetFocus() == hwnd;
+  if(focused) {
+    for(int i = 0; i < 6; ++i)
+      if(GetAsyncKeyState(keys[i] - 'a' + 'A') & 0x8000) held |= 1u << i;
+    shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+  }
+#endif
+  bool changed = false;
+  if(interactive && focused && !terminate && !IsPreviewMotionActive()) {
+    auto move = [&](unsigned int bits, bool shifted, double dt) {
+      auto down = [&](int index) { return (bits & (1u << index)) ? Float(1) : Float(0); };
+      return navigation.Move(*cam, down(3)-down(1), down(4)-down(5), down(0)-down(2),
+                             shifted, orbit, speed, dt);
+    };
+    // Cap a stalled frame at 250 ms to prevent a large jump after a pause.
+    // New presses get one 60-Hz step, not the preceding idle frame's duration.
+    changed |= move(held & navigation_previous_keys, shift, std::min(seconds, .25));
+    changed |= move(held & ~navigation_previous_keys, shift, 1.0/60);
+    // Preserve quick taps that began and ended between preview updates.
+    changed |= move(navigation_taps & ~held, false, 1.0/60);
+    changed |= move(navigation_shifted_taps & ~held, true, 1.0/60);
+  }
+  navigation_previous_keys = focused ? held : 0;
+  navigation_taps = navigation_shifted_taps = 0;
+  return changed;
+#else
+  return false;
+#endif
+}
 
 void PreviewDisplay::CalibratePreviewExposure(adaptive_sampler& adaptive_pixel_sampler,
                                               RayMatrix& rgb,
@@ -503,6 +572,7 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
   cam->update_focal_absolute(key_focal);
   cam->update_position_absolute(key_pos);
   cam->update_lookat(key_lookat);
+  navigation.SetDistance((key_lookat - key_pos).length());
   cam->update_up(key_up);
   cam->update_aperture_absolute(key_aperture);
   cam->update_fov_absolute(key_fov);
@@ -824,6 +894,10 @@ void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
   }
 }
 
+unsigned int PreviewDisplay::StatusBarHeight() const {
+  return interactive && width >= PREVIEW_STATUS_MIN_WIDTH ? PREVIEW_STATUS_BAR_HEIGHT : 0;
+}
+
 std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   if(cam == nullptr) {
     return "";
@@ -859,7 +933,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   char flags_text[160];
   std::snprintf(flags_text,
                 sizeof(flags_text),
-                "Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                "Integrator %s | Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                integrator_name.c_str(),
                 keyframe_motion_closed ? "CLOSED" : "OPEN",
                 env_rotation,
                 camera_motion_blur_enabled ? "ON" : "OFF",
@@ -1407,9 +1482,7 @@ void PreviewDisplay::CompositeLineOverlaysToX11Buffer(hitable* world, random_gen
 }
 
 void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
-  if(!interactive ||
-     width < PREVIEW_STATUS_MIN_WIDTH ||
-     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+  if(StatusBarHeight() == 0) {
     return;
   }
 
@@ -1424,13 +1497,13 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
                  w,
                  gc,
                  0,
-                 height - PREVIEW_STATUS_BAR_HEIGHT,
+                 height,
                  width,
                  PREVIEW_STATUS_BAR_HEIGHT);
   XSetForeground(d, gc, WhitePixel(d, s));
   std::istringstream rows(status_text);
   std::string row;
-  int baseline = height - PREVIEW_STATUS_BAR_HEIGHT + PREVIEW_STATUS_ROW_HEIGHT - 7;
+  int baseline = height + PREVIEW_STATUS_ROW_HEIGHT - 7;
   while(std::getline(rows, row)) {
     XDrawString(d, w, gc, 8, baseline, row.c_str(), static_cast<int>(row.size()));
     baseline += PREVIEW_STATUS_ROW_HEIGHT;
@@ -1567,9 +1640,7 @@ void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
 
 #ifdef RAY_WINDOWS
 void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
-  if(!interactive ||
-     width < PREVIEW_STATUS_MIN_WIDTH ||
-     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+  if(StatusBarHeight() == 0) {
     return;
   }
 
@@ -1579,9 +1650,9 @@ void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
   }
 
   RECT bar_rect = {0,
-                   static_cast<LONG>(height - PREVIEW_STATUS_BAR_HEIGHT),
+                   static_cast<LONG>(height),
                    static_cast<LONG>(width),
-                   static_cast<LONG>(height)};
+                   static_cast<LONG>(height + StatusBarHeight())};
   HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
   FillRect(hdc, &bar_rect, brush);
   DeleteObject(brush);
@@ -1815,9 +1886,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           continue;
         }
         if(interactive) {
-          vec3f w = cam->get_w();
-          vec3f u = cam->get_u();
-          vec3f v = cam->get_v();
         
           bool blanked = false;
           bool one_orbit = false;
@@ -1842,56 +1910,38 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             write_fast_output = !write_fast_output;
             one_fast  = true;
           }
-          if (e.xkey.keycode == W_key ) {
-            if(shift_pressed) {
-              cam->rotate_forward(speed * 1.f);
-            } else {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
-                }
-              }
-              cam->update_position(step, orbit, false);
-            }
+          if (e.xkey.keycode == W_key) {
+            QueueNavigationTap('w', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == A_key ) {
-            if(shift_pressed) {
-              cam->rotate_up(speed * -1.f);
-            } else {
-              cam->update_position(speed * u * base_step, orbit);
-            }
+          if (e.xkey.keycode == A_key) {
+            QueueNavigationTap('a', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == S_key ) {
-            if(shift_pressed) {
-              cam->rotate_forward(speed * -1.f);
-            } else {
-              cam->update_position(-speed * w * base_step, orbit, false);
-            }
+          if (e.xkey.keycode == S_key) {
+            QueueNavigationTap('s', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == D_key ) {
-            if(shift_pressed) {
-              cam->rotate_up(speed * 1.f);
-            } else {
-              cam->update_position(-speed * u * base_step, orbit);
-            }
+          if (e.xkey.keycode == D_key) {
+            QueueNavigationTap('d', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == Q_key ) {
-            cam->update_position(speed * v * base_step, orbit);
+          if (e.xkey.keycode == Q_key) {
+            QueueNavigationTap('q', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == Z_key ) {
-            cam->update_position(-speed * v * base_step, orbit);
+          if (e.xkey.keycode == Z_key) {
+            QueueNavigationTap('z', shift_pressed);
+            continue;
           }
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
-            speed = std::fmin(speed,128);
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = clamp(speed, Float(1.0/128), Float(128));
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == C_key ) {
-            speed = 0.5 * speed;
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = std::max(Float(1.0/128), Float(0.5) * speed);
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == Down_key ) {
             cam->update_fov(speed*1.f);
@@ -1938,7 +1988,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
           }
           if (e.xkey.keycode == R_key ) {
-            cam->reset();
+            cam->reset(); navigation.Reset(*cam);
             speed = 1;
             (*EnvWorldToObject) = Start_EnvWorldToObject;
             (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2038,10 +2088,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               write_fast_output = !write_fast_output;
               one_fast  = true;
             }
-            
-            w = cam->get_w();
-            u = cam->get_u();
-            v = cam->get_v();
             shift_pressed = (e.xkey.state & ShiftMask) != 0;
             if(IsX11ShiftedLeftBracket(d, e.xkey)) {
               AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
@@ -2054,57 +2100,39 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               continue;
             }
             
-            if (e.xkey.keycode == W_key ) {
-              if(shift_pressed) {
-                cam->rotate_forward(speed * 1.f);
-              } else {
-                vec3f step = speed * w * base_step;
-                if(orbit) {
-                  Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                  if(dist_to_orbit <= base_step * speed) {
-                    Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                    step = vec3f(0);
-                  }
-                }
-                cam->update_position(step, orbit, false);
-              }
+            if (e.xkey.keycode == W_key) {
+              QueueNavigationTap('w', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == A_key ) {
-              if(shift_pressed) {
-                cam->rotate_up(speed * -1.f);
-              } else {
-                cam->update_position(speed * u * base_step, orbit);
-              }
+            if (e.xkey.keycode == A_key) {
+              QueueNavigationTap('a', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == S_key ) {
-              if(shift_pressed) {
-                cam->rotate_forward(speed * -1.f);
-              } else {
-                cam->update_position(-speed * w * base_step, orbit, false);
-              }
+            if (e.xkey.keycode == S_key) {
+              QueueNavigationTap('s', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == D_key ) {
-              if(shift_pressed) {
-                cam->rotate_up(speed * 1.f);
-              } else {
-                cam->update_position(-speed * u * base_step, orbit);
-              }
+            if (e.xkey.keycode == D_key) {
+              QueueNavigationTap('d', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == Q_key ) {
-              cam->update_position(speed * v * base_step, orbit);
+            if (e.xkey.keycode == Q_key) {
+              QueueNavigationTap('q', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == Z_key ) {
-              cam->update_position(-speed * v * base_step, orbit);
+            if (e.xkey.keycode == Z_key) {
+              QueueNavigationTap('z', shift_pressed);
+              continue;
             }
             if (e.xkey.keycode == E_key ) {
               speed = 2 * speed;
-              Rprintf("Step Multiplier: %.3f\n", speed);
+              Rprintf("Speed Multiplier: %.3f\n", speed);
               
             }
             if (e.xkey.keycode == C_key ) {
-              speed = 0.5 * speed;
-              speed = std::fmin(speed,128);
-              Rprintf("Step Multiplier: %.3f\n", speed);
+              speed = std::max(Float(1.0/128), Float(0.5) * speed);
+              speed = clamp(speed, Float(1.0/128), Float(128));
+              Rprintf("Speed Multiplier: %.3f\n", speed);
               
             }
             if (e.xkey.keycode == Down_key ) {
@@ -2155,7 +2183,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
             if (e.xkey.keycode == R_key ) {
-              cam->reset();
+              cam->reset(); navigation.Reset(*cam);
               speed = 1;
               (*EnvWorldToObject) = Start_EnvWorldToObject;
               (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2222,6 +2250,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
           Float x = e.xbutton.x;
           Float y = e.xbutton.y;
+          if(x < 0 || y < 0 || x >= width || y >= height) {
+            continue; // Status-bar clicks must not generate camera rays.
+          }
           Float u = 1 - (x + .5f) / Float(width);
           Float v = 1 - (y + .5f) / Float(height);
           if(!PickCameraTarget(u, v, left, world)) {
@@ -2243,6 +2274,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         terminate = true;
         break;
       } 
+    }
+    if(PollNavigation()) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+      reset_preview_render();
     }
     if(AdvancePreviewMotion(&env_y_angle)) {
       reset_preview_render();
@@ -2356,6 +2391,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       TranslateMessage(&msg);
       DispatchMessage(&msg); 
     }
+    if(PollNavigation()) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+      reset_preview_render();
+    }
     if(AdvancePreviewMotion(&env_y_angle)) {
       blanked = true;
       reset_preview_render();
@@ -2367,7 +2406,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
 #ifdef HAS_OIDN
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                               bool _deferred_render, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
                                RayOidnDenoiser* _denoiser,
                                RayMatrix* _oidn_albedo_output,
@@ -2387,7 +2426,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                               bool _deferred_render, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                                bool _auto_exposure) :
   preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
@@ -2424,7 +2463,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   speed = 1.f;
   env_y_angle = 0;
   orbit = true;
-  base_step = initial_lookat_distance/20;
   cam = _cam;
   if(preview) {
     d = XOpenDisplay(NULL);
@@ -2458,7 +2496,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                        ZPixmap,
                        0,data.get(),width,height,32,0);
     
-    w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height, 1,
+    // Film dimensions stay unchanged: only the window gets extra UI space.
+    w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height + StatusBarHeight(), 1,
                             BlackPixel(d, s),  BlackPixel(d, s));
     XSelectInput(d, w, ExposureMask | KeyPressMask | ButtonPress);
     XMapWindow(d, w);
@@ -2476,7 +2515,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   if(preview) {
     width = _width;
     height = _height;
-    base_step = initial_lookat_distance/20;
     rgb.resize(width*height*3);
     cam_w = _cam;
     ApplyShutterSpeedToCameras();
@@ -2493,8 +2531,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     RegisterClass(&wc);
   
     // Create the window.
-    RECT rect = {0, 0, (long int)width, (long int)height};
-    AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, true);
+    RECT rect = {0, 0, (long int)width, (long int)(height + StatusBarHeight())};
+    AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, FALSE);
     
     hwnd = CreateWindowEx(
       0,                              // Optional window styles.
@@ -2526,6 +2564,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 
 void PreviewDisplay::SetCamera(RayCamera* _cam) {
   cam = _cam;
+  navigation_initialized = false;
+  navigation_previous_keys = navigation_taps = navigation_shifted_taps = 0;
   if(cam != nullptr) {
     cam->set_camera_motion_blur(camera_motion_blur_enabled);
     cam->set_shutter_speed(shutter_speed);
@@ -2866,14 +2906,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
-      vec3f w(1,0,0);
-      vec3f u(0,1,0);
-      vec3f v(0,0,1);
       
       if(interactive_w) {
-        w = cam_w->get_w();
-        u = cam_w->get_u();
-        v = cam_w->get_v();
       }
       if(interactive_w &&
          preview_display_w != nullptr &&
@@ -2915,79 +2949,25 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
           break;
         }
-        case VK_KEY_W: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_forward(speed * 1.f);
-            } else {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
-                }
-              }
-              cam_w->update_position(step, orbit, false);
-            }
+        case VK_KEY_W: case VK_KEY_A: case VK_KEY_S:
+        case VK_KEY_D: case VK_KEY_Q: case VK_KEY_Z: {
+          if(interactive_w && preview_display_w != nullptr) {
+            preview_display_w->QueueNavigationTap(static_cast<char>(wParam + ('a' - 'A')), shift_pressed);
           }
-          break;
+          return 0;
         }
-
-        case VK_KEY_A: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_up(speed * -1.f);
-            } else {
-              cam_w->update_position(-speed * u * base_step, orbit);
-            }
-          }
-          break;
-        }
-        case VK_KEY_S: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_forward(speed * -1.f);
-            } else {
-              cam_w->update_position(-speed * w * base_step, orbit, false);
-            }
-          }
-          break;
-        }
-        case VK_KEY_D: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_up(speed * 1.f);
-            } else {
-              cam_w->update_position(speed * u * base_step, orbit);
-            }
-          }
-          break;
-        }
-        case VK_KEY_Q: { 
-          if(interactive_w) {
-            cam_w->update_position(speed * v * base_step, orbit);
-        }
-          break;
-          }
-        case VK_KEY_Z: { 
-          if(interactive_w) {
-            cam_w->update_position(-speed * v * base_step, orbit);
-        }
-          break;
-          }
         case VK_KEY_E: { 
           if(interactive_w) {
             speed = 2 * speed;
-            speed = std::fmin(speed,128);
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = clamp(speed, Float(1.0/128), Float(128));
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           break;
           }
         case VK_KEY_C: { 
           if(interactive_w) {
-            speed = 0.5 * speed;
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = std::max(Float(1.0/128), Float(0.5) * speed);
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           break;
           }
@@ -3072,7 +3052,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_R: {
           if(interactive_w) {
-            cam_w->reset();
+            cam_w->reset(); preview_display_w->navigation.Reset(*cam_w);
             speed = 1;
             (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
             (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
@@ -3149,8 +3129,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
   case WM_RBUTTONDOWN: {
     if(interactive_w && preview_display_w != nullptr &&
        !preview_display_w->IsPreviewMotionActive()) {
-      Float u = 1 - (Float(GET_X_LPARAM(lParam)) + .5f) / Float(width);
-      Float v = 1 - (Float(GET_Y_LPARAM(lParam)) + .5f) / Float(height);
+      const int x = GET_X_LPARAM(lParam), y = GET_Y_LPARAM(lParam);
+      if(x < 0 || y < 0 || static_cast<unsigned int>(x) >= width ||
+         static_cast<unsigned int>(y) >= height) break;
+      Float u = 1 - (Float(x) + .5f) / Float(width);
+      Float v = 1 - (Float(y) + .5f) / Float(height);
       if(preview_display_w->PickCameraTarget(u, v, uMsg == WM_LBUTTONDOWN, world_w)) {
         ResetWindowsPreviewRenderState();
       }
@@ -3207,12 +3190,12 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
                                                        Transform& env_transform) {
 #ifdef HAS_OIDN
   return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-    4, 4, false, true, false, 10.f, &cam,
+    4, 4, false, true, false, &cam,
     &env_transform, &env_transform,
     nullptr, nullptr, nullptr, false, false));
 #else
   return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-    4, 4, false, true, false, 10.f, &cam,
+    4, 4, false, true, false, &cam,
     &env_transform, &env_transform, false));
 #endif
 }

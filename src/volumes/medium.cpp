@@ -1,6 +1,5 @@
 #include "medium.h"
 #include "subsurface.h"
-#include "../materials/texture.h"
 #include "../materials/openpbr.h"
 #include "boundary.h"
 #include <algorithm>
@@ -274,21 +273,16 @@ Medium::Medium(const Rcpp::List &d)
     temperature = values[0];
   }
 }
-MediumProperties Medium::Properties(Float density, const point3f &le, const point3f &p) const {
+MediumProperties Medium::Properties(Float density, const point3f &le) const {
   MediumProperties out;
   out.sigma_a = sigma_a * density;
   out.sigma_s = sigma_s * density;
-  if (legacy_albedo) {
-    point3f a = legacy_albedo->value(0, 0, p);
-    out.sigma_s = sigma_s * a;
-    out.sigma_a = sigma_s * (point3f(1) - a);
-  }
   out.Le = le;
   out.phase = HGPhaseFunction(g);
   return out;
 }
 MediumProperties Medium::SamplePoint(const point3f &p) const {
-  return Properties(Density(p), Emission(p), p);
+  return Properties(Density(p), Emission(p));
 }
 RayMajorantIterator Medium::SampleRay(const Ray &r, double t_max) const {
   return RayMajorantIterator(r, t_max, sigma_a + sigma_s, nullptr);
@@ -408,8 +402,8 @@ MediumProperties GridMedium::SamplePoint(const point3f &p) const {
   // Avoid even entering the emission lookup in the common non-emissive case.
   // Do not use IsEmissive(): zero absorption does not make the stored Le zero.
   if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
-    return Properties(Density(p), point3f(0), p);
-  return Properties(Density(p), Emission(p), p);
+    return Properties(Density(p), point3f(0));
+  return Properties(Density(p), Emission(p));
 }
 RayMajorantIterator GridMedium::SampleRay(const Ray &r, double t_max) const {
   return RayMajorantIterator(r, t_max, sigma_a + sigma_s, &majorants);

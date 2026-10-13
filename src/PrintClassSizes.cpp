@@ -7,7 +7,6 @@
 #include "materials/texture.h"
 #include "hitables/rectangle.h"
 #include "hitables/box.h"
-#include "materials/constant.h"
 #include "hitables/triangle.h"
 #include "math/pdf.h"
 #include "hitables/trimesh.h"
@@ -73,7 +72,6 @@ void PrintClassSizes() {
   Rcpp::Rcout << "---dielectric            : " << sizeof(dielectric) << "\n";
   Rcpp::Rcout << "---diffuse_light         : " << sizeof(diffuse_light) << "\n";
   Rcpp::Rcout << "---spot_light            : " << sizeof(spot_light) << "\n";
-  Rcpp::Rcout << "---isotropic             : " << sizeof(isotropic) << "\n";
   Rcpp::Rcout << "---MicrofacetReflection  : " << sizeof(MicrofacetReflection) << "\n";
   Rcpp::Rcout << "---MicrofacetTransmission: " << sizeof(MicrofacetTransmission) << "\n";
   Rcpp::Rcout << "---glossy                : " << sizeof(glossy) << "\n";

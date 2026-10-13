@@ -7,6 +7,62 @@
 #include <testthat.h>
 
 context("Metal texture evaluation") {
+  test_that("legacy noise, gradients and nested checkers match native evaluation") {
+    if (!MetalBVHAvailable()) return;
+    auto noise = std::make_shared<noise_texture>(1.7, point3f(.1, .3, .8),
+                                                point3f(.9, .7, .2), .73, 8.3);
+    std::vector<std::shared_ptr<texture>> cases{noise};
+    for (bool hsv : {false, true}) {
+      for (bool transpose : {false, true})
+        cases.push_back(std::make_shared<gradient_texture>(point3f(.9, .1, .3),
+                         point3f(.1, .2, .8), transpose, hsv));
+      cases.push_back(std::make_shared<world_gradient_texture>(point3f(-.4, .2, -.7),
+                        point3f(.6, 1.1, .4), point3f(.9, .1, .3), point3f(.1, .2, .8), hsv));
+    }
+    std::shared_ptr<texture> nested = noise;
+    for (int i = 0; i < 5; ++i)
+      nested = std::make_shared<checker_texture>(cases[i + 1], nested, .71 + .17 * i);
+    cases.push_back(nested);
+    // A graph leaf under a legacy checker exercises dispatch between the two
+    // representations, including the texture-feature specialization flags.
+    auto ns = Rcpp::Environment::namespace_env("rayrender");
+    Rcpp::Function constant = ns["texture_constant"];
+    TextureCache cache;
+    TextureGraphBuilder builder(cache);
+    auto graph = std::make_shared<graph_texture>(builder.Build(constant("coral")));
+    cases.push_back(std::make_shared<checker_texture>(graph, nested, .93));
+    Transform identity;
+    camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
+    for (const auto &tex : cases) {
+      hitable_list world, lights;
+      world.add(std::make_shared<xy_rect>(-2, 2, -2, 2, 0,
+        std::make_shared<diffuse_material>(tex), nullptr, nullptr, &identity, &identity, false));
+      WavefrontScene scene;
+      WavefrontReport report;
+      auto session = PrepareWavefront(world, lights, cam, 1, 0, scene, report);
+      expect_true(bool(session));
+      if (!session) continue;
+      std::vector<WFTextureProbe> probes;
+      std::vector<point3f> expected;
+      for (int i = 0; i < 193; ++i) {
+        float u = (i % 23 - 5) / 17.f, v = (i % 31 - 8) / 19.f;
+        WFVector p{(i - 96) * .173f, (i % 29 - 14) * .231f, (i % 13 - 6) * .357f, 0};
+        if (i == 0) p = {}; // Checker's zero-sine convention and lattice origin.
+        probes.push_back({{u, v, float(scene.materials[0].texture), 0}, p, {}, {}, {}, {}});
+        expected.push_back(tex->value(u, v, point3f(p.x, p.y, p.z)));
+      }
+      auto actual = ProbeMetalTextures(scene, probes);
+      double error = 0;
+      expect_true(actual.size() == expected.size());
+      for (size_t i = 0; i < actual.size(); ++i)
+        for (int c = 0; c < 3; ++c) {
+          double value = (&actual[i].x)[c];
+          if (!std::isfinite(value)) error = INFINITY;
+          error = std::max(error, std::abs(value - expected[i][c]));
+        }
+      expect_true(error < 5e-5);
+    }
+  }
   test_that("Ptex atlas lookups preserve face IDs and decode after interpolation") {
     if (!MetalBVHAvailable()) return;
     Rcpp::Function temporary = Rcpp::Environment::base_env()["tempfile"];

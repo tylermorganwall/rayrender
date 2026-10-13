@@ -128,6 +128,19 @@ animation_default_plot_scene = function(
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
 #'
+#' @details
+#' With \code{integrator_type = "metal"}, frames in the same native animation batch
+#' reuse the uploaded scene, acceleration structures, and GPU work buffers.
+#' Camera parameters update for each frame while image accumulation and sampling
+#' restart independently. Resources are released when the batch finishes or is
+#' interrupted. Changes that require new camera storage or replace a sky model
+#' rebuild the Metal session. Separate \code{render_scene()} calls and camera batches
+#' with incompatible metadata do not share a session.
+#'
+#' Returned Metal frames carry a \code{wavefront} attribute with \code{scene_reused},
+#' \code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
+#' Reused frames report zero scene-upload time; sampling time remains per frame.
+#'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Create and animate flying through a scene on a simulated roller coaster
 #' set.seed(3)

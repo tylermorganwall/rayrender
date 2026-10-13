@@ -1,6 +1,9 @@
 test_that("scene requirements select NEE without changing other integrators", {
   # Integrator selection must not require downloading sky data or rendering disks.
-  local_mocked_bindings(prepare_scene_infinite_lights = function(lights) list())
+  local_mocked_bindings(
+    prepare_scene_infinite_lights = function(lights) list(),
+    .package = "rayrender"
+  )
   time = as.POSIXct("2026-06-21 12:00:00", tz = "UTC")
   sky = sky_light(0, 0, time, sun = FALSE, moon = FALSE)
   fixed_sky = sky_light(
@@ -18,7 +21,6 @@ test_that("scene requirements select NEE without changing other integrators", {
   medium = set_medium(cube(), homogeneous_medium())
   unchanged = list(
     surface,
-    sphere(material = diffuse(fog = TRUE)),
     add_infinite_light(surface, infinite_light(image)),
     add_infinite_light(surface, sky_light_image(0, 0, time)),
     add_infinite_light(surface, sun_light(0, 0, time)),
@@ -26,6 +28,7 @@ test_that("scene requirements select NEE without changing other integrators", {
   )
   requires_nee = list(
     medium,
+    set_medium(sphere(), homogeneous_medium(sigma_s = .01)),
     create_instances(medium, x = c(-2, 2)),
     add_infinite_light(surface, sky),
     add_infinite_light(surface, fixed_sky),

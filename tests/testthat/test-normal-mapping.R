@@ -11,7 +11,10 @@ test_that("diffuse has one normal-mapping model and validates roughness", {
   expect_equal(diffuse(sigma = 900)[[1]]$sigma, pi / 2)
   expect_identical(unserialize(serialize(rough, NULL)), rough)
   expect_no_error(prepare_scene_list(sphere(material = rough)))
-  expect_no_error(prepare_scene_list(sphere(material = diffuse(fog = TRUE))))
+  expect_no_error(prepare_scene_list(set_medium(
+    sphere(material = diffuse()),
+    homogeneous_medium(sigma_s = .01)
+  )))
 })
 
 test_that("imported diffuse face materials and vertex colors render with the default model", {

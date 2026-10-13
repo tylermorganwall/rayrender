@@ -23,8 +23,6 @@ WFField ExportField(const SampledField &field, int channel = 0) {
 
 uint32_t ExportMedium(const Medium &medium, const Transform &placement) {
   scene.texture_features |= 16; // Specialize general-medium work out of ordinary/SSS shaders.
-  if (medium.legacy_albedo && !dynamic_cast<const constant_texture *>(medium.legacy_albedo.get()))
-    throw std::runtime_error("textured legacy volume albedo");
   WFMedium out;
   const auto inverse = placement.GetInverseMatrix();
   for (int k = 0; k < 3; ++k)

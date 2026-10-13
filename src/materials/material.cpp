@@ -370,43 +370,6 @@ size_t spot_light::GetSize()  {
 }
 
 //
-//Isotropic
-//
-
-bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Isotropic Scatter");
-  
-  srec.is_specular = true;
-  srec.specular_ray = Ray(rec.p, rng.random_in_unit_sphere(), r_in.pri_stack);
-  srec.attenuation = albedo->value(rec);
-  return(true);
-}
-bool isotropic::scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler) {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Isotropic Scatter");
-  
-  srec.is_specular = true;
-  srec.specular_ray = Ray(rec.p, rand_to_sphere(1, 1, sampler->Get2D()), r_in.pri_stack);
-  srec.attenuation = albedo->value(rec);
-  return(true);
-}
-
-point3f isotropic::f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const {
-  SCOPED_CONTEXT("Material");
-  SCOPED_TIMER_COUNTER("Isotropic F");
-  
-  return(albedo->value(rec) * static_cast<Float>(0.25) * static_cast<Float>(M_1_PI));
-}
-point3f isotropic::get_albedo(const hit_record& rec) const {
-  return(albedo->value(rec));
-}
-
-size_t isotropic::GetSize()  {
-  return(sizeof(*this));
-}
-
-//
 //MicrofacetReflection
 //
 

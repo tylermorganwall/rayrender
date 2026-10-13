@@ -153,9 +153,9 @@ R"MSL(
     device const MeshInstance *instances =
         reinterpret_cast<device const MeshInstance *>(bytes + storage->instance_offset);
     GeometryScene scene = {triangle_scene, functions, mixed_scene, mixed_functions, instances,
-      reinterpret_cast<device const float4 *>(bytes + storage->motion_offset),
-      reinterpret_cast<device const Quadric *>(bytes + storage->motion_offset + 48)};
+      {bytes + storage->motion_offset, 0}};
     GeometryProbe p = input[i];
+    scene.motion.time = as_type<float>(p.padding[1]);
     ray r;
     r.origin = p.origin.xyz;
     r.direction = p.direction.xyz;
@@ -166,14 +166,14 @@ R"MSL(
     result.primitive = UINT_MAX;
     if (hit.type != intersection_type::none) {
       auto surface = geometry_surface(hit.primitive_id, hit.coordinates, triangles, quadrics,
-                                      surfaces, hit.instance, scene.instances, r.origin, r.direction);
+                                      surfaces, hit.instance, scene.instances, r.origin, r.direction, scene.motion);
       result.point = float4(surface.position, hit.distance);
       result.normal = float4(surface.normal, 1);
       float3 bary = float3(1 - hit.coordinates.x - hit.coordinates.y, hit.coordinates.xy);
       if (p.padding[0])
         result.normal.xyz = consistent_normal(surface.face,
             surfaces[as_type<uint>(surface.face.uv2.w)], bary, surface.normal, -r.direction, texels);
-      result.uv.xy = surface_context(surface.face, bary, surface.position, surfaces).uv;
+      result.uv.xy = surface_context(surface.face, bary, surface.position, surfaces, scene.motion).uv;
       result.primitive = hit.primitive_id;
       result.material = surface.face.material;
       result.boundary = surface.face.boundary;

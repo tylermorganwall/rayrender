@@ -44,7 +44,6 @@ struct Pipelines {
       shade_pbr_lights, shade_diffusion, shadow, shadow_transport, shadow_lights,
       dispatch, atmosphere_paths, atmosphere_dispatch, coverage;
   id<MTLBuffer> directions, blue;
-  std::array<id<MTLComputePipelineState>, 4> motion{};
   bool boundary_support, analytic_support, instance_support, mixed_support, atmosphere_support;
   uint32_t texture_features;
   std::mutex material_mutex;
@@ -70,7 +69,7 @@ struct Pipelines {
       throw MetalError("wavefront function specialization", error);
     auto descriptor = [MTLComputePipelineDescriptor new];
     descriptor.computeFunction = function;
-    if (boundary_support || mixed_support) {
+    if (boundary_support || mixed_support || (texture_features & 1024)) {
       auto linked = [MTLLinkedFunctions linkedFunctions];
       NSMutableArray<id<MTLFunction>> *functions = [NSMutableArray array];
       [functions
@@ -102,16 +101,7 @@ struct Pipelines {
     if (transparent && !coverage)
       coverage = Compile(@"shadows", false, true);
   }
-  void PrepareMotion() {
-    std::lock_guard<std::mutex> lock(material_mutex);
-    if (motion[0] && motion[1] && motion[2] && motion[3]) return;
-    NSArray<NSString *> *names = @[@"motion_triangles", @"motion_quadrics",
-                                  @"motion_surfaces", @"motion_instances"];
-    // A failed pipeline allocation must not leave a partially populated cache
-    // looking ready when a later render retries the Metal backend.
-    for (size_t i=0; i<4; ++i)
-      if (!motion[i]) motion[i]=Compile(names[i]);
-  }
+
   explicit Pipelines(bool boundary_support, uint32_t textures, bool analytics, bool instances, bool atmosphere)
       : boundary_support(boundary_support), analytic_support(analytics),
         instance_support(instances), mixed_support(analytics || instances),
@@ -205,62 +195,6 @@ class MetalWavefront final : public WavefrontSession {
   std::unique_ptr<WavefrontAtmosphere> atmosphere;
   const WavefrontScene &scene_data;
   bool gpu_atmosphere = false;
-  std::vector<id<MTLAccelerationStructure>> refit_structures;
-  std::vector<MTLAccelerationStructureDescriptor *> refit_descriptors;
-  id<MTLBuffer> refit_scratch = nil, motion_boxes = nil, motion_instances = nil;
-  bool moving_triangles = false, moving_quadrics = false, moving_instances = false;
-  bool whole_scene_frame = false;
-  id<MTLBuffer> reference_vertices = nil;
-  std::array<id<MTLBuffer>,4> motion_references{};
-  std::array<uint32_t,4> motion_counts{};
-  id<MTLBuffer> motion_poses = nil;
-
-  void EncodeMotion(id<MTLCommandBuffer> command) {
-    if (!scene_data.motion || !scene_data.motion_changed)
-      return;
-    const auto &s = scene_data;
-    // Only placement matrices and small transport metadata cross the host
-    // boundary. All primitive records and refit inputs are written on device.
-    std::memcpy(motion_poses.contents, s.motion->poses.data(),
-                s.motion->poses.size()*sizeof(WavefrontMotion::Pose));
-    std::memcpy(buffers[17].contents, s.boundaries.data(),
-                s.boundaries.size() * sizeof(WFBoundary));
-    auto *bytes = static_cast<char *>(buffers[28].contents);
-    if (whole_scene_frame)
-      std::memcpy(bytes + geometry_storage.motion_offset, s.motion->inverse_frame,
-                  3 * sizeof(WFVector));
-    std::memcpy(bytes + geometry_storage.medium_offset, s.media.data(), s.media.size()*sizeof(WFMedium));
-    for (size_t kind=0; kind<4; ++kind) {
-      if (!motion_counts[kind]) continue;
-      auto encoder=[command computeCommandEncoder];
-      encoder.label=@"Wavefront geometry motion";
-      [encoder setComputePipelineState:kernels.motion[kind]];
-      id<MTLBuffer> target=kind==0 ? buffers[0] : kind==2 ? buffers[26] : buffers[28];
-      size_t offset=kind==1 ? geometry_storage.quadric_offset : kind==3 ? geometry_storage.instance_offset : 0;
-      [encoder setBuffer:target offset:offset atIndex:0];
-      [encoder setBuffer:motion_references[kind] offset:0 atIndex:1];
-      [encoder setBuffer:motion_poses offset:0 atIndex:2];
-      id<MTLBuffer> descriptors=kind==1 ? motion_boxes : motion_instances;
-      [encoder setBuffer:descriptors ? descriptors : motion_poses offset:0 atIndex:3];
-      [encoder setBytes:&motion_counts[kind] length:sizeof(uint32_t) atIndex:4];
-      bool refit=descriptors != nil;
-      [encoder setBytes:&refit length:sizeof(bool) atIndex:5];
-      [encoder dispatchThreads:MTLSizeMake(motion_counts[kind],1,1)
-          threadsPerThreadgroup:MTLSizeMake(64,1,1)];
-      [encoder endEncoding];
-    }
-    // Separate encoders order child bounds before the parent TLAS refit.
-    for (size_t i = 0; i < refit_structures.size(); ++i) {
-      auto encoder = [command accelerationStructureCommandEncoder];
-      [encoder refitAccelerationStructure:refit_structures[i]
-                               descriptor:refit_descriptors[i]
-                              destination:nil
-                            scratchBuffer:refit_scratch
-                      scratchBufferOffset:0];
-      [encoder endEncoding];
-    }
-  }
-
   id<MTLBuffer> Buffer(size_t size, const void *data = nullptr) {
     size_t allocation_size = std::max(size, size_t(16));
     id<MTLBuffer> result = [kernels.device newBufferWithLength:allocation_size
@@ -300,9 +234,7 @@ class MetalWavefront final : public WavefrontSession {
     return !(stop || cancelled());
   }
 
-  id<MTLAccelerationStructure> BuildAcceleration(MTLAccelerationStructureDescriptor *descriptor,
-                                                bool changes = false) {
-    if (changes) descriptor.usage |= MTLAccelerationStructureUsageRefit;
+  id<MTLAccelerationStructure> BuildAcceleration(MTLAccelerationStructureDescriptor *descriptor) {
     auto sizes = [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
     auto result = [kernels.device newAccelerationStructureWithSize:sizes.accelerationStructureSize];
     auto scratch = Buffer(sizes.buildScratchBufferSize);
@@ -316,12 +248,6 @@ class MetalWavefront final : public WavefrontSession {
                     scratchBufferOffset:0];
     [encoder endEncoding];
     Wait(command, [] { return false; });
-    if (changes) {
-      refit_structures.push_back(result);
-      refit_descriptors.push_back(descriptor);
-      if (!refit_scratch || refit_scratch.length < sizes.refitScratchBufferSize)
-        refit_scratch = Buffer(sizes.refitScratchBufferSize);
-    }
     return result;
   }
 
@@ -346,12 +272,12 @@ class MetalWavefront final : public WavefrontSession {
         throw MetalError("wavefront analytic intersection table", nil);
       [table setFunction:analytic atIndex:1];
       [table setBuffer:buffers[28]
-                offset:whole_scene_frame ? geometry_storage.motion_offset + 3 * sizeof(WFVector)
-                                         : geometry_storage.quadric_offset
+                offset:geometry_storage.quadric_offset
                atIndex:1];
     }
     [table setBuffer:buffers[28] offset:geometry_storage.instance_offset atIndex:2];
     [table setBuffer:buffers[11] offset:7*sizeof(uint32_t) atIndex:3];
+    [table setBuffer:buffers[28] offset:geometry_storage.motion_offset atIndex:4];
     intersection_tables.emplace_back(pipeline, table);
   }
 
@@ -433,16 +359,7 @@ class MetalWavefront final : public WavefrontSession {
 public:
   MetalWavefront(Pipelines &kernels, const WavefrontScene &scene, size_t capacity)
       : kernels(kernels), capacity(capacity), scene_data(scene) {
-    if (scene.motion) {
-      whole_scene_frame = scene.motion->whole_scene_frame;
-      auto changes = [&](size_t kind) {
-        const auto &owners = scene.motion->owners[kind];
-        return std::any_of(owners.begin(), owners.end(), [](uint32_t owner) { return owner != 0; });
-      };
-      moving_triangles = changes(0);
-      moving_quadrics = changes(1);
-      moving_instances = changes(3);
-    }
+
     for (const auto &material : scene.materials) {
       has_materials |= material.type > 0 && material.type < 7;
       has_pbr |= material.type == 7;
@@ -492,7 +409,7 @@ public:
     buffers[26] = Upload(scene.surfaces);
     // Metal exposes 31 buffer slots, all already in use. Pack geometry, media,
     // camera and atmosphere metadata with explicit offsets, not a pointer ABI.
-    // Moving scenes also retain immutable quadrics for reference-frame tracing.
+    // Moving scenes append the immutable transform hierarchy and per-pixel times.
     auto instances = scene.instances;
     if (instances.empty())
       instances.resize((!scene.triangles.empty()) + (!scene.quadrics.empty()));
@@ -512,12 +429,14 @@ public:
     geometry_storage.field_offset = uint32_t(storage_size);
     storage_size += scene.fields.size() * sizeof(float);
     storage_size = (storage_size + 15) & ~size_t(15);
-    if (whole_scene_frame) {
-      size_t motion_bytes = 3 * sizeof(WFVector) + scene.quadrics.size() * sizeof(WFQuadric)+csg_bytes+curve_bytes;
-      if (storage_size + motion_bytes > UINT32_MAX)
-        throw std::runtime_error("Metal motion metadata exceeds the 32-bit scene buffer capacity");
+    if (scene.motion) {
       geometry_storage.motion_offset = uint32_t(storage_size);
-      storage_size += motion_bytes;
+      storage_size += scene.motion->packed.size();
+      storage_size = (storage_size + 15) & ~size_t(15);
+      geometry_storage.padding[0] = uint32_t(storage_size); // Per-pixel shutter times.
+      storage_size += capacity * sizeof(float);
+      storage_size = (storage_size + 15) & ~size_t(15);
+      if (storage_size > UINT32_MAX) throw std::runtime_error("Metal motion metadata exceeds 32-bit capacity");
     }
     geometry_storage.camera_offset = uint32_t(storage_size);
     storage_size += scene.camera_data.size() * sizeof(WFVector);
@@ -542,17 +461,8 @@ public:
     if (!scene.light_nodes.empty())
       std::memcpy(bytes + geometry_storage.light_offset, scene.light_nodes.data(),
                   scene.light_nodes.size()*sizeof(WFLightNode));
-    if (whole_scene_frame) {
-      std::memcpy(bytes + geometry_storage.motion_offset, scene.motion->inverse_frame,
-                  3 * sizeof(WFVector));
-      if (!scene.quadrics.empty())
-        std::memcpy(bytes + geometry_storage.motion_offset + 3 * sizeof(WFVector),
-                    scene.quadrics.data(), scene.quadrics.size() * sizeof(WFQuadric));
-      if(csg_bytes) std::memcpy(bytes+geometry_storage.motion_offset+3*sizeof(WFVector)+
-          scene.quadrics.size()*sizeof(WFQuadric),scene.csg_instructions.data(),csg_bytes);
-      if (curve_bytes) std::memcpy(bytes + geometry_storage.motion_offset + 3*sizeof(WFVector) +
-          scene.quadrics.size()*sizeof(WFQuadric) + csg_bytes, scene.curves.data(), curve_bytes);
-    }
+    if (scene.motion)
+      std::memcpy(bytes + geometry_storage.motion_offset, scene.motion->packed.data(), scene.motion->packed.size());
     if (gpu_atmosphere) {
       std::memcpy(bytes + geometry_storage.atmosphere_offset, &scene.atmosphere_data, sizeof(WFAtmosphereData));
       std::memcpy(bytes + geometry_storage.atmosphere_data_offset, coefficients, coefficient_count*sizeof(float));
@@ -578,7 +488,7 @@ public:
          {kernels.primary, kernels.intersect, kernels.shade, kernels.shade_materials,
           kernels.shade_pbr, kernels.shade_pbr_lights, kernels.shade_diffusion,
           kernels.shadow, kernels.shadow_transport, kernels.coverage}) {
-      if (!pipeline || !(kernels.boundary_support || kernels.mixed_support))
+      if (!pipeline || !(kernels.boundary_support || kernels.mixed_support || (kernels.texture_features & 1024)))
         continue;
       RegisterIntersections(pipeline);
     }
@@ -594,11 +504,9 @@ public:
     NSMutableArray<MTLAccelerationStructureGeometryDescriptor *> *geometries =
         [NSMutableArray array];
     size_t loose = scene.meshes.empty() ? scene.triangles.size() : scene.loose_triangles;
-    if (whole_scene_frame && moving_triangles)
-      reference_vertices = Buffer(loose * sizeof(WFTriangle), scene.triangles.data());
     if (loose) {
       auto geometry = [MTLAccelerationStructureTriangleGeometryDescriptor descriptor];
-      geometry.vertexBuffer = reference_vertices ? reference_vertices : buffers[0];
+      geometry.vertexBuffer = buffers[0];
       geometry.vertexStride = sizeof(WFVector);
       geometry.indexBuffer = index_buffer;
       geometry.indexType = MTLIndexTypeUInt32;
@@ -617,8 +525,6 @@ public:
         boxes[i].max = MTLPackedFloat3{hi.x, hi.y, hi.z};
       }
       box_buffer = Upload(boxes);
-      if (moving_quadrics && !whole_scene_frame)
-        motion_boxes = box_buffer;
       auto geometry = [MTLAccelerationStructureBoundingBoxGeometryDescriptor descriptor];
       geometry.boundingBoxBuffer = box_buffer;
       geometry.boundingBoxCount = boxes.size();
@@ -639,16 +545,10 @@ public:
       [geometries addObject:geometry];
     }
     NSMutableArray<id<MTLAccelerationStructure>> *children = [NSMutableArray array];
-    size_t child_index = 0;
     for (MTLAccelerationStructureGeometryDescriptor *geometry in geometries) {
       auto descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
       descriptor.geometryDescriptors = @[ geometry ];
-      bool changes =
-          (loose && child_index == 0 && moving_triangles) ||
-          (!scene.quadrics.empty() && child_index == size_t(loose != 0) && moving_quadrics);
-      changes = changes && !whole_scene_frame;
-      [children addObject:BuildAcceleration(descriptor, changes)];
-      ++child_index;
+      [children addObject:BuildAcceleration(descriptor)];
     }
     bottom_levels = children;
     acceleration = children[0];
@@ -680,40 +580,19 @@ public:
       descriptor.instancedAccelerationStructures = children;
       descriptor.instanceCount = instances.size();
       descriptor.instanceDescriptorBuffer = Upload(instances);
-      if (moving_instances && !whole_scene_frame)
-        motion_instances = descriptor.instanceDescriptorBuffer;
-      mixed_acceleration = BuildAcceleration(
-          descriptor,
-          !whole_scene_frame && (moving_triangles || moving_quadrics || moving_instances));
+      mixed_acceleration = BuildAcceleration(descriptor);
     }
-    if (scene.motion) {
-      static_assert(sizeof(WavefrontMotion::Record<WFTriangle>) == 176 &&
-                    sizeof(WavefrontMotion::Record<WFQuadric>) == 192 &&
-                    sizeof(WavefrontMotion::Record<WFSurface>) == 256 &&
-                    sizeof(WavefrontMotion::Record<WFMeshInstance>) == 144 &&
-                    sizeof(MTLAccelerationStructureInstanceDescriptor) == 64,
-                    "motion reference ABI mismatch");
-      kernels.PrepareMotion();
-      auto upload=[&](size_t kind,const auto &references) {
-        if (references.size()>UINT32_MAX) throw std::runtime_error("Too many moving Metal primitives");
-        motion_counts[kind]=references.size(); motion_references[kind]=Upload(references);
-      };
-      upload(0,scene.motion->TriangleReferences()); upload(1,scene.motion->QuadricReferences());
-      upload(2,scene.motion->SurfaceReferences()); upload(3,scene.motion->InstanceReferences());
-      motion_poses=Buffer((scene.motion->nodes.size()+1)*sizeof(WavefrontMotion::Pose));
-      scene.motion->EnableGPU();
-    }
+
   }
 
 #ifdef NOT_CRAN
   std::vector<WFGeometryResult> Probe(const std::vector<WFGeometryProbe> &input) {
     auto pipeline = kernels.Compile(@"probe_geometry");
-    if (kernels.boundary_support || kernels.mixed_support)
+    if (kernels.boundary_support || kernels.mixed_support || (kernels.texture_features & 1024))
       RegisterIntersections(pipeline);
     auto probes = Upload(input);
     auto results = Buffer(input.size() * sizeof(WFGeometryResult));
     auto command = [queue commandBuffer];
-    EncodeMotion(command);
     auto encoder = [command computeCommandEncoder];
     [encoder setComputePipelineState:pipeline];
     [encoder setBuffer:buffers[0] offset:0 atIndex:0];
@@ -729,7 +608,7 @@ public:
     [encoder setAccelerationStructure:acceleration atBufferIndex:16];
     if (kernels.mixed_support)
       [encoder setAccelerationStructure:mixed_acceleration atBufferIndex:29];
-    if (kernels.boundary_support || kernels.mixed_support)
+    if (kernels.boundary_support || kernels.mixed_support || (kernels.texture_features & 1024))
       [encoder setIntersectionFunctionTable:intersection_tables.back().second
                               atBufferIndex:kernels.mixed_support ? 30 : 25];
     [encoder setBuffer:buffers[26] offset:0 atIndex:26];
@@ -754,9 +633,6 @@ public:
       // Primary rays can query CSG for initial membership. Reset on the host
       // before dispatch, rather than racing the first lane against those queries.
       static_cast<uint32_t *>(buffers[11].contents)[7]=0;
-      if (scene_data.motion_changed && !scene_data.light_nodes.empty())
-        std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.light_offset,
-                    scene_data.light_nodes.data(),scene_data.light_nodes.size()*sizeof(WFLightNode));
       if (!active.empty())
         std::memcpy(buffers[13].contents, active.data(), active.size() * sizeof(uint32_t));
       if (!lights.empty())
@@ -771,7 +647,8 @@ public:
         std::memcpy(static_cast<char *>(buffers[28].contents) + geometry_storage.atmosphere_offset,
                     &scene_data.atmosphere_data, sizeof(WFAtmosphereData));
       if (atmosphere)
-        atmosphere->Begin(active);
+        atmosphere->Begin(active, scene_data.motion ? reinterpret_cast<const float *>(
+            static_cast<const char *>(buffers[28].contents) + geometry_storage.padding[0]) : nullptr);
       // Media carry depth per path: internal flights and hidden crossings must
       // not spend ordinary bounce depth. Run bounded event batches until their
       // queue is empty, with no finite walk cap. Only batch completion crosses
@@ -781,9 +658,7 @@ public:
         auto command = [queue commandBuffer];
         command.label = @"Wavefront transport batch";
         if (first == 0) {
-          // Motion, child/parent refits, and traversal share one ordered command
-          // buffer. A separate submit/wait costs more than small poses need.
-          EncodeMotion(command);
+          // Generate each path's shutter time before any geometry queries.
           Dispatch(command, kernels.primary, parameters, true);
           if (parameters.camera.padding[1] & 4) {
             if (atmosphere && has_haze) {

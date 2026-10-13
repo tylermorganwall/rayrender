@@ -21,8 +21,12 @@ $(SHLIB): $(OBJECTS)
 # An incremental install must not mix old sampler/light vtables with new ones.
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): core/wavefront.h
+render_scene_rcpp.o render_animation_rcpp.o: core/wavefront_report.h
+$(CPP_OBJECTS): core/integrator.h
+$(CPP_OBJECTS): core/PreviewDisplay.h core/preview_navigation.h
 # Per-hit closures change scatter_record layout across material/integrator calls.
 $(CPP_OBJECTS): materials/material.h materials/normalmap.h math/pdf.h
+$(CPP_OBJECTS): volumes/medium.h
 
 core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
@@ -36,7 +40,7 @@ core/wavefront.o core/wavefront_motion.o core/wavefront_camera_tests.o: core/wav
 core/wavefront_metal.o: core/wavefront_motion.h
 core/wavefront_metal.o core/wavefront_medium_tests.o: core/wavefront_medium_probe.h
 
-core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_csg.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc core/wavefront_media.inc core/wavefront_atmosphere.inc core/wavefront_atmosphere_paths.inc core/wavefront_haze.inc core/wavefront_camera.inc core/wavefront_light_sampling.inc core/wavefront_subsurface_sampling.inc core/wavefront_curves.inc core/wavefront_motion.inc
+core/wavefront_metal.o: core/wavefront_metal.mm core/wavefront.h core/wavefront_kernels.inc core/wavefront_textures.inc core/wavefront_bump.inc core/wavefront_intersections.inc core/wavefront_csg.inc core/wavefront_bsdf.inc core/wavefront_diffusion.inc core/wavefront_openpbr.inc core/wavefront_openpbr_generated.inc core/wavefront_openpbr_fields.inc core/wavefront_probes.inc core/wavefront_media.inc core/wavefront_atmosphere.inc core/wavefront_atmosphere_paths.inc core/wavefront_haze.inc core/wavefront_camera.inc core/wavefront_light_sampling.inc core/wavefront_subsurface_sampling.inc core/wavefront_curves.inc core/wavefront_ray_motion.inc
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
 
 # Make the shared object

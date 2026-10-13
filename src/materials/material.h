@@ -239,21 +239,6 @@ class spot_light : public material {
     bool invisible;
 };
 
-class isotropic : public material {
-public:
-  isotropic(std::shared_ptr<texture> a) : albedo(a) {}
-  ~isotropic() {}
-  virtual bool scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng);
-  virtual bool scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
-    return(std::string("isotropic"));
-  };
-  std::shared_ptr<texture> albedo;
-};
-
 class MicrofacetReflection : public material {
   friend class WavefrontSceneCompiler;
 public:

@@ -58,7 +58,6 @@ test_that('curve batching leaves emitters and medium-related rows separate', {
   for (material in list(
     light(),
     openpbr(emission_luminance = 2),
-    diffuse(fog = TRUE),
     subsurface()
   )) {
     rows = curve_batch_fixture(material)

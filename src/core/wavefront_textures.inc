@@ -12,6 +12,16 @@ R"MSL(
     int face_index;
   };
   static_assert(sizeof(Surface) == 240, "wavefront surface ABI mismatch");
+  Surface motion_surface(Surface s, MotionContext m, uint id) {
+    uint owner=motion_owner(m,2,id);
+    if(owner) {
+      auto p=motion_pose(m,owner);
+      motion_compose(p,s.forward,s.inverse);
+      motion_compose(p,s.bump_forward,s.bump_inverse);
+      s.bump_transformed=1;
+    }
+    return s;
+  }
   TextureContext texture_context(float2 uv, float3 position) {
     return {uv, position, position, float3(0, 1, 0), float3(0, 1, 0), float4(0), -1};
   }
@@ -20,13 +30,13 @@ R"MSL(
                   dot(s.inverse[2], float4(p, 1)));
   }
   TextureContext surface_context(Triangle t, float3 bary, float3 position,
-                                 device const Surface *surfaces) {
+                                 device const Surface *surfaces, MotionContext motion = {}) {
     TextureContext h =
         texture_context(bary.x * t.uv01.xy + bary.y * t.uv01.zw + bary.z * t.uv2.xy, position);
     h.normal = t.geometric.xyz;
     h.face_index = (t.flags & 64) ? as_type<int>(t.uv2.z) : -1;
     if (texture_features & 2) {
-      Surface s = surfaces[as_type<uint>(t.uv2.w)];
+      Surface s = motion_surface(surfaces[as_type<uint>(t.uv2.w)], motion, as_type<uint>(t.uv2.w));
       h.object_position = object_point(s, position);
       // Normals transform by the transpose of object-to-world here.
       h.object_normal = normalize(s.forward[0].xyz * h.normal.x + s.forward[1].xyz * h.normal.y +
@@ -202,6 +212,38 @@ R"MSL(
     }
     return values[root.height];
   }
+  // Legacy gradients interpolate the stored HSV coordinates directly, including
+  // the long hue arc. Do not substitute shortest-arc hue interpolation.
+  float3 legacy_hsv_rgb(float3 hsv) {
+    float chroma = hsv.z * hsv.y, hue = fmod(hsv.x / 60, 6.f);
+    float x = chroma * (1 - abs(fmod(hue, 2.f) - 1));
+    float3 rgb = 0;
+    if (hue >= 0 && hue < 1) rgb = float3(chroma, x, 0);
+    else if (hue >= 1 && hue < 2) rgb = float3(x, chroma, 0);
+    else if (hue >= 2 && hue < 3) rgb = float3(0, chroma, x);
+    else if (hue >= 3 && hue < 4) rgb = float3(0, x, chroma);
+    else if (hue >= 4 && hue < 5) rgb = float3(x, 0, chroma);
+    else if (hue >= 5 && hue < 6) rgb = float3(chroma, 0, x);
+    return rgb + hsv.z - chroma;
+  }
+  float legacy_perlin(float3 p, uint offset, device const float4 *texels) {
+    float3 base = floor(p), f = p - base, smooth = f * f * (3 - 2 * f);
+    // Modulo before conversion preserves the native 256-cell periodicity,
+    // including negative coordinates, without overflowing a signed integer.
+    uint3 cell = uint3(fmod(fmod(base, 256.f) + 256.f, 256.f));
+    float sum = 0;
+    for (uint x = 0; x < 2; ++x)
+      for (uint y = 0; y < 2; ++y)
+        for (uint z = 0; z < 2; ++z) {
+          uint index = uint(texels[offset + 256 + ((cell.x + x) & 255)].x) ^
+                       uint(texels[offset + 256 + ((cell.y + y) & 255)].y) ^
+                       uint(texels[offset + 256 + ((cell.z + z) & 255)].z);
+          sum += (x ? smooth.x : 1 - smooth.x) * (y ? smooth.y : 1 - smooth.y) *
+                 (z ? smooth.z : 1 - smooth.z) *
+                 dot(texels[offset + index].xyz, f - float3(x, y, z));
+        }
+    return sum;
+  }
   float roughness_alpha(float x) {
     x = log(max(x, .0001550155f));
     float mapped = 1.62142f + .819955f * x + .1734f * x * x + .0171201f * x * x * x +
@@ -213,6 +255,11 @@ R"MSL(
     Texture t = textures[id];
     float2 uv = h.uv;
     float3 position = h.position;
+    while (t.type == 14) {
+      float3 s = sin(pi * position / t.a.w);
+      s = select(s, float3(1), s == 0);
+      t = textures[s.x * s.y * s.z < 0 ? t.width : t.offset];
+    }
     if ((texture_features & 1) && t.type == 8)
       return graph_value(t, h, textures, texels);
     if ((texture_features & 1) && t.type == 9) {
@@ -241,8 +288,24 @@ R"MSL(
       s = select(s, float3(1), s == 0);
       return s.x * s.y * s.z < 0 ? t.b.xyz : t.a.xyz;
     }
-    if (t.type == 2 || t.type == 3)
-      return mix(t.a.xyz, t.b.xyz, t.type == 2 ? uv.x : uv.y);
+    if (t.type == 2 || t.type == 3 || t.type == 13) {
+      float weight = t.type == 13
+        ? clamp(dot(position - t.c.xyz, t.mapping.xyz) * t.mapping.w, 0.f, 1.f)
+        : t.type == 2 ? uv.x : uv.y;
+      float3 color = mix(t.a.xyz, t.b.xyz, weight);
+      return t.height ? legacy_hsv_rgb(color) : color;
+    }
+    if (t.type == 12) {
+      float3 p = position * t.c.x;
+      float sum = 0, amplitude = .5f;
+      for (uint octave = 0; octave < 7; ++octave) {
+        sum += amplitude * legacy_perlin(p, t.offset, texels);
+        amplitude *= .5f;
+        p *= 2;
+      }
+      float weight = .5f * (1 + sin(t.c.x * position.y + t.c.z * abs(sum) + t.c.y));
+      return mix(t.a.xyz, t.b.xyz, weight);
+    }
     if (t.type == 4)
       return uv.x * t.a.xyz + uv.y * t.b.xyz + (1 - uv.x - uv.y) * t.c.xyz;
     if (t.type == 7) {

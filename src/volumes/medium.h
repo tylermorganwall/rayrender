@@ -8,7 +8,6 @@
 #include <optional>
 #include <vector>
 
-class texture;
 struct WFMedium;
 struct PhaseFunctionSample {
   vec3f wi;
@@ -99,10 +98,9 @@ public:
   double density_scale = 1, haze_density_threshold = 0;
   Float temperature = 0;
   Transform medium_to_object;
-  std::shared_ptr<texture> legacy_albedo;
 
 protected:
-  MediumProperties Properties(Float density, const point3f &le, const point3f &p) const;
+  MediumProperties Properties(Float density, const point3f &le) const;
 };
 class GridMedium final : public Medium {
   friend class WavefrontSceneCompiler;

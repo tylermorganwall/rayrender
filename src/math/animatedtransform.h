@@ -15,6 +15,10 @@ public:
   static void Decompose(const Matrix4x4 &m, vec3f *T, Quaternion *R,
                         Matrix4x4 *S);
   void Interpolate(Float time, Transform *t) const;
+  Float StartTime() const { return startTime; }
+  Float EndTime() const { return endTime; }
+  const Transform &StartTransform() const { return *startTransform; }
+  const Transform &EndTransform() const { return *endTransform; }
   bool SameMotion(const AnimatedTransform &other) const {
     return startTime == other.startTime && endTime == other.endTime &&
            *startTransform == *other.startTransform && *endTransform == *other.endTransform;

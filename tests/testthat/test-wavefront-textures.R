@@ -52,6 +52,49 @@ expect_wavefront_texture = function(
   list(gpu = gpu, cpu = cpu)
 }
 
+test_that('Metal renders legacy noise and RGB/HSV gradients without fallback', {
+  materials = list(
+    diffuse(
+      'coral',
+      noise = 2.3,
+      noisephase = 37,
+      noiseintensity = 7,
+      noisecolor = 'navy'
+    )
+  )
+  for (space in c('uv', 'world')) {
+    for (encoding in c('rgb', 'hsv')) {
+      args = list(
+        color = 'coral',
+        gradient_color = 'navy',
+        gradient_type = encoding,
+        gradient_transpose = TRUE
+      )
+      if (space == 'world') {
+        args$gradient_point_start = c(-.7, -.3, 0)
+        args$gradient_point_end = c(.6, .8, 0)
+      }
+      materials[[length(materials) + 1L]] = do.call(diffuse, args)
+    }
+  }
+  for (material in materials) {
+    expect_wavefront_texture(
+      xy_rect(xwidth = 4, ywidth = 4, material = material),
+      .025
+    )
+    # Native analytic and transformed instance coordinates must agree as well.
+    scene = create_instances(
+      sphere(radius = .8, material = material),
+      x = .13,
+      y = -.07,
+      scale_x = .8,
+      scale_y = 1.1,
+      scale_z = .9
+    )
+    expect_wavefront_texture(scene, .04)
+  }
+})
+
 test_that('Metal evaluates composable operations in UV and world coordinates', {
   uv = texture_coordinates(
     'uv',

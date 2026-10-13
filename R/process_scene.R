@@ -51,7 +51,7 @@ process_scene = function(
     alpha_input = materials[[i]]$alphaimage
     alpha_tex_bool = is.array(alpha_input)
     alpha_is_filename = is.character(alpha_input) && nchar(alpha_input) > 0
-    if (alpha_tex_bool || alpha_is_filename) {
+    if (alpha_tex_bool) {
       alpha_file = tempfile("alphatemp", fileext = ".png")
     }
     if (alpha_tex_bool) {
@@ -79,6 +79,7 @@ process_scene = function(
       }
       materials[[i]]$alphaimage = alpha_file
     } else if (alpha_is_filename) {
+      alpha_input = path.expand(alpha_input)
       if (any(!file.exists(path.expand(alpha_input)))) {
         stop(paste0(
           "Cannot find the following texture file:\n",
@@ -86,20 +87,21 @@ process_scene = function(
         ))
       }
       temp_array = png::readPNG(alpha_input)
-      if (dim(temp_array)[3] == 4 && any(temp_array[,, 4] != 1)) {
-        temp_array[,, 1] = temp_array[,, 4]
-        temp_array[,, 2] = temp_array[,, 4]
-        temp_array[,, 3] = temp_array[,, 4]
-      }
+      # Native alpha lookup reads the last channel directly. Retain usable
+      # files so serialized instance prototypes do not acquire session-local
+      # dependencies (including PBRT masks already saved under asset_dir).
+      materials[[i]]$alphaimage = alpha_input
       if (
-        dim(temp_array)[3] == 4 &&
+        length(dim(temp_array)) == 3L &&
+          dim(temp_array)[3] == 4 &&
           all(temp_array[,, 4] == 1) &&
           any(temp_array[,, 1:3] != 1)
       ) {
         temp_array[,, 4] = temp_array[,, 1]
+        alpha_file = tempfile("alphatemp", fileext = ".png")
+        png::writePNG(temp_array, alpha_file)
+        materials[[i]]$alphaimage = alpha_file
       }
-      materials[[i]]$alphaimage = alpha_file
-      png::writePNG(temp_array, alpha_file)
     }
   }
 
@@ -140,16 +142,9 @@ process_scene = function(
       }
       if (length(dim(tmp_image)) == 3 && dim(tmp_image)[3] == 4) {
         if (any(tmp_image[,, 4] != 1)) {
-          tmp_image[,, 1] = tmp_image[,, 4]
-          tmp_image[,, 2] = tmp_image[,, 4]
-          tmp_image[,, 3] = tmp_image[,, 4]
-          tmp_image[,, 4] = tmp_image[,, 4]
-          alpha_file = materials[[i]]$alphaimage
-          if (!nzchar(alpha_file)) {
-            alpha_file = tempfile("alphatemp", fileext = ".png")
-          }
-          png::writePNG(tmp_image[,, 1:4], alpha_file)
-          materials[[i]]$alphaimage = alpha_file
+          # The native mask reader can use the color PNG's alpha directly too.
+          # In particular, never overwrite an explicit source mask in place.
+          materials[[i]]$alphaimage = image_input
         }
       }
       materials[[i]]$image = image_input

@@ -66,6 +66,12 @@ class RayCamera {
     // differentials use the same handedness as the final image.
     void set_camera_flip_x(bool value) { camera_flip_x = value; }
     bool get_camera_flip_x() const { return camera_flip_x; }
+    // Navigation follows the displayed horizontal axis, including imported
+    // camera reflections. Keep get_u() unchanged for projection/export code.
+    vec3f get_navigation_u() { return camera_flip_x ? -get_u() : get_u(); }
+    void rotate_navigation_up(Float angle_degrees) {
+      rotate_up(camera_flip_x ? -angle_degrees : angle_degrees);
+    }
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {

@@ -5,13 +5,8 @@
 #include <array>
 #include <limits>
 
-// Moving geometry uses coherent shutter samples: one exact instant per image
-// sample, shared by camera, visibility, lights and media. This is Monte Carlo
-// integration over time, not a finite set of baked motion poses. It trades
-// spatially correlated temporal noise for exact native transform interpolation
-// (including nested rotation/shear) on existing devices. Independent placements
-// refit only changing structures; a shared whole-scene motion transforms rays
-// into one immutable reference BVH instead.
+// Immutable geometry is traversed in each animated owner's reference frame.
+// Camera paths retain independent shutter times through all transport stages.
 class WavefrontMotion {
 public:
   struct Node {
@@ -49,77 +44,25 @@ public:
     }
   }
   void PrefixInstances(size_t prefix) { owners[3].insert(owners[3].begin(), prefix, 0); }
-  template <class T> struct Record {
-    uint32_t index, owner;
-    T value;
-  };
-  template <class T>
-  static std::vector<Record<T>> Save(const std::vector<T> &values, const std::vector<uint32_t> &ids) {
-    std::vector<Record<T>> result;
-    for (size_t i = 0; i < ids.size(); ++i)
-      if (ids[i])
-        result.push_back({uint32_t(i), ids[i], values[i]});
+  void Seal(WavefrontScene &scene) {
+    scene.texture_features |= 1024;
+    packed = Export(scene);
+  }
+  // Native counterpart for the optional batched CPU atmosphere transport.
+  Transform At(uint32_t owner, Float time) const {
+    Transform result;
+    while (owner) {
+      const auto &node = nodes[owner - 1];
+      Transform value;
+      node.animation->Interpolate(time, &value);
+      result = node.before * value * node.reference_inverse * result;
+      owner = node.parent;
+    }
     return result;
   }
-  bool whole_scene_frame = false;
-  WFVector inverse_frame[3] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}};
-  void Seal(WavefrontScene &s) {
-    gpu_geometry = false;
-    last_time = std::numeric_limits<float>::quiet_NaN();
-    host_triangles.clear();
-    host_quadrics.clear();
-    boundary_owners.clear();
-    triangles = Save(s.triangles, owners[0]);
-    quadrics = Save(s.quadrics, owners[1]);
-    surfaces = Save(s.surfaces, owners[2]);
-    instances = Save(s.instances, owners[3]);
-    media = Save(s.media, owners[4]);
-    reference_bounds = s.boundaries;
-    reference_lo = s.boundary_lo;
-    reference_hi = s.boundary_hi;
-    // A single transform owning every rendered primitive can move rays instead
-    // of the acceleration structure. Prototype vertices are owned by placements.
-    auto owns = [&](size_t kind, size_t count) {
-      for (size_t i = 0; i < count; ++i)
-        if (i >= owners[kind].size() || owners[kind][i] != 1)
-          return false;
-      return true;
-    };
-    whole_scene_frame = nodes.size() == 1 && owns(0, s.meshes.empty() ? s.triangles.size() : s.loose_triangles) &&
-                        owns(1, s.quadrics.size());
-    for (size_t i = 0; i < s.instances.size() && whole_scene_frame; ++i)
-      if (s.instances[i].triangle_count && (i >= owners[3].size() || owners[3][i] != 1))
-        whole_scene_frame = false;
-    s.texture_features &= ~32u;
-    if (whole_scene_frame)
-      s.texture_features |= 32; // Specialize reference-frame traversal.
-  }
-  bool Update(WavefrontScene &, float time);
-
-  // Per-owner affine deltas are small host metadata. Metal applies them to
-  // immutable geometry records, then refits the affected acceleration trees.
-  struct Pose {
-    WFVector forward[3], inverse[3];
-  };
-  std::vector<Pose> poses;
-  const auto &TriangleReferences() const { return triangles; }
-  const auto &QuadricReferences() const { return quadrics; }
-  const auto &SurfaceReferences() const { return surfaces; }
-  const auto &InstanceReferences() const { return instances; }
-  void EnableGPU();
-  bool gpu_geometry = false;
+  std::vector<unsigned char> packed;
 
 private:
-  std::vector<Record<WFTriangle>> triangles;
-  std::vector<Record<WFQuadric>> quadrics;
-  std::vector<Record<WFTriangle>> host_triangles;
-  std::vector<Record<WFQuadric>> host_quadrics;
-  std::vector<Record<WFSurface>> surfaces;
-  std::vector<Record<WFMeshInstance>> instances;
-  std::vector<Record<WFMedium>> media;
-  std::vector<WFBoundary> reference_bounds;
-  std::vector<std::pair<uint32_t, uint32_t>> boundary_owners;
-  WFVector reference_lo, reference_hi;
-  float last_time = std::numeric_limits<float>::quiet_NaN();
+  std::vector<unsigned char> Export(WavefrontScene &);
 };
 #endif

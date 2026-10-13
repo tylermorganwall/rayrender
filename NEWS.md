@@ -16,9 +16,15 @@
 
 ## New features
 
-- `render_scene()` Updates animated geometry on the Metal device before refitting
-  acceleration structures, while retaining native transform interpolation and
-  interactive cancellation.
+- `render_scene()` Sizes interactive navigation from visible geometry, with
+  finite scene bounds as a fallback. Held movement uses elapsed time; orbit,
+  viewport-scaled pan, and proportional dolly controls retain E/C speed overrides.
+  Picking a new target updates navigation scale without changing lens focus on
+  right clicks.
+
+- `render_scene()` Supports legacy Perlin noise, nested checker textures, and
+  RGB/HSV gradients in UV or world coordinates with the Metal integrator,
+  preserving the CPU texture definitions instead of falling back to CPU rendering.
 
 - `texture_ptex()` Supports Metal through a bounded, mipmapped GPU atlas.
   Filtering approximates native Ptex; atlas resolution and memory limits are
@@ -41,9 +47,8 @@
   solids support dielectric priorities and subsurface or volume interiors.
 
 - `render_scene()` Supports physical lens cameras, panoramic cameras, camera motion
-  blur, and animated geometry on Metal. Animated scenes sample one shutter time
-  per image sample; camera-only motion
-  uses per-pixel times. Density-threshold haze now runs on the GPU for dense and
+  blur, and animated geometry on Metal. Camera and geometry motion use independent
+  per-pixel shutter times. Density-threshold haze runs on the GPU for dense and
   sparse volumes, retaining every crossing of the interpolated density cutoff.
 
 - `render_scene()` Supports homogeneous, dense-grid, and sparse OpenVDB/NanoVDB
@@ -198,6 +203,30 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `render_animation()` Retains Metal scene buffers and acceleration structures
+  across compatible frames, avoiding repeated uploads and construction. Frame
+  accumulation and diagnostics reset independently; returned frames report
+  resource reuse and per-frame setup and sampling times.
+
+- `read_pbrt()` Preserves persistent alpha-mask paths in instance prototypes,
+  allowing imported scenes saved with `saveRDS()` to render in later R sessions.
+
+- `render_scene()` Corrects reversed horizontal navigation and roll controls
+  for imported PBRT cameras with horizontally reflected film coordinates.
+
+- `render_scene()` Fixes coherent ghost poses in Metal geometry motion blur by
+  sampling time independently for each camera ray. Shading, shadows, moving
+  emitters, textures, and volume transport retain that time throughout the path.
+  Nested rotation and scale/shear use native transform interpolation without
+  per-sample acceleration-structure refits.
+
+- `render_scene()` Places the interactive status bar below the image and identifies
+  the active integrator, including CPU fallback when Metal is unavailable.
+
+- `render_scene()` Updates the interactive `F` preview after each low-resolution
+  sample instead of waiting for four samples, allowing more frequent camera
+  interaction while retaining progressive accumulation and denoising.
 
 - Overall: Diffuse and glossy bump mapping includes up to 16 local facet
   interactions on CPU and Metal, reducing darkening from truncated scattering.
@@ -603,8 +632,7 @@
   and isolate its preview environment transform from geometry transforms.
 * Preserve preview RGB colors when exporting snapshots through rayimage.
 * `nee` now traces surfaces and RGB participating media with null scattering and
-  path-space MIS. Its images change; `rtiow` remains the default and legacy fog
-  remains available in `rtiow` and `basic`.
+  path-space MIS. Its images change; `rtiow` remains the default.
 * Add reusable homogeneous, dense-grid and uncompressed float NanoVDB medium
   descriptions, independent medium attachments, nested containment, anisotropic
   scattering, and RGB or normalized blackbody emission.
@@ -634,6 +662,11 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `diffuse()` Removes the `fog` and `fogdensity` arguments. Create volumes with
+  `set_medium()` and an explicit `homogeneous_medium()`, `grid_medium()`, or
+  `vdb_medium()` instead. Removes the legacy material-based fog implementations
+  from both CPU and Metal scene preparation.
 
 - Overall: Tracks material, normal-mapping, and sampling header dependencies in
   Unix and Windows builds so incremental compilation rebuilds affected C++ files

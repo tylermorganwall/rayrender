@@ -1837,7 +1837,6 @@ pbrt_store_mesh_rows = function(rows, cache) {
         isTRUE(settings$recalculate_normals) ||
         !is.null(info$medium) ||
         !is.null(mat$subsurface) ||
-        isTRUE(mat$fog) ||
         isTRUE(mat$implicit_sample) ||
         (!is.null(mat$openpbr) && mat$openpbr$emission_luminance != 0) ||
         !(mat$type %in% c(1L, 4L, 11L, 12L))
@@ -2048,7 +2047,6 @@ pbrt_curve_batch_input = function(row) {
     function(material) {
       material$type %in%
         c(1L, 4L, 9L, 11L, 12L) &&
-        !material$fog &&
         !material$implicit_sample &&
         is.null(material$subsurface) &&
         (is.null(material$openpbr) || material$openpbr$emission_luminance == 0)
@@ -2167,7 +2165,6 @@ pbrt_batch_mesh_rows = function(rows, file_backed = FALSE) {
           ) &&
           is.null(mat$subsurface) &&
           is.null(info$medium) &&
-          !isTRUE(mat$fog) &&
           !isTRUE(mat$implicit_sample) &&
           (is.null(mat$openpbr) || mat$openpbr$emission_luminance == 0) &&
           isTRUE(settings$override_material) &&

@@ -16,7 +16,6 @@
 #include "../hitables/sphere.h"
 #include "../hitables/triangle.h"
 #include "../hitables/trimesh.h"
-#include "../materials/constant.h"
 #include "../materials/openpbr.h"
 #include "../materials/texture.h"
 #include "../materials/texturecache.h"
@@ -476,18 +475,18 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
   for (size_t i = 0; i < n; i++) {
     List SingleShape = ShapeInfo(i);
     List SingleMaterial = RayMaterials(i);
+    if (SingleMaterial.containsElementNamed("fog") && as<bool>(SingleMaterial["fog"]))
+      Rcpp::stop("Material fog is no longer supported. Use set_medium() with an explicit medium.");
     List SingleTransform = Transforms(i);
     List SingleAnimation = AnimationInfo(i);
     MaterialEnum material_type = static_cast<MaterialEnum>(as<int>(SingleMaterial["type"]));
 
     /// Load material for shape
     NumericVector tricolorinfo = as<NumericVector>(as<List>(SingleShape["tricolorinfo"])(0));
-    bool isvolume = as<bool>(SingleMaterial["fog"]);
     auto volume_scene = imp_sample_objects.volume_scene;
     bool has_medium = SingleShape.containsElementNamed("medium") && !Rf_isNull(SingleShape["medium"]);
     if (has_medium && !volume_scene)
       Rcpp::stop("Medium descriptions require integrator_type = \"nee\".");
-    Float fog_density = as<Float>(SingleMaterial["fogdensity"]);
     Float importance_sample = as<bool>(SingleMaterial["implicit_sample"]);
 
     IntegerVector material_id_vec = as<IntegerVector>(SingleShape["material_id"]);
@@ -610,22 +609,18 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
 
     List shape_properties = as<List>(SingleShape["shape_properties"]);
     bool is_flipped = as<bool>(SingleShape["flipped"]);
-    NumericVector fog_color = as<NumericVector>(as<List>(SingleMaterial["properties"])(0));
-    NumericVector noise_color = as<NumericVector>(as<List>(SingleMaterial["noisecolor"])(0));
-
-    // New code
     std::shared_ptr<hitable> entry;
     const size_t lights_before_shape = imp_sample_objects.objects.size();
     auto finish_entry = [&](std::shared_ptr<hitable> object) {
       bool register_boundary = false;
-      if (volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))
+      if (volume_scene && has_medium && !as<bool>(SingleShape["medium_keep_surface"]))
         imp_sample_objects.objects.resize(lights_before_shape);
       if (volume_scene) {
-        bool bare_glass = !has_medium && !isvolume && shape_material->is_dielectric();
+        bool bare_glass = !has_medium && shape_material->is_dielectric();
         bool supported =
-            (has_medium || isvolume || bare_glass) && ValidateMediumBoundary(object.get(), has_medium || isvolume);
+            (has_medium || bare_glass) && ValidateMediumBoundary(object.get(), has_medium);
         if (supported) {
-          if ((has_medium || isvolume) && has_alpha)
+          if (has_medium && has_alpha)
             Rcpp::stop("Medium boundaries cannot have alpha cutouts.");
           ValidateMediumTransform(*ObjToWorld);
           if (is_animated) {
@@ -637,30 +632,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
           if (has_medium) {
             medium = volume_scene->GetMedium(as<List>(SingleShape["medium"]));
             keep_surface = as<bool>(SingleShape["medium_keep_surface"]);
-          } else if (isvolume) {
-            NumericMatrix legacy_transform(4, 4);
-            const auto &inv = ObjToWorld->GetInverseMatrix();
-            for (int row = 0; row < 4; ++row)
-              for (int col = 0; col < 4; ++col)
-                legacy_transform(row, col) = inv.m[row][col];
-            List desc = List::create(_["sigma_a"] = NumericVector::create(0, 0, 0),
-                                     _["sigma_s"] = NumericVector::create(fog_density, fog_density, fog_density),
-                                     _["density_scale"] = 1, _["g"] = 0, _["emission"] = NumericVector::create(0, 0, 0),
-                                     _["temperature"] = R_NilValue, _["emission_scale"] = 1, _["temperature_scale"] = 1,
-                                     _["temperature_offset"] = 0, _["medium_transform"] = legacy_transform);
-            if (!std::isfinite(fog_density) || fog_density < 0)
-              Rcpp::stop("Fog density must be finite and nonnegative.");
-            auto legacy = std::make_shared<Medium>(desc);
-            if (shape_type == BOX && as<Float>(SingleMaterial["noise"]) != 0)
-              legacy->legacy_albedo = std::make_shared<noise_texture>(
-                  as<Float>(SingleMaterial["noise"]), point3f(fog_color[0], fog_color[1], fog_color[2]),
-                  point3f(noise_color[0], noise_color[1], noise_color[2]), as<Float>(SingleMaterial["noisephase"]),
-                  as<Float>(SingleMaterial["noiseintensity"]));
-            else
-              legacy->legacy_albedo =
-                  std::make_shared<constant_texture>(point3f(fog_color[0], fog_color[1], fog_color[2]));
-            medium = legacy;
-            keep_surface = false;
           }
           object = std::make_shared<MediumBoundary>(object, medium, *ObjToWorld, keep_surface,
                                                     volume_scene->NextBoundaryId());
@@ -680,10 +651,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       Float radius = as<Float>(shape_properties["radius"]);
       entry = std::make_shared<sphere>(radius, shape_material, alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj,
                                        is_flipped);
-      if (isvolume && !volume_scene) {
-        entry = std::make_shared<constant_medium>(
-            entry, fog_density, std::make_shared<constant_texture>(point3f(fog_color(0), fog_color(1), fog_color(2))));
-      }
       entry = finish_entry(entry);
       list.add(entry);
       break;
@@ -719,24 +686,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
           std::make_shared<box>(-vec3f(widths(0), widths(1), widths(2)) / 2, vec3f(widths(0), widths(1), widths(2)) / 2,
                                 shape_material, alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
 
-      if (isvolume && !volume_scene) {
-        Float noise = as<Float>(SingleMaterial["noise"]);
-        bool isnoise = noise != 0;
-        if (!isnoise) {
-          entry = std::make_shared<constant_medium>(
-              entry, fog_density,
-              std::make_shared<constant_texture>(point3f(fog_color(0), fog_color(1), fog_color(2))));
-        } else {
-          Float noisephase = as<Float>(SingleMaterial["noisephase"]);
-          Float noiseintensity = as<Float>(SingleMaterial["noiseintensity"]);
-
-          entry = std::make_shared<constant_medium>(
-              entry, fog_density,
-              std::make_shared<noise_texture>(noise, point3f(fog_color(0), fog_color(1), fog_color(2)),
-                                              point3f(noise_color(0), noise_color(1), noise_color(2)), noisephase,
-                                              noiseintensity));
-        }
-      }
       entry = finish_entry(entry);
       list.add(entry);
       break;
@@ -765,10 +714,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
           subdivision_levels, displacement_texture, displacement_intensity, is_vector_displacement, texCache,
           recalculate_normals, imp_sample_objects, shutteropen, shutterclose, bvh_type, rng, verbose, ObjToWorld,
           WorldToObj, is_flipped);
-      if (isvolume && !volume_scene) {
-        entry = std::make_shared<constant_medium>(
-            entry, fog_density, std::make_shared<constant_texture>(point3f(fog_color(0), fog_color(1), fog_color(2))));
-      }
       entry = finish_entry(entry);
       list.add(entry);
       break;
@@ -804,10 +749,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       Float c = Rcpp::as<Float>(shape_properties["c"]);
       entry = std::make_shared<ellipsoid>(point3f(0), 1, vec3f(a, b, c), shape_material, alpha[mat_idx], bump[mat_idx],
                                           ObjToWorld, WorldToObj, is_flipped);
-      if (isvolume && !volume_scene) {
-        entry = std::make_shared<constant_medium>(
-            entry, fog_density, std::make_shared<constant_texture>(point3f(fog_color(0), fog_color(1), fog_color(2))));
-      }
       entry = finish_entry(entry);
       list.add(entry);
       break;
@@ -834,7 +775,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
         }
       };
       if (shape_properties.containsElementNamed("curve_data")) {
-        if (importance_sample || has_medium || isvolume)
+        if (importance_sample || has_medium)
           Rcpp::stop("Packed curves cannot be importance-sampled emitters or medium boundaries.");
         NumericMatrix curves = as<NumericMatrix>(shape_properties["curve_data"]);
         if (curves.nrow() != 24 || curves.ncol() == 0)
@@ -910,10 +851,6 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
                                         shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped, consistent_normals);
       if (entry == nullptr) {
         continue;
-      }
-      if (isvolume && !volume_scene) {
-        entry = std::make_shared<constant_medium>(
-            entry, fog_density, std::make_shared<constant_texture>(point3f(fog_color(0), fog_color(1), fog_color(2))));
       }
       entry = finish_entry(entry);
       list.add(entry);
@@ -1056,7 +993,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     }
     }
     if (importance_sample && shape_type != INSTANCE &&
-        !(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))) {
+        !(volume_scene && has_medium && !as<bool>(SingleShape["medium_keep_surface"]))) {
       imp_sample_objects.add(entry);
     }
   }

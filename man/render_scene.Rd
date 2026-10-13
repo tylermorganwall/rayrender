@@ -88,15 +88,15 @@ If `deferred_render = TRUE`, the preview stays interactive until the final rende
 lookat point (unless the mode is switched to free flying), with the following control mapping:
 W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
 Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
-E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
+E = 2x Speed (max 128), C = 0.5x Speed (min 1/128), Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
 Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
 3/4 = Rotate Environment Light,
 Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
 Shift-Enter = Save Preview Snapshot, R = Reset Camera,
 Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
-If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
-and keyframe state.
+If the interactive preview window is wide enough, a status bar below the image shows the current camera, exposure, environment rotation,
+keyframe state, and active integrator (including CPU fallback from Metal). The bar does not cover the image or appear in saved snapshots.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
 data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
 L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
@@ -108,7 +108,15 @@ H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
 Haze requires altitude queries: enabling haze also enables altitude queries,
 and disabling altitude queries also disables haze. Each change restarts sampling.
 
-Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
+Initial navigation distance is estimated from visible geometry near the center
+of the image, with finite scene bounds as a fallback. The orbit target is placed
+at that distance along the viewing direction, preserving framing and lens focus.
+Held movement keys use elapsed time rather than keyboard repeat. Orbiting uses
+angular speed; free-flight panning scales with viewport size at the navigation
+distance, and orbit-mode forward/backward movement scales with orbit radius.
+Picking a surface updates the navigation distance. Free flight retains its
+scale until another target is selected; E/C adjust the speed multiplier.
+A long preview stall contributes at most 0.25 seconds of held movement per update.
 
 With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
 reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
@@ -287,27 +295,24 @@ texture coordinates, hair shading, and animated transforms. Cylinders and disks
 are triangulated automatically.
 [csg_object()] evaluates distance fields directly on the GPU, including blends,
 shells, emission, and closed dielectric/subsurface boundaries.
-It supports constant/checker/gradient/image textures, composable color and roughness graphs,
+It supports constant/checker/gradient/image textures, legacy Perlin noise, nested checkers,
+RGB/HSV gradients in UV or world coordinates, composable color and roughness graphs,
 image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
 and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
 point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
 progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
 orthographic, panoramic, and physical lens cameras are supported, including camera motion
 blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
-Animated geometry uses one shared shutter time per image sample, with exact native transform
-interpolation. A single shared geometry motion keeps an immutable reference acceleration
-structure and transforms rays; independent motions refit only changing structures.
-Metal updates moving vertices, analytic bounds, texture frames, and instance transforms
-on the GPU. The CPU interpolates the small transform hierarchy and updates light and
-medium metadata. This supports animated transforms, not deforming vertex keyframes.
-Camera, shadows, emitters, and volumes use
-the same pose. This estimates the shutter integral with spatially correlated temporal noise;
-low sample counts can show distinct motion positions, and refits add cost for moving scenes.
-Camera-only motion uses independent per-pixel shutter samples. `shutter_speed = Inf` freezes
+Animated geometry and cameras use independent shutter samples for each pixel. Every
+path retains its time through shading, shadows, emitter sampling, and volume transport.
+Metal evaluates the native translation, quaternion rotation, and scale/shear interpolation,
+including nested transforms, against immutable reference geometry. Each intersected
+animation group requires a reference-frame traversal, so many independently moving
+objects can increase traversal cost. This supports animated transforms, not deforming
+vertex keyframes. `shutter_speed = Inf` freezes
 time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
 approximation; see its documentation for filtering differences and memory limits.
-Unsupported geometry, materials, media,
-legacy noise and world/HSV gradients, or stratified sampling produce a warning and use CPU
+Unsupported geometry, materials, media, or stratified sampling produce a warning and use CPU
 `nee` for the whole scene.
 GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
 but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
@@ -317,7 +322,7 @@ Homogeneous, dense-grid, and sparse OpenVDB/NanoVDB media support absorption, HG
 RGB and thermal emission, invisible boundaries, transformed fields, and nested regions.
 Density and emission fields retain their native interpolation; sparse grids stay sparse.
 Thermal spectra use a 10 K lookup spacing; spatial temperature fields above 20,000 K
-and procedural legacy fog colors fall back to CPU rendering.
+fall back to CPU rendering.
 Prague [sky_light()] evaluates skymodelr's spectral coefficients directly on Metal for
 altitude-dependent lighting and finite haze, preserving atmospheric light before blockers
 and within scattering volumes. GPU arithmetic uses floats; CPU evaluation uses doubles.
@@ -402,8 +407,8 @@ Triangulation approximates cylinders/disks using 128 azimuth segments.
 Supply a mesh directly when finer control is needed. Curves retain the same
 width-dependent intersection refinement and `split_depth` as CPU rendering;
 they are open surfaces and cannot bound dielectric/subsurface interiors.
-Procedurally textured legacy fog, grid temperatures above 20000 kelvin,
-and other unsupported features still select CPU rendering for the whole scene.
+Grid temperatures above 20000 kelvin and other unsupported features still select
+CPU rendering for the whole scene.
 GPU membership supports up to 16 simultaneous overlapping closed boundaries.
 Overflow, unresolvable positions, and nonfinite transport weights terminate affected
 rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.

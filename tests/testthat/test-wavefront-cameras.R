@@ -90,7 +90,7 @@ test_that('Metal camera projections and moving geometry preserve CPU image energ
   expect_lt(sqrt(mean((gpu[,, 1:3] - cpu[,, 1:3])^2)), .03)
 })
 
-test_that('Metal motion refits shared meshes and transformed medium boundaries', {
+test_that('Metal motion preserves shared meshes and transformed medium boundaries', {
   skip_if_not_installed('rayvertex')
   mesh = raymesh_model(
     rayvertex::cube_mesh(),

@@ -1,4 +1,5 @@
 #include "core/wavefront.h"
+#include "core/wavefront_report.h"
 #include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
@@ -1110,7 +1111,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   preview = preview && debug_channel == 0;
 #ifdef HAS_OIDN
   PreviewDisplay Display(nx,ny, preview, interactive, 
-                         deferred_render, (lookat-lookfrom).length(), cam.get(),
+                         deferred_render, cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          &oidn_denoiser,
@@ -1119,11 +1120,12 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          denoise, auto_exposure);
 #else
   PreviewDisplay Display(nx,ny, preview, interactive, 
-                         deferred_render, (lookat-lookfrom).length(), cam.get(),
+                         deferred_render, cam.get(),
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          auto_exposure);
 #endif
+  Display.navigation_bounds = bounding_box_world;
   // Keep complete, immutable light variants for interactive atmosphere changes.
   // Rebuilding the mixture also updates altitude-dependent sampling weights and
   // celestial filtering. Coefficients and image textures use their existing caches.
@@ -1276,20 +1278,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     final_image.attr("trace_seconds") = trace_seconds;
   }
   if(wavefront_report.requested) {
-    final_image.attr("wavefront") = List::create(
-      _["used"] = wavefront_report.used, _["fallback"] = wavefront_report.fallback,
-      _["triangles"] = double(wavefront_report.triangles),
-      _["tessellated_primitives"] = double(wavefront_report.tessellated_primitives),
-      _["analytic_primitives"] = double(wavefront_report.analytic_primitives),
-      _["unique_meshes"] = double(wavefront_report.unique_meshes),
-      _["mesh_instances"] = double(wavefront_report.mesh_instances),
-      _["scattering_events"] = double(wavefront_report.scattering_events),
-      _["discarded_paths"] = double(wavefront_report.discarded_paths),
-      _["csg_failed_queries"] = double(wavefront_report.csg_failed_queries),
-      _["upload_seconds"] = wavefront_report.upload_seconds,
-      _["sample_seconds"] = wavefront_report.sample_seconds,
-      _["atmosphere_seconds"] = wavefront_report.atmosphere_seconds,
-      _["completed_samples"] = double(wavefront_report.completed_samples));
+    final_image.attr("wavefront") = WavefrontReportToR(wavefront_report);
   }
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;

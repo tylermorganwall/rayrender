@@ -209,7 +209,7 @@ point3f NanoVDBMedium::Emission(const point3f &p) const {
                   : emission);
 }
 MediumProperties NanoVDBMedium::SamplePoint(const point3f &p) const {
-  return Properties(Density(p), Emission(p), p);
+  return Properties(Density(p), Emission(p));
 }
 RayMajorantIterator NanoVDBMedium::SampleRay(const Ray &r, double t_max) const {
   return RayMajorantIterator(r, t_max, sigma_a + sigma_s, &majorants);

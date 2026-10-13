@@ -1,4 +1,5 @@
 #include "core/wavefront.h"
+#include "core/wavefront_report.h"
 #include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
 
@@ -545,6 +546,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       output_frames[output_frame_index++] = frame_output;
     }
   } else {
+    // The native world above is immutable for this batch. Retain its Metal
+    // resources until all frames finish (or cancellation unwinds this scope).
+    WavefrontContext animation_wavefront;
     bool persistent_preview = preview;
     std::unique_ptr<RayCamera> preview_cam;
     bool preview_cam_initialized = false;
@@ -654,7 +658,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-            nx, ny, preview, false, false, 20.0f, frame_cam,
+            nx, ny, preview, false, false, frame_cam,
             background_sphere->ObjectToWorld,
             background_sphere->WorldToObject,
             &oidn_denoiser,
@@ -676,12 +680,12 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame, &wavefront_report);
+                   integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx, ny, preview, false, 
                      false,
-                     20.0f, frame_cam, 
+                     frame_cam,
                      background_sphere->ObjectToWorld,
                      background_sphere->WorldToObject,
                      &oidn_denoiser,
@@ -695,14 +699,14 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    progress_bar, sample_method, stratified_x, stratified_y,
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
       }
 #else
       if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-            nx, ny, preview, false, false, 20.0f, frame_cam,
+            nx, ny, preview, false, false, frame_cam,
             background_sphere->ObjectToWorld,
             background_sphere->WorldToObject,
             false));
@@ -717,12 +721,12 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    verbose, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame, &wavefront_report);
+                   integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx,ny, preview, false, 
                          false,
-                         20.0f, frame_cam,
+                         frame_cam,
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          false);
@@ -733,7 +737,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    progress_bar, sample_method, stratified_x, stratified_y,
                    verbose, frame_cam,  fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
       }
 #endif
@@ -788,6 +792,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
+      if (wavefront_report.requested)
+        frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
       output_frames[output_frame_index++] = frame_output;
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
@@ -803,6 +809,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
+      if (wavefront_report.requested)
+        frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
       output_frames[output_frame_index++] = frame_output;
 #endif
     }

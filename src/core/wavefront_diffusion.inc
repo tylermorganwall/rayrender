@@ -137,7 +137,7 @@ R"MSL(
       if (hit.type == intersection_type::none)
         break;
       GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
-                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction);
+                                                 quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction, scene.motion);
       Triangle t = contact.face;
       if (t.boundary) {
         float3 position = contact.position, error = contact.error;

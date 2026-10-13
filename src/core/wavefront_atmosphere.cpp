@@ -1,3 +1,4 @@
+#include "wavefront_motion.h"
 #include "../lights/atmosphere.h"
 #include "../materials/material.h"
 #include "../volumes/boundary.h"
@@ -59,6 +60,10 @@ struct WavefrontAtmosphere::Data {
   RcppThread::ThreadPool pool;
   std::vector<AtmosphereRay> rays;
   std::vector<Transform> inverses;
+  const float *times = nullptr;
+  Float Time(uint32_t pixel, const WFParameters &p) const {
+    return times ? times[pixel] : p.camera.shutter.x;
+  }
   explicit Data(const WavefrontScene &s, size_t capacity)
       : scene(s), pool(std::max(size_t(1), s.workers)), rays(capacity, AtmosphereRay(s.transport_atmosphere)) {
     inverses.emplace_back();
@@ -87,8 +92,7 @@ struct WavefrontAtmosphere::Data {
     // this term, especially inside fog. Evaluate ordered native shadow transport
     // in this hybrid batch; ordinary GPU scenes retain their device shadow walk.
     bool sky_source = infinite && scene.light_sources[light]->GetAtmosphere();
-    Float time = parameters.camera.shutter.x + (parameters.camera.shutter.y-parameters.camera.shutter.x) *
-                 std::max(0.f,parameters.camera.shutter.w);
+    Float time = Time(shadow.pixel, parameters);
     Ray ray(origin, w, time);
     VolumePathState state;
     const auto *volumes = scene.volume_scene;
@@ -213,10 +217,8 @@ struct WavefrontAtmosphere::Data {
 WavefrontAtmosphere::WavefrontAtmosphere(const WavefrontScene &scene, size_t capacity)
     : data(new Data(scene, capacity)) {}
 WavefrontAtmosphere::~WavefrontAtmosphere() = default;
-void WavefrontAtmosphere::Begin(const std::vector<uint32_t> &active) {
-  if (data->scene.motion_changed)
-    for (size_t i=1;i<data->scene.media.size();++i)
-      data->inverses[i]=medium_inverse(data->scene.media[i]);
+void WavefrontAtmosphere::Begin(const std::vector<uint32_t> &active, const float *times) {
+  data->times = times;
   for (uint32_t pixel : active)
     data->rays[pixel] = AtmosphereRay(data->scene.transport_atmosphere);
 }
@@ -230,8 +232,7 @@ bool WavefrontAtmosphere::Coverage(const WFParameters &p, const std::vector<uint
       uint32_t pixel = active[i];
       const auto &path = paths[pixel];
       if ((path.flags & 4) || pixels[pixel].normal.w <= 0) return;
-      Float time = p.camera.shutter.x + (p.camera.shutter.y - p.camera.shutter.x) *
-                   std::max(0.f, p.camera.shutter.w);
+      Float time = data->Time(pixel, p);
       Ray ray(point(path.origin), direction(path.direction), time);
       random_gen rng(mix_bits(pixel ^ p.seed ^ mix_bits(p.sample) ^ 0x713ad591u));
       try {
@@ -293,8 +294,12 @@ bool WavefrontAtmosphere::Paths(const WFParameters &p, const uint32_t *queue, si
           (&film.radiance.x)[c] += (&path.beta.x)[c] * sum[c];
         return;
       }
-      Ray world(origin, w, Float(0));
-      Ray local = medium ? Ray(data->inverses[medium_id](origin), data->inverses[medium_id](w), Float(0)) : world;
+      Float time = data->Time(pixel, p);
+      Ray world(origin, w, time);
+      Transform inverse = medium ? data->inverses[medium_id] : Transform();
+      if (medium && scene.motion)
+        inverse = inverse * Inverse(scene.motion->At(scene.motion->owners[4][medium_id], time));
+      Ray local = medium ? Ray(inverse(origin), inverse(w), time) : world;
       MediumHazeIterator intervals(medium, local, request.direction.w, enabled);
       point3f transmission(1), radiance(0);
       while (auto interval = intervals.Next()) {

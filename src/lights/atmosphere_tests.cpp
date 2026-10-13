@@ -179,10 +179,10 @@ context("Atmospheric preview export") {
       }
       Transform transform;
 #ifdef HAS_OIDN
-      PreviewDisplay preview(width, height, false, false, false, 1, nullptr,
+      PreviewDisplay preview(width, height, false, false, false, nullptr,
                               &transform, &transform, nullptr, nullptr, nullptr, false, false);
 #else
-      PreviewDisplay preview(width, height, false, false, false, 1, nullptr,
+      PreviewDisplay preview(width, height, false, false, false, nullptr,
                               &transform, &transform, false);
 #endif
       preview.transparent_volume_background = true;

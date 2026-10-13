@@ -8,6 +8,14 @@ R"MSL(
   // Keep world-distance ray parameters while traversing the local majorant grid.
   // Shadow ratio tracking samples many events on one straight segment; retaining
   // this state avoids transforming, clipping and locating its cell at every event.
+  Medium motion_medium(Medium m, MotionContext motion, uint id) {
+    uint owner=motion_owner(motion,4,id);
+    if(owner) {
+      auto pose=motion_pose(motion,owner);
+      motion_multiply(m.inverse,m.inverse,pose.inverse);
+    }
+    return m;
+  }
   struct MediumFlightIterator {
     float t, end, sigma;
     uint n, offset;
