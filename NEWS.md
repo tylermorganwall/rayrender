@@ -204,6 +204,15 @@
 
 ## Bugfixes
 
+- `generate_camera_motion()` Samples closed paths without a duplicated closing
+  frame. With `closed = TRUE`, `render_animation()` automatically blurs the last
+  frame toward the first, including when rendering a subset of the animation.
+  Open paths retain their stationary final shutter endpoint.
+
+- `render_scene()` Prevents occasional large camera jumps when tapping movement
+  keys during slow preview updates. Separate presses remain separate taps, and
+  only uninterrupted holds accumulate elapsed movement time.
+
 - `render_animation()` Retains Metal scene buffers and acceleration structures
   across compatible frames, avoiding repeated uploads and construction. Frame
   accumulation and diagnostics reset independently; returned frames report

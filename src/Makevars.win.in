@@ -22,7 +22,7 @@ $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): core/wavefront.h
 render_scene_rcpp.o render_animation_rcpp.o: core/wavefront_report.h
 $(CPP_OBJECTS): core/integrator.h
-$(CPP_OBJECTS): core/PreviewDisplay.h core/preview_navigation.h
+$(CPP_OBJECTS): core/PreviewDisplay.h core/preview_navigation.h core/preview_navigation_input.h
 # Per-hit closures change scatter_record layout across material/integrator calls.
 $(CPP_OBJECTS): materials/material.h materials/normalmap.h math/pdf.h
 $(CPP_OBJECTS): volumes/medium.h

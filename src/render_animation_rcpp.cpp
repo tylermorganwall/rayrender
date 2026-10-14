@@ -198,19 +198,42 @@ void set_animation_camera_motion_blur(
     const NumericVector& cam_upx,
     const NumericVector& cam_upy,
     const NumericVector& cam_upz,
-    const NumericVector& cam_focal) {
+    const NumericVector& cam_focal,
+    const NumericMatrix& shutter_endpoints) {
   point3f start_origin(cam_x(frame), cam_y(frame), cam_z(frame));
   point3f start_lookat(cam_dx(frame), cam_dy(frame), cam_dz(frame));
   vec3f start_up(cam_upx(frame), cam_upy(frame), cam_upz(frame));
   point3f end_origin(cam_x(end_frame), cam_y(end_frame), cam_z(end_frame));
   point3f end_lookat(cam_dx(end_frame), cam_dy(end_frame), cam_dz(end_frame));
   vec3f end_up(cam_upx(end_frame), cam_upy(end_frame), cam_upz(end_frame));
+  Float end_focal = cam_focal(end_frame);
+  if(shutter_endpoints.nrow() > 0) {
+    // R resolves neighbors on each complete camera path before frame selection.
+    // This includes loop wraparound, without a duplicate output frame or a
+    // transition into another camera in a batch. Columns match camera_shutter_endpoints().
+    if(animation_camera_type(cam->get_fov()) ==
+       animation_camera_type(shutter_endpoints(frame, 10))) {
+      end_origin = point3f(shutter_endpoints(frame, 0), shutter_endpoints(frame, 1),
+                          shutter_endpoints(frame, 2));
+      end_lookat = point3f(shutter_endpoints(frame, 3), shutter_endpoints(frame, 4),
+                          shutter_endpoints(frame, 5));
+      end_up = vec3f(shutter_endpoints(frame, 6), shutter_endpoints(frame, 7),
+                     shutter_endpoints(frame, 8));
+      end_focal = shutter_endpoints(frame, 9);
+    } else {
+      // Projection cuts cannot interpolate one camera model into another.
+      end_origin = start_origin;
+      end_lookat = start_lookat;
+      end_up = start_up;
+      end_focal = cam_focal(frame);
+    }
+  }
 
   cam->set_camera_motion_blur(enabled);
   cam->set_camera_motion_blur_range(start_origin, start_lookat, start_up,
                                     cam_focal(frame),
                                     end_origin, end_lookat, end_up,
-                                    cam_focal(end_frame));
+                                    end_focal);
 }
 
 } // namespace
@@ -317,6 +340,12 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     as<IntegerVector>(camera_movement["camera_motion_blur_group"]) :
     IntegerVector();
   int motion_frame_count = cam_x.size();
+  NumericMatrix shutter_endpoints(0, 11);
+  if(camera_movement.hasAttribute("shutter_endpoints")) {
+    shutter_endpoints = as<NumericMatrix>(camera_movement.attr("shutter_endpoints"));
+    if(shutter_endpoints.nrow() != motion_frame_count || shutter_endpoints.ncol() != 11)
+      stop("Camera shutter endpoints must have one row per camera frame and 11 columns.");
+  }
   int n_frames = end_frame;
   List output_frames(n_frames - start_frame);
   int output_frame_index = 0;
@@ -509,7 +538,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        cam_x, cam_y, cam_z,
                                        cam_dx, cam_dy, cam_dz,
                                        cam_upx, cam_upy, cam_upz,
-                                       cam_focal);
+                                       cam_focal, shutter_endpoints);
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -619,7 +648,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        cam_x, cam_y, cam_z,
                                        cam_dx, cam_dy, cam_dz,
                                        cam_upx, cam_upy, cam_upz,
-                                       cam_focal);
+                                       cam_focal, shutter_endpoints);
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 

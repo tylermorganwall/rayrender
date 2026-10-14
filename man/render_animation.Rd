@@ -222,6 +222,10 @@ with incompatible metadata do not share a session.
 Returned Metal frames carry a \code{wavefront} attribute with \code{scene_reused},
 \code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
 Reused frames report zero scene-upload time; sampling time remains per frame.
+
+Motion generated with \code{generate_camera_motion(closed = TRUE)} wraps its
+last shutter interval toward the first frame when camera motion blur is enabled.
+Open paths keep a stationary shutter endpoint at their final frame.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

@@ -311,12 +311,16 @@ void PreviewDisplay::InitializeNavigation(hitable* world) {
 }
 
 void PreviewDisplay::QueueNavigationTap(char key, bool shifted) {
-  const std::string keys = "wasdqz";
-  size_t index = keys.find(key);
-  if(index == std::string::npos) return;
-  unsigned int bit = 1u << index;
-  if(navigation_previous_keys & bit) return; // Ignore OS key-repeat events.
-  (shifted ? navigation_shifted_taps : navigation_taps) |= bit;
+  navigation_input.Press(key, shifted);
+}
+
+void PreviewDisplay::ReleaseNavigationKey(char key) {
+  navigation_input.Release(key);
+}
+
+void PreviewDisplay::ResetNavigationInput() {
+  navigation_input.Reset();
+  navigation_clock = std::chrono::steady_clock::now();
 }
 
 bool PreviewDisplay::PollNavigation() {
@@ -349,21 +353,29 @@ bool PreviewDisplay::PollNavigation() {
 #endif
   bool changed = false;
   if(interactive && focused && !terminate && !IsPreviewMotionActive()) {
-    auto move = [&](unsigned int bits, bool shifted, double dt) {
-      auto down = [&](int index) { return (bits & (1u << index)) ? Float(1) : Float(0); };
-      return navigation.Move(*cam, down(3)-down(1), down(4)-down(5), down(0)-down(2),
-                             shifted, orbit, speed, dt);
-    };
-    // Cap a stalled frame at 250 ms to prevent a large jump after a pause.
-    // New presses get one 60-Hz step, not the preceding idle frame's duration.
-    changed |= move(held & navigation_previous_keys, shift, std::min(seconds, .25));
-    changed |= move(held & ~navigation_previous_keys, shift, 1.0/60);
-    // Preserve quick taps that began and ended between preview updates.
-    changed |= move(navigation_taps & ~held, false, 1.0/60);
-    changed |= move(navigation_shifted_taps & ~held, true, 1.0/60);
+    auto steps = navigation_input.Consume(held, shift, seconds);
+    for(int shifted = 0; shifted < 2; ++shifted) {
+      // Integrate concurrent keys together to preserve diagonal normalization.
+      // Split only where a key has exhausted its accumulated movement time.
+      auto& remaining = steps[shifted];
+      while(true) {
+        double dt = 0;
+        unsigned int bits = 0;
+        for(int i = 0; i < 6; ++i) {
+          if(remaining[i] <= 0) continue;
+          bits |= 1u << i;
+          if(dt == 0 || remaining[i] < dt) dt = remaining[i];
+        }
+        if(bits == 0) break;
+        auto down = [&](int i) { return (bits & (1u << i)) ? Float(1) : Float(0); };
+        changed |= navigation.Move(*cam, down(3)-down(1), down(4)-down(5), down(0)-down(2),
+                                   shifted != 0, orbit, speed, dt);
+        for(int i = 0; i < 6; ++i) if(bits & (1u << i)) remaining[i] -= dt;
+      }
+    }
+  } else {
+    navigation_input.Reset();
   }
-  navigation_previous_keys = focused ? held : 0;
-  navigation_taps = navigation_shifted_taps = 0;
   return changed;
 #else
   return false;
@@ -1852,7 +1864,25 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     DrawStatusBarX11(env_y_angle);
     while (XPending(d)) {
       XNextEvent(d, &e);
-      if (e.type == KeyPress) {
+      if(e.type == FocusOut) {
+        ResetNavigationInput();
+      } else if(e.type == KeyRelease) {
+        KeySym key = XLookupKeysym(&e.xkey, 0);
+        if(key > 0 && key < 128 && std::strchr("wasdqz", static_cast<char>(key))) {
+          // Servers without detectable repeat synthesize release/press pairs
+          // with identical timestamps. They do not end the physical hold.
+          if(XPending(d)) {
+            XEvent next;
+            XPeekEvent(d, &next);
+            if(next.type == KeyPress && next.xkey.keycode == e.xkey.keycode &&
+               next.xkey.time == e.xkey.time) {
+              XNextEvent(d, &next);
+              continue;
+            }
+          }
+          ReleaseNavigationKey(static_cast<char>(key));
+        }
+      } else if (e.type == KeyPress) {
         if(!PreviewDisplayHasKeyboardFocus(d, this->w)) {
           continue;
         }
@@ -2499,7 +2529,10 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     // Film dimensions stay unchanged: only the window gets extra UI space.
     w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height + StatusBarHeight(), 1,
                             BlackPixel(d, s),  BlackPixel(d, s));
-    XSelectInput(d, w, ExposureMask | KeyPressMask | ButtonPress);
+    XSelectInput(d, w, ExposureMask | KeyPressMask | KeyReleaseMask |
+                 FocusChangeMask | ButtonPressMask);
+    Bool detectable_repeat = False;
+    XkbSetDetectableAutoRepeat(d, True, &detectable_repeat);
     XMapWindow(d, w);
     Atom WM_DELETE_WINDOW = XInternAtom(d, "WM_DELETE_WINDOW", False); 
     XSetWMProtocols(d, w, &WM_DELETE_WINDOW, 1);
@@ -2565,7 +2598,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 void PreviewDisplay::SetCamera(RayCamera* _cam) {
   cam = _cam;
   navigation_initialized = false;
-  navigation_previous_keys = navigation_taps = navigation_shifted_taps = 0;
+  ResetNavigationInput();
   if(cam != nullptr) {
     cam->set_camera_motion_blur(camera_motion_blur_enabled);
     cam->set_shutter_speed(shutter_speed);
@@ -2864,6 +2897,15 @@ static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = tru
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
+    case WM_KILLFOCUS: {
+      if(preview_display_w != nullptr) preview_display_w->ResetNavigationInput();
+      break;
+    }
+    case WM_KEYUP: {
+      if(preview_display_w != nullptr && wParam >= 'A' && wParam <= 'Z')
+        preview_display_w->ReleaseNavigationKey(static_cast<char>(wParam + ('a' - 'A')));
+      break;
+    }
     case WM_DESTROY: {
       PostQuitMessage(0);
       term = true;
@@ -2951,7 +2993,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_W: case VK_KEY_A: case VK_KEY_S:
         case VK_KEY_D: case VK_KEY_Q: case VK_KEY_Z: {
-          if(interactive_w && preview_display_w != nullptr) {
+          if(interactive_w && preview_display_w != nullptr &&
+             (lParam & (LPARAM(1) << 30)) == 0) {
             preview_display_w->QueueNavigationTap(static_cast<char>(wParam + ('a' - 'A')), shift_pressed);
           }
           return 0;

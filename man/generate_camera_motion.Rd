@@ -59,7 +59,10 @@ properly formatted to be passed to `render_animation()`.}
 
 \item{frames}{Default `30`. Total number of frames.}
 
-\item{closed}{Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.}
+\item{closed}{Default `FALSE`. Whether the camera path loops back to its start.
+Generated paths contain `frames` samples without a duplicated closing frame.
+`render_animation()` wraps the last frame's camera motion blur toward the first.
+With `type = "manual"`, the supplied rows are retained and marked as a loop.}
 
 \item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.}
 

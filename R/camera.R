@@ -709,6 +709,35 @@ as_ray_camera_motion = function(motion) {
   motion
 }
 
+#' @param motion Complete camera motion, before selecting output frames.
+#' @return Numeric matrix of shutter endpoints in native renderer column order.
+#' @keywords internal
+camera_shutter_endpoints = function(motion) {
+  count = nrow(motion)
+  indices = pmin(seq_len(count) + 1L, count)
+  if (count > 1L && isTRUE(attr(motion, "closed"))) {
+    indices[count] = 1L
+  }
+  # Keep this order synchronized with set_animation_camera_motion_blur().
+  columns = c(
+    "x",
+    "y",
+    "z",
+    "dx",
+    "dy",
+    "dz",
+    "upx",
+    "upy",
+    "upz",
+    "focal",
+    "fov"
+  )
+  result = as.matrix(motion[indices, columns, drop = FALSE])
+  storage.mode(result) = "double"
+  rownames(result) = NULL
+  result
+}
+
 #' @keywords internal
 validate_camera_motion = function(motion) {
   missing_columns = setdiff(ray_camera_motion_columns(), colnames(motion))
@@ -1448,6 +1477,7 @@ camera_batch_plan = function(
   }
 
   motions = vector("list", length(cameras))
+  shutter_endpoints = vector("list", length(cameras))
   filename_list = vector("list", length(cameras))
   camera_index = integer()
   frame_numbers = integer()
@@ -1467,6 +1497,13 @@ camera_batch_plan = function(
       end_frame = end_frame
     )
     motions[[i]] = as.data.frame(camera$motion)[frame_range, , drop = FALSE]
+    # Resolve neighbors before slicing: a partial loop still blurs toward its
+    # original next pose, never back to the first selected frame or another camera.
+    shutter_endpoints[[i]] = camera_shutter_endpoints(camera$motion)[
+      frame_range,
+      ,
+      drop = FALSE
+    ]
     motions[[i]]$camera_motion_blur = isTRUE(camera$camera_motion_blur)
     motions[[i]]$camera_motion_blur_group = i
     filename_list[[i]] = camera_batch_frame_filenames(
@@ -1486,6 +1523,7 @@ camera_batch_plan = function(
 
   list(
     motion = as_ray_camera_motion(motion),
+    shutter_endpoints = do.call(rbind, shutter_endpoints),
     filenames = filenames,
     write_image = any(nzchar(filenames)),
     camera_index = camera_index,

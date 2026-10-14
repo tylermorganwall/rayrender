@@ -141,6 +141,10 @@ animation_default_plot_scene = function(
 #' \code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
 #' Reused frames report zero scene-upload time; sampling time remains per frame.
 #'
+#' Motion generated with \code{generate_camera_motion(closed = TRUE)} wraps its
+#' last shutter interval toward the first frame when camera motion blur is enabled.
+#' Open paths keep a stationary shutter endpoint at their final frame.
+#'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Create and animate flying through a scene on a simulated roller coaster
 #' set.seed(3)
@@ -638,6 +642,9 @@ render_animation_camera = function(
   }
 
   #Animate Scene
+  attr(camera_motion, "shutter_endpoints") = camera_shutter_endpoints(
+    camera_motion
+  )
   rgb_mat = render_animation_rcpp(
     scene = processed_scene,
     camera_info = camera_info,
@@ -815,6 +822,10 @@ render_camera_batch = function(
     }
   }
 
+  if (!is.na(camera$camera_description_file) && all(camera_motion$fov == -1)) {
+    plan$shutter_endpoints[, "fov"] = -1
+  }
+  attr(camera_motion, "shutter_endpoints") = plan$shutter_endpoints
   frame_outputs = render_animation_rcpp(
     scene = processed_scene,
     camera_info = camera_info,

@@ -10,6 +10,7 @@
 #include "../core/adaptivesampler.h"
 #include "../core/camera.h"
 #include "preview_navigation.h"
+#include "preview_navigation_input.h"
 #include <chrono>
 #include "../hitables/hitable.h"
 
@@ -51,6 +52,7 @@ struct PreviewLineOverlay {
 
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 // X11 macros also collide with RcppThread and Catch in builds without OIDN.
 #undef Status
 #undef None
@@ -96,6 +98,8 @@ public:
   bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
   void InitializeNavigation(hitable* world);
   void QueueNavigationTap(char key, bool shifted);
+  void ReleaseNavigationKey(char key);
+  void ResetNavigationInput();
   bool PollNavigation();
   PreviewNavigation navigation;
   aabb navigation_bounds; // Finite scene bounds, before adding environment proxies.
@@ -272,8 +276,7 @@ public:
 
 private:
   bool navigation_initialized = false;
-  unsigned int navigation_taps = 0, navigation_shifted_taps = 0;
-  unsigned int navigation_previous_keys = 0;
+  PreviewNavigationInput navigation_input;
   std::chrono::steady_clock::time_point navigation_clock = std::chrono::steady_clock::now();
   bool UpdateAtmosphere(bool haze, bool query_altitude);
   std::function<void(bool, bool)> update_atmosphere;

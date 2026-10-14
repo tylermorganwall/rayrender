@@ -1,4 +1,4 @@
-test_that("closed damped camera motion closes the endpoint", {
+test_that("closed damped camera motion wraps without duplicating the endpoint", {
   positions = list(
     c(0, 0, 0),
     c(10, 0, 0),
@@ -15,10 +15,9 @@ test_that("closed damped camera motion closes the endpoint", {
     progress = FALSE
   )
 
-  expect_equal(
-    unname(as.numeric(motion[1, c("x", "y", "z")])),
-    unname(as.numeric(motion[nrow(motion), c("x", "y", "z")]))
-  )
+  expect_equal(nrow(motion), 12)
+  expect_true(attr(motion, "closed"))
+  expect_false(identical(as.numeric(motion[1, ]), as.numeric(motion[12, ])))
 
   bezier_motion = generate_camera_motion(
     positions = positions,
@@ -31,7 +30,7 @@ test_that("closed damped camera motion closes the endpoint", {
 
   expect_equal(
     unname(as.numeric(bezier_motion[1, c("x", "y", "z")])),
-    unname(as.numeric(bezier_motion[nrow(bezier_motion), c("x", "y", "z")]))
+    unname(camera_shutter_endpoints(bezier_motion)[12, c("x", "y", "z")])
   )
 })
 
@@ -98,6 +97,7 @@ test_that("closed spline camera motion has periodic boundary speed", {
     progress = FALSE
   )
   position = as.matrix(motion[, c("x", "y", "z")])
+  position = rbind(position, position[1, ])
   final_frame = nrow(position)
   start_velocity = (-3 * position[1, ] + 4 * position[2, ] - position[3, ]) / 2
   end_velocity = (3 *
@@ -106,10 +106,8 @@ test_that("closed spline camera motion has periodic boundary speed", {
     position[final_frame - 2, ]) /
     2
 
-  expect_equal(
-    unname(as.numeric(motion[1, ])),
-    unname(as.numeric(motion[final_frame, ]))
-  )
+  expect_equal(nrow(motion), 400)
+  expect_true(attr(motion, "closed"))
   expect_equal(
     sqrt(sum(start_velocity^2)),
     sqrt(sum(end_velocity^2)),
@@ -205,20 +203,17 @@ test_that("pitched keyframes retain exact targets and continuous up vectors thro
   up_columns = c("upx", "upy", "upz")
 
   for (closed in c(FALSE, TRUE)) {
-    expected_positions = if (closed) {
-      rbind(positions, positions[1, ])
-    } else {
-      positions
-    }
-    expected_lookats = if (closed) rbind(lookats, lookats[1, ]) else lookats
+    expected_positions = positions
+    expected_lookats = lookats
     keyframe_rows = 1 + 40 * (seq_len(nrow(expected_positions)) - 1)
+    frame_count = if (closed) 40 * nrow(positions) else max(keyframe_rows)
     for (type in c("linear", "spline")) {
       motion = generate_camera_motion(
         positions,
         lookats = lookats,
         camera_ups = camera_ups,
         type = type,
-        frames = max(keyframe_rows),
+        frames = frame_count,
         closed = closed,
         damp_motion = FALSE,
         progress = FALSE
@@ -247,7 +242,7 @@ test_that("pitched keyframes retain exact targets and continuous up vectors thro
         lookats = lookats,
         camera_ups = camera_ups,
         type = type,
-        frames = max(keyframe_rows),
+        frames = frame_count,
         closed = closed,
         damp_motion = TRUE,
         progress = FALSE
@@ -257,7 +252,7 @@ test_that("pitched keyframes retain exact targets and continuous up vectors thro
         lookats = lookats,
         camera_ups = perpendicular_ups,
         type = type,
-        frames = max(keyframe_rows),
+        frames = frame_count,
         closed = closed,
         damp_motion = TRUE,
         progress = FALSE
@@ -353,6 +348,7 @@ test_that("closed orientation spline has periodic angular velocity", {
   up = as.matrix(motion[, c("upx", "upy", "upz")])
   up = up / sqrt(rowSums(up^2))
   periodic_derivative_difference = function(value) {
+    value = rbind(value, value[1, ])
     final_frame = nrow(value)
     start_velocity = (-3 * value[1, ] + 4 * value[2, ] - value[3, ]) / 2
     end_velocity = (3 *
@@ -365,11 +361,14 @@ test_that("closed orientation spline has periodic angular velocity", {
 
   expect_equal(
     unname(as.numeric(motion[1, c("dx", "dy", "dz")])),
-    unname(as.numeric(motion[nrow(motion), c("dx", "dy", "dz")]))
+    unname(camera_shutter_endpoints(motion)[nrow(motion), c("dx", "dy", "dz")])
   )
   expect_equal(
     unname(as.numeric(motion[1, c("upx", "upy", "upz")])),
-    unname(as.numeric(motion[nrow(motion), c("upx", "upy", "upz")]))
+    unname(camera_shutter_endpoints(motion)[
+      nrow(motion),
+      c("upx", "upy", "upz")
+    ])
   )
   expect_lt(periodic_derivative_difference(forward), 1e-5)
   expect_lt(periodic_derivative_difference(up), 1e-5)
