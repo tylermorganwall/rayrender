@@ -16,6 +16,11 @@
 
 ## New features
 
+- `dielectric()` Supports open interfaces on Metal, including water surfaces
+  bounded by opaque terrain, with refraction, absorption, and material priorities.
+  Open mesh instances retain shared geometry; closed subsurface and volume
+  boundaries keep their containment behavior.
+
 - `render_scene()` and `render_animation()` Default to `integrator_type = "auto"`,
   selecting Metal when a supported device is available and CPU NEE otherwise.
   Explicit integrator choices are preserved. PBRT imports use the same default.
@@ -207,6 +212,14 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `render_scene()` Preserves camera elevation when orbiting horizontally with
+  A/D, including repeated taps and held keys, in CPU and Metal previews.
+
+- `render_scene()` Keeps interactive preview brightness consistent immediately
+  after camera, lighting, or resolution changes. CPU and Metal restart sampling
+  from the cleared film's actual sample count instead of dividing the first
+  new frame by two.
 
 - `generate_camera_motion()` Samples closed paths without a duplicated closing
   frame. With `closed = TRUE`, `render_animation()` automatically blurs the last
