@@ -50,7 +50,7 @@ render_animation(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
+  integrator_type = "auto",
   camera = NULL
 )
 }
@@ -194,8 +194,11 @@ those pixels will be partially transparent.}
 
 \item{preview_exponent}{Default `6`. Phong exponent.}
 
-\item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+\item{integrator_type}{Default `"auto"`, selecting Metal when the package was built
+with Metal support and a ray-tracing-capable device is available, otherwise CPU
+`"nee"` (Next Event Estimation, with direct light sampling). Explicit choices
+override automatic selection. Other options include `"rtiow"` (the algorithm
+specified in the book "Raytracing in One Weekend", a basic form of path guiding)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 `"metal"` uses the experimental GPU wavefront integrator where supported; see
 \code{\link{render_scene}()} for its feature coverage and CPU fallback behavior.

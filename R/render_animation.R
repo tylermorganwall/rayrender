@@ -116,8 +116,11 @@ animation_default_plot_scene = function(
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
-#' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-#' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+#' @param integrator_type Default `"auto"`, selecting Metal when the package was built
+#' with Metal support and a ray-tracing-capable device is available, otherwise CPU
+#' `"nee"` (Next Event Estimation, with direct light sampling). Explicit choices
+#' override automatic selection. Other options include `"rtiow"` (the algorithm
+#' specified in the book "Raytracing in One Weekend", a basic form of path guiding)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 #' `"metal"` uses the experimental GPU wavefront integrator where supported; see
 #' \code{\link{render_scene}()} for its feature coverage and CPU fallback behavior.
@@ -252,7 +255,7 @@ render_animation = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
+  integrator_type = "auto",
   camera = NULL
 ) {
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
@@ -532,7 +535,7 @@ render_animation_camera = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
+  integrator_type = "auto",
   force_no_write = FALSE
 ) {
   if (!inherits(camera, "ray_camera")) {
@@ -702,7 +705,7 @@ render_camera_batch = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
+  integrator_type = "auto",
   force_no_write = FALSE
 ) {
   if (!camera_batch_metadata_compatible(cameras)) {

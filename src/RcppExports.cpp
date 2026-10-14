@@ -37,6 +37,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cpp_has_metal
+bool cpp_has_metal();
+RcppExport SEXP _rayrender_cpp_has_metal() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cpp_has_metal());
+    return rcpp_result_gen;
+END_RCPP
+}
 // has_gui_capability
 bool has_gui_capability();
 RcppExport SEXP _rayrender_has_gui_capability() {
@@ -162,6 +172,7 @@ RcppExport SEXP run_testthat_tests(SEXP);
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
     {"_rayrender_query_prague_atmosphere", (DL_FUNC) &_rayrender_query_prague_atmosphere, 6},
+    {"_rayrender_cpp_has_metal", (DL_FUNC) &_rayrender_cpp_has_metal, 0},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},
     {"_rayrender_cppdef_HAS_OIDN", (DL_FUNC) &_rayrender_cppdef_HAS_OIDN, 0},
     {"_rayrender_cppdef_HAS_NEON", (DL_FUNC) &_rayrender_cppdef_HAS_NEON, 0},

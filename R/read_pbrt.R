@@ -855,7 +855,7 @@ pbrt_render_arguments = function(context) {
     ambient_light = FALSE,
     backgroundhigh = "black",
     backgroundlow = "black",
-    integrator_type = "nee",
+    integrator_type = "auto",
     # PBRT path integrators use roulette. Avoid carrying negligible paths all
     # the way to an imported high maxdepth; callers can override this argument.
     roulette_active_depth = 5L

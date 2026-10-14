@@ -16,6 +16,10 @@
 
 ## New features
 
+- `render_scene()` and `render_animation()` Default to `integrator_type = "auto"`,
+  selecting Metal when a supported device is available and CPU NEE otherwise.
+  Explicit integrator choices are preserved. PBRT imports use the same default.
+
 - `render_scene()` Sizes interactive navigation from visible geometry, with
   finite scene bounds as a fallback. Held movement uses elapsed time; orbit,
   viewport-scaled pan, and proportional dolly controls retain E/C speed overrides.

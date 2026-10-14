@@ -760,6 +760,16 @@ std::vector<WFGeometryResult> ProbeMetalGeometry(const WavefrontScene &scene,
 }
 #endif
 
+bool MetalWavefrontAvailable() {
+  @autoreleasepool {
+    if (@available(macOS 11.0, *)) {
+      id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+      return device != nil && device.supportsRaytracing;
+    }
+    return false;
+  }
+}
+
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &scene, size_t capacity) {
   @autoreleasepool {
     if (@available(macOS 11.0, *)) {

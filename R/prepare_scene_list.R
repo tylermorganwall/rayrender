@@ -47,7 +47,7 @@ prepare_scene_list = function(
   sample_dist = Inf,
   keep_colors = FALSE,
   deferred_render = FALSE,
-  integrator_type = "nee",
+  integrator_type = "auto",
   denoise = TRUE,
   print_debug_info = FALSE,
   camera_flip_x = FALSE
@@ -73,6 +73,9 @@ prepare_scene_list = function(
       "A scene can contain only one sky_light().",
       call. = FALSE
     )
+  }
+  if (identical(integrator_type, "auto")) {
+    integrator_type = if (cpp_has_metal()) "metal" else "nee"
   }
   metal_wavefront = identical(integrator_type, "metal")
   integrator_type = switch(

@@ -53,7 +53,7 @@ render_scene(
   verbose = FALSE,
   print_debug_info = FALSE,
   new_page = TRUE,
-  integrator_type = "nee",
+  integrator_type = "auto",
   screen_text = NULL,
   screen_line = NULL,
   camera = NULL,
@@ -280,7 +280,10 @@ each render.}
 \item{new_page}{Default `TRUE`. Whether to call `grid::grid.newpage()` when plotting the image (if
 no filename specified). Set to `FALSE` for faster plotting (does not affect render time).}
 
-\item{integrator_type}{Default `"nee"` (Next Event Estimation, with direct light sampling).
+\item{integrator_type}{Default `"auto"`, selecting Metal when the package was built
+with Metal support and a ray-tracing-capable device is available, otherwise CPU
+`"nee"` (Next Event Estimation, with direct light sampling). An explicit choice
+overrides automatic selection. Unsupported Metal scene features retain the CPU fallback below.
 Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
 `"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.

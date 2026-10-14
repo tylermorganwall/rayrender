@@ -952,6 +952,7 @@ private:
 };
 
 #ifndef RAY_HAS_METAL_BVH
+bool MetalWavefrontAvailable() { return false; }
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, size_t) {
   throw std::runtime_error("Metal was not enabled in this build");
 }

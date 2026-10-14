@@ -1,3 +1,10 @@
+#include "core/wavefront.h"
+
+// [[Rcpp::export]]
+bool cpp_has_metal() {
+  return MetalWavefrontAvailable();
+}
+
 // [[Rcpp::export]]
 bool has_gui_capability() {
 #ifdef RAY_HAS_X11

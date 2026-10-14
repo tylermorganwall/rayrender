@@ -9,6 +9,10 @@ query_prague_atmosphere <- function(description, positions, directions, distance
     .Call(`_rayrender_query_prague_atmosphere`, description, positions, directions, distances, sample, build_sampler)
 }
 
+cpp_has_metal <- function() {
+    .Call(`_rayrender_cpp_has_metal`)
+}
+
 has_gui_capability <- function() {
     .Call(`_rayrender_has_gui_capability`)
 }

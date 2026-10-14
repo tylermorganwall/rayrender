@@ -211,8 +211,8 @@ Evaluate the native Prague atmosphere at scene interactions, including
 altitude-dependent Sun and sky lighting, finite-distance haze, and
 in-scattering. Supply location and time, or direct Sun elevation and azimuth.
 Location/time skies include Sun and Moon disk lights automatically.
-Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}}. Rendering automatically selects
-\code{integrator_type = "nee"}. Use \code{\link[=sky_light_image]{sky_light_image()}} for a cached sky image.
+Add the light with \code{\link[=add_infinite_light]{add_infinite_light()}}. The default integrator uses Metal
+when available, otherwise CPU NEE. Use \code{\link[=sky_light_image]{sky_light_image()}} for a cached sky image.
 }
 \details{
 Install the full-altitude Prague data with

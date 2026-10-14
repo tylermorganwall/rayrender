@@ -287,6 +287,8 @@ private:
 // Empty output means this primitive has no faithful static triangulation.
 std::vector<WFTriangle> TriangulateWavefrontPrimitive(const hitable &, const Transform &);
 std::unique_ptr<WavefrontSession> MakeMetalWavefront(const WavefrontScene &, size_t capacity);
+// Capability probe only: do not compile pipelines or allocate scene resources.
+bool MetalWavefrontAvailable();
 std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &, const hitable_list &,
                                                    RayCamera &, size_t capacity, int sampler,
                                                    WavefrontScene &, WavefrontReport &, size_t workers = 1);

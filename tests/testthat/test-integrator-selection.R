@@ -1,3 +1,78 @@
+test_that("automatic integration selects a usable Metal device or CPU NEE", {
+  for (fun in list(
+    render_scene,
+    render_animation,
+    prepare_scene_list,
+    render_animation_camera,
+    render_camera_batch
+  )) {
+    expect_identical(formals(fun)$integrator_type, "auto")
+  }
+  for (available in c(FALSE, TRUE)) {
+    local_mocked_bindings(
+      cpp_has_metal = function() available,
+      .package = "rayrender"
+    )
+    info = prepare_scene_list(sphere())$render_info
+    expect_identical(info$metal_wavefront, available)
+    expect_identical(info$integrator_type, 1L)
+    info = prepare_scene_list(sphere(), integrator_type = "auto")$render_info
+    expect_identical(info$metal_wavefront, available)
+  }
+})
+
+test_that("explicit integrators do not perform automatic device selection", {
+  local_mocked_bindings(
+    cpp_has_metal = function() stop("unexpected capability probe"),
+    .package = "rayrender"
+  )
+  for (integrator in c("nee", "rtiow", "basic", "metal")) {
+    info = prepare_scene_list(
+      sphere(),
+      integrator_type = integrator
+    )$render_info
+    expect_identical(info$metal_wavefront, integrator == "metal")
+  }
+})
+
+test_that("PBRT render arguments leave device selection automatic", {
+  path = withr::local_tempfile(fileext = ".pbrt")
+  writeLines(
+    c('WorldBegin', 'Shape "sphere" "float radius" [1]', 'WorldEnd'),
+    path
+  )
+  expect_identical(read_pbrt(path)$render_args$integrator_type, "auto")
+})
+
+test_that("default still and animation renders match explicit device selection", {
+  available = cpp_has_metal()
+  selected = if (available) "metal" else "nee"
+  args = list(
+    scene = sphere(material = light("orange")),
+    width = 12,
+    height = 12,
+    samples = 4,
+    denoise = FALSE,
+    preview = FALSE,
+    plot_scene = FALSE,
+    progress = FALSE,
+    parallel = FALSE,
+    bloom = FALSE
+  )
+  for (render in list(render_scene, render_animation)) {
+    set.seed(71)
+    automatic = do.call(render, args)
+    set.seed(71)
+    explicit = do.call(render, c(args, list(integrator_type = selected)))
+    if (is.list(automatic)) {
+      automatic = automatic[[1]]
+      explicit = explicit[[1]]
+    }
+    expect_equal(as.numeric(automatic), as.numeric(explicit), tolerance = 0)
+    expect_identical(isTRUE(attr(automatic, "wavefront")$used), available)
+  }
+})
+
 test_that("scene requirements select NEE without changing other integrators", {
   # Integrator selection must not require downloading sky data or rendering disks.
   local_mocked_bindings(
@@ -81,6 +156,10 @@ test_that("automatically selected NEE recognizes emitting media as illumination"
 })
 
 test_that("automatic NEE renders the same volume through still and animation APIs", {
+  local_mocked_bindings(
+    cpp_has_metal = function() FALSE,
+    .package = "rayrender"
+  )
   absorption = c(0.2, 0.4, 0.6)
   scene = set_medium(
     cube(),
