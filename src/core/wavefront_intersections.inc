@@ -235,7 +235,7 @@ bool containment_face_instanced(uint primitive [[primitive_id]], uint instance [
                                 device const MeshInstance *instances [[buffer(2)]],
                                 device const uchar *motion [[buffer(4)]]) {
   MeshInstance placement = instances[instance];
-  uint boundary=placement.triangle_count ? placement.boundary : triangles[primitive].boundary;
+  uint boundary=placement.triangle_count && placement.boundary ? placement.boundary : triangles[primitive].boundary;
   uint owner=query.owner==UINT_MAX ? UINT_MAX : query_owner(motion,placement.triangle_count ? 3 : 0,placement.triangle_count ? instance : primitive);
   return (!query.body || boundary==query.body) && owner==query.owner;
 }
@@ -524,7 +524,7 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
     out.face.geometric.xyz = placement.orientation * normalize(placement.inverse[0].xyz * g.x +
                                                                placement.inverse[1].xyz * g.y +
                                                                placement.inverse[2].xyz * g.z);
-    out.face.boundary = placement.boundary;
+    out.face.boundary = placement.boundary ? placement.boundary : local.boundary;
     out.face.uv2.w = as_type<float>(placement.surface_base + as_type<uint>(local.uv2.w));
     if (local.light != UINT_MAX)
       out.face.light = placement.light_base + local.light;

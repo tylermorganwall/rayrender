@@ -335,13 +335,13 @@ R"MSL(
     uint body = active_boundary(state, boundaries, materials);
     return body && boundaries[body].subsurface ? body : 0;
   }
-  bool cross_boundary(thread VolumeState &state, uint id, bool entering) {
+  bool cross_boundary(thread VolumeState &state, uint id, bool entering, bool nested = false) {
     uint found = state.count;
     for (uint j = 0; j < state.count; ++j)
       if (state.ids[j] == id)
         found = j;
     if (entering) {
-      if (found < state.count)
+      if (found < state.count && !nested)
         return true; // Membership is a set per placement.
       if (state.count == 16)
         return false;
@@ -468,7 +468,7 @@ R"MSL(
       float exit_distance[16];
       for (uint id = 1; id <= p.boundaries; ++id) {
         Boundary b = boundaries[id];
-        if (any(origin < b.lo.xyz) || any(origin > b.hi.xyz))
+        if (b.lo.w != 0 || any(origin < b.lo.xyz) || any(origin > b.hi.xyz))
           continue;
         uint body = id;
         auto hit = trace_geometry(probe, scene, quadrics, body);
@@ -515,7 +515,8 @@ R"MSL(
       float facing = dot(direction, t.geometric.xyz);
       bool before_endpoint = hit.distance < distance - endpoint_guard ||
                              dot(origin - t.p[0].xyz, t.geometric.xyz) * facing >= 0;
-      if (t.boundary && before_endpoint && !cross_boundary(state, t.boundary, facing < 0))
+      if (t.boundary && boundaries[t.boundary].lo.w == 0 && before_endpoint &&
+          !cross_boundary(state, t.boundary, facing < 0))
         return false;
       float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
       if (!(next > probe.min_distance) || !isfinite(next))
@@ -827,6 +828,24 @@ R"MSL(
       hit = trace_geometry(r, scene, quadrics);
     }
     float surface = hit.type == intersection_type::none ? INFINITY : hit.distance;
+    // A back face identifies the medium of this entire incident segment, even
+    // without a preceding entry (e.g. an underwater camera). Beer absorption
+    // needs only this segment's distance. Do this before attenuation and retain
+    // the inferred membership if the surface subsequently reflects the ray.
+    // Closed-volume/scattering initialization continues to use containment.
+    if ((texture_features & 2048) && !scattering && hit.type != intersection_type::none) {
+      GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
+          quadrics, surfaces, hit.instance, scene.instances, r.origin, r.direction, scene.motion);
+      uint id = contact.face.boundary;
+      if (id && boundaries[id].lo.w != 0 && dot(r.direction, contact.face.geometric.xyz) > 0) {
+        if (!cross_boundary(state, id, true)) {
+          atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+          return;
+        }
+        glass = active_boundary(state, boundaries, materials);
+        membership[pixel] = state;
+      }
+    }
     bool collision = flight < surface;
     float distance = collision ? flight : surface;
     // GPU finite segments need atmosphere transport only when haze is enabled.
@@ -1023,7 +1042,7 @@ R"MSL(
       ++path.depth;
       DiffusionSample exit;
       bool invalid = false;
-      bool found = diffusion_surface(body, diffusion_entries[pixel], pixel, dim, p, directions,
+      bool found = diffusion_surface(body, diffusion_entries[pixel], path.origin.xyz, state, pixel, dim, p, directions,
                                      blue, triangles, quadrics, surfaces, boundaries, materials,
                                      scene, exit, invalid);
       if (invalid)
@@ -1080,6 +1099,17 @@ R"MSL(
       error = geometry.error;
       g = t.geometric.xyz;
       n = geometry.normal;
+      // An unpaired back face still specifies its incident IOR (e.g. a camera
+      // below a water sheet). Infer it at the interface, not by inventing a
+      // closed volume. Retain it on reflection, including total internal reflection.
+      if (t.boundary && boundaries[t.boundary].lo.w != 0 && dot(g, wo) < 0) {
+        if (!cross_boundary(state, t.boundary, true)) {
+          atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+          return;
+        }
+        adjacent = state;
+        body = active_boundary(state, boundaries, materials);
+      }
       if ((texture_features & 16) && t.boundary && boundaries[t.boundary].subsurface == 3 &&
           boundaries[t.boundary].radius.w == 0) {
         entering = dot(g, wo) > 0;
@@ -1821,6 +1851,13 @@ R"MSL(
           !materials[t.material].dielectric)
         return;
       bool entering = dot(r.direction, t.geometric.xyz) < 0;
+      if (!entering && boundaries[t.boundary].lo.w != 0) {
+        if (!cross_boundary(state, t.boundary, true)) {
+          if(lane==0) atomic_fetch_add_explicit(&counts.discarded, 1, memory_order_relaxed);
+          return;
+        }
+        before = active_boundary(state, boundaries, materials);
+      }
       float3 position = contact.position, error = contact.error;
       if (!adjacent_membership(t.boundary, entering, position, error, t.geometric.xyz, state, p,
                                triangles, quadrics, surfaces, boundaries, scene)) {

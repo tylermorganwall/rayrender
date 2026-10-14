@@ -669,7 +669,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         if(restart_after_atmosphere_change()) {
           preview_sample = 0;
         } else if(!display.render_requested && !display.terminate) {
-          preview_sample++;
+          // DrawImage may clear both films after a camera/light/F-key change.
+          // Resume from the actual accumulated count: incrementing the reset
+          // index skips sample zero and divides one new sample by two.
+          preview_sample = adaptive_pixel_sampler.max_s;
         }
       }
       if(display.terminate) {
@@ -680,7 +683,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       display.write_fast_output = false;
       reset_render_state();
 
-      for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
+      for(size_t s = 0; s < static_cast<size_t>(ns); s = adaptive_pixel_sampler.max_s) {
         Rcpp::checkUserInterrupt();
         if(display.PollCloseEvent()) {
           finish_preview_termination(s);
@@ -721,15 +724,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           finish_preview_termination(s + 1);
           break;
         }
-        const bool atmosphere_changed = restart_after_atmosphere_change();
+        restart_after_atmosphere_change();
         if(!display.render_requested) {
           preview_sample = 0;
           reset_render_state();
           break;
-        }
-        if(atmosphere_changed) {
-          // The for-loop increment advances this back to sample zero.
-          s = std::numeric_limits<size_t>::max();
         }
       }
       if(display.terminate) {
@@ -740,7 +739,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       }
     }
   } else {
-    for(size_t s = 0; s < static_cast<size_t>(ns); s++) {
+    for(size_t s = 0; s < static_cast<size_t>(ns); s = adaptive_pixel_sampler.max_s) {
       Rcpp::checkUserInterrupt();
       if(display.PollCloseEvent()) {
         finish_preview_termination(s);
@@ -787,9 +786,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         finish_preview_termination(s + 1);
         break;
       }
-      if(restart_after_atmosphere_change()) {
-        s = std::numeric_limits<size_t>::max();
-      }
+      restart_after_atmosphere_change();
     }
   }
 

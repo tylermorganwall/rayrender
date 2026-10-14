@@ -388,6 +388,26 @@ private:
   uint32_t current_boundary = 0;
   uint32_t current_motion = 0;
   Float boundary_orientation = 1;
+  std::unordered_map<uint32_t, uint32_t> open_dielectrics;
+
+  // Open interfaces have no containment volume. Share their crossing identity
+  // by material, like the CPU dielectric stack, rather than by triangle. Their
+  // membership persists across opaque reflections until a matching exit.
+  uint32_t OpenDielectric(uint32_t material) {
+    if (!scene.materials[material].dielectric)
+      return 0;
+    auto found = open_dielectrics.find(material);
+    if (found != open_dielectrics.end())
+      return found->second;
+    WFBoundary boundary;
+    boundary.material = material;
+    boundary.lo.w = 1; // Crossing-only; never use geometric containment queries.
+    scene.texture_features |= 2048; // Infer incident glass at unpaired back faces.
+    uint32_t id = scene.boundaries.size();
+    scene.boundaries.push_back(boundary);
+    open_dielectrics.emplace(material, id);
+    return id;
+  }
 
 #include "wavefront_instances.inc"
 
@@ -703,6 +723,8 @@ private:
     if (fiber) {
       if (current_boundary)
         throw std::runtime_error("open curve cannot bound a dielectric/SSS interior on Metal");
+      if (scene.materials[out.material].dielectric)
+        throw std::runtime_error("dielectric curve interfaces on Metal");
       WFCurve data = ExportWavefrontCurve(*fiber);
       if (!(data.width.z < data.width.w))
         return;
@@ -735,8 +757,8 @@ private:
         (&body.lo.x)[k] = std::min((&body.lo.x)[k], (&lo.x)[k]);
         (&body.hi.x)[k] = std::max((&body.hi.x)[k], (&hi.x)[k]);
       }
-    } else if (scene.materials[out.material].dielectric)
-      throw std::runtime_error("open dielectric surface (a closed boundary is required on Metal)");
+    } else
+      out.boundary = OpenDielectric(out.material);
     if (scene.materials[out.material].emissive) {
       WFLight light;
       light.type = 3;
@@ -782,9 +804,8 @@ private:
         body.hi.y = std::max(body.hi.y, p.y);
         body.hi.z = std::max(body.hi.z, p.z);
       }
-    } else if (scene.materials[out.material].dielectric) {
-      throw std::runtime_error("open dielectric surface (a closed boundary is required on Metal)");
-    }
+    } else
+      out.boundary = OpenDielectric(out.material);
     if (scene.materials[out.material].emissive) {
       WFLight light;
       light.type = 3;

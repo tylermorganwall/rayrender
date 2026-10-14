@@ -59,13 +59,17 @@ void Mesh(const hitable &object, const hitable &faces, size_t count, const Trans
     found = mesh_prototypes.emplace(&object, prototypes.size()).first;
     prototypes.push_back(std::move(prototype));
   }
-  const auto &prototype = prototypes[found->second];
+  auto &prototype = prototypes[found->second];
   if (current_boundary) {
     if (prototype.mixed_materials ||
         prototype.material != scene.boundaries[current_boundary].material)
       throw std::runtime_error("mixed materials on a dielectric/SSS boundary");
-  } else if (prototype.dielectric)
-    throw std::runtime_error("open dielectric surface (a closed boundary is required on Metal)");
+  } else if (prototype.dielectric) {
+    // A mixed-material open mesh can contain several optical interfaces. Keep
+    // their identities on faces; closed placements override these below.
+    for (auto &triangle : prototype.triangles)
+      triangle.boundary = OpenDielectric(triangle.material);
+  }
   WFMeshInstance out;
   out.mesh = found->second;
   out.boundary = current_boundary;

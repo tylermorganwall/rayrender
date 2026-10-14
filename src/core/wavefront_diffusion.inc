@@ -34,7 +34,9 @@ R"MSL(
           return false; // Explicit volumes require disjoint or nested interiors.
       }
     }
-    if (!cross_boundary(adjacent, boundary, entering))
+    // Unlike closed placements, open surfaces share material identity. Retain
+    // repeated entries so overlapping instances remove only their last crossing.
+    if (!cross_boundary(adjacent, boundary, entering, boundaries[boundary].lo.w != 0))
       return false;
     if (p.boundary_lo.w != 0) {
       VolumeState resolved;
@@ -44,6 +46,12 @@ R"MSL(
       // The reported face can be the losing member of an exact contact. Even
       // when the winner is glass on both sides, retain ALL coincident members
       // so a later glass exit exposes the correct diffusion region.
+      // Open interfaces have only path history, which containment cannot recover.
+      // Preserve it when resolving contacts between closed volumes.
+      for (uint j = 0; j < adjacent.count; ++j)
+        if (boundaries[adjacent.ids[j]].lo.w != 0 &&
+            !cross_boundary(resolved, adjacent.ids[j], true, true))
+          return false;
       adjacent = resolved;
     }
     return true;
@@ -89,7 +97,57 @@ R"MSL(
     return float3((corner & 1) ? b.hi.x : b.lo.x, (corner & 2) ? b.hi.y : b.lo.y,
                   (corner & 4) ? b.hi.z : b.lo.z);
   }
-  bool diffusion_surface(uint body, DiffusionEntry entry, uint pixel, thread uint &dimension,
+  // Diffusion jumps between surface points instead of following a physical ray.
+  // Recover closed bodies geometrically, then transport open-interface history
+  // along the segment from the known interior point to the candidate. Ignoring
+  // that history would turn an SSS exit under water into an SSS/air interface.
+  bool diffusion_membership(float3 point, float3 known_point, thread const VolumeState &known,
+                             thread VolumeState &state, constant Params &p,
+                             device const Triangle *triangles, device const Quadric *quadrics,
+                             device const Surface *surfaces, device const Boundary *boundaries,
+                             GeometryScene scene) {
+    if (!initial_membership(point, state, p, triangles, quadrics, surfaces, boundaries, scene))
+      return false;
+    if (!(texture_features & 2048))
+      return true;
+    VolumeState open = {};
+    for (uint j = 0; j < known.count; ++j)
+      if (boundaries[known.ids[j]].lo.w != 0 && !cross_boundary(open, known.ids[j], true, true))
+        return false;
+    float distance = length(point - known_point);
+    if (distance > 0) {
+      ray probe;
+      probe.origin = known_point;
+      probe.direction = (point - known_point) / distance;
+      probe.min_distance = FLT_MIN;
+      float guard = 64 * FLT_EPSILON * max(distance, max(1.f, length(point)));
+      probe.max_distance = distance + guard;
+      while (true) {
+        auto hit = trace_geometry(probe, scene, quadrics);
+        if (hit.type == intersection_type::none)
+          break;
+        GeometrySurface contact = geometry_surface(hit.primitive_id, hit.coordinates, triangles,
+            quadrics, surfaces, hit.instance, scene.instances, probe.origin, probe.direction, scene.motion);
+        uint id = contact.face.boundary;
+        float facing = dot(probe.direction, contact.face.geometric.xyz);
+        bool before = hit.distance < distance - guard ||
+            dot(point - contact.position, contact.face.geometric.xyz) * facing >= 0;
+        if (id && boundaries[id].lo.w != 0 && before &&
+            !cross_boundary(open, id, facing < 0, true))
+          return false;
+        float next = as_type<float>(as_type<uint>(hit.distance) + 1u);
+        if (!(next > probe.min_distance) || !isfinite(next))
+          return false;
+        probe.min_distance = next;
+      }
+    }
+    for (uint j = 0; j < open.count; ++j)
+      if (!cross_boundary(state, open.ids[j], true, true))
+        return false;
+    return true;
+  }
+  bool diffusion_surface(uint body, DiffusionEntry entry, float3 known_point,
+                         thread const VolumeState &known, uint pixel, thread uint &dimension,
                          constant Params &p, device const uint *directions, device const uint *blue,
                          device const Triangle *triangles, device const Quadric *quadrics,
                          device const Surface *surfaces, device const Boundary *boundaries,
@@ -146,9 +204,9 @@ R"MSL(
         VolumeState before, after;
         // Classify BOTH sides: one closest hit alone cannot represent coincident
         // milk/glass faces. The winning region, not mesh identity, defines an exit.
-        bool classified = initial_membership(offset_origin(position, error, -forward), before, p,
+        bool classified = diffusion_membership(offset_origin(position, error, -forward), known_point, known, before, p,
                                              triangles, quadrics, surfaces, boundaries, scene) &&
-                          initial_membership(offset_origin(position, error, forward), after, p,
+                          diffusion_membership(offset_origin(position, error, forward), known_point, known, after, p,
                                              triangles, quadrics, surfaces, boundaries, scene);
         if (!classified) {
           invalid = true;

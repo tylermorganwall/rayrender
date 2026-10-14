@@ -134,6 +134,7 @@ struct WFMaterial {
   uint32_t type = 0, distribution = 0, second_texture = UINT32_MAX, data = 0;
 };
 struct WFBoundary {
+  // lo.w marks a crossing-only open dielectric (no geometric containment).
   WFVector sigma_a, sigma_s; // roughness in a.w, HG anisotropy in s.w.
   uint32_t material = 0, subsurface = 0, diffusion_offset = 0, medium = 0;
   // Diffusion uses RGB color/radius. Guided random walks use color.xyz for the

@@ -138,6 +138,8 @@ std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
   const auto reference_bounds = scene.boundaries;
   for (const auto &body : bodies) {
     const auto &b = reference_bounds[body.first];
+    if (b.lo.w != 0)
+      continue; // Open interfaces have no interior bounds to sweep.
     aabb box(point3f(b.lo.x, b.lo.y, b.lo.z), point3f(b.hi.x, b.hi.y, b.hi.z));
     for (uint32_t owner = body.second; owner; owner = nodes[owner - 1].parent) {
       const auto &node = nodes[owner - 1];

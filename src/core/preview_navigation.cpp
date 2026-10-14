@@ -79,12 +79,21 @@ bool PreviewNavigation::Move(RayCamera& cam, Float horizontal, Float vertical, F
   } else if (orbit) {
     point3f pivot = cam.get_lookat();
     vec3f offset = cam.get_origin() - pivot;
-    vec3f tangent = -horizontal * cam.get_navigation_u() + vertical * cam.get_v();
-    Float strength = tangent.length();
-    if (strength > 0 && offset.length() > 0) {
-      vec3f axis = cross(offset, tangent);
-      if (axis.length() > 0)
-        offset = Rotate(30 * dt * std::min(strength, Float(1)), unit_vector(axis))(offset);
+    if ((horizontal != 0 || vertical != 0) && offset.length() > 0) {
+      // Yaw follows a latitude circle around the reference up, not a great
+      // circle around cross(offset, camera-right). Recomputing that old axis
+      // after each step progressively flattened tilted orbits, even when
+      // alternating left and right. Keep pitch separate so yaw preserves height.
+      vec3f up = cam.get_up();
+      up = up.length() > 0 ? unit_vector(up) : vec3f(0,1,0);
+      Float step = 30 * dt / std::max(Float(1), std::sqrt(horizontal*horizontal + vertical*vertical));
+      Float yaw = step * horizontal * (cam.get_camera_flip_x() ? -1 : 1);
+      Transform yaw_rotation = Rotate(yaw, up);
+      if (horizontal != 0) offset = yaw_rotation(offset);
+      // Pitch around the yawed right axis; normalize diagonal input just as
+      // for panning, and retain the displayed handedness for horizontal input.
+      if (vertical != 0)
+        offset = Rotate(step * vertical, yaw_rotation(cam.get_u()))(offset);
     }
     // Exponential dolly moves a fraction of the remaining radius and cannot
     // cross the pivot. Integrating several short intervals equals one long one.
@@ -197,6 +206,58 @@ context("Preview navigation") {
     expect_true(nav.ViewHeight(ortho) == 4);
     nav.SetDistance(100);
     expect_true(nav.ViewHeight(ortho) == 4);
+  }
+  test_that("horizontal orbit preserves height through repeated turns and reverse taps") {
+    // Use an elevated, translated target: a level camera hides the old
+    // great-circle drift. Test both displayed handednesses and key directions.
+    for (bool flipped : {false, true}) {
+      for (Float direction : {Float(-1), Float(1)}) {
+        point3f origin(148.30, 66.85, 294.37), target(87.54, -2.70, 272.00);
+        camera perspective(origin, target, vec3f(0,1,0), 30, 1, .1, 95, 0, 1, 1);
+        ortho_camera orthographic(origin, target, vec3f(0,1,0), 80, 80, 0, 1, 1);
+        environment_camera panoramic(origin, target, vec3f(0,1,0), 0, 1, 1);
+        for (RayCamera* cam : {static_cast<RayCamera*>(&perspective),
+                               static_cast<RayCamera*>(&orthographic),
+                               static_cast<RayCamera*>(&panoramic)}) {
+          cam->set_camera_flip_x(flipped);
+          PreviewNavigation nav;
+          Float radius = (origin - target).length(), focal = cam->get_focal_distance();
+          nav.SetDistance(radius);
+          Float max_height_error = 0, max_radius_error = 0;
+          for (int step = 0; step < 1440; ++step) {
+            nav.Move(*cam, direction, 0, 0, false, true, 1, 1.0/60);
+            max_height_error = std::max(max_height_error, std::abs(cam->get_origin().xyz.y-origin.xyz.y));
+            max_radius_error = std::max(max_radius_error, std::abs((cam->get_origin()-target).length()-radius));
+          }
+          expect_true(max_height_error < 1e-4);
+          expect_true(max_radius_error/radius < 1e-4);
+          expect_true((cam->get_origin()-origin).length()/radius < 1e-4);
+          for (int step = 0; step < 200; ++step) {
+            nav.Move(*cam, direction, 0, 0, false, true, 1, .15);
+            nav.Move(*cam, -direction, 0, 0, false, true, 1, .15);
+          }
+          expect_true(std::abs(cam->get_origin().xyz.y-origin.xyz.y) < 1e-4);
+          expect_true((cam->get_origin()-origin).length()/radius < 1e-4);
+          expect_true((cam->get_lookat()-target).length() == 0);
+          expect_true(cam->get_focal_distance() == focal);
+        }
+      }
+    }
+  }
+  test_that("yaw is independent of time subdivision and respects a custom up axis") {
+    vec3f up = unit_vector(vec3f(1,2,-1));
+    point3f origin(10,20,-30), target(2,-3,4);
+    camera once(origin,target,up,45,1,0,12,0,1,1), many = once;
+    PreviewNavigation nav;
+    nav.SetDistance((origin-target).length());
+    nav.Move(once,1,0,0,false,true,1,2);
+    for (int i=0;i<120;++i) nav.Move(many,1,0,0,false,true,1,1.0/60);
+    expect_true((once.get_origin()-many.get_origin()).length() < 1e-3);
+    expect_true(std::abs(dot(many.get_origin()-origin,up)) < 1e-3);
+    // Positive vertical input still raises the orbit along the reference up.
+    Float before = dot(many.get_origin()-target,up);
+    nav.Move(many,0,1,0,false,true,1,.1);
+    expect_true(dot(many.get_origin()-target,up) > before);
   }
 }
 #endif

@@ -404,7 +404,7 @@ metal = function(
 #' through the material. Higher numbers will result in less of that color making it through the material. If a character string
 #' is provided (either as a named R color or a hex string), this will be converted to a length-3 vector equal to one minus the RGB
 #' color vector, which should approximate the color being passed.
-#' Note: This assumes the object has a closed surface.
+#' Closed surfaces define the interior geometrically; open interfaces use surface crossings (see Details).
 #' @param attenuation_intensity Default `1`. Changes the attenuation by a multiplicative factor. Values lower than one will make the
 #' dielectric more transparent, while values greater than one will make the glass more opaque.
 #' @param priority Default `0`. When two dielectric materials overlap, the one with the lower priority value
@@ -420,6 +420,16 @@ metal = function(
 #'
 #' @return Single row of a tibble describing the dielectric material.
 #' @export
+#' @details Metal supports open interfaces, such as a water surface whose sides
+#' and bottom are hidden by opaque terrain. Orient the surface normals toward
+#' the exterior. Transmitted rays retain the material's refractive index and
+#' absorption until a matching exit, including when reflecting from the terrain.
+#' Open interfaces are tracked by material crossings; they do not define a
+#' geometrically closed interior. A first back-face hit identifies the incident
+#' dielectric and applies absorption over that camera-to-surface segment. A first
+#' opaque hit cannot identify an enclosing open dielectric by itself. Use closed
+#' geometry when interior camera placement or exposed edges must be unambiguous.
+#' Subsurface and explicit volume materials still require closed boundaries.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Generate a checkered ground
