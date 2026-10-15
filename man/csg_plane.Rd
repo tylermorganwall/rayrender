@@ -4,7 +4,15 @@
 \alias{csg_plane}
 \title{CSG Plane}
 \usage{
-csg_plane(x = 0, y = 0, z = 0, normal = c(0, 1, 0), width_x = 4, width_z = 4)
+csg_plane(
+  x = 0,
+  y = 0,
+  z = 0,
+  normal = c(0, 1, 0),
+  width_x = 4,
+  width_z = 4,
+  material = NULL
+)
 }
 \arguments{
 \item{x}{Default `0`. An x-coordinate on the plane.}
@@ -18,6 +26,8 @@ csg_plane(x = 0, y = 0, z = 0, normal = c(0, 1, 0), width_x = 4, width_z = 4)
 \item{width_x}{Default `10`.}
 
 \item{width_z}{Default `10`.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the plane in the scene.

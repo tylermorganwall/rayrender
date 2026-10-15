@@ -17,6 +17,40 @@ class ImplicitShape {
     virtual size_t GetSize()  = 0;
 }; 
 
+// A surface label is invisible to distance marching. Slot zero is the enclosing
+// csg_object material; positive slots index its owned component palette.
+class csg_material_label : public ImplicitShape {
+public:
+  csg_material_label(std::shared_ptr<ImplicitShape> shape, uint32_t index)
+      : shape(std::move(shape)), index(index) {}
+  Float getDistance(const point3f& p) const override { return shape->getDistance(p); }
+  bool bbox(Float a, Float b, aabb& box) const override { return shape->bbox(a,b,box); }
+  bool isClosed() const override { return shape->isClosed(); }
+  size_t GetSize() override { return sizeof(*this) + shape->GetSize(); }
+  std::shared_ptr<ImplicitShape> shape;
+  uint32_t index;
+};
+
+struct CsgSurfaceSample { Float distance; uint32_t material; };
+// Evaluated once at an accepted contact, never during marching/normal queries.
+CsgSurfaceSample SampleCsgSurface(const ImplicitShape&, const point3f&, uint32_t& seed);
+
+// A curve is a union of exact tapered segments. Its point-query BVH stores
+// escape indices so CPU and GPU can prune subtrees without a traversal stack.
+class csg_curve_tube : public ImplicitShape {
+public:
+  struct Node {
+    aabb bounds;
+    uint32_t escape = 0, segment = UINT32_MAX;
+  };
+  explicit csg_curve_tube(std::vector<std::shared_ptr<ImplicitShape>> segments);
+  Float getDistance(const point3f& p) const override;
+  bool bbox(Float, Float, aabb& box) const override { box = nodes[0].bounds; return true; }
+  size_t GetSize() override;
+  std::vector<std::shared_ptr<ImplicitShape>> segments;
+  std::vector<Node> nodes;
+};
+
 class csg_sphere : public ImplicitShape {
   public: 
     csg_sphere(const vec3f& c, const float& r) : 
@@ -683,6 +717,7 @@ struct intersectionFunc {
 struct blendFunc { 
   blendFunc(const float &_k) : k(_k) {} 
   float operator() (float a, float b) const { 
+    if (k <= 0) return std::fmin(a,b);
     float h = std::fmax(k-std::fabs(a-b), 0.0 )/k;
     return(std::fmin( a, b ) - h*h*k*(1.0/4.0));
   } 
@@ -698,6 +733,7 @@ struct blendFunc {
 struct blendFuncMinus { 
   blendFuncMinus(const float &_k) : k(_k) {} 
   float operator() (float a, float b) const { 
+    if (k <= 0) return std::fmax(a,-b);
     float h = std::fmax(k-std::fabs(-b-a), 0.0)/k;
     return(std::fmax(-b, a) + h*h*k*(1.0/4.0));
   }
@@ -745,7 +781,8 @@ class CSG : public ImplicitShape {
     size_t GetSize() override {
       return(sizeof(*this) + shape1->GetSize() + shape2->GetSize());
     }
-    Op op; 
+    Op op;
+    bool blend_materials = true;
     const std::shared_ptr<ImplicitShape> shape1, shape2; 
 }; 
 
@@ -802,6 +839,7 @@ class csg: public hitable {
       Rcpp::Rcout << GetName() << ": " <<  box.min() << "-" << box.max() << "\n";
     }
     std::shared_ptr<ImplicitShape> shapes;
+    std::vector<std::shared_ptr<material>> component_materials;
     // Cached bounds are part of the CSG performance architecture: object-space
     // bounds limit the signed-distance march, while world-space bounds avoid
     // recomputing transformed bboxes for scene acceleration.
@@ -811,11 +849,17 @@ class csg: public hitable {
     vec3f last_intersection;
 };
 
-inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
+inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info);
+inline std::shared_ptr<ImplicitShape> parse_csg_geometry(Rcpp::List csg_info) {
   if(Rcpp::as<int>(csg_info["csg_type"]) == 1) { //Operation
     std::shared_ptr<ImplicitShape> obj1 = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object1"]));
     std::shared_ptr<ImplicitShape> obj2 = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object2"]));
     int op_type = Rcpp::as<int>(csg_info["operation"]);
+    auto operation = [&](auto node) -> std::shared_ptr<ImplicitShape> {
+      if (csg_info.containsElementNamed("blend_materials"))
+        node->blend_materials = Rcpp::as<bool>(csg_info["blend_materials"]);
+      return node;
+    };
     if(op_type == 1) {
       return(std::make_shared<Union>(obj1, obj2));
     } else if(op_type == 2) {
@@ -824,13 +868,13 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
       return(std::make_shared<Intersect>(obj1, obj2));
     } else if(op_type == 4) {
       double blend_val = Rcpp::as<double>(csg_info["blend"]);
-      return(std::make_shared<Blend>(obj1, obj2, blend_val));
+      return operation(std::make_shared<Blend>(obj1, obj2, blend_val));
     } else if(op_type == 5) {
       double blend_val = Rcpp::as<double>(csg_info["blend"]);
-      return(std::make_shared<Mix>(obj1, obj2, blend_val));
+      return operation(std::make_shared<Mix>(obj1, obj2, blend_val));
     } else if(op_type == 6) {
       double blend_val = Rcpp::as<double>(csg_info["blend"]);
-      return(std::make_shared<BlendMinus>(obj1, obj2, blend_val));
+      return operation(std::make_shared<BlendMinus>(obj1, obj2, blend_val));
     }
   } else if (Rcpp::as<int>(csg_info["csg_type"]) == 2) { //Sphere
     double x = Rcpp::as<double>(csg_info["x"]);
@@ -971,7 +1015,20 @@ inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List csg_info) {
     std::shared_ptr<ImplicitShape> obj = parse_csg(Rcpp::as<Rcpp::List>(csg_info["object"]));
     return(std::make_shared<csg_translate>(obj,vec3f(t(0),t(1),t(2))));
   }
+  if (Rcpp::as<int>(csg_info["csg_type"]) == 22) {
+    Rcpp::List items = csg_info["shapes"];
+    std::vector<std::shared_ptr<ImplicitShape>> segments;
+    for (SEXP item : items) segments.push_back(parse_csg(Rcpp::as<Rcpp::List>(item)));
+    return std::make_shared<csg_curve_tube>(std::move(segments));
+  }
   return(nullptr);
+}
+
+inline std::shared_ptr<ImplicitShape> parse_csg(Rcpp::List info) {
+  auto shape = parse_csg_geometry(info);
+  if (info.containsElementNamed("surface_material"))
+    return std::make_shared<csg_material_label>(shape, Rcpp::as<uint32_t>(info["surface_material"]));
+  return shape;
 }
 
 #endif

@@ -4,7 +4,12 @@
 \alias{csg_triangle}
 \title{CSG Triangle}
 \usage{
-csg_triangle(v1 = c(0, 1, 0), v2 = c(1, 0, 0), v3 = c(-1, 0, 0))
+csg_triangle(
+  v1 = c(0, 1, 0),
+  v2 = c(1, 0, 0),
+  v3 = c(-1, 0, 0),
+  material = NULL
+)
 }
 \arguments{
 \item{v1}{Default `c(0,1,0)`. First vertex.}
@@ -12,6 +17,8 @@ csg_triangle(v1 = c(0, 1, 0), v2 = c(1, 0, 0), v3 = c(-1, 0, 0))
 \item{v2}{Default `c(1,0,0)`. Second vertex.}
 
 \item{v3}{Default `c(-1,0,0)`. Third vertex.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the triangle in the scene.

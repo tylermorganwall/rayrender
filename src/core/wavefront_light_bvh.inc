@@ -50,6 +50,10 @@ void RefitWavefrontLightBVH(WavefrontScene &scene) {
         material = triangle.material;
       }
       power = area * scene.emission_estimates[material];
+      if (light.primitive & 0x80000000u) {
+        const auto &q = scene.quadrics[light.primitive & 0x7fffffffu];
+        if (q.reserved) power = area * q.csg_hi.w;
+      }
     }
     vec3<double> center = .5 * (lo + hi), radius = .5 * (hi - lo);
     node.center_radius2 = {float(center[0]), float(center[1]), float(center[2]),

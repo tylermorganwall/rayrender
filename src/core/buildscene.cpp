@@ -831,7 +831,26 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     case CSG_OBJECT: {
       List csg_object = as<List>(SingleShape["csg_object"])(0);
       std::shared_ptr<ImplicitShape> shapes = parse_csg(csg_object);
-      entry = std::make_shared<csg>(shape_material, shapes, ObjToWorld, WorldToObj, is_flipped);
+      auto solid = std::make_shared<csg>(shape_material, shapes, ObjToWorld, WorldToObj, is_flipped);
+      if (SingleShape.containsElementNamed("csg_materials")) {
+        List palette = SingleShape["csg_materials"];
+        solid->component_materials.push_back(shape_material);
+        for (SEXP item : palette) {
+          List component(item);
+          bool image = false, mask = false, height = false, roughness = false;
+          auto surface = LoadSingleMaterial(component, texCache, textures, alpha_textures,
+              bump_textures, roughness_textures, nvec.get(), nveca.get(), nvecb.get(), nvecr.get(),
+              image, mask, height, roughness, tricolorinfo);
+          if (surface->is_dielectric() || mask || height)
+            Rcpp::stop("CSG component materials require opaque surfaces without alpha or bump maps.");
+          solid->component_materials.push_back(surface);
+          importance_sample = importance_sample || as<bool>(component["implicit_sample"]);
+          // Keep the per-material texture and surface-map buffers aligned.
+          alpha.push_back(nullptr);
+          bump.push_back(nullptr);
+        }
+      }
+      entry = solid;
       entry = finish_entry(entry);
       list.add(entry);
       break;

@@ -961,6 +961,17 @@ R"MSL(
       pixels[pixel].radiance.xyz += path.beta.xyz * radiance;
       return;
     }
+    // Commit one material choice per hit before dispatching the specialized
+    // BSDF queues. NEE, scattering, emission, and MIS all use this same choice.
+    uint surface_material = 0;
+    if (!collision && is_quadric(hit.primitive_id)) {
+      Quadric q = quadrics[hit.primitive_id & ~quadric_bit];
+      if (q.reserved) {
+        uint seed = uint(sample1(pixel, path.dimension, p, directions, blue) * 16777216.f);
+        surface_material = 1 + csg_material(csg_program(quadrics, q), q.csg_count,
+                                            hit.coordinates, q.material, seed);
+      }
+    }
     paths[pixel] = path;
     uint slot = atomic_fetch_add_explicit(&counts.hits, 1, memory_order_relaxed);
     if (slot >= p.active) {
@@ -973,7 +984,7 @@ R"MSL(
                        collision ? 0 : hit.coordinates.y,
                        distance,
                        collision ? 0 : hit.coordinates.z,
-                       {collision ? 0 : hit.instance, 0}};
+                       {collision ? 0 : hit.instance, surface_material}};
     atomic_fetch_max_explicit(&indirect[3], (slot + 64) / 64, memory_order_relaxed);
   }
 
@@ -996,7 +1007,8 @@ R"MSL(
       return;
     bool is_pbr =
         h.primitive < UINT_MAX - 2 &&
-        materials[geometry_material(h.primitive, triangles, quadrics)].type == bsdf_openpbr;
+        materials[h.padding[1] ? h.padding[1] - 1 :
+                  geometry_material(h.primitive, triangles, quadrics)].type == bsdf_openpbr;
     if (is_pbr != (features == 2))
       return;
     uint pixel = h.pixel;
@@ -1094,6 +1106,10 @@ R"MSL(
                                   h.padding[0], scene.instances, path.origin.xyz, path.direction.xyz, scene.motion);
       t = geometry.face;
       m = materials[t.material];
+      if (h.padding[1]) {
+        t.material = h.padding[1] - 1;
+        m = materials[t.material];
+      }
       float3 bary = float3(1 - h.u - h.v, h.u, h.v);
       position = geometry.position;
       error = geometry.error;
@@ -1385,6 +1401,14 @@ R"MSL(
             sample_geometry_light(l.primitive, float2(u, v), position, triangles, quadrics,
                                   surfaces, l.instance, scene.instances, &counts.csg_failed, scene.motion);
         Triangle emitter = source.face;
+        if (is_quadric(l.primitive)) {
+          Quadric q = quadrics[l.primitive & ~quadric_bit];
+          if (q.reserved) {
+            uint seed = uint(sample1(pixel, dim, p, directions, blue) * 16777216.f);
+            emitter.material = csg_material(csg_program(quadrics, q), q.csg_count,
+                                            source.coordinates, q.material, seed);
+          }
+        }
         Material lm = materials[emitter.material];
         float3 b = float3(1 - source.coordinates.x - source.coordinates.y, source.coordinates.xy);
         float3 target = source.position;

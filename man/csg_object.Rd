@@ -52,9 +52,14 @@ On Metal, expressions with more than 32 levels fall back to the CPU renderer.
 
 Closed solids support dielectric priorities, [subsurface()],
 [subsurface_diffusion()], and [set_medium()]. Expressions containing open
-planes or triangles are not accepted as medium boundaries. All parts of one
-CSG object share its material. UV coordinates are constant; use object-space
-or world-space [texture_coordinates()] for spatially varying textures.
+planes or triangles are not accepted as medium boundaries. Components with
+`material = NULL` inherit this object's material. Explicit component materials
+override it; [csg_combine()] can blend them across smooth joins. Multi-material
+objects do not support dielectric interfaces, subsurface scattering (including
+OpenPBR transmission/SSS), alpha coverage, or bump maps. A single inherited
+material still supports dielectric and subsurface transport. UV coordinates
+are constant; use object-space or world-space [texture_coordinates()] for
+spatially varying textures. Object coordinates refer to the whole CSG object.
 
 Emissive objects sample directions toward an enclosing sphere. Holes and empty
 parts of that sphere produce zero-contribution samples, so sparse CSG lights

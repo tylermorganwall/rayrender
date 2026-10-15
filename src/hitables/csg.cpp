@@ -1,6 +1,145 @@
 #include "../hitables/csg.h"
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
+csg_curve_tube::csg_curve_tube(std::vector<std::shared_ptr<ImplicitShape>> input)
+    : segments(std::move(input)) {
+  if (segments.empty()) throw std::runtime_error("A CSG curve needs at least one segment");
+  std::vector<aabb> bounds(segments.size());
+  std::vector<uint32_t> order(segments.size());
+  for (size_t i = 0; i < segments.size(); ++i) {
+    order[i] = i;
+    if (auto cone = dynamic_cast<const csg_rounded_cone*>(segments[i].get())) {
+      // The convex hull of two balls has these exact coordinate extents.
+      bounds[i] = surrounding_box(aabb(cone->start-vec3f(cone->r1), cone->start+vec3f(cone->r1)),
+                                  aabb(cone->end-vec3f(cone->r2), cone->end+vec3f(cone->r2)));
+    } else if (dynamic_cast<const csg_sphere*>(segments[i].get())) {
+      segments[i]->bbox(0,0,bounds[i]);
+    } else throw std::runtime_error("CSG curve segments must be rounded cones or spheres");
+  }
+  nodes.reserve(2 * segments.size() - 1);
+  auto build = [&](auto&& self, size_t begin, size_t end) -> void {
+    size_t index = nodes.size();
+    Node node;
+    node.bounds = bounds[order[begin]];
+    for (size_t i = begin + 1; i < end; ++i)
+      node.bounds = surrounding_box(node.bounds, bounds[order[i]]);
+    nodes.push_back(node);
+    if (end - begin == 1) nodes[index].segment = order[begin];
+    else {
+      vec3f extent = node.bounds.max() - node.bounds.min();
+      int axis = extent[0] >= extent[1] && extent[0] >= extent[2] ? 0 : extent[1] >= extent[2] ? 1 : 2;
+      size_t middle = begin + (end - begin) / 2;
+      std::nth_element(order.begin()+begin, order.begin()+middle, order.begin()+end,
+        [&](uint32_t a, uint32_t b) {
+          return bounds[a].min()[axis]+bounds[a].max()[axis] < bounds[b].min()[axis]+bounds[b].max()[axis];
+        });
+      self(self,begin,middle);
+      self(self,middle,end);
+    }
+    nodes[index].escape = nodes.size();
+  };
+  build(build,0,segments.size());
+}
+
+Float csg_curve_tube::getDistance(const point3f& p) const {
+  Float best = INFINITY;
+  for (size_t i = 0; i < nodes.size();) {
+    const Node& node = nodes[i];
+    Float lower = -INFINITY;
+    for (int a = 0; a < 3; ++a)
+      lower = std::max(lower, std::max(node.bounds.min()[a]-p[a],p[a]-node.bounds.max()[a]));
+    // Signed L-infinity box distance is a lower bound on every enclosed
+    // segment's signed distance, including queries inside the union.
+    if (lower > best) i = node.escape;
+    else {
+      if (node.segment != UINT32_MAX) best = std::min(best,segments[node.segment]->getDistance(p));
+      ++i;
+    }
+  }
+  return best;
+}
+
+size_t csg_curve_tube::GetSize() {
+  size_t size = sizeof(*this) + nodes.capacity()*sizeof(Node) + segments.capacity()*sizeof(segments[0]);
+  for (auto& segment : segments) size += segment->GetSize();
+  return size;
+}
+
+
+namespace {
+Float csg_material_random(uint32_t& seed) {
+  uint32_t x = (seed += 0x9e3779b9u);
+  x = (x ^ (x >> 16)) * 0x7feb352du;
+  x = (x ^ (x >> 15)) * 0x846ca68bu;
+  return Float((x ^ (x >> 16)) >> 8) * Float(1.0/16777216.0);
+}
+
+template<class T>
+CsgSurfaceSample sample_csg_binary(const T& s, const point3f& p, uint32_t& seed,
+                                    int op, Float parameter = 0) {
+  auto a = SampleCsgSurface(*s.shape1,p,seed), b = SampleCsgSurface(*s.shape2,p,seed);
+  Float weight;
+  if (op == 30 || op == 33) weight = a.distance <= b.distance ? 1 : 0;
+  else if (op == 31 || op == 34) weight = a.distance >= -b.distance ? 1 : 0;
+  else if (op == 32) weight = a.distance >= b.distance ? 1 : 0;
+  else weight = parameter <= .5 ? 1 : 0;
+  if (s.blend_materials) {
+    // These are the distance derivatives of the polynomial smooth min/max.
+    // Their nonnegative sum is one, including inside nested smooth joins.
+    if (op == 33 && parameter > 0)
+      weight = clamp(Float(.5) + Float(.5)*(b.distance-a.distance)/parameter,Float(0),Float(1));
+    else if (op == 34 && parameter > 0)
+      weight = clamp(Float(.5) + Float(.5)*(a.distance+b.distance)/parameter,Float(0),Float(1));
+    else if (op == 35) weight = 1-parameter;
+  }
+  uint32_t selected = weight >= 1 ? a.material : weight <= 0 ? b.material :
+    csg_material_random(seed) < weight ? a.material : b.material;
+  return {s.op(a.distance,b.distance),selected};
+}
+} // namespace
+
+CsgSurfaceSample SampleCsgSurface(const ImplicitShape& shape, const point3f& p, uint32_t& seed) {
+  if (auto s = dynamic_cast<const csg_material_label*>(&shape))
+    return {s->getDistance(p),s->index};
+  if (auto s = dynamic_cast<const Union*>(&shape)) return sample_csg_binary(*s,p,seed,30);
+  if (auto s = dynamic_cast<const Subtract*>(&shape)) return sample_csg_binary(*s,p,seed,31);
+  if (auto s = dynamic_cast<const Intersect*>(&shape)) return sample_csg_binary(*s,p,seed,32);
+  if (auto s = dynamic_cast<const Blend*>(&shape)) return sample_csg_binary(*s,p,seed,33,s->op.k);
+  if (auto s = dynamic_cast<const BlendMinus*>(&shape)) return sample_csg_binary(*s,p,seed,34,s->op.k);
+  if (auto s = dynamic_cast<const Mix*>(&shape)) return sample_csg_binary(*s,p,seed,35,s->op.t);
+  if (auto s = dynamic_cast<const csg_list*>(&shape)) {
+    CsgSurfaceSample best{INFINITY,0};
+    for (const auto& child : s->shapes) {
+      auto sample = SampleCsgSurface(*child,p,seed);
+      if (sample.distance < best.distance) best = sample;
+    }
+    return best;
+  }
+  if (auto s = dynamic_cast<const csg_round*>(&shape)) {
+    auto out = SampleCsgSurface(*s->shape,p,seed); out.distance -= s->r; return out;
+  }
+  if (auto s = dynamic_cast<const csg_onion*>(&shape)) {
+    auto out = SampleCsgSurface(*s->shape,p,seed); out.distance = std::abs(out.distance)-s->thickness; return out;
+  }
+  if (auto s = dynamic_cast<const csg_scale*>(&shape)) {
+    auto out = SampleCsgSurface(*s->shape,p/s->scale,seed); out.distance *= s->scale; return out;
+  }
+  if (auto s = dynamic_cast<const csg_translate*>(&shape))
+    return SampleCsgSurface(*s->shape,p-s->translate,seed);
+  if (auto s = dynamic_cast<const csg_rotate*>(&shape))
+    return SampleCsgSurface(*s->shape,s->axis.world_to_local(p-s->pivot_point)+s->pivot_point,seed);
+  if (auto s = dynamic_cast<const csg_elongate*>(&shape)) {
+    vec3f q = p-s->center;
+    return SampleCsgSurface(*s->shape,q-clamp(q,-s->elongate,s->elongate)+s->center,seed);
+  }
+  if (auto s = dynamic_cast<const csg_elongate_robust*>(&shape)) {
+    vec3f from = p-s->center, q = Abs(from)-s->elongate;
+    auto out = SampleCsgSurface(*s->shape,sgn(from)*clamp(q,vec3f(0),vec3f(INFINITY))+s->center,seed);
+    out.distance += std::min(MaxComponent(q),Float(0));
+    return out;
+  }
+  return {shape.getDistance(p),0};
+}
 
 namespace {
 // Object-space slab test against the cached CSG bounds. CSG distance fields are
@@ -174,13 +313,25 @@ inline bool march_csg(const csg &object, const Ray &r, Float t_min, Float t_max,
 const bool csg::hit(const Ray &r, Float t_min, Float t_max, hit_record &rec, random_gen &rng) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
-  return (march_csg(*this, r, t_min, t_max, &rec));
+  if (!march_csg(*this, r, t_min, t_max, &rec)) return false;
+  if (!component_materials.empty()) {
+    uint32_t seed = uint32_t(rng.unif_rand()*16777216.0);
+    auto sample = SampleCsgSurface(*shapes,rec.texture_object_p,seed);
+    rec.mat_ptr = component_materials.at(sample.material).get();
+  }
+  return true;
 }
 
 const bool csg::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const {
   SCOPED_CONTEXT("Hit");
   SCOPED_TIMER_COUNTER("CSG");
-  return(march_csg(*this, r, t_min, t_max, &rec));
+  if (!march_csg(*this, r, t_min, t_max, &rec)) return false;
+  if (!component_materials.empty()) {
+    uint32_t seed = uint32_t(sampler->Get1D()*16777216.0);
+    auto sample = SampleCsgSurface(*shapes,rec.texture_object_p,seed);
+    rec.mat_ptr = component_materials.at(sample.material).get();
+  }
+  return true;
 }
 
 

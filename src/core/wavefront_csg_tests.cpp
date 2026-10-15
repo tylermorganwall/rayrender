@@ -6,6 +6,91 @@
 #include "wavefront.h"
 #include <testthat.h>
 
+context("CSG material attribution") {
+  test_that("curve pruning preserves the full signed-distance union") {
+    std::vector<std::shared_ptr<ImplicitShape>> segments;
+    for (int i = 0; i < 40; ++i) {
+      Float t = Float(i) / 40, u = Float(i + 1) / 40;
+      segments.push_back(std::make_shared<csg_rounded_cone>(
+        point3f(std::cos(6*t),t,std::sin(6*t)),
+        point3f(std::cos(6*u),u,std::sin(6*u)), .2-.1*t, .2-.1*u));
+    }
+    csg_curve_tube accelerated(segments);
+    csg_list reference(segments);
+    random_gen rng(121);
+    double error = 0;
+    for (int i = 0; i < 12000; ++i) {
+      point3f p(3*rng.unif_rand()-1.5,2*rng.unif_rand()-.5,3*rng.unif_rand()-1.5);
+      error = std::max(error,std::abs(double(accelerated.getDistance(p)-reference.getDistance(p))));
+    }
+    expect_true(error < 1e-6);
+    std::vector<WFCsgInstruction> code;
+    ExportWavefrontCSG(accelerated,code);
+    expect_true(code[0].operation == 23);
+    expect_true(code[0].padding[0] == code.size());
+  }
+  test_that("nested smooth materials follow analytical distance weights") {
+    auto base = std::make_shared<csg_sphere>(vec3f(0), 1);
+    auto red = std::make_shared<csg_material_label>(base, 1);
+    auto blue = std::make_shared<csg_material_label>(base, 2);
+    auto green = std::make_shared<csg_material_label>(base, 3);
+    auto pair = std::make_shared<Mix>(red, blue, .25f);
+    Mix nested(pair, green, .4f);
+    uint32_t seed = 19;
+    unsigned counts[4] = {};
+    double error = 0;
+    for (unsigned i = 0; i < 40000; ++i) {
+      auto sample = SampleCsgSurface(nested, point3f(0,0,1), seed);
+      if (sample.material < 4) ++counts[sample.material];
+      error = std::max(error, std::abs(double(sample.distance)));
+    }
+    expect_true(error == 0);
+    expect_true(counts[0] == 0);
+    expect_true(std::abs(counts[1]/40000. - .45) < .015);
+    expect_true(std::abs(counts[2]/40000. - .15) < .015);
+    expect_true(std::abs(counts[3]/40000. - .4) < .015);
+    Blend smooth(red, blue, .4f);
+    smooth.blend_materials = false;
+    expect_true(SampleCsgSurface(smooth,point3f(0,0,1),seed).material == 1);
+    Blend zero(red,blue,0.f);
+    expect_true(std::isfinite(SampleCsgSurface(zero,point3f(0,0,1),seed).distance));
+    BlendMinus subtract(red,blue,.4f);
+    expect_true(std::isfinite(SampleCsgSurface(subtract,point3f(0,0,1),seed).distance));
+    std::vector<WFCsgInstruction> code;
+    ExportWavefrontCSG(smooth,code);
+    expect_true(code.size() == 5);
+    expect_true((code[1].operation == 22 && code[1].padding[0] == 1));
+    expect_true((code[3].operation == 22 && code[3].padding[0] == 2));
+    expect_true((code[4].operation == 33 && code[4].padding[1] == 1));
+  }
+  test_that("material queries agree with geometry through coordinate modifiers") {
+    auto sphere = std::make_shared<csg_sphere>(vec3f(0), 1);
+    auto colored = std::make_shared<csg_material_label>(sphere, 7);
+    std::vector<std::shared_ptr<ImplicitShape>> shapes{
+      std::make_shared<csg_scale>(colored, 2),
+      std::make_shared<csg_translate>(colored, vec3f(1,2,3)),
+      std::make_shared<csg_rotate>(colored, point3f(1,0,0), vec3f(1,1,0)),
+      std::make_shared<csg_round>(colored, .2),
+      std::make_shared<csg_onion>(colored, .2),
+      std::make_shared<csg_elongate>(colored, point3f(0), vec3f(.3)),
+      std::make_shared<csg_elongate_robust>(colored, point3f(0), vec3f(.3))
+    };
+    uint32_t seed = 5;
+    double error = 0;
+    unsigned wrong = 0;
+    for (const auto &shape : shapes) {
+      for (int i = -20; i < 20; ++i) {
+        point3f p(Float(i)/7, Float(i)/9, Float(i)/11);
+        auto sample = SampleCsgSurface(*shape,p,seed);
+        error = std::max(error,std::abs(double(sample.distance-shape->getDistance(p))));
+        wrong += sample.material != 7;
+      }
+    }
+    expect_true(error < 1e-6);
+    expect_true(wrong == 0);
+  }
+}
+
 context("CSG boundary and sampling") {
   test_that("clipped and thin-shell rays find later crossings") {
     Transform identity;
@@ -126,6 +211,14 @@ context("Metal CSG intersections") {
         std::make_shared<csg_elongate>(ball, point3f(0), vec3f(.2, 0, 0)),
         std::make_shared<csg_elongate_robust>(ball, point3f(0), vec3f(.2, 0, 0)),
         std::make_shared<csg_list>(std::vector<std::shared_ptr<ImplicitShape>>{ball, box})};
+    std::vector<std::shared_ptr<ImplicitShape>> tube_segments;
+    for (int i = 0; i < 24; ++i) {
+      Float a = Float(i)/24, b = Float(i+1)/24;
+      tube_segments.push_back(std::make_shared<csg_rounded_cone>(
+        point3f(.6*std::cos(a*4),a-.5,.6*std::sin(a*4)),
+        point3f(.6*std::cos(b*4),b-.5,.6*std::sin(b*4)),.18-.1*a,.18-.1*b));
+    }
+    shapes.push_back(std::make_shared<csg_curve_tube>(tube_segments));
     camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
     for (size_t k = 0; k < shapes.size(); ++k) {
       Transform transform = Translate(vec3f(.1, -.1, .2)) * RotateY(17) * Scale(-1.1, .8, 1.2);
@@ -178,4 +271,68 @@ context("Metal CSG intersections") {
   }
 }
 #endif
+#endif
+#ifdef NOT_CRAN
+#include "../hitables/csg.h"
+#include "wavefront.h"
+#include <testthat.h>
+context("CSG grouped curve pruning") {
+  test_that("merged curve geometry preserves distance and bounds") {
+    std::vector<std::shared_ptr<ImplicitShape>> curves, segments;
+    for (int arm=0;arm<8;++arm) {
+      std::vector<std::shared_ptr<ImplicitShape>> part;
+      for (int j=0;j<24;++j) {
+        Float a=j/24.f,b=(j+1)/24.f,angle=arm*.785398163f;
+        point3f p(a*std::cos(angle),.2f*std::sin(a*6),a*std::sin(angle));
+        point3f q(b*std::cos(angle),.2f*std::sin(b*6),b*std::sin(angle));
+        part.push_back(std::make_shared<csg_rounded_cone>(p,q,.15f-.1f*a,.15f-.1f*b));
+      }
+      segments.insert(segments.end(),part.begin(),part.end());
+      curves.push_back(std::make_shared<csg_material_label>(std::make_shared<csg_curve_tube>(part),arm+1));
+    }
+    csg_list original(curves);
+    csg_curve_tube merged(segments);
+    random_gen rng(42);
+    double error=0;
+    for(int i=0;i<20000;++i) {
+      point3f p(4*rng.unif_rand()-2,4*rng.unif_rand()-2,4*rng.unif_rand()-2);
+      error=std::max(error,std::abs(double(original.getDistance(p)-merged.getDistance(p))));
+    }
+    expect_true(error==0);
+    aabb a,b;original.bbox(0,0,a);merged.bbox(0,0,b);
+    for(int i=0;i<3;++i) {expect_true(a.min()[i]==b.min()[i]);expect_true(a.max()[i]==b.max()[i]);}
+    std::vector<WFCsgInstruction> code;
+    ExportWavefrontCSG(original,code);
+    expect_true(code[0].operation==25);
+    size_t material_start=code[0].padding[0];
+    expect_true(material_start<code.size());
+    expect_true(code[material_start-1].operation==26);
+    expect_true(material_start-1+code[material_start-1].padding[0]==code.size());
+    unsigned labels=0;for(auto &n:code) labels+=n.operation==22;
+    expect_true(labels==8);
+
+    auto nested=std::make_shared<csg_list>(curves);
+    csg_list outer({nested,nested});
+    code.clear();ExportWavefrontCSG(outer,code);
+    unsigned dispatches=0;for(auto &n:code)dispatches+=n.operation==25;
+    expect_true(dispatches==1);
+    auto sphere=std::make_shared<csg_sphere>(vec3f(0),.5f);
+    csg_list mixed({curves[0],sphere});
+    code.clear();ExportWavefrontCSG(mixed,code);
+    dispatches=0;for(auto &n:code)dispatches+=n.operation==25;
+    expect_true(dispatches==0);
+    Blend smooth(curves[0],curves[1],.2f);
+    code.clear();ExportWavefrontCSG(smooth,code);
+    dispatches=0;for(auto &n:code)dispatches+=n.operation==25;
+    expect_true(dispatches==0);
+    csg_list one({curves[0]});
+    code.clear();ExportWavefrontCSG(one,code);
+    expect_true(code[0].operation==23);
+    std::shared_ptr<ImplicitShape> deep=curves[0];
+    for(int i=0;i<40;++i) deep=std::make_shared<csg_list>(
+      std::vector<std::shared_ptr<ImplicitShape>>{deep,curves[0]});
+    code.clear();
+    expect_error(ExportWavefrontCSG(*deep,code));
+  }
+}
 #endif

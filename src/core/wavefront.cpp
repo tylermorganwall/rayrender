@@ -666,6 +666,7 @@ private:
       throw std::runtime_error("Metal analytic primitive capacity exceeded");
     WFQuadric out;
     out.material = Material(object.mat_ptr.get());
+    bool emissive = scene.materials[out.material].emissive;
     out.boundary = current_boundary;
     const Transform object_transform = placement * *object.ObjectToWorld;
     const Transform unit_transform = object_transform * Scale(axes[0], axes[1], axes[2]);
@@ -710,6 +711,25 @@ private:
       out.csg_count=scene.csg_instructions.size()-out.csg_offset;
       out.csg_lo=Pack(implicit->object_bounds.min());
       out.csg_hi=Pack(implicit->object_bounds.max());
+      if (!implicit->component_materials.empty()) {
+        std::vector<uint32_t> palette;
+        float power = 0;
+        for (const auto &surface : implicit->component_materials) {
+          uint32_t id = Material(surface.get());
+          if (scene.materials[id].dielectric)
+            throw std::runtime_error("CSG component materials cannot contain dielectric interfaces");
+          palette.push_back(id);
+          emissive = emissive || scene.materials[id].emissive;
+          power = std::max(power, float(scene.emission_estimates[id]));
+        }
+        for (size_t i = out.csg_offset; i < scene.csg_instructions.size(); ++i) {
+          auto &instruction = scene.csg_instructions[i];
+          if (instruction.operation == 22)
+            instruction.padding[0] = palette.at(instruction.padding[0]);
+        }
+        out.reserved = 1; // A material palette is evaluated only at final hits.
+        out.csg_hi.w = power; // Conservative emission estimate for light selection.
+      }
       out.csg_lo.w=std::max(1e-7f,1e-6f*float((implicit->object_bounds.max()-implicit->object_bounds.min()).length()));
       // Bounds include the isosurface acceptance band, including flat leaves.
       for(int a=0;a<3;++a) {
@@ -759,7 +779,7 @@ private:
       }
     } else
       out.boundary = OpenDielectric(out.material);
-    if (scene.materials[out.material].emissive) {
+    if (emissive) {
       WFLight light;
       light.type = 3;
       light.primitive = 0x80000000u | uint32_t(scene.quadrics.size());

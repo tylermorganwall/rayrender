@@ -44,10 +44,33 @@ process_scene = function(
     typevec[i] = materials[[i]]$type
   }
 
+  # Component palettes share the ordinary texture preparation passes. They are
+  # kept out of scene rows and attached back to their owning CSG after processing.
+  csg_slots = vector("list", nrow(scene))
+  csg_rows = which(shapevec == 11L)
+  csg_palettes = vector("list", length(csg_rows))
+  material_count = length(materials)
+  for (j in seq_along(csg_rows)) {
+    i = csg_rows[j]
+    prepared = prepare_csg_materials(
+      shape_info[[i]]$csg_object[[1]],
+      scene$material[i]
+    )
+    shape_info[[i]]$csg_object[[1]] = prepared$object
+    if (length(prepared$materials)) {
+      csg_slots[[i]] = material_count + seq_along(prepared$materials)
+      csg_palettes[[j]] = prepared$materials
+      material_count = material_count + length(prepared$materials)
+    }
+  }
+  if (length(csg_rows)) {
+    materials = c(materials, unlist(csg_palettes, recursive = FALSE))
+  }
+
   #alpha texture handler -- need to do this before images to override alpha if present
   # Allocate paths only for images we actually write. Millions of untextured
   # primitives otherwise create five unused filename strings apiece.
-  for (i in seq_len(nrow(scene))) {
+  for (i in seq_along(materials)) {
     alpha_input = materials[[i]]$alphaimage
     alpha_tex_bool = is.array(alpha_input)
     alpha_is_filename = is.character(alpha_input) && nchar(alpha_input) > 0
@@ -106,7 +129,7 @@ process_scene = function(
   }
 
   #texture handler
-  for (i in seq_len(nrow(scene))) {
+  for (i in seq_along(materials)) {
     image_input = materials[[i]]$image
     image_tex_bool = is.array(image_input)
     image_is_filename = is.character(image_input) && nchar(image_input) > 0
@@ -152,7 +175,7 @@ process_scene = function(
   }
 
   # Independent RGB transmission images use the same array orientation as color.
-  for (i in seq_len(nrow(scene))) {
+  for (i in seq_along(materials)) {
     input = materials[[i]]$transmission_texture
     if (is.null(input)) {
       next
@@ -219,7 +242,7 @@ process_scene = function(
   }
 
   #bump texture handler
-  for (i in seq_len(nrow(scene))) {
+  for (i in seq_along(materials)) {
     bump_input = materials[[i]]$bump_texture
     bump_tex_bool = is.array(bump_input)
     bump_is_filename = is.character(bump_input) && nchar(bump_input) > 0
@@ -269,7 +292,7 @@ process_scene = function(
   }
 
   #roughness texture handler
-  for (i in seq_len(nrow(scene))) {
+  for (i in seq_along(materials)) {
     roughness_input = materials[[i]]$roughness_texture
     rough_tex_bool = is.array(roughness_input)
     roughness_is_filename = is.character(roughness_input) &&
@@ -365,6 +388,24 @@ process_scene = function(
     }
   }
 
+  for (i in which(lengths(csg_slots) > 0L)) {
+    validate_csg_surface_material(ray_material(materials[[i]]))
+    palette = materials[csg_slots[[i]]]
+    # Image alpha extraction can reveal coverage only after texture loading.
+    for (mat in palette) {
+      validate_csg_surface_material(ray_material(mat))
+    }
+    shape_info[[i]]$csg_materials = palette
+    any_light = any_light ||
+      any(vapply(
+        palette,
+        function(m) {
+          m$type == 5L || (m$type == 11L && m$openpbr$emission_luminance > 0)
+        },
+        logical(1)
+      ))
+  }
+  materials = materials[seq_len(nrow(scene))]
   scene$material = vctrs::vec_restore(materials, scene$material)
   scene$shape_info = vctrs::vec_restore(shape_info, scene$shape_info)
 

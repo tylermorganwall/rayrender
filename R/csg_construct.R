@@ -26,9 +26,14 @@
 #'
 #' Closed solids support dielectric priorities, [subsurface()],
 #' [subsurface_diffusion()], and [set_medium()]. Expressions containing open
-#' planes or triangles are not accepted as medium boundaries. All parts of one
-#' CSG object share its material. UV coordinates are constant; use object-space
-#' or world-space [texture_coordinates()] for spatially varying textures.
+#' planes or triangles are not accepted as medium boundaries. Components with
+#' `material = NULL` inherit this object's material. Explicit component materials
+#' override it; [csg_combine()] can blend them across smooth joins. Multi-material
+#' objects do not support dielectric interfaces, subsurface scattering (including
+#' OpenPBR transmission/SSS), alpha coverage, or bump maps. A single inherited
+#' material still supports dielectric and subsurface transport. UV coordinates
+#' are constant; use object-space or world-space [texture_coordinates()] for
+#' spatially varying textures. Object coordinates refer to the whole CSG object.
 #'
 #' Emissive objects sample directions toward an enclosing sphere. Holes and empty
 #' parts of that sphere produce zero-contribution samples, so sparse CSG lights
@@ -91,6 +96,7 @@ csg_object = function(
   if (!inherits(object, "ray_csg")) {
     stop("`object` must be constructed with rayrender csg_* functions")
   }
+  prepare_csg_materials(object, material)
   new_tibble_row(list(
     x = x,
     y = y,
@@ -121,12 +127,89 @@ csg_object = function(
   ))
 }
 
+#' @param object CSG expression with optional component materials.
+#' @param fallback Material of the enclosing CSG object.
+#' @return Geometry expression with material indices and its component palette.
+#' @keywords internal
+prepare_csg_materials = function(object, fallback) {
+  palette = list()
+  visit = function(node) {
+    if (!is.null(node$material)) {
+      validate_csg_surface_material(node$material)
+      palette[[length(palette) + 1L]] <<- vctrs::vec_data(node$material)[[1]]
+      node$surface_material = length(palette)
+      node$material = NULL
+    }
+    for (name in c("object", "object1", "object2")) {
+      if (!is.null(node[[name]])) node[[name]] = visit(node[[name]])
+    }
+    if (!is.null(node$shapes)) {
+      node$shapes = lapply(node$shapes, visit)
+    }
+    node
+  }
+  object = visit(object)
+  if (length(palette)) {
+    validate_csg_surface_material(fallback)
+  }
+  list(object = object, materials = palette)
+}
+
+#' @param material Surface material to validate for a multi-material CSG object.
+#' @return The material invisibly, or an error for incompatible transport.
+#' @keywords internal
+validate_csg_surface_material = function(material) {
+  if (!inherits(material, "ray_material") || length(material) != 1L) {
+    stop(
+      "A CSG component material must be one rayrender material or NULL.",
+      call. = FALSE
+    )
+  }
+  m = vctrs::vec_data(material)[[1]]
+  if (
+    m$type %in%
+      c(3L, 10L) ||
+      !is.null(m$subsurface) ||
+      (m$type == 11L &&
+        (m$openpbr$transmission_weight > 0 || m$openpbr$subsurface_weight > 0))
+  ) {
+    stop(
+      "Multi-material CSG does not support dielectric, transmissive microfacet, or subsurface materials (including OpenPBR transmission/SSS).",
+      call. = FALSE
+    )
+  }
+  # CSG has no UV chart or per-component coverage interface. Reject these
+  # instead of silently discarding a map while changing only its color.
+  has_map = function(x) {
+    !is.null(x) && (is.array(x) || (is.character(x) && any(nzchar(x))))
+  }
+  if (
+    has_map(m$alphaimage) ||
+      has_map(m$bump_texture) ||
+      !is.null(m$texture_graphs$bump) ||
+      (m$type == 11L && m$openpbr$geometry_opacity != 1)
+  ) {
+    stop(
+      "Multi-material CSG currently requires full opacity and no bump map; use spatial color and roughness textures.",
+      call. = FALSE
+    )
+  }
+  if (m$type == 8L || (m$type == 5L && m$properties[[1]][4] == 1)) {
+    stop(
+      "CSG component lights must be visible area lights, not spotlights or invisible lights.",
+      call. = FALSE
+    )
+  }
+  invisible(material)
+}
+
 #' CSG Sphere
 #'
 #' @param x Default `0`. x-coordinate of the center of the sphere.
 #' @param y Default `0`. y-coordinate of the center of the sphere.
 #' @param z Default `0`. z-coordinate of the center of the sphere.
 #' @param radius Default `1`. Radius of the sphere.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the sphere in the scene.
 #' @export
 #'
@@ -167,9 +250,10 @@ csg_object = function(
 #'       operation="blend", radius=20),
 #'     material=glossy(color="purple"))) |>
 #'   render_scene(clamp_value=10, samples=16)
-csg_sphere = function(x = 0, y = 0, z = 0, radius = 1) {
+csg_sphere = function(x = 0, y = 0, z = 0, radius = 1, material = NULL) {
   csg_obj = list(csg_type = 2, x = x, y = y, z = z, radius = radius)
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -184,6 +268,7 @@ csg_sphere = function(x = 0, y = 0, z = 0, radius = 1) {
 #' @param normal Default `c(0,1,0)`. Surface normal of the plane.
 #' @param width_x Default `10`.
 #' @param width_z Default `10`.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the plane in the scene.
 #' @export
 #'
@@ -212,7 +297,8 @@ csg_plane = function(
   z = 0,
   normal = c(0, 1, 0),
   width_x = 4,
-  width_z = 4
+  width_z = 4,
+  material = NULL
 ) {
   csg_obj = list(
     csg_type = 3,
@@ -224,6 +310,7 @@ csg_plane = function(
     width_z = width_z
   )
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -234,6 +321,7 @@ csg_plane = function(
 #' @param z Default `0`. A z-coordinate on the box
 #' @param width Default `c(1,1,1)`. Length-3 vector describing the x/y/z widths of the box
 #' @param corner_radius Default `0`. Radius if rounded box.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the box in the scene.
 #' @export
 #'
@@ -256,10 +344,18 @@ csg_plane = function(
 #'    material=glossy(color="#FF69B4"))) |>
 #'   add_object(sphere(y=5,x=5,radius=3,material=light(intensity=5))) |>
 #'   render_scene(clamp_value=10, samples=16,lookfrom=c(7,3,7),fov=13)
-csg_box = function(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0) {
+csg_box = function(
+  x = 0,
+  y = 0,
+  z = 0,
+  width = c(1, 1, 1),
+  corner_radius = 0,
+  material = NULL
+) {
   if (corner_radius == 0) {
     csg_obj = list(csg_type = 4, x = x, y = y, z = z, width = width)
     class(csg_obj) = c("list", "ray_csg")
+    csg_obj$material = material
     csg_obj
   } else {
     csg_obj = list(
@@ -271,6 +367,7 @@ csg_box = function(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0) {
       radius = corner_radius
     )
     class(csg_obj) = c("list", "ray_csg")
+    csg_obj$material = material
     csg_obj
   }
 }
@@ -282,6 +379,7 @@ csg_box = function(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0) {
 #' @param z Default `0`. z-coordinate on the torus.
 #' @param radius Default `1`. Torus radius.
 #' @param minor_radius Default `0.5`. Cross section radius of the torus.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the torus in the scene.
 #' @export
 #'
@@ -309,7 +407,14 @@ csg_box = function(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0) {
 #'     pivot_point = c(555/2,555/2,555/2), up =c(0,1,-1)),
 #'                         material=glossy(color="dodgerblue4"))) |>
 #'   render_scene(clamp_value=10, samples=16)
-csg_torus = function(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5) {
+csg_torus = function(
+  x = 0,
+  y = 0,
+  z = 0,
+  radius = 1,
+  minor_radius = 0.5,
+  material = NULL
+) {
   csg_obj = list(
     csg_type = 7,
     x = x,
@@ -319,6 +424,7 @@ csg_torus = function(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5) {
     cross_radius = minor_radius
   )
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -327,6 +433,7 @@ csg_torus = function(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5) {
 #' @param start Default `c(0, 0, 0)`. Start point of the capsule, specifying `x`, `y`, `z`.
 #' @param end Default `c(0, 1, 0)`. End point of the capsule, specifying `x`, `y`, `z`.
 #' @param radius Default `1`. Capsule radius.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the capsule in the scene.
 #' @export
 #'
@@ -356,9 +463,15 @@ csg_torus = function(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5) {
 #'     csg_capsule(start = c(555/2-100,555/2,555/2), end = c(555/2+100,555/2,555/2), radius=100),
 #'     material=glossy(color="dodgerblue4"))) |>
 #'   render_scene(clamp_value=10, samples=16)
-csg_capsule = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1) {
+csg_capsule = function(
+  start = c(0, 0, 0),
+  end = c(0, 1, 0),
+  radius = 1,
+  material = NULL
+) {
   csg_obj = list(csg_type = 8, start = start, end = end, radius = radius)
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -368,6 +481,7 @@ csg_capsule = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1) {
 #' @param end Default `c(0, 1, 0)`. End point of the cylinder, specifing `x`, `y`, `z`.
 #' @param radius Default `1`. Cylinder radius.
 #' @param corner_radius Default `0`. Radius if rounded cylinder.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the cylinder in the scene.
 #' @export
 #'
@@ -404,7 +518,8 @@ csg_cylinder = function(
   start = c(0, 0, 0),
   end = c(0, 1, 0),
   radius = 1,
-  corner_radius = 0
+  corner_radius = 0,
+  material = NULL
 ) {
   csg_obj = list(
     csg_type = 9,
@@ -414,6 +529,7 @@ csg_cylinder = function(
     corner_radius = corner_radius
   )
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -423,6 +539,7 @@ csg_cylinder = function(
 #' @param y Default `0`. y-coordinate on the ellipsoid.
 #' @param z Default `0`. z-coordinate on the ellipsoid.
 #' @param axes Default `c(0.5,1,0.5)`. Ellipsoid principle axes.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the ellipsoid in the scene.
 #' @export
 #'
@@ -448,9 +565,16 @@ csg_cylinder = function(
 #'   add_object(csg_object(csg_ellipsoid(x=555/2,y=555/2,z=555/2,axes=c(100,150,200)),
 #'     material=dielectric(attenuation = c(1,0.3,1)/200))) |>
 #'   render_scene(clamp_value=10, samples=16)
-csg_ellipsoid = function(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5)) {
+csg_ellipsoid = function(
+  x = 0,
+  y = 0,
+  z = 0,
+  axes = c(0.5, 1, 0.5),
+  material = NULL
+) {
   csg_obj = list(csg_type = 10, x = x, y = y, z = z, axes = axes)
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -460,6 +584,7 @@ csg_ellipsoid = function(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5)) {
 #' @param end Default `c(0, 1, 0)`. End point of the cone, specifing `x`, `y`, `z`.
 #' @param radius Default `0.5`. Radius of the bottom of the cone.
 #' @param upper_radius Default `0.2`. Radius from the top of the cone.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the box in the scene.
 #' @export
 #'
@@ -493,7 +618,8 @@ csg_rounded_cone = function(
   start = c(0, 0, 0),
   end = c(0, 1, 0),
   radius = 0.5,
-  upper_radius = 0.2
+  upper_radius = 0.2,
+  material = NULL
 ) {
   csg_obj = list(
     csg_type = 11,
@@ -503,7 +629,123 @@ csg_rounded_cone = function(
     upper_radius = upper_radius
   )
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
+}
+
+#' Solid tubes along 3D curves
+#'
+#' Make curling tentacles, stems, cables, or handles that can merge into other
+#' CSG solids. Cubic Bezier control points shape the centerline; radii control
+#' its thickness and taper.
+#'
+#' @param points Numeric matrix with three columns (x, y, z) and `3*n + 1` rows
+#' for `n` connected cubic Bezier spans. Each span shares its endpoint with the next.
+#' @param radius Default `0.1`. Positive radius, or a vector of radii at the
+#' `n + 1` span endpoints. Radii interpolate linearly in each span's parameter.
+#' @param segments Default `32L`. Positive integer number of straight tapered
+#' segments per Bezier span. Increase this for tighter curls or close views.
+#' @param material Default `NULL`. Component surface material; `NULL` inherits
+#' the enclosing [csg_object()] material.
+#' @return A `ray_csg` solid for [csg_combine()] or [csg_object()].
+#' @export
+#' @details
+#' Both CPU and Metal trace the same union of rounded, tapered segments, with
+#' spherical end caps. This is a piecewise linear approximation to a curved
+#' swept solid, not an exact distance to the cubic curve. Subdivision controls
+#' geometric error; it does not generate triangles. The tube remains closed,
+#' including at repeated control points. Self-intersections form a solid union.
+#'
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' # A little copper sprout: the tapered curl grows smoothly from a blue pebble.
+#' stem = csg_curve(rbind(c(0, .25, 0), c(-.6, 2, 0),
+#'                       c(1.3, 1.7, .3), c(.4, 1.1, .3)),
+#'                  radius = c(.14, .035),
+#'                  material = metal(color = "#b9683b", fuzz = .18))
+#' sprout = csg_combine(csg_sphere(radius = .4), stem,
+#'                      operation = "blend", radius = .2)
+#' scene = generate_ground(depth = 0, material = diffuse("#ded9cb")) |>
+#'   add_object(csg_object(sprout, y = .4, material = glossy("#287f97"))) |>
+#'   add_infinite_light(disk_light(direction = c(-1, 1, 1), intensity = 5,
+#'                        angular_diameter = 55))
+#' render_scene(scene, lookfrom = c(3, 2.5, 5), lookat = c(0, 1, 0),
+#'              fov = 28, samples = 16, denoise = TRUE)
+csg_curve = function(points, radius = 0.1, segments = 32L, material = NULL) {
+  if (
+    !is.matrix(points) ||
+      !is.numeric(points) ||
+      ncol(points) != 3L ||
+      nrow(points) < 4L ||
+      (nrow(points) - 1L) %% 3L != 0L ||
+      any(!is.finite(points))
+  ) {
+    stop(
+      '`points` must be a finite numeric matrix with 3 columns and 3*n + 1 rows.',
+      call. = FALSE
+    )
+  }
+  spans = (nrow(points) - 1L) %/% 3L
+  if (
+    !is.numeric(radius) ||
+      !length(radius) %in% c(1L, spans + 1L) ||
+      any(!is.finite(radius)) ||
+      any(radius <= 0)
+  ) {
+    stop(
+      '`radius` must contain one positive value or one per span endpoint.',
+      call. = FALSE
+    )
+  }
+  if (
+    !is.numeric(segments) ||
+      length(segments) != 1L ||
+      !is.finite(segments) ||
+      segments < 1 ||
+      segments != floor(segments) ||
+      segments > .Machine$integer.max / spans
+  ) {
+    stop(
+      '`segments` must be a positive integer with a representable total segment count.',
+      call. = FALSE
+    )
+  }
+  if (!is.null(material)) {
+    validate_csg_surface_material(material)
+  }
+  radius = rep(radius, length.out = spans + 1L)
+  t = seq(0, 1, length.out = segments + 1L)
+  basis = cbind((1 - t)^3, 3 * (1 - t)^2 * t, 3 * (1 - t) * t^2, t^3)
+  shapes = vector('list', spans * segments)
+  for (span in seq_len(spans)) {
+    centers = basis %*% points[3L * (span - 1L) + 1:4, , drop = FALSE]
+    radii = (1 - t) * radius[span] + t * radius[span + 1L]
+    for (j in seq_len(segments)) {
+      distance = sqrt(sum((centers[j + 1L, ] - centers[j, ])^2))
+      # A steep taper or stationary centerline nests the smaller end sphere
+      # inside the larger one. Its hull is just that sphere; avoid a singular cone.
+      if (distance <= abs(radii[j + 1L] - radii[j])) {
+        k = if (radii[j] >= radii[j + 1L]) j else j + 1L
+        shape = csg_sphere(
+          centers[k, 1],
+          centers[k, 2],
+          centers[k, 3],
+          radii[k]
+        )
+      } else {
+        shape = csg_rounded_cone(
+          centers[j, ],
+          centers[j + 1L, ],
+          radii[j],
+          radii[j + 1L]
+        )
+      }
+      shapes[[(span - 1L) * segments + j]] = shape
+    }
+  }
+  curve = csg_group(shapes)
+  curve$csg_type = 22L
+  curve$material = material
+  curve
 }
 
 #' CSG Cone
@@ -511,6 +753,7 @@ csg_rounded_cone = function(
 #' @param start Default `c(0, 0, 0)`. Start point of the cone, specifing `x`, `y`, `z`.
 #' @param end Default `c(0, 1, 0)`. End point of the cone, specifing `x`, `y`, `z`.
 #' @param radius Default `1`. Radius of the bottom of the cone.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the box in the scene.
 #' @export
 #'
@@ -540,9 +783,15 @@ csg_rounded_cone = function(
 #'     csg_cone(start = c(555/2,0,555/2), end = c(555/2,555/2+100,555/2), radius=100),
 #'     material=dielectric(attenuation=c(1,1,0.3)/100))) |>
 #'   render_scene(clamp_value=10, samples=16)
-csg_cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5) {
+csg_cone = function(
+  start = c(0, 0, 0),
+  end = c(0, 1, 0),
+  radius = 0.5,
+  material = NULL
+) {
   csg_obj = list(csg_type = 12, start = start, end = end, radius = radius)
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -556,6 +805,7 @@ csg_cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5) {
 #' @param z Default `0`. z-coordinate on the pyramid.
 #' @param height Default `1`. Pyramid height.
 #' @param base Default `1`. Pyramid base width.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the box in the scene.
 #' @export
 #'
@@ -581,7 +831,14 @@ csg_cone = function(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5) {
 #'   add_object(sphere(y=5,x=5,z=5,material=light(intensity=20))) |>
 #'   render_scene(clamp_value=10, samples=16,lookfrom=c(-3,1,10),
 #'                fov=15, lookat=c(0,-0.5,0))
-csg_pyramid = function(x = 0, y = 0, z = 0, height = 1, base = 1) {
+csg_pyramid = function(
+  x = 0,
+  y = 0,
+  z = 0,
+  height = 1,
+  base = 1,
+  material = NULL
+) {
   csg_obj = list(
     csg_type = 13,
     x = x,
@@ -591,6 +848,7 @@ csg_pyramid = function(x = 0, y = 0, z = 0, height = 1, base = 1) {
     base = base
   )
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -599,6 +857,7 @@ csg_pyramid = function(x = 0, y = 0, z = 0, height = 1, base = 1) {
 #' @param v1 Default `c(0,1,0)`. First vertex.
 #' @param v2 Default `c(1,0,0)`. Second vertex.
 #' @param v3 Default `c(-1,0,0)`. Third vertex.
+#' @param material Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.
 #' @return List describing the triangle in the scene.
 #' @export
 #'
@@ -619,9 +878,15 @@ csg_pyramid = function(x = 0, y = 0, z = 0, height = 1, base = 1) {
 #'                         material=diffuse(color="blue"))) |>
 #'   add_object(sphere(y=5,z=3,material=light(intensity=30))) |>
 #'   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(0,5,10))
-csg_triangle = function(v1 = c(0, 1, 0), v2 = c(1, 0, 0), v3 = c(-1, 0, 0)) {
+csg_triangle = function(
+  v1 = c(0, 1, 0),
+  v2 = c(1, 0, 0),
+  v3 = c(-1, 0, 0),
+  material = NULL
+) {
   csg_obj = list(csg_type = 14, v1 = v1, v2 = v2, v3 = v3)
   class(csg_obj) = c("list", "ray_csg")
+  csg_obj$material = material
   csg_obj
 }
 
@@ -1021,9 +1286,25 @@ csg_translate = function(object, x = 0, y = 0, z = 0) {
 #' @param object2 Second CSG object
 #' @param operation Default `union`. Can be `union`, `subtract`, `intersection`, `blend`, `subtractblend`, or `mix`.
 #' @param radius Default `0.5`. Blending radius.
+#' @param blend_materials Default `TRUE`. Blend component surface materials at
+#' smooth joins (`blend`, `subtractblend`, or `mix`). `FALSE` keeps a sharp
+#' material transition while retaining the blended geometry.
 #'
 #' @return List describing the combined csg object in the scene.
 #' @export
+#' @details
+#' Hard Boolean operations use the material of the component defining the
+#' surface. Subtraction uses the cutter's material on the cut; equal distances
+#' choose the first component. `NULL` component materials inherit [csg_object()]'s
+#' material. Smooth joins use the derivatives of the smooth distance operation
+#' as weights; `mix` uses `1 - radius` and `radius`. Complete surface BSDFs are
+#' mixed, rather than interpolating unrelated shader parameters. Dielectric and
+#' subsurface transport cannot participate in this mixture.
+#'
+#' Material blending is sampled at each hit, so low sample counts can show
+#' noise at joins. Increase samples or denoise for a smoother result. With
+#' `blend_materials = FALSE`, `mix` selects the first material through `radius = .5`
+#' and the second above it.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Combine two spheres:
@@ -1098,12 +1379,34 @@ csg_translate = function(object, x = 0, y = 0, z = 0) {
 #'   material=glossy(color="green"))) |>
 #'   add_object(sphere(y=10,x=-5,radius=3,material=light(intensity=10))) |>
 #'   render_scene(clamp_value=10, samples=16,fov=20,lookfrom=c(-15,10,10))
-csg_combine = function(object1, object2, operation = "union", radius = 0.5) {
+csg_combine = function(
+  object1,
+  object2,
+  operation = "union",
+  radius = 0.5,
+  blend_materials = TRUE
+) {
   if (!inherits(object1, "ray_csg")) {
     stop("`object1` must be constructed with rayrender csg_* functions")
   }
   if (!inherits(object2, "ray_csg")) {
     stop("`object2` must be constructed with rayrender csg_* functions")
+  }
+  operation = match.arg(
+    tolower(operation),
+    c("union", "subtract", "intersection", "blend", "mix", "subtractblend")
+  )
+  if (
+    !is.numeric(radius) ||
+      length(radius) != 1L ||
+      !is.finite(radius) ||
+      radius < 0 ||
+      (operation == "mix" && radius > 1)
+  ) {
+    stop(
+      "`radius` must be finite and nonnegative, and between 0 and 1 for mix.",
+      call. = FALSE
+    )
   }
   combine_type = unlist(lapply(
     tolower(operation),
@@ -1116,12 +1419,20 @@ csg_combine = function(object1, object2, operation = "union", radius = 0.5) {
     "subtractblend" = 6,
     1
   ))
+  if (
+    !is.logical(blend_materials) ||
+      length(blend_materials) != 1L ||
+      is.na(blend_materials)
+  ) {
+    stop("`blend_materials` must be TRUE or FALSE.", call. = FALSE)
+  }
   csg_obj = list(
     csg_type = 1,
     object1 = object1,
     object2 = object2,
     operation = combine_type,
-    blend = radius
+    blend = radius,
+    blend_materials = blend_materials
   )
   class(csg_obj) = c("list", "ray_csg")
   csg_obj

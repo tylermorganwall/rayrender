@@ -70,8 +70,8 @@
 #'   ortho_dimensions = c(5.5, 4.4),
 #'   width = 420,
 #'   height = 340,
-#'   samples = 16,
-#'   denoise = TRUE
+#'   samples = 16, defer=T,
+#'   denoise = TRUE, integrator_type="metal"
 #' )
 disk_light = function(
   color = "white",

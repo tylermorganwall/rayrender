@@ -7,22 +7,49 @@ template <class T> WFVector pack(const T &p, float w = 0) { return {float(p[0]),
 // Postfix distance expressions use a value stack. Coordinate modifiers bracket
 // a child program with save/restore instructions; sibling inputs always see the
 // same point. Limits are checked before upload, never by unchecked GPU indexing.
+
+// Only hard unions of curve tubes have certified segment-distance bounds here.
+// Do not infer a field bound from an arbitrary implicit shape's geometry bbox:
+// approximate SDFs and smooth unions need their own conservative treatment.
+bool collect_curve_segments(const ImplicitShape &shape,
+                            std::vector<std::shared_ptr<ImplicitShape>> &segments, unsigned depth = 0) {
+  // Match the compiler's bounded recursion even before eligibility is known.
+  if (depth >= 32) return false;
+  if (auto label = dynamic_cast<const csg_material_label *>(&shape))
+    return collect_curve_segments(*label->shape, segments, depth + 1);
+  if (auto curve = dynamic_cast<const csg_curve_tube *>(&shape)) {
+    segments.insert(segments.end(), curve->segments.begin(), curve->segments.end());
+    return true;
+  }
+  if (auto group = dynamic_cast<const csg_list *>(&shape)) {
+    if (group->shapes.empty()) return false;
+    for (const auto &child : group->shapes)
+      if (!collect_curve_segments(*child, segments, depth + 1)) return false;
+    return true;
+  }
+  return false;
+}
 class CsgCompiler {
 public:
   std::vector<WFCsgInstruction> &code;
   explicit CsgCompiler(std::vector<WFCsgInstruction> &code) : code(code) {}
-  void emit(const ImplicitShape &shape, unsigned depth = 0) {
+  void emit(const ImplicitShape &shape, unsigned depth = 0, bool distance_queries = true) {
     if (depth >= 32)
       throw std::runtime_error("CSG expression exceeds the Metal nesting limit (32)");
     WFCsgInstruction n;
-    auto child = [&](const std::shared_ptr<ImplicitShape> &s) { emit(*s, depth + 1); };
+    auto child = [&](const std::shared_ptr<ImplicitShape> &s) { emit(*s, depth + 1, distance_queries); };
     auto binary = [&](const auto *s, uint32_t op, float parameter = 0) {
       child(s->shape1);
       child(s->shape2);
       n.operation = op;
       n.a.w = parameter;
+      n.padding[1] = !s->blend_materials;
     };
-    if (auto s = dynamic_cast<const Union *>(&shape))
+    if (auto s = dynamic_cast<const csg_material_label *>(&shape)) {
+      child(s->shape);
+      n.operation = 22;
+      n.padding[0] = s->index;
+    } else if (auto s = dynamic_cast<const Union *>(&shape))
       binary(s, 30);
     else if (auto s = dynamic_cast<const Subtract *>(&shape))
       binary(s, 31);
@@ -37,12 +64,56 @@ public:
     else if (auto s = dynamic_cast<const csg_list *>(&shape)) {
       if (s->shapes.empty())
         throw std::runtime_error("empty CSG group");
-      child(s->shapes[0]);
+
+      // A single point-query BVH shares the current best distance across arms.
+      // Preserve the original expression for material queries: reordering labels
+      // could otherwise change ties or consume random numbers differently.
+      std::vector<std::shared_ptr<ImplicitShape>> segments;
+      bool accelerate = distance_queries && s->shapes.size() > 1 && collect_curve_segments(*s, segments);
+      size_t dispatch = 0, skip_material = 0;
+      if (accelerate) {
+        dispatch = code.size();
+        n.operation = 25;
+        code.push_back(n);
+        csg_curve_tube combined(std::move(segments));
+        emit(combined, depth + 1);
+        skip_material = code.size();
+        n.operation = 26;
+        code.push_back(n);
+        code[dispatch].padding[0] = code.size() - dispatch;
+      }
+      // Nested groups in this copy serve material queries only. Avoid duplicating
+      // their distance BVHs: the outer merged hierarchy already covers them.
+      emit(*s->shapes[0], depth + 1, distance_queries && !accelerate);
       for (size_t i = 1; i < s->shapes.size(); ++i) {
-        child(s->shapes[i]);
+        emit(*s->shapes[i], depth + 1, distance_queries && !accelerate);
         n.operation = 30;
         code.push_back(n);
       }
+
+      if (accelerate) code[skip_material].padding[0] = code.size() - skip_material;
+      return;
+    } else if (auto s = dynamic_cast<const csg_curve_tube *>(&shape)) {
+      // Embed the point-query BVH in the same immutable instruction buffer.
+      // Each node has a bounds instruction; leaves also have one segment.
+      size_t start = code.size();
+      n.operation = 23;
+      code.push_back(n);
+      std::vector<uint32_t> offsets(s->nodes.size() + 1, 0);
+      for (size_t i = 0; i < s->nodes.size(); ++i)
+        offsets[i + 1] = offsets[i] + (s->nodes[i].segment == UINT32_MAX ? 1 : 2);
+      for (size_t i = 0; i < s->nodes.size(); ++i) {
+        const auto &node = s->nodes[i];
+        WFCsgInstruction bounds;
+        bounds.operation = 24;
+        bounds.a = pack(node.bounds.min());
+        bounds.b = pack(node.bounds.max());
+        bounds.padding[0] = offsets[node.escape] - offsets[i];
+        bounds.padding[1] = node.segment != UINT32_MAX;
+        code.push_back(bounds);
+        if (node.segment != UINT32_MAX) child(s->segments[node.segment]);
+      }
+      code[start].padding[0] = code.size() - start;
       return;
     } else if (auto s = dynamic_cast<const csg_sphere *>(&shape)) {
       n.operation = 2;

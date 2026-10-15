@@ -4,7 +4,7 @@
 \alias{csg_ellipsoid}
 \title{CSG Ellipsoid}
 \usage{
-csg_ellipsoid(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5))
+csg_ellipsoid(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5), material = NULL)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate on the ellipsoid.}
@@ -14,6 +14,8 @@ csg_ellipsoid(x = 0, y = 0, z = 0, axes = c(0.5, 1, 0.5))
 \item{z}{Default `0`. z-coordinate on the ellipsoid.}
 
 \item{axes}{Default `c(0.5,1,0.5)`. Ellipsoid principle axes.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the ellipsoid in the scene.

@@ -4,7 +4,7 @@
 \alias{csg_torus}
 \title{CSG Torus}
 \usage{
-csg_torus(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5)
+csg_torus(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5, material = NULL)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate on the torus.}
@@ -16,6 +16,8 @@ csg_torus(x = 0, y = 0, z = 0, radius = 1, minor_radius = 0.5)
 \item{radius}{Default `1`. Torus radius.}
 
 \item{minor_radius}{Default `0.5`. Cross section radius of the torus.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the torus in the scene.
