@@ -16,6 +16,13 @@
 
 ## New features
 
+- `csg_object()` Supports per-component surface materials, with `NULL` inheriting
+  the enclosing object's material. `csg_combine()` blends these materials across
+  smooth joins on CPU and Metal; `blend_materials = FALSE` retains sharp material
+  transitions. Dielectric and subsurface materials cannot be mixed.
+- `csg_curve()` Creates closed, tapered tubes along 3D Bezier paths for tentacles,
+  stems, and other curved solids that can participate in CSG operations.
+
 - `dielectric()` Supports open interfaces on Metal, including water surfaces
   bounded by opaque terrain, with refraction, absorption, and material priorities.
   Open mesh instances retain shared geometry; closed subsurface and volume
@@ -688,6 +695,10 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `csg_group()` Accelerates Metal rendering of grouped curves with a shared
+  distance-query BVH while preserving geometry, smooth joins, and material
+  selection. Other CSG expressions retain their existing evaluation.
 
 - `diffuse()` Removes the `fog` and `fogdensity` arguments. Create volumes with
   `set_medium()` and an explicit `homogeneous_medium()`, `grid_medium()`, or
