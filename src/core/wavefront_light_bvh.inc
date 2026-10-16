@@ -14,6 +14,7 @@ void RefitWavefrontLightBVH(WavefrontScene &scene) {
     if (light.type == 2) {
       lo = hi = vec3<double>(light.forward.x, light.forward.y, light.forward.z);
       power = (double(light.color.x) + light.color.y + light.color.z) / 3;
+      if (light.flags & 2) power = light.projection_direction.w / (4 * M_PI);
     } else {
       uint32_t material;
       double area;

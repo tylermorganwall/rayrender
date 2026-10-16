@@ -48,6 +48,199 @@ void compare_camera(RayCamera &camera) {
   expect_true(max_weight < 1e-4);
 }
 } // namespace
+context("Scene-wide motion identity") {
+  test_that("nonadjacent repeats preserve exact transforms, times and parents") {
+    Transform start, end = Translate(vec3f(1, 2, 3)) * RotateY(35) * Scale(.7, 1.3, .9);
+    Transform other_end = Translate(vec3f(2, 1, -1));
+    AnimatedTransform first(&start, 0, &end, 1), copy(&start, 0, &end, 1);
+    AnimatedTransform other(&start, 0, &other_end, 1);
+    WavefrontMotion motion;
+    const auto first_id = motion.Add(0, first, Transform());
+    const auto other_id = motion.Add(0, other, Transform());
+    expect_true(first_id == 1);
+    expect_true(other_id == 2);
+    expect_true(motion.Add(0, copy, Transform()) == first_id);
+    expect_true(motion.nodes.size() == 2);
+
+    // Equal numerical values must share a hash even when their bits differ.
+    Matrix4x4 signed_zero;
+    signed_zero.m[0][1] = -Float(0);
+    Transform zero_transform(signed_zero, signed_zero);
+    AnimatedTransform zero_time(&start, -Float(0), &end, 1);
+    expect_true(motion.Add(0, zero_time, zero_transform) == first_id);
+
+    AnimatedTransform later_start(&start, .1, &end, 1);
+    AnimatedTransform later_end(&start, 0, &end, 2);
+    Transform shifted_start = Translate(vec3f(.01, 0, 0));
+    AnimatedTransform different_start(&shifted_start, 0, &end, 1);
+    const auto start_id = motion.Add(0, later_start, Transform());
+    const auto end_id = motion.Add(0, later_end, Transform());
+    const auto endpoint_id = motion.Add(0, different_start, Transform());
+    const auto placement_id = motion.Add(0, first, Translate(vec3f(.01, 0, 0)));
+    const auto parent_id = motion.Add(other_id, first, Transform());
+    expect_true(start_id == 3);
+    expect_true(end_id == 4);
+    expect_true(endpoint_id == 5);
+    expect_true(placement_id == 6);
+    expect_true(parent_id == 7);
+    expect_true(motion.Add(0, copy, Transform()) == first_id);
+    expect_true(motion.Add(other_id, copy, Transform()) == parent_id);
+
+    // Explicit inverses participate in Transform::operator== independently
+    // from the forward matrix, even if a caller supplies an unusual pair.
+    Matrix4x4 inverse = end.GetInverseMatrix();
+    inverse.m[0][3] = std::nextafter(inverse.m[0][3], std::numeric_limits<Float>::infinity());
+    Transform different_inverse(end.GetMatrix(), inverse);
+    AnimatedTransform inverse_motion(&start, 0, &different_inverse, 1);
+    const auto inverse_id = motion.Add(0, inverse_motion, Transform());
+    expect_true(inverse_id == 8);
+    Transform before_inverse(start.GetMatrix(), inverse);
+    expect_true(motion.Add(0, first, before_inverse) == 9);
+    expect_true(motion.Add(0, inverse_motion, Transform()) == inverse_id);
+
+    for (Float time : {Float(-.2), Float(0), Float(.37), Float(1), Float(1.2)}) {
+      Transform a, b;
+      first.Interpolate(time, &a);
+      other.Interpolate(time, &b);
+      const auto expected = (b * a)(point3f(.2, -.5, 1));
+      const auto actual = motion.At(parent_id, time)(point3f(.2, -.5, 1));
+      expect_true((expected - actual).length() < 1e-5);
+    }
+    WavefrontScene scene;
+    scene.triangles.resize(3);
+    motion.Claim({0, 0, 0, 0, 0}, {1, 0, 0, 0, 0}, first_id);
+    motion.Claim({1, 0, 0, 0, 0}, {2, 0, 0, 0, 0}, other_id);
+    motion.Claim({2, 0, 0, 0, 0}, {3, 0, 0, 0, 0}, motion.Add(0, copy, Transform()));
+    motion.Seal(scene);
+    expect_true(motion.owners[0] == std::vector<uint32_t>({first_id, other_id, first_id}));
+  }
+  test_that("motion IDs survive lookup rehashing and node vector growth") {
+    constexpr size_t count = 2048;
+    Transform start;
+    std::vector<Transform> ends;
+    std::vector<AnimatedTransform> animations;
+    ends.reserve(count);
+    animations.reserve(count);
+    WavefrontMotion motion;
+    for (size_t i = 0; i < count; ++i) {
+      ends.push_back(Translate(vec3f(Float(i + 1), .2, -.3)));
+      animations.emplace_back(&start, 0, &ends.back(), 1);
+      expect_true(motion.Add(0, animations.back(), Transform()) == i + 1);
+    }
+    for (size_t i = count; i-- > 0;)
+      expect_true(motion.Add(0, animations[i], Transform()) == i + 1);
+    expect_true(motion.nodes.size() == count);
+  }
+}
+
+context("Metal hardware motion partitions") {
+  test_that("masked traversal matches owner filtering for hits and boundaries") {
+    if (!MetalBVHAvailable()) return;
+    for (int group_count : {1, 7, 8}) {
+      WavefrontScene scene;
+      scene.motion = std::make_shared<WavefrontMotion>();
+      auto &motion = *scene.motion;
+      std::vector<Transform> starts(group_count), ends;
+      std::vector<AnimatedTransform> animations;
+      ends.reserve(group_count);
+      animations.reserve(group_count);
+      for (int i = 0; i < group_count; ++i) {
+        ends.push_back(Translate(vec3f(.1 * (i + 1), -.1, .3)) * RotateY(10 + i));
+        animations.emplace_back(&starts[i], 0, &ends[i], 1);
+        motion.Add(0, animations.back(), Transform());
+      }
+      // One static loose triangle and one shared triangle prototype. Include
+      // static and moving instances and analytic spheres in the same TLAS.
+      WFTriangle triangle;
+      triangle.p[0] = {-1, -1, 0, 0};
+      triangle.p[1] = {1, -1, 0, 0};
+      triangle.p[2] = {0, 1, 0, 0};
+      for (auto &n : triangle.n) n = {0, 0, 1, 0};
+      triangle.geometric = {0, 0, 1, 0};
+      triangle.uv01 = {0, 0, 1, 0};
+      triangle.uv2 = {.5, 1, 0, 0};
+      scene.triangles = {triangle, triangle};
+      for (auto &p : scene.triangles[0].p) p.z = -2;
+      scene.loose_triangles = 1;
+      scene.meshes.push_back({1, 1});
+      scene.instances.resize(2); // Loose triangle and analytic BLAS prefixes.
+      motion.owners[3] = {0, 0};
+      scene.boundaries.resize(2);
+      for (int axis = 0; axis < 3; ++axis) {
+        WFVector row{};
+        (&row.x)[axis] = 1;
+        scene.surfaces[0].forward[axis] = scene.surfaces[0].inverse[axis] = row;
+      }
+      scene.surfaces[0].axes = {1, 1, 1, 1};
+      for (int owner = 0; owner <= group_count; ++owner) {
+        const float x = (owner - group_count / 2.f) * 1.1f;
+        WFMeshInstance instance;
+        instance.triangle_start = 1;
+        instance.triangle_count = 1;
+        instance.boundary = owner % 2;
+        for (int axis = 0; axis < 3; ++axis)
+          instance.forward[axis] = instance.inverse[axis] = scene.surfaces[0].forward[axis];
+        instance.forward[0].w = x;
+        instance.inverse[0].w = -x;
+        scene.instances.push_back(instance);
+        motion.owners[3].push_back(owner);
+        WFQuadric sphere;
+        for (int axis = 0; axis < 3; ++axis)
+          sphere.forward[axis] = sphere.inverse[axis] = scene.surfaces[0].forward[axis];
+        sphere.forward[0].w = x;
+        sphere.inverse[0].w = -x;
+        sphere.forward[1].w = -1.4f;
+        sphere.inverse[1].w = 1.4f;
+        sphere.measure = {1, 1, 1, 1};
+        sphere.boundary = owner % 2;
+        scene.quadrics.push_back(sphere);
+        scene.quadric_bounds.push_back({x - 1, -2.4f, -1, 0});
+        scene.quadric_bounds.push_back({x + 1, -.4f, 1, 0});
+        motion.owners[1].push_back(owner);
+      }
+      motion.Seal(scene);
+      expect_true(bool(scene.texture_features & 4096) == (group_count < 8));
+      std::vector<WFGeometryProbe> probes;
+      for (float time : {0.f, .23f, .71f, 1.f})
+        for (uint32_t body : {0u, 1u})
+          for (int i = 0; i < 1024; ++i) {
+            WFGeometryProbe probe;
+            probe.origin = {float(i % 64 - 32) * .17f, float(i / 64 - 8) * .25f, 5, 0};
+            probe.direction = {0, 0, -1, 12};
+            probe.body = body;
+            std::memcpy(&probe.padding[1], &time, sizeof(time));
+            probes.push_back(probe);
+          }
+      auto partitioned = ProbeMetalGeometry(scene, probes);
+      scene.texture_features &= ~4096u;
+      auto reference = ProbeMetalGeometry(scene, probes);
+      size_t errors = 0, hits = 0;
+      double maximum = 0;
+      for (size_t i = 0; i < probes.size(); ++i) {
+        const auto &a = partitioned[i], &b = reference[i];
+        errors += (a.normal.w != b.normal.w) || a.primitive != b.primitive || a.boundary != b.boundary;
+        if (!a.normal.w || !b.normal.w) continue;
+        ++hits;
+        for (int k = 0; k < 4; ++k) {
+          maximum = std::max(maximum, std::abs(double((&a.point.x)[k]) - (&b.point.x)[k]));
+          maximum = std::max(maximum, std::abs(double((&a.normal.x)[k]) - (&b.normal.x)[k]));
+          maximum = std::max(maximum, std::abs(double((&a.uv.x)[k]) - (&b.uv.x)[k]));
+        }
+      }
+      Rcpp::Rcout << "Motion mask groups=" << group_count << " hits=" << hits
+                  << " errors=" << errors << " maximum difference=" << maximum << "\n";
+      expect_true(hits > 0);
+      expect_true(errors == 0);
+      expect_true(maximum < 1e-6);
+      // Animated loose triangles cannot be given an independent instance mask.
+      // Re-sealing must also clear a previously enabled optimization flag.
+      motion.owners[0][0] = 1;
+      motion.Seal(scene);
+      expect_true((scene.texture_features & 4096) == 0);
+    }
+  }
+}
+
 context("Metal cameras and density threshold intervals") {
   test_that("motion ownership coalesces identical animations and retains native affine parameters") {
     Transform start = Translate(vec3f(2, -1, 3));

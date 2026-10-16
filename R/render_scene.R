@@ -113,6 +113,19 @@
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param time Default `NULL`. Scene time in seconds; NULL retains legacy timing.
+#'   Explicit times sample object and camera tracks without playback history.
+#' @param timeline Default `NULL`. Ordered playback range in scene seconds.
+#'   With preview and interactive enabled, shows seeking and playback controls.
+#'   Authored perspective, orthographic, and panoramic camera rows follow scene
+#'   time with zero-width exposure and a fixed projection. Manual camera changes
+#'   pause and override the track until the next timeline command. M plays saved
+#'   camera keyframes at fps, starting at the timeline's first second.
+#' @param fps Default `30`. Positive display/output frame rate.
+#' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
+#'   stored as frame-relative floats; absolute scene time remains double precision.
+#'   Explicit time rejects explicitly supplied legacy shutter controls.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
@@ -423,9 +436,29 @@ render_scene = function(
   start_frame = 1,
   end_frame = NA,
   mode = c("auto", "image", "animation", "preview"),
-  camera_flip_x = FALSE
+  camera_flip_x = FALSE,
+  time = NULL,
+  timeline = NULL,
+  fps = 30,
+  shutter_offsets = NULL
 ) {
+  timing = resolve_scene_timing(
+    time,
+    timeline,
+    fps,
+    shutter_offsets,
+    !missing(shutteropen) ||
+      !missing(shutterclose) ||
+      !missing(shutter_speed) ||
+      !missing(camera_motion_blur)
+  )
   mode = match.arg(mode)
+  if (!is.null(timeline) && mode == "animation") {
+    stop(
+      "Use render_animation(times = ...) for offline output; timeline controls an interactive still preview.",
+      call. = FALSE
+    )
+  }
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
@@ -538,6 +571,21 @@ render_scene = function(
     )
   }
 
+  if (!is.null(time)) {
+    if (!is.null(timeline)) {
+      validate_relative_scene_times(c(
+        timeline - time + min(0, timing$offsets[1]),
+        timeline - time + max(0, timing$offsets[2])
+      ))
+    }
+    cameras = lapply(
+      cameras,
+      camera_at_scene_times,
+      times = time,
+      fps = fps,
+      shutter_offsets = timing$offsets
+    )
+  }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
       cameras,
@@ -546,6 +594,9 @@ render_scene = function(
       end_frame = end_frame
     )
     batch_blockers = character()
+    if (!is.null(timeline)) {
+      batch_blockers = c(batch_blockers, "interactive timeline is enabled")
+    }
     if (!camera_batch_metadata_compatible(cameras)) {
       batch_blockers = c(batch_blockers, "camera metadata differs")
     }
@@ -609,11 +660,13 @@ render_scene = function(
         force_no_write = identical(mode, "preview")
       ))
     }
-    warning(
-      "Rendering cameras one at a time because ",
-      paste(batch_blockers, collapse = ", "),
-      "."
-    )
+    if (length(batch_blockers)) {
+      warning(
+        "Rendering cameras one at a time because ",
+        paste(batch_blockers, collapse = ", "),
+        "."
+      )
+    }
     output = lapply(cameras, function(cam) {
       render_scene(
         scene = scene,
@@ -654,7 +707,11 @@ render_scene = function(
         camera = cam,
         start_frame = start_frame,
         end_frame = end_frame,
-        mode = mode
+        mode = mode,
+        time = time,
+        timeline = timeline,
+        fps = fps,
+        shutter_offsets = shutter_offsets
       )
     })
     names(output) = vapply(cameras, function(cam) cam$name, character(1))
@@ -741,6 +798,12 @@ render_scene = function(
   camera_motion_blur = camera_args$camera_motion_blur
   shutter_speed = camera_args$shutter_speed
   camera_flip_x = camera_args$camera_flip_x
+  if (!is.null(time)) {
+    shutteropen = timing$offsets[1]
+    shutterclose = timing$offsets[2]
+    shutter_speed = 1
+    camera_motion_blur = FALSE
+  }
   filename = camera_image_filename(selected_camera, frame)
   if (render_mode == "preview") {
     filename = NA
@@ -791,15 +854,33 @@ HAS_OIDN: %s
       "Move:       W/A/S/D horizontal | Q/Z vertical | E/C speed | F fast travel",
       "Look:       Shift-W/S pitch | Shift-A/D roll | Tab toggle orbit",
       "Lens/Env:   Up/Down FOV | Left/Right aperture | 1/2 focal | 3/4 env rotate",
-      "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel",
+      if (is.null(timeline)) {
+        "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel"
+      } else {
+        "Keyframes:  K save | L last | </> prev/next | / delete | M scene-time preview/cancel"
+      },
       "Mouse:      Left click lookat + focal distance | Right click lookat",
       "Status:     Wide window shows camera/exposure/env/keyframes/loop",
-      "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
-      "Blur:       B camera motion blur",
+      if (is.null(timeline)) {
+        "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed"
+      } else {
+        "Exposure:   ]/[ preview exposure | shutter_offsets controls rigid motion blur"
+      },
+      if (is.null(timeline)) {
+        "Blur:       B camera motion blur"
+      } else {
+        "Timeline:   Space play/pause | Shift-Space reverse | Ctrl-Space scene loop"
+      },
       "Atmosphere: H haze | Y altitude queries (haze requires altitude queries)",
       "Snapshot:   Shift-Enter save current preview",
       "General:    P print camera | R reset camera | ESC close"
     )
+    if (!is.null(timeline)) {
+      controls_lines = c(
+        controls_lines,
+        "Timeline:   Drag slider | Home/End endpoints | Ctrl-Left/Right step | Page Up/Down rate"
+      )
+    }
     if (deferred_render) {
       controls_lines = c(
         controls_lines,
@@ -857,11 +938,19 @@ HAS_OIDN: %s
     deferred_render = deferred_render,
     integrator_type = integrator_type,
     denoise = denoise,
-    print_debug_info = print_debug_info
+    print_debug_info = print_debug_info,
+    scene_time = time
   )
   print_time(verbose, "Pre-processed scene")
 
   camera_info = scene_list$camera_info
+  camera_info$timeline = timeline
+  camera_info$timeline_fps = fps
+  camera_info$timeline_camera = if (!is.null(timeline)) {
+    selected_camera$authored_motion
+  } else {
+    NULL
+  }
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
   render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
@@ -975,6 +1064,7 @@ HAS_OIDN: %s
   attr(return_array, "bvh_build_count") = attr(rgb_mat, "bvh_build_count")
   attr(return_array, "trace_seconds") = attr(rgb_mat, "trace_seconds")
   attr(return_array, "wavefront") = attr(rgb_mat, "wavefront")
+  attr(return_array, "timeline") = attr(rgb_mat, "timeline")
 
   return(invisible(return_array))
 }

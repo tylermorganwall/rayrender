@@ -5,6 +5,18 @@ PrintClassSizes <- function() {
     invisible(.Call(`_rayrender_PrintClassSizes`))
 }
 
+animation_evaluate_track <- function(track, times) {
+    .Call(`_rayrender_animation_evaluate_track`, track, times)
+}
+
+animation_evaluate_transform <- function(track, times) {
+    .Call(`_rayrender_animation_evaluate_transform`, track, times)
+}
+
+animation_euler_quaternions <- function(angles) {
+    .Call(`_rayrender_animation_euler_quaternions`, angles)
+}
+
 query_prague_atmosphere <- function(description, positions, directions, distances, sample = FALSE, build_sampler = FALSE) {
     .Call(`_rayrender_query_prague_atmosphere`, description, positions, directions, distances, sample, build_sampler)
 }

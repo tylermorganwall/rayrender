@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <future>
 #include <limits>
+#include <thread>
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size,
@@ -615,8 +616,14 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
 
   bool termination_sample_count_set = false;
   auto restart_after_atmosphere_change = [&]() {
-    if(!display.ConsumeAtmosphereChange()) return false;
+    bool atmosphere = display.ConsumeAtmosphereChange();
+    bool timeline = display.ConsumeTimelineChange();
+    if(!atmosphere && !timeline) return false;
     reset_render_state();
+    if(timeline && wavefront_report && wavefront_report->requested) {
+      context.BeginFrame(world, hlist, *cam, nx*ny, sample_method, *wavefront_report, numbercores);
+      display.integrator_name = wavefront ? "Metal" : cpu_integrator;
+    }
     return true;
   };
   auto finish_preview_termination = [&](size_t rendered_samples) {
@@ -739,11 +746,20 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       }
     }
   } else {
-    for(size_t s = 0; s < static_cast<size_t>(ns); s = adaptive_pixel_sampler.max_s) {
+    for(size_t s = 0; s < static_cast<size_t>(ns) ||
+        (display.timeline && display.preview && display.interactive && !display.terminate);
+        s = adaptive_pixel_sampler.max_s) {
       Rcpp::checkUserInterrupt();
       if(display.PollCloseEvent()) {
         finish_preview_termination(s);
         break;
+      }
+      if(s >= ns && display.timeline) {
+        display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
+                          s, pb, false, 1, &world, rng_interactive);
+        restart_after_atmosphere_change();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        continue;
       }
       if(progress_bar && !display.preview) {
         pb.tick();

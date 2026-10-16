@@ -26,7 +26,7 @@
 #' includes and serial imports (relative to the main file, as in PBRT), object instances, perspective
 #' orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
 #' bilinear patches (triangulated), cubic Bezier and uniform B-spline curves, diffuse area lights,
-#' point/spot lights, uniform and equal-area image infinite lights,
+#' point/spot/projection lights, uniform and equal-area image infinite lights,
 #' RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
 #' approximations of coated and Disney materials, constant/image/Ptex/UV checker/direction-mix textures, and
 #' homogeneous, uniform-grid, and NanoVDB interior media. Material displacement
@@ -3194,6 +3194,34 @@ pbrt_light = function(command, state, context) {
       direction = direction
     )
     pbrt_buffer_append(context$lights, light)
+  } else if (type == "projection") {
+    intensity = pbrt_spectrum(p, "I", rep(1, 3)) *
+      pbrt_spectrum(p, "scale", rep(1, 3))
+    legacy = !is.null(p$values$mapname) || is.null(p$values$filename)
+    filename = pbrt_get(p, if (legacy) "mapname" else "filename", "", 1L)
+    pixels = if (nzchar(filename)) {
+      pbrt_read_environment(pbrt_asset(filename, context, command))
+    } else {
+      array(1, c(1, 1, 3))
+    }
+    light = projection_light(
+      pixels,
+      position = state$transform[1:3, 4],
+      direction = state$transform[1:3, 3],
+      up = state$transform[1:3, 2],
+      fov = pbrt_get(p, "fov", if (legacy) 45 else 90, 1L),
+      encoding = "linear",
+      color = if (max(intensity) > 0) intensity / max(intensity) else rep(0, 3),
+      intensity = max(intensity)
+    )
+    light$projection_basis = solve(state$transform[1:3, 1:3])
+    # V3 mapname uses downward image UVs directly. V4 filename adds a Y
+    # reflection to its light transform, canceling that flip.
+    if (legacy) {
+      light$projection_basis[2, ] = -light$projection_basis[2, ]
+    }
+    validate_point_light(light)
+    pbrt_buffer_append(context$point_lights, light)
   } else if (type %in% c("point", "spot")) {
     intensity = pbrt_spectrum(p, "I", rep(1, 3)) * pbrt_get(p, "scale", 1, 1L)
     from = pbrt_get(p, "from", c(0, 0, 0), 3L)

@@ -262,9 +262,14 @@ GeometryIntersection trace_reference(ray r, GeometryScene scene, device const Qu
   GeometryIntersection result;
   if (scene_has_quadrics || scene_has_instances) {
     intersector<triangle_data, instancing> query;
-    query.force_opacity(body || owner != UINT_MAX ? forced_opacity::non_opaque : forced_opacity::opaque);
+    // Disjoint instance masks make owner checks unnecessary for triangle hits.
+    // Boundary-only queries still run their existing containment callbacks.
+    const bool masked = (texture_features & 4096) && owner != UINT_MAX;
+    query.force_opacity(body || (owner != UINT_MAX && !masked)
+                            ? forced_opacity::non_opaque : forced_opacity::opaque);
     query.accept_any_intersection(any_hit);
-    auto hit = query.intersect(r, scene.mixed, 0xff, scene.mixed_functions, payload);
+    const uint mask = masked ? 1u << owner : 0xff;
+    auto hit = query.intersect(r, scene.mixed, mask, scene.mixed_functions, payload);
     result = {hit.type, hit.primitive_id, 0, hit.distance, float3(0)};
     if (hit.type == intersection_type::triangle) {
       MeshInstance placement = scene.instances[hit.instance_id];
@@ -519,6 +524,17 @@ GeometrySurface geometry_surface(uint primitive, float3 coordinates,
                  dot(placement.forward[2], float4(p, 1)));
       out.face.n[k].xyz = placement.inverse[0].xyz * n.x + placement.inverse[1].xyz * n.y +
                           placement.inverse[2].xyz * n.z;
+      // Tessellation normalizes vertices in the reference placement before
+      // shutter motion is applied. Preserve that order under animated scales:
+      // divide by the reference normal's length, not its current-time length.
+      // Native mesh normals retain their lengths through all transforms.
+      if (local.flags & 1) {
+        MeshInstance reference = instances[instance - 1];
+        float3 reference_normal = reference.inverse[0].xyz * n.x +
+                                  reference.inverse[1].xyz * n.y +
+                                  reference.inverse[2].xyz * n.z;
+        out.face.n[k].xyz /= length(reference_normal);
+      }
     }
     float3 g = local.geometric.xyz;
     out.face.geometric.xyz = placement.orientation * normalize(placement.inverse[0].xyz * g.x +

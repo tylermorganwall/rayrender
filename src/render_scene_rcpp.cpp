@@ -1,4 +1,5 @@
 #include "core/wavefront.h"
+#include "animation_rcpp.h"
 #include "core/wavefront_report.h"
 #include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
@@ -984,10 +985,22 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   std::vector<std::shared_ptr<roughness_texture> > roughness;
   std::vector<int> texture_idx;
 
+  const bool has_timeline = camera_info.containsElementNamed("timeline") && !Rf_isNull(camera_info["timeline"]);
+  const double time_origin = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]) ?
+    as<double>(camera_info["scene_time"]) : 0;
+  auto scene_time = has_timeline ? std::make_shared<SceneTimeContext>() : nullptr;
+  NumericVector timeline_range = has_timeline ? as<NumericVector>(camera_info["timeline"]) : NumericVector();
+  Float bounds_open = shutteropen, bounds_close = shutterclose;
+  if (has_timeline) {
+    scene_time->epoch = time_origin;
+    // Include the zero-width dragging exposure as well as the authored shutter.
+    bounds_open = std::nextafter(Float(timeline_range[0] - time_origin + std::min(Float(0), shutteropen)), -std::numeric_limits<Float>::infinity());
+    bounds_close = std::nextafter(Float(timeline_range[1] - time_origin + std::max(Float(0), shutterclose)), std::numeric_limits<Float>::infinity());
+  }
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
-                                                   shutteropen,
-                                                   shutterclose,
+                                                   bounds_open,
+                                                   bounds_close,
                                                    textures, 
                                                    alpha_textures,
                                                    bump_textures,
@@ -1002,7 +1015,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    instance_importance_sampled,
                                                    texture_idx,
                                                    verbose, 
-                                                   rng);
+                                                   rng, nullptr,
+                                                   time_origin, scene_time);
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -1126,6 +1140,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          auto_exposure);
 #endif
   Display.navigation_bounds = bounding_box_world;
+  if (has_timeline) {
+    Display.ConfigureTimeline(timeline_range[0], timeline_range[1], time_origin,
+      as<double>(camera_info["timeline_fps"]), scene_time, shutteropen, shutterclose);
+    if (camera_info.containsElementNamed("timeline_camera") && !Rf_isNull(camera_info["timeline_camera"])) {
+      DataFrame motion = as<DataFrame>(camera_info["timeline_camera"]);
+      if (motion.nrows() > 1) Display.ConfigureTimelineCamera(read_camera_track(motion, 1, 0));
+    }
+  }
   // Keep complete, immutable light variants for interactive atmosphere changes.
   // Rebuilding the mixture also updates altitude-dependent sampling weights and
   // celestial filtering. Coefficients and image textures use their existing caches.
@@ -1283,6 +1305,13 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   final_image.attr("render_cancelled") = Display.terminate;
   final_image.attr("preview_exposure") = Display.preview_exposure_adjustment;
   final_image.attr("screen_camera_info") = get_screen_camera_info(cam.get());
+  if (Display.timeline) {
+    const auto &published = Display.timeline->Published();
+    const auto &displayed = Display.timeline->Displayed();
+    final_image.attr("timeline") = List::create(Named("published_time") = published.time,
+      Named("displayed_time") = displayed.time, Named("revision") = double(published.revision),
+      Named("displayed_revision") = double(displayed.revision), Named("rate") = Display.timeline->Rate());
+  }
   if(screen_text_visible.size() > 0) {
     final_image.attr("screen_text_visible") = screen_text_visible;
   }

@@ -4,8 +4,13 @@
 AnimatedTransform::AnimatedTransform(Transform* startTransform,
                                      Float startTime,
                                      Transform* endTransform,
-                                     Float endTime)
-                                     : startTransform(startTransform),
+                                     Float endTime,
+                                     std::shared_ptr<const animation::TransformTrack> track,
+                                     double time_origin,
+                                     std::shared_ptr<SceneTimeContext> scene_time)
+                                     : track(std::move(track)), time_origin(time_origin),
+                                       scene_time(std::move(scene_time)),
+                                       startTransform(startTransform),
                                        endTransform(endTransform),
                                        startTime(startTime),
                                        endTime(endTime),
@@ -753,6 +758,11 @@ void AnimatedTransform::Decompose(const Matrix4x4 &m, vec3f *T,
 }
 
 void AnimatedTransform::Interpolate(Float time, Transform *t) const {
+  if (track) {
+    *t = track->At(SceneTime(time));
+    return;
+  }
+  if (scene_time || time_origin != 0) time = Float(SceneTime(time));
   // Handle boundary conditions for matrix interpolation
   if (!actuallyAnimated || time <= startTime) {
     *t = *startTransform;
@@ -780,6 +790,7 @@ void AnimatedTransform::Interpolate(Float time, Transform *t) const {
 }
 
 Ray AnimatedTransform::operator()(const Ray &r) const {
+  if (UsesSceneTime()) { Transform t; Interpolate(r.time(), &t); return t(r); }
   if (!actuallyAnimated || r.time() <= startTime)
     return (*startTransform)(r);
   else if (r.time() >= endTime)
@@ -804,6 +815,7 @@ Ray AnimatedTransform::operator()(const Ray &r) const {
 // }
 
 point3f AnimatedTransform::operator()(Float time, const point3f &p) const {
+  if (UsesSceneTime()) { Transform t; Interpolate(time, &t); return t(p); }
   if (!actuallyAnimated || time <= startTime)
     return (*startTransform)(p);
   else if (time >= endTime)
@@ -814,6 +826,7 @@ point3f AnimatedTransform::operator()(Float time, const point3f &p) const {
 }
 
 vec3f AnimatedTransform::operator()(Float time, const vec3f &v) const {
+  if (UsesSceneTime()) { Transform t; Interpolate(time, &t); return t(v); }
   if (!actuallyAnimated || time <= startTime)
     return (*startTransform)(v);
   else if (time >= endTime)
@@ -824,6 +837,25 @@ vec3f AnimatedTransform::operator()(Float time, const vec3f &v) const {
 }
 
 aabb AnimatedTransform::MotionBounds(const aabb &b) const {
+  if (track) {
+    double begin = 0, end = 0;
+    for (const auto &channel : {track->position, track->rotation, track->scale}) if (channel) {
+      begin = std::min(begin, channel->times.front()); end = std::max(end, channel->times.back());
+    }
+    // This overload encloses all authored motion, not a scene-time exposure.
+    // A player may be paused or have an anchor far from the local key interval.
+    auto local = *track;
+    local.clock.reset();
+    return local.Bounds(b, begin, end);
+  }
+  if (scene_time || time_origin != 0) {
+    // The analytic legacy derivative roots are expressed in authored time.
+    // Evaluate them without applying the ray-time epoch a second time.
+    auto authored = *this;
+    authored.time_origin = 0;
+    authored.scene_time.reset();
+    return authored.MotionBounds(b);
+  }
   if (!actuallyAnimated) return (*startTransform)(b);
   if (hasRotation == false)
     return surrounding_box((*startTransform)(b), (*endTransform)(b));
@@ -833,6 +865,14 @@ aabb AnimatedTransform::MotionBounds(const aabb &b) const {
     bounds = surrounding_box(bounds, BoundPointMotion(b.Corner(corner)));
   }
   return bounds;
+}
+
+aabb AnimatedTransform::MotionBounds(const aabb &b, double begin, double end) const {
+  if (track) return track->Bounds(b, FrameEpoch() + (begin - FrameAnchor()), FrameEpoch() + (end - FrameAnchor()));
+  if (begin == end) { Transform t; Interpolate(Float(begin), &t); return t(b); }
+  // The original analytic legacy bound encloses the full segment, also when
+  // exposure extends beyond either held endpoint. Preserve its shear semantics.
+  return MotionBounds(b);
 }
 
 
@@ -879,6 +919,7 @@ void IntervalFindZeros(Float c1, Float c2, Float c3, Float c4, Float c5,
 
 
 aabb AnimatedTransform::BoundPointMotion(const point3f &p) const {
+  if (track) return MotionBounds(aabb(p));
   if (!actuallyAnimated) return aabb((*startTransform)(p));
   aabb bounds((*startTransform)(p), (*endTransform)(p));
   Float cosTheta = dot(R[0], R[1]);

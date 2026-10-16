@@ -127,6 +127,15 @@ animation_default_plot_scene = function(
 #' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
 #' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
 #' @param camera Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.
+#' @param times Default `NULL`. Finite output scene times in seconds, including
+#'   nonmonotonic or repeated times. NULL preserves legacy timing. start_frame and
+#'   end_frame select positions in this sequence; filenames use output indices.
+#' @param fps Default `30`. Frame rate used to timestamp camera-motion rows as
+#'   (index - 1) / fps when no explicit time column is present.
+#' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   With times, NULL freezes each requested scene time. Explicit legacy shutter
+#'   controls conflict with times. Moving cameras currently require zero-width
+#'   explicit exposures. Geometry is compiled once for the output sequence.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
@@ -256,8 +265,29 @@ render_animation = function(
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
   integrator_type = "auto",
-  camera = NULL
+  camera = NULL,
+  times = NULL,
+  fps = 30,
+  shutter_offsets = NULL
 ) {
+  if (
+    !is.null(times) &&
+      (!is.numeric(times) || !length(times) || any(!is.finite(times)))
+  ) {
+    stop(
+      "times must be a nonempty finite numeric vector of scene seconds.",
+      call. = FALSE
+    )
+  }
+  timing = resolve_scene_timing(
+    if (is.null(times)) NULL else times[1],
+    NULL,
+    fps,
+    shutter_offsets,
+    !missing(shutteropen) ||
+      !missing(shutterclose) ||
+      !missing(camera_motion_blur)
+  )
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
@@ -357,6 +387,15 @@ render_animation = function(
     )
   }
 
+  if (!is.null(times)) {
+    cameras = lapply(
+      cameras,
+      camera_at_scene_times,
+      times = times,
+      fps = fps,
+      shutter_offsets = timing$offsets
+    )
+  }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
       cameras,
@@ -602,10 +641,12 @@ render_animation_camera = function(
     keep_colors = keep_colors,
     deferred_render = FALSE,
     integrator_type = integrator_type,
-    denoise = denoise
+    denoise = denoise,
+    scene_time = camera$scene_time
   )
 
   camera_info = scene_list$camera_info
+  camera_info$shutter_offsets = camera$shutter_offsets
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
   render_info$transparent_background = transparent_background
@@ -779,10 +820,12 @@ render_camera_batch = function(
     keep_colors = keep_colors,
     deferred_render = FALSE,
     integrator_type = integrator_type,
-    denoise = denoise
+    denoise = denoise,
+    scene_time = camera$scene_time
   )
 
   camera_info = scene_list$camera_info
+  camera_info$shutter_offsets = camera$shutter_offsets
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
   render_info$transparent_background = transparent_background

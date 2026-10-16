@@ -40,6 +40,7 @@ R"MSL(
   };
   struct Light {
     float4 forward, right, up, color;
+    float4 projection_direction;
     uint type, texture, primitive, flags;
     uint instance, alias_offset, alias_width, alias_height;
   };
@@ -85,7 +86,7 @@ R"MSL(
     atomic_uint rays, hits, shadows, next, error, discarded, scattering, csg_failed;
   };
   static_assert(sizeof(Triangle) == 160 && sizeof(Texture) == 80 && sizeof(Material) == 144 &&
-                    sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 96 &&
+                    sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 112 &&
                     sizeof(Camera) == 240 && sizeof(Params) == 320 && sizeof(Pixel) == 48 &&
                     sizeof(Path) == 80 && sizeof(Hit) == 32 && sizeof(Shadow) == 144 &&
                     sizeof(Counts) == 32,
@@ -1385,16 +1386,25 @@ R"MSL(
         maximum = sqrt(distance2);
         wi = delta / maximum;
         float falloff = 1;
-        if (l.flags) {
+        if (l.flags & 1) {
           float cosine = dot(-wi, l.right.xyz);
           if (cosine <= l.right.w)
             falloff = 0;
           else if (cosine < l.up.w) {
             float f = (cosine - l.right.w) / (l.up.w - l.right.w);
-            falloff = f * f * f * f;
+            falloff = f * f * (3 - 2 * f);
           }
         }
         emitted = l.color.xyz * falloff / distance2;
+        if (l.flags & 2) {
+          // Project the outgoing direction; image_centers uses top-first rows
+          // and clamped bilinear taps, matching PointLight::Project on CPU.
+          float z = dot(-wi, l.projection_direction.xyz);
+          float2 uv = .5f + .5f * float2(dot(-wi, l.right.xyz), dot(-wi, l.up.xyz)) /
+                                  (z * float2(l.right.w, l.up.w));
+          emitted *= z > 0 && all(uv >= 0) && all(uv <= 1)
+            ? image_centers(textures[l.texture], uv, false, texels) : float3(0);
+        }
         pdf = selection_pdf;
       } else {
         GeometrySurface source =

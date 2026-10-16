@@ -561,6 +561,14 @@ public:
       for (size_t i = 0; i < count; ++i) {
         auto &instance = instances[i];
         instance.mask = 0xff;
+        if (scene.texture_features & 4096) {
+          if (i >= prefix)
+            instance.mask = 1u << scene.motion->owners[3][i];
+          else if (loose && i == 0)
+            instance.mask = 1; // All loose triangles belong to the static group.
+          // Analytic shapes share a BLAS; their intersection callback retains
+          // owner filtering. Meshes are rejected by hardware masks instead.
+        }
         if (i < prefix) {
           instance.transformationMatrix.columns[0].x = 1;
           instance.transformationMatrix.columns[1].y = 1;
@@ -630,6 +638,12 @@ public:
         throw std::runtime_error("wavefront image exceeds queue capacity");
       if (cancelled())
         return false;
+      if (scene_data.motion) {
+        // The prior command has completed before this batch. Publish only the
+        // clock phase/anchor; key arrays and reference geometry stay resident.
+        scene_data.motion->UpdateClocks();
+        scene_data.motion->CopyClockState(static_cast<char *>(buffers[28].contents) + geometry_storage.motion_offset);
+      }
       // Primary rays can query CSG for initial membership. Reset on the host
       // before dispatch, rather than racing the first lane against those queries.
       static_cast<uint32_t *>(buffers[11].contents)[7]=0;

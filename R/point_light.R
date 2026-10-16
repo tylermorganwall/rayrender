@@ -263,7 +263,7 @@ spot_light = function(
 #' attached lights; geometry transforms do not move these world-space lights.
 #'
 #' @param scene Scene to modify.
-#' @param light Description from [point_light()] or `spot_light()`.
+#' @param light Description from [point_light()], [spot_light()], or [projection_light()].
 #' @param name Default `NULL`. Optional override for the light name.
 #' @param replace Default `FALSE`. Replace an existing light with this name.
 #' @return The modified scene.
@@ -639,10 +639,21 @@ remove_light = function(scene, name) {
 #' @keywords internal
 #' @noRd
 validate_point_light = function(light) {
-  if (!inherits(light, "ray_light") || !light$type %in% c("point", "spot")) {
-    stop("Expected a point_light() or spot_light().", call. = FALSE)
+  if (
+    !inherits(light, "ray_light") ||
+      !light$type %in% c("point", "spot", "projection")
+  ) {
+    stop(
+      "Expected a point_light(), spot_light(), or projection_light().",
+      call. = FALSE
+    )
   }
-  for (field in c("position", "color", if (light$type == "spot") "direction")) {
+  for (field in c(
+    "position",
+    "color",
+    if (light$type != "point") "direction",
+    if (light$type == "projection") "up"
+  )) {
     value = light[[field]]
     if (
       !is.numeric(value) ||
@@ -675,6 +686,61 @@ validate_point_light = function(light) {
       !nzchar(trimws(light$name))
   ) {
     stop("Light name must be a nonempty string.", call. = FALSE)
+  }
+  if (light$type == "projection") {
+    if (
+      !is.numeric(light$fov) ||
+        length(light$fov) != 1L ||
+        !is.finite(light$fov) ||
+        light$fov <= 0 ||
+        light$fov >= 180
+    ) {
+      stop("Projection fov must be between 0 and 180 degrees.", call. = FALSE)
+    }
+    d = light$direction / max(abs(light$direction))
+    u = light$up / max(abs(light$up))
+    if (
+      any(!is.finite(c(d, u))) ||
+        sum((u - d * sum(u * d) / sum(d * d))^2) < 1e-12
+    ) {
+      stop(
+        "Projection direction and up must be nonzero and nonparallel.",
+        call. = FALSE
+      )
+    }
+    pixels = light$image
+    if (
+      !is.numeric(pixels) ||
+        length(dim(pixels)) != 3L ||
+        dim(pixels)[3] != 3L ||
+        any(dim(pixels) < 1L) ||
+        any(!is.finite(pixels)) ||
+        any(pixels < 0) ||
+        any(pixels > 1e30)
+    ) {
+      stop(
+        "Projection image must contain finite nonnegative RGB values at most 1e30.",
+        call. = FALSE
+      )
+    }
+    # Imported PBRT lights retain the full inverse linear transform, including
+    # reflection and nonuniform scaling, rather than rebuilding an orthogonal frame.
+    basis = light$projection_basis
+    if (
+      !is.null(basis) &&
+        (!is.matrix(basis) ||
+          !is.numeric(basis) ||
+          !identical(dim(basis), c(3L, 3L)) ||
+          any(!is.finite(basis)) ||
+          any(abs(basis) > 1e30) ||
+          !is.finite(det(basis)) ||
+          det(basis) == 0)
+    ) {
+      stop(
+        "Projection basis must be a finite nonsingular 3 by 3 matrix.",
+        call. = FALSE
+      )
+    }
   }
   if (light$type == "spot") {
     if (max(abs(light$direction)) == 0) {

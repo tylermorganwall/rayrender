@@ -3,13 +3,28 @@ R"MSL(
 // the camera ray's absolute shutter time; secondary/visibility rays retain it.
 struct MotionHeader {
   uint count, owners[5], nodes, bounds;
+  uint version, byte_size, reserved[2];
 };
 struct Animation {
   float4 endpoints[2][3], translation[2], rotation[2], scale[2][3];
   float4 before[3], reference_inverse[3];
   uint parent;
   float start, end;
-  uint padding;
+  uint track;
+};
+struct TransformTrack {
+  uint channels[3], version;
+  float4 pivot;
+  float4 clock;
+  float4 frame;
+};
+struct PropertyTrack {
+  uint count, interpolation, property, keys;
+};
+struct TrackKey {
+  float4 value, incoming, outgoing;
+  float time;
+  uint reserved[3];
 };
 struct MotionContext {
   device const uchar *data;
@@ -18,8 +33,42 @@ struct MotionContext {
 struct MotionPose {
   float4 forward[3], inverse[3];
 };
-static_assert(sizeof(Animation) == 368 && sizeof(MotionHeader) == 32,
+static_assert(sizeof(Animation) == 368 && sizeof(MotionHeader) == 48,
               "motion ABI mismatch");
+static_assert(sizeof(TransformTrack) == 64 && sizeof(PropertyTrack) == 16 && sizeof(TrackKey) == 64,
+              "track ABI mismatch");
+float4 motion_track(MotionContext m, uint offset, float4 rest) {
+  if (!offset) return rest;
+  auto track = reinterpret_cast<device const PropertyTrack *>(m.data + offset);
+  auto keys = reinterpret_cast<device const TrackKey *>(m.data + track->keys);
+  if (m.time <= keys[0].time) return keys[0].value;
+  if (m.time >= keys[track->count - 1].time) return keys[track->count - 1].value;
+  uint lo = 0, hi = track->count - 1;
+  while (hi - lo > 1) {
+    uint mid = lo + (hi - lo) / 2;
+    if (keys[mid].time <= m.time) lo = mid; else hi = mid;
+  }
+  TrackKey a = keys[lo], b = keys[lo + 1];
+  if (track->interpolation == 0 || m.time == a.time) return a.value;
+  float duration = b.time - a.time, u = (m.time - a.time) / duration;
+  float4 value;
+  if (track->interpolation == 1) {
+    if (track->property == 1) {
+      float cosine = clamp(dot(a.value, b.value), -1.f, 1.f);
+      if (cosine >= .9995f) value = mix(a.value, b.value, u);
+      else {
+        float theta = acos(cosine);
+        value = (sin((1-u)*theta)*a.value + sin(u*theta)*b.value) / sin(theta);
+      }
+    } else value = mix(a.value, b.value, u);
+  } else {
+    float4 m0 = duration * a.outgoing, m1 = duration * b.incoming;
+    float4 c0 = 2*a.value - 2*b.value + m0 + m1;
+    float4 c1 = -3*a.value + 3*b.value - 2*m0 - m1;
+    value = ((c0*u + c1)*u + m0)*u + a.value;
+  }
+  return track->property == 1 ? normalize(value) : value;
+}
 uint motion_owner(MotionContext m, uint kind, uint index) {
   if (!(texture_features & 1024))
     return 0;
@@ -52,7 +101,33 @@ MotionPose motion_pose(MotionContext m, uint owner) {
     while (owner) {
       Animation a = nodes[owner - 1];
       float4 value[3];
-      if (m.time <= a.start || m.time >= a.end) {
+      if (a.track) {
+        auto track = reinterpret_cast<device const TransformTrack *>(m.data + a.track);
+        MotionContext local = m;
+        if (track->clock.w != 0) {
+          float duration = track->clock.z;
+          // Keep the owner's clock local: a parent has its own scene-time
+          // placement and must never inherit a child's wrapped clip time.
+          float phase = track->clock.x + track->clock.y * (m.time - track->frame.x);
+          if (duration == 0) local.time = 0;
+          else if (track->clock.w == 1) local.time = clamp(phase, 0.f, duration);
+          else {
+            float period = track->clock.w == 2 ? duration : 2 * duration;
+            float wrapped = fmod(phase, period);
+            if (wrapped < 0) wrapped += period;
+            if (wrapped >= period) wrapped = 0;
+            local.time = track->clock.w == 3 && wrapped > duration ? period - wrapped : wrapped;
+          }
+        }
+        float3 p = motion_track(local, track->channels[0], float4(0)).xyz;
+        float4 q = normalize(motion_track(local, track->channels[1], float4(0,0,0,1)));
+        float3 s = motion_track(local, track->channels[2], float4(1,1,1,0)).xyz;
+        float3 x = q.xyz, pivot = track->pivot.xyz;
+        value[0] = float4(float3(1-2*(x.y*x.y+x.z*x.z), 2*(x.x*x.y-q.w*x.z), 2*(x.x*x.z+q.w*x.y))*s, 0);
+        value[1] = float4(float3(2*(x.x*x.y+q.w*x.z), 1-2*(x.x*x.x+x.z*x.z), 2*(x.y*x.z-q.w*x.x))*s, 0);
+        value[2] = float4(float3(2*(x.x*x.z-q.w*x.y), 2*(x.y*x.z+q.w*x.x), 1-2*(x.x*x.x+x.y*x.y))*s, 0);
+        for (uint k = 0; k < 3; ++k) value[k].w = p[k] + pivot[k] - dot(value[k].xyz, pivot);
+      } else if (m.time <= a.start || m.time >= a.end) {
         uint endpoint = m.time <= a.start ? 0 : 1;
         for (uint k = 0; k < 3; ++k)
           value[k] = a.endpoints[endpoint][k];

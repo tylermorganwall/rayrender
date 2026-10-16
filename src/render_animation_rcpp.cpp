@@ -285,6 +285,16 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int ns = as<int>(camera_info["ns"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
+  const bool explicit_time = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]);
+  const double time_origin = explicit_time ? as<double>(camera_info["scene_time"]) : 0;
+  NumericVector frame_times = explicit_time ? as<NumericVector>(camera_movement["scene_offset"]) : NumericVector();
+  NumericVector absolute_frame_times = explicit_time ? as<NumericVector>(camera_movement["time"]) : NumericVector();
+  auto scene_time = explicit_time ? std::make_shared<SceneTimeContext>() : nullptr;
+  if (scene_time) scene_time->epoch = time_origin;
+  NumericVector shutter_offsets = explicit_time ? as<NumericVector>(camera_info["shutter_offsets"]) : NumericVector();
+  if (explicit_time && (shutter_offsets.size() != 2 || absolute_frame_times.size() != frame_times.size() ||
+      frame_times.size() != as<NumericVector>(camera_movement["x"]).size()))
+    stop("Explicit animation timing does not match the requested camera frames.");
   Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
     as<Float>(camera_info["shutter_speed"]) :
     static_cast<Float>(2);
@@ -402,7 +412,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instanced_objects,
                                                   instance_importance_sampled,
                                                   texture_idx,
-                                                  verbose, rng);
+                                                  verbose, rng, nullptr, time_origin, scene_time);
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -501,6 +511,12 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   if(debug_channel != 0) {
     for(int i = start_frame; i < n_frames; i++ ) {
+      if (explicit_time) {
+        scene_time->epoch = absolute_frame_times[i];
+        scene_time->ray_anchor = Float(frame_times[i]);
+        shutteropen = Float(frame_times[i] + shutter_offsets[0]);
+        shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+      }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : &rng;
       if(progress_bar) {
@@ -586,6 +602,12 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     std::unique_ptr<PreviewDisplay> preview_display;
 
     for(int i = start_frame; i < n_frames; i++ ) {
+      if (explicit_time) {
+        scene_time->epoch = absolute_frame_times[i];
+        scene_time->ray_anchor = Float(frame_times[i]);
+        shutteropen = Float(frame_times[i] + shutter_offsets[0]);
+        shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+      }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : nullptr;
       if(progress_bar) {
@@ -605,7 +627,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       RayCamera* frame_cam = nullptr;
       std::unique_ptr<RayCamera> frame_cam_storage;
       if(persistent_preview) {
-        if(preview_cam_initialized &&
+        if(preview_cam_initialized && !explicit_time &&
            current_camera_type == preview_camera_type &&
            can_update_animation_camera(current_camera_type) &&
            same_animation_up(camera_up, preview_camera_up)) {

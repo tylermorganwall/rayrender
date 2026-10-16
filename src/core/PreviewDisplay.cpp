@@ -1,5 +1,6 @@
 #include "Rcpp.h"
 #include "../core/PreviewDisplay.h"
+#include "../animation_rcpp.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
 #include "../volumes/picking.h"
@@ -8,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <sstream>
 #include <stdexcept>
 
@@ -142,6 +144,7 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
   } else {
     ray = cam->get_ray(u, v, point3f(0), .5f);
   }
+  if (timeline && timeline_scene_time) ray._time = timeline_scene_time->ray_anchor;
   bool cancelled = false;
   size_t polls = 0;
   auto cancel = [&] {
@@ -445,6 +448,10 @@ void PreviewDisplay::DecreasePreviewExposure() {
 }
 
 void PreviewDisplay::SetShutterSpeed(Float value) {
+  if (timeline) {
+    Rprintf("Timeline exposure is controlled by shutter_offsets in scene seconds.\n");
+    return;
+  }
   if(std::isnan(value) ||
      value < static_cast<Float>(1) ||
      (std::isinf(value) && value < static_cast<Float>(0))) {
@@ -513,6 +520,10 @@ void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
 }
 
 bool PreviewDisplay::ToggleCameraMotionBlur() {
+  if (timeline) {
+    Rprintf("Timeline camera motion blur is not implemented; rigid object shutter_offsets remain active.\n");
+    return false;
+  }
   SetCameraMotionBlur(!camera_motion_blur_enabled);
   Rprintf("Camera Motion Blur: %s\n", camera_motion_blur_enabled ? "ON" : "OFF");
   return camera_motion_blur_enabled;
@@ -726,6 +737,7 @@ Rcpp::DataFrame PreviewDisplay::KeyframesDataFrame() const {
 }
 
 bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
+  if (timeline && timeline_saved_camera) return CancelPreviewMotion(&env_rotation);
   if(preview_motion_active) {
     return false;
   }
@@ -775,6 +787,25 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     return false;
   }
 
+  if (timeline) {
+    try {
+      auto track = read_camera_track(preview_motion, timeline->Fps(), timeline->Begin());
+      auto previous_track = timeline_camera;
+      auto previous_state = CreateCurrentKeyframe(env_rotation);
+      ConfigureTimelineCamera(std::move(track));
+      timeline_camera_restore = std::move(previous_track);
+      preview_motion_restore_state = previous_state;
+      preview_motion_restore_keyframe = current_keyframe;
+      timeline_saved_camera = true;
+      timeline->Pause(false);
+      Rprintf("Saved camera rows now follow scene seconds at %.3f fps. Press M to restore the previous track.\n", timeline->Fps());
+      return true;
+    } catch (const std::exception &error) {
+      Rprintf("Can't preview camera track: %s\n", error.what());
+      return false;
+    }
+  }
+
   preview_motion_restore_state = CreateCurrentKeyframe(env_rotation);
   preview_motion_restore_keyframe = current_keyframe;
   preview_motion_frame = 0;
@@ -786,6 +817,20 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
 }
 
 bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
+  if (timeline && timeline_saved_camera) {
+    timeline->Pause(true);
+    if (timeline_camera_restore)
+      ConfigureTimelineCamera(timeline_camera_restore);
+    else {
+      ApplyCameraState(preview_motion_restore_state, env_rotation);
+      timeline_camera.reset();
+      timeline->Invalidate(animation::Camera);
+    }
+    timeline_camera_restore.reset();
+    timeline_saved_camera = false;
+    current_keyframe = preview_motion_restore_keyframe;
+    return true;
+  }
   if(!preview_motion_active) {
     return false;
   }
@@ -907,6 +952,7 @@ void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
 }
 
 unsigned int PreviewDisplay::StatusBarHeight() const {
+  if (interactive && timeline) return 120;
   return interactive && width >= PREVIEW_STATUS_MIN_WIDTH ? PREVIEW_STATUS_BAR_HEIGHT : 0;
 }
 
@@ -954,7 +1000,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
                 Keyframes.size());
   const std::string atmosphere_status = AtmosphereStatusText();
   return std::string(camera_text) + "\n" +
-    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text);
+    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text) +
+    (timeline ? "\n" + TimelineStatusText() : "");
 }
 
 void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
@@ -1511,7 +1558,7 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
                  0,
                  height,
                  width,
-                 PREVIEW_STATUS_BAR_HEIGHT);
+                 StatusBarHeight());
   XSetForeground(d, gc, WhitePixel(d, s));
   std::istringstream rows(status_text);
   std::string row;
@@ -1519,6 +1566,20 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
   while(std::getline(rows, row)) {
     XDrawString(d, w, gc, 8, baseline, row.c_str(), static_cast<int>(row.size()));
     baseline += PREVIEW_STATUS_ROW_HEIGHT;
+  }
+  if (timeline) {
+    const char *labels[] = {"|<", "<", timeline->Paused() ? "Play" : "Pause", "Rev", ">", ">|", "-", "+", "Loop"};
+    for (int i = 0; i < 9; ++i) {
+      int left = i * width / 9, right = (i+1) * width / 9;
+      XDrawRectangle(d, w, gc, left+1, height+73, std::max(1,right-left-3), 21);
+      XDrawString(d, w, gc, left+5, height+89, labels[i], std::strlen(labels[i]));
+    }
+    int extent = std::max(1, int(width)-24), y = height+108;
+    XDrawLine(d,w,gc,12,y,12+extent,y);
+    double fraction = timeline->End() == timeline->Begin() ? 0 :
+      (timeline->Requested().time-timeline->Begin())/(timeline->End()-timeline->Begin());
+    int x = 12 + int(fraction * extent);
+    XFillRectangle(d,w,gc,x-3,y-6,7,13);
   }
   XFlush(d);
 }
@@ -1686,6 +1747,24 @@ void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
     text_rect.top += PREVIEW_STATUS_ROW_HEIGHT;
     text_rect.bottom += PREVIEW_STATUS_ROW_HEIGHT;
   }
+  if (timeline) {
+    const char *labels[] = {"|<", "<", timeline->Paused() ? "Play" : "Pause", "Rev", ">", ">|", "-", "+", "Loop"};
+    for (int i = 0; i < 9; ++i) {
+      RECT button = {LONG(i*width/9+1), LONG(height+73), LONG((i+1)*width/9-1), LONG(height+95)};
+      FrameRect(hdc, &button, (HBRUSH)GetStockObject(WHITE_BRUSH));
+      DrawTextA(hdc,labels[i],-1,&button,DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    }
+    HPEN pen = CreatePen(PS_SOLID,1,RGB(255,255,255));
+    HGDIOBJ old = SelectObject(hdc,pen);
+    int extent = std::max(1,int(width)-24), y = height+108;
+    MoveToEx(hdc,12,y,NULL); LineTo(hdc,12+extent,y);
+    double fraction = timeline->End() == timeline->Begin() ? 0 :
+      (timeline->Requested().time-timeline->Begin())/(timeline->End()-timeline->Begin());
+    int x = 12 + int(fraction*extent);
+    RECT thumb = {x-3,y-6,x+4,y+7};
+    FillRect(hdc,&thumb,(HBRUSH)GetStockObject(WHITE_BRUSH));
+    SelectObject(hdc,old); DeleteObject(pen);
+  }
 }
 #endif
 
@@ -1711,6 +1790,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   if(PollCloseEvent()) {
     return;
   }
+  if (timeline) timeline->Display(timeline->Published().revision);
+  Rcpp::List camera_before_input;
+  if (timeline && timeline_camera) camera_before_input = CreateCurrentKeyframe(0);
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
@@ -1866,6 +1948,18 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       XNextEvent(d, &e);
       if(e.type == FocusOut) {
         ResetNavigationInput();
+        TimelineFocusLost();
+        if (timeline) XUngrabPointer(d, CurrentTime);
+      } else if (timeline && e.type == MotionNotify) {
+        TimelinePointer(e.xmotion.x, e.xmotion.y, false, false);
+      } else if (timeline && e.type == ButtonRelease) {
+        TimelinePointer(e.xbutton.x, e.xbutton.y, false, true);
+        XUngrabPointer(d, CurrentTime);
+      } else if (timeline && e.type == ConfigureNotify) {
+        if (e.xconfigure.width != int(width) || e.xconfigure.height != int(height + StatusBarHeight())) {
+          TimelineFocusLost();
+          XResizeWindow(d,w,width,height+StatusBarHeight());
+        }
       } else if(e.type == KeyRelease) {
         KeySym key = XLookupKeysym(&e.xkey, 0);
         if(key > 0 && key < 128 && std::strchr("wasdqz", static_cast<char>(key))) {
@@ -1885,6 +1979,19 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       } else if (e.type == KeyPress) {
         if(!PreviewDisplayHasKeyboardFocus(d, this->w)) {
           continue;
+        }
+        if (timeline) {
+          KeySym key = XLookupKeysym(&e.xkey,0);
+          bool control = (e.xkey.state & ControlMask) != 0;
+          bool shifted = (e.xkey.state & ShiftMask) != 0;
+          using animation::TimelineCommand;
+          if (key == XK_space) { TimelineAction(control ? TimelineCommand::Loop : shifted ? TimelineCommand::Reverse : TimelineCommand::PlayPause); continue; }
+          if (key == XK_Home) { TimelineAction(TimelineCommand::Begin); continue; }
+          if (key == XK_End) { TimelineAction(TimelineCommand::End); continue; }
+          if (key == XK_Page_Up) { TimelineAction(TimelineCommand::Faster); continue; }
+          if (key == XK_Page_Down) { TimelineAction(TimelineCommand::Slower); continue; }
+          if (control && key == XK_Left) { TimelineAction(TimelineCommand::StepBack); continue; }
+          if (control && key == XK_Right) { TimelineAction(TimelineCommand::StepForward); continue; }
         }
         if (e.xkey.keycode == esc ) {
           terminate = true;
@@ -2269,6 +2376,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
+        if (timeline && e.xbutton.button == Button1 &&
+            TimelinePointer(e.xbutton.x,e.xbutton.y,true,false)) {
+          if (timeline->Requested().dragging)
+            XGrabPointer(d,w,False,PointerMotionMask | ButtonReleaseMask,GrabModeAsync,GrabModeAsync,0,0,CurrentTime);
+          continue;
+        }
         if(interactive && IsPreviewMotionActive()) {
           continue;
         }
@@ -2432,6 +2545,15 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     terminate = term;
   }
 #endif
+  if (timeline && timeline_camera && camera_before_input.size() && !timeline->Pending()) {
+    auto after = CreateCurrentKeyframe(0);
+    bool camera_changed = false;
+    for (const char *name : {"x","y","z","dx","dy","dz","upx","upy","upz",
+                            "fov","aperture","focal","orthox","orthoy"})
+      camera_changed = camera_changed || Rcpp::as<double>(after[name]) != Rcpp::as<double>(camera_before_input[name]);
+    if (camera_changed) TimelineCameraEdited();
+  }
+  if (UpdateTimeline()) reset_preview_render();
 }
 #ifdef HAS_OIDN
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
@@ -2530,7 +2652,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height + StatusBarHeight(), 1,
                             BlackPixel(d, s),  BlackPixel(d, s));
     XSelectInput(d, w, ExposureMask | KeyPressMask | KeyReleaseMask |
-                 FocusChangeMask | ButtonPressMask);
+                 FocusChangeMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask);
     Bool detectable_repeat = False;
     XkbSetDetectableAutoRepeat(d, True, &detectable_repeat);
     XMapWindow(d, w);
@@ -2540,6 +2662,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   }
 #endif
 #ifdef RAY_WINDOWS
+  ::width = _width; ::height = _height;
   speed = 1.f;
   term = false;
   env_y_angle = 0;
@@ -2898,9 +3021,25 @@ static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = tru
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
     case WM_KILLFOCUS: {
-      if(preview_display_w != nullptr) preview_display_w->ResetNavigationInput();
+      if(preview_display_w != nullptr) {
+        preview_display_w->ResetNavigationInput();
+        preview_display_w->TimelineFocusLost();
+      }
+      ReleaseCapture();
       break;
     }
+    case WM_CAPTURECHANGED:
+      if(preview_display_w && preview_display_w->timeline)
+        preview_display_w->TimelinePointer(0,0,false,true);
+      break;
+    case WM_MOUSEMOVE:
+      if(preview_display_w && preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),false,false)) return 0;
+      break;
+    case WM_LBUTTONUP:
+      if(preview_display_w && preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),false,true)) {
+        ReleaseCapture(); return 0;
+      }
+      break;
     case WM_KEYUP: {
       if(preview_display_w != nullptr && wParam >= 'A' && wParam <= 'Z')
         preview_display_w->ReleaseNavigationKey(static_cast<char>(wParam + ('a' - 'A')));
@@ -2916,6 +3055,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         return 0;
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(preview_display_w && preview_display_w->timeline) {
+        bool control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        using animation::TimelineCommand;
+        auto action = [&](TimelineCommand command) { preview_display_w->TimelineAction(command); };
+        if(wParam == VK_SPACE) { action(control ? TimelineCommand::Loop : shift_pressed ? TimelineCommand::Reverse : TimelineCommand::PlayPause); return 0; }
+        if(wParam == VK_HOME) { action(TimelineCommand::Begin); return 0; }
+        if(wParam == VK_END) { action(TimelineCommand::End); return 0; }
+        if(wParam == VK_PRIOR) { action(TimelineCommand::Faster); return 0; }
+        if(wParam == VK_NEXT) { action(TimelineCommand::Slower); return 0; }
+        if(control && wParam == VK_LEFT) { action(TimelineCommand::StepBack); return 0; }
+        if(control && wParam == VK_RIGHT) { action(TimelineCommand::StepForward); return 0; }
+      }
       if(interactive_w && preview_display_w != nullptr &&
          (wParam == VK_KEY_H || wParam == VK_KEY_Y)) {
         if((lParam & (LPARAM(1) << 30)) == 0) {
@@ -3170,6 +3321,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN: {
+    if(uMsg == WM_LBUTTONDOWN && preview_display_w &&
+       preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),true,false)) {
+      if(preview_display_w->timeline->Requested().dragging) SetCapture(hwnd);
+      return 0;
+    }
     if(interactive_w && preview_display_w != nullptr &&
        !preview_display_w->IsPreviewMotionActive()) {
       const int x = GET_X_LPARAM(lParam), y = GET_Y_LPARAM(lParam);
@@ -3245,6 +3401,72 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
 }
 
 context("Preview atmosphere controls") {
+  test_that("camera tracks seek, allow a manual override, and restore saved playback") {
+    Transform identity;
+    camera cam(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60,1,0,10,0,0,1);
+    auto display = MakeTestPreviewDisplay(cam,identity);
+    auto scene_time = std::make_shared<SceneTimeContext>();
+    display->ConfigureTimeline(2,9,2,30,scene_time,0,0);
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto last = first; last.time = 9; last.values[0] = 7;
+    display->ConfigureTimelineCamera(std::make_shared<const animation::CameraTrack>(
+      std::vector<animation::CameraKey>{first,last}));
+    display->TimelineAction(animation::TimelineCommand::End);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam.get_origin()[0] == 7);
+    expect_true(cam.time0 == cam.time1);
+    cam.update_position_absolute(point3f(15,0,-10));
+    display->TimelineCameraEdited();
+    display->UpdateTimeline();
+    expect_true(cam.get_origin()[0] == 15);
+    expect_true(display->timeline->Paused());
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    display->UpdateTimeline();
+    expect_true(cam.get_origin()[0] == 0);
+    display->SaveCurrentKeyframe(0);
+    cam.update_position_absolute(point3f(3,0,-10));
+    display->SaveCurrentKeyframe(0);
+    display->SetKeyframeMotionArgs(Rcpp::List::create(Rcpp::Named("frames")=31,
+      Rcpp::Named("type")="linear", Rcpp::Named("damp_motion")=false));
+    expect_true(display->StartPreviewMotion(0));
+    display->timeline->Pause(true);
+    display->timeline->Seek(3);
+    display->UpdateTimeline();
+    expect_true(std::abs(cam.get_origin()[0]-3) < 1e-5);
+    Float environment = 0;
+    expect_true(display->CancelPreviewMotion(&environment));
+    display->UpdateTimeline();
+    expect_true(std::abs(cam.get_origin()[0]-1) < 1e-5);
+    expect_true(display->Keyframes.size() == 2);
+  }
+
+  test_that("timeline seeks publish exact time and restore exposure after dragging") {
+    Transform identity;
+    camera cam(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60.f,1.f,0.f,5.f,-.1f,.2f,1.f);
+    auto display = MakeTestPreviewDisplay(cam,identity);
+    auto scene_time = std::make_shared<SceneTimeContext>();
+    scene_time->epoch = 2;
+    display->ConfigureTimeline(2,9,2,30,scene_time,-.1f,.2f);
+    display->TimelineAction(animation::TimelineCommand::End);
+    expect_true(display->UpdateTimeline());
+    expect_true(scene_time->epoch == 9);
+    expect_true(scene_time->ray_anchor == 7);
+    expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    expect_false(cam.get_camera_motion_blur());
+    expect_true(display->ConsumeTimelineChange());
+    expect_false(display->ConsumeTimelineChange());
+    expect_true(display->TimelinePointer(12,112,true,false));
+    expect_true(display->UpdateTimeline());
+    expect_true(scene_time->epoch == 2);
+    expect_true(cam.time0 == cam.time1);
+    expect_true(display->TimelinePointer(-100,-100,false,true));
+    expect_true(display->UpdateTimeline());
+    expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    expect_true(display->timeline->Paused());
+    display->TimelineFocusLost();
+    expect_false(display->timeline->Requested().dragging);
+  }
+
   test_that("replacing an environment updates emission as well as sampling") {
     Transform identity;
     auto original = std::make_shared<ImageInfiniteLight>(

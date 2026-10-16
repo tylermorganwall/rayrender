@@ -18,6 +18,7 @@ class bump_texture;
 struct HeightImage;
 class roughness_texture;
 struct InstanceBuildCache;
+struct SceneTimeContext;
 
 std::shared_ptr<hitable> rotation_order(std::shared_ptr<hitable> entry, NumericVector temprotvec, NumericVector order_rotation);
 
@@ -42,7 +43,9 @@ std::shared_ptr<hitable> build_scene(List& scene,
                                      std::vector<int>& texture_idx,
                                      bool verbose,
                                      random_gen& rng,
-                                     InstanceBuildCache* instance_cache = nullptr);
+                                     InstanceBuildCache* instance_cache = nullptr,
+                                     double time_origin = 0,
+                                     std::shared_ptr<SceneTimeContext> scene_time = nullptr);
 
 
 #endif

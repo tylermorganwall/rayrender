@@ -3,6 +3,33 @@
 #include <testthat.h>
 
 context("Point and spot light sampling") {
+  test_that("projection clips its frustum and preserves image orientation") {
+    PointLight light;
+    light.projection = true;
+    light.direction = vec3f(0, 0, 1);
+    light.right = vec3f(1, 0, 0);
+    light.up = vec3f(0, 1, 0);
+    light.width = light.height = 2;
+    light.image = {point3f(1,0,0), point3f(0,1,0), point3f(0,0,1), point3f(1)};
+    light.intensity = point3f(4);
+    expect_true(light.Project(vec3f(-.5,.5,1))[0] == 1);
+    expect_true(light.Project(vec3f(.5,.5,1))[1] == 1);
+    expect_true(light.Project(vec3f(-.5,-.5,1))[2] == 1);
+    expect_true(light.Project(vec3f(0,0,-1)).length() == 0);
+    expect_true(light.Project(vec3f(1.001,0,1)).length() == 0);
+    expect_true(light.Project(vec3f(0,1.001,1)).length() == 0);
+    auto center = light.Project(vec3f(0,0,1));
+    auto near = light.Sample(point3f(0,0,2));
+    auto far = light.Sample(point3f(0,0,4));
+    for (int c = 0; c < 3; ++c) {
+      expect_true(std::abs(center[c] - .5) < 1e-6);
+      expect_true(std::abs(near.radiance[c] - .5) < 1e-6);
+      expect_true(std::abs(near.radiance[c] - 4 * far.radiance[c]) < 1e-6);
+    }
+    light.half_width = 2;
+    expect_true(light.Project(vec3f(1.5,0,1)).length() > 0);
+    expect_true(light.Project(vec3f(2.001,0,1)).length() == 0);
+  }
   test_that("point intensity obeys inverse-square falloff") {
     PointLight light;
     light.intensity = point3f(4, 8, 12);

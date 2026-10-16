@@ -11,6 +11,8 @@
 #include "../core/camera.h"
 #include "preview_navigation.h"
 #include "preview_navigation_input.h"
+#include "timeline.h"
+#include "camera_track.h"
 #include <chrono>
 #include "../hitables/hitable.h"
 
@@ -94,6 +96,18 @@ public:
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  void ConfigureTimeline(double begin, double end, double initial, double fps,
+                         std::shared_ptr<SceneTimeContext> scene_time,
+                         Float shutter_open, Float shutter_close);
+  void TimelineAction(animation::TimelineCommand command) noexcept;
+  bool TimelinePointer(int x, int y, bool press, bool release) noexcept;
+  void TimelineFocusLost() noexcept;
+  bool UpdateTimeline() noexcept;
+  bool ConsumeTimelineChange();
+  void ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track);
+  void TimelineCameraEdited();
+  std::string TimelineStatusText() const;
+  std::unique_ptr<animation::TimelineController> timeline;
   // Coordinates match the renderer's film samples, independent of window API.
   bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
   void InitializeNavigation(hitable* world);
@@ -213,17 +227,12 @@ public:
   std::unique_ptr<char[]> data;
   Window w;
   XEvent e;
-  unsigned int width;
-  unsigned int height;
   Float speed;
   bool orbit;
   int s;
 #endif
-#if !defined(RAY_HAS_X11) && !defined(RAY_WINDOWS)
-  // Shared buffer/snapshot code also needs dimensions without a window.
   unsigned int width;
   unsigned int height;
-#endif
 #ifdef RAY_WINDOWS
   HWND hwnd;
   HINSTANCE hInstance;
@@ -275,6 +284,13 @@ public:
   std::vector<PreviewLineOverlay> line_overlays;
 
 private:
+  std::shared_ptr<SceneTimeContext> timeline_scene_time;
+  double timeline_epoch = 0;
+  Float timeline_open = 0, timeline_close = 0;
+  bool timeline_changed = false, timeline_fast = false, timeline_restore_fast = false;
+  std::string timeline_error;
+  std::shared_ptr<const animation::CameraTrack> timeline_camera, timeline_camera_restore;
+  bool timeline_camera_override = false, timeline_saved_camera = false;
   bool navigation_initialized = false;
   PreviewNavigationInput navigation_input;
   std::chrono::steady_clock::time_point navigation_clock = std::chrono::steady_clock::now();

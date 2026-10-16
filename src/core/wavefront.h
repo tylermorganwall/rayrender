@@ -149,8 +149,9 @@ struct WFDiffusionExit {
   uint32_t offset = 0, padding[3]{};
 };
 struct WFLight {
-  // Types: image environment, infinite disk, point/spot, emissive primitive.
+  // Types: image environment, infinite disk, point/spot/projection, emissive primitive.
   WFVector forward, right, up, color;
+  WFVector projection_direction; // Inverse projector transform's Z row; w = power estimate.
   uint32_t type = 0, texture = 0, primitive = 0, flags = 0;
   uint32_t instance = 0, alias_offset = UINT32_MAX, alias_width = 0, alias_height = 0;
 };
@@ -194,7 +195,7 @@ static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
               sizeof(WFLightNode) == 32 &&
               sizeof(WFQuadric) == 176 && sizeof(WFCurve) == 144 && sizeof(WFCsgInstruction) == 80 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
               sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 && sizeof(WFBoundary) == 112 &&
-              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 96 && sizeof(WFCamera) == 240 &&
+              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 112 && sizeof(WFCamera) == 240 &&
               sizeof(WFParameters) == 320 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {

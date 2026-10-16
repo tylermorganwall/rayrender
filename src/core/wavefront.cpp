@@ -185,14 +185,32 @@ public:
     } else if (const auto *mesh = dynamic_cast<const trimesh *>(&object)) {
       Mesh(object, *mesh->tri_mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *shape = dynamic_cast<const box *>(&object)) {
-      Geometry(shape->list, placement);
+      // Repeated primitives use the same prototype path as imported meshes.
+      // Compile the faces once in native coordinates; placement-specific
+      // surfaces, emission and medium identities remain on each instance.
+      if (current_placement && !prototype_triangles)
+        Mesh(object, shape->list, 12, placement);
+      else
+        Geometry(shape->list, placement);
     } else if (const auto *rect = dynamic_cast<const xy_rect *>(&object)) {
+      if (current_placement && !prototype_triangles) {
+        Mesh(object, object, 2, placement);
+        return;
+      }
       Rectangle(*rect, placement, {rect->x0, rect->y0, rect->k}, {rect->x1, rect->y0, rect->k},
                 {rect->x1, rect->y1, rect->k}, {rect->x0, rect->y1, rect->k}, {0, 0, 1});
     } else if (const auto *rect = dynamic_cast<const xz_rect *>(&object)) {
+      if (current_placement && !prototype_triangles) {
+        Mesh(object, object, 2, placement);
+        return;
+      }
       Rectangle(*rect, placement, {rect->x0, rect->k, rect->z0}, {rect->x1, rect->k, rect->z0},
                 {rect->x1, rect->k, rect->z1}, {rect->x0, rect->k, rect->z1}, {0, 1, 0});
     } else if (const auto *rect = dynamic_cast<const yz_rect *>(&object)) {
+      if (current_placement && !prototype_triangles) {
+        Mesh(object, object, 2, placement);
+        return;
+      }
       Rectangle(*rect, placement, {rect->k, rect->y0, rect->z0}, {rect->k, rect->y1, rect->z0},
                 {rect->k, rect->y1, rect->z1}, {rect->k, rect->y0, rect->z1}, {1, 0, 0});
     } else if (const auto *s = dynamic_cast<const sphere *>(&object)) {
@@ -219,6 +237,12 @@ public:
         Infinite(*source);
       }
     } else {
+      if (current_placement && !prototype_triangles) {
+        // Mesh() recursively compiles this primitive with prototype_triangles
+        // set, so tessellation happens only on the first placement.
+        Mesh(object, object, 0, placement);
+        return;
+      }
       auto triangles = TriangulateWavefrontPrimitive(object, placement);
       if (triangles.empty())
         throw std::runtime_error("geometry '" + object.GetName() + "'");
@@ -328,6 +352,23 @@ public:
       out.right.w = light.cos_outer;
       out.up.w = light.cos_inner;
       out.flags = light.spot;
+      if (light.projection) {
+        out.flags = 2;
+        out.right = Pack(light.right);
+        out.up = Pack(light.up);
+        out.right.w = light.half_width;
+        out.up.w = light.half_height;
+        out.projection_direction = Pack(light.direction);
+        out.projection_direction.w = std::min(light.Power(), double(std::numeric_limits<float>::max()));
+        WFTexture image;
+        image.type = 5;
+        image.width = light.width;
+        image.height = light.height;
+        image.offset = scene.texels.size();
+        for (const auto &pixel : light.image) scene.texels.push_back(Pack(pixel));
+        out.texture = scene.textures.size();
+        scene.textures.push_back(image);
+      }
       scene.lights.push_back(out);
       scene.light_sources.push_back(nullptr);
     }
@@ -1059,7 +1100,10 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
     WavefrontSceneCompiler::PrepareAtmosphere(scene);
     WFCamera camera_data;
     ExportWavefrontCamera(camera, camera_data, scene.camera_data);
-    if (scene.motion) scene.motion->Seal(scene);
+    if (scene.motion) {
+      scene.motion->Seal(scene);
+      scene.motion->ValidateTimes(camera_data.shutter.x, camera_data.shutter.y);
+    }
     if (scene.triangles.empty() && scene.quadrics.empty())
       throw std::runtime_error("scene without renderable geometry");
     auto session = MakeMetalWavefront(scene, capacity);
@@ -1093,6 +1137,7 @@ void WavefrontContext::BeginFrame(const hitable_list &new_world, const hitable_l
     try {
       WFCamera descriptor{};
       ExportWavefrontCamera(camera, descriptor, scene.camera_data);
+      if (scene.motion) scene.motion->ValidateTimes(descriptor.shutter.x, descriptor.shutter.y);
       reusable = scene.camera_data.size() <= camera_capacity;
     } catch (const std::exception &) {
       reusable = false; // PrepareWavefront owns the normal CPU-fallback policy.
@@ -1137,6 +1182,7 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   p.boundary_lo = scene.boundary_lo;
   p.boundary_hi = scene.boundary_hi;
   ExportWavefrontCamera(camera, p.camera, scene.camera_data);
+  if (scene.motion) scene.motion->ValidateTimes(p.camera.shutter.x, p.camera.shutter.y);
   p.camera.padding[1] = scene.transparent_background ? 4 : 0;
   // Geometry stays at its reference pose on the host. Its light tree remains
   // a valid positive proposal; device emitter evaluation and PDFs use ray time.

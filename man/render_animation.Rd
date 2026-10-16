@@ -51,7 +51,10 @@ render_animation(
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
   integrator_type = "auto",
-  camera = NULL
+  camera = NULL,
+  times = NULL,
+  fps = 30,
+  shutter_offsets = NULL
 )
 }
 \arguments{
@@ -206,6 +209,18 @@ and `"basic"` (basic pathtracing, for high sample reference renders and debuggin
 media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.}
 
 \item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
+
+\item{times}{Default `NULL`. Finite output scene times in seconds, including
+nonmonotonic or repeated times. NULL preserves legacy timing. start_frame and
+end_frame select positions in this sequence; filenames use output indices.}
+
+\item{fps}{Default `30`. Frame rate used to timestamp camera-motion rows as
+(index - 1) / fps when no explicit time column is present.}
+
+\item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
+With times, NULL freezes each requested scene time. Explicit legacy shutter
+controls conflict with times. Moving cameras currently require zero-width
+explicit exposures. Geometry is compiled once for the output sequence.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.

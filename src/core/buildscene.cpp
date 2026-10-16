@@ -1,4 +1,5 @@
 #include "../core/buildscene.h"
+#include "../animation_rcpp.h"
 #include "../core/bvh.h"
 #include "../hitables/box.h"
 #include "../hitables/csg.h"
@@ -447,7 +448,8 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
             TextureCache &texCache, hitable_list &imp_sample_objects,
             std::vector<std::shared_ptr<hitable>> &instanced_objects,
             std::vector<std::shared_ptr<hitable_list>> &instance_importance_sampled, std::vector<int> &texture_idx,
-            bool verbose, random_gen &rng, InstanceBuildCache *instance_cache) {
+            bool verbose, random_gen &rng, InstanceBuildCache *instance_cache, double time_origin,
+            std::shared_ptr<SceneTimeContext> scene_time) {
   InstanceBuildCache local_instance_cache;
   if (!instance_cache)
     instance_cache = &local_instance_cache;
@@ -466,6 +468,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
   List ShapeInfo = as<List>(scene["shape_info"]);
   List Transforms = as<List>(scene["transforms"]);
   List AnimationInfo = as<List>(scene["animation_info"]);
+  std::unordered_map<SEXP, std::shared_ptr<const animation::TransformTrack>> authored_tracks;
   size_t n = ShapeInfo.length();
 
   NumericVector x = scene["x"];
@@ -605,7 +608,17 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     Transform *StartAnim = transformCache.Lookup(AnimationStartTransform);
     Transform *EndAnim = transformCache.Lookup(AnimationEndTransform);
 
-    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time);
+    std::shared_ptr<const animation::TransformTrack> keyframes;
+    if (SingleAnimation.containsElementNamed("keyframes") && !Rf_isNull(SingleAnimation["keyframes"])) {
+      if (is_animated) Rcpp::stop("Legacy and keyframe attachments cannot target the same object.");
+      SEXP authored = SingleAnimation["keyframes"];
+      auto found = authored_tracks.find(authored);
+      if (found == authored_tracks.end())
+        found = authored_tracks.emplace(authored, read_transform_track(as<List>(authored))).first;
+      keyframes = found->second;
+      is_animated = true;
+    }
+    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time, keyframes, time_origin, scene_time);
 
     List shape_properties = as<List>(SingleShape["shape_properties"]);
     bool is_flipped = as<bool>(SingleShape["flipped"]);
@@ -938,7 +951,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
           original_scene, shape_vec, shutteropen, shutterclose, textures, alpha_textures, bump_textures,
           roughness_textures, shared_materials, alpha, bump, roughness, bvh_type, transformCache, texCache,
           (*instance_importance_sample_list), instanced_objects, instance_importance_sampled, texture_idx, false, rng,
-          instance_cache);
+          instance_cache, time_origin, scene_time);
         instance_cache->prototypes.emplace(prototype_key,
             InstanceBuildCache::Prototype{instance_scene, instance_importance_sample_list});
         instanced_objects.push_back(instance_scene);

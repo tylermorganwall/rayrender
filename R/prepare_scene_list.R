@@ -1,5 +1,6 @@
 #'@title Prepare the scene list
 #'
+#' @param scene_time Default `NULL`. Double scene-time epoch for relative ray times.
 #'@keywords internal
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #'#internal
@@ -50,8 +51,12 @@ prepare_scene_list = function(
   integrator_type = "auto",
   denoise = TRUE,
   print_debug_info = FALSE,
-  camera_flip_x = FALSE
+  camera_flip_x = FALSE,
+  scene_time = NULL
 ) {
+  if (scene_has_keyframes(scene) && is.null(scene_time)) {
+    stop("Keyframe animation requires an explicit scene time.", call. = FALSE)
+  }
   bvh_type = match.arg(bvh_type, c("sah", "equal", "hlbvh", "metal"))
   if (inherits(scene, "ray_mesh")) {
     scene = raymesh_model(scene)
@@ -318,6 +323,7 @@ prepare_scene_list = function(
   camera_info$aperture = aperture
   camera_info$camera_up = camera_up
   camera_info$shutteropen = shutteropen
+  camera_info$scene_time = scene_time
   camera_info$shutterclose = shutterclose
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$shutter_speed = shutter_speed

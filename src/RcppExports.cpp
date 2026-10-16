@@ -21,6 +21,41 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// animation_evaluate_track
+Rcpp::NumericMatrix animation_evaluate_track(Rcpp::List track, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_animation_evaluate_track(SEXP trackSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type track(trackSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_evaluate_track(track, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_evaluate_transform
+Rcpp::List animation_evaluate_transform(Rcpp::List track, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_animation_evaluate_transform(SEXP trackSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type track(trackSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_evaluate_transform(track, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_euler_quaternions
+Rcpp::NumericMatrix animation_euler_quaternions(Rcpp::NumericMatrix angles);
+RcppExport SEXP _rayrender_animation_euler_quaternions(SEXP anglesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type angles(anglesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_euler_quaternions(angles));
+    return rcpp_result_gen;
+END_RCPP
+}
 // query_prague_atmosphere
 Rcpp::List query_prague_atmosphere(Rcpp::List description, Rcpp::NumericMatrix positions, Rcpp::NumericMatrix directions, Rcpp::NumericVector distances, bool sample, bool build_sampler);
 RcppExport SEXP _rayrender_query_prague_atmosphere(SEXP descriptionSEXP, SEXP positionsSEXP, SEXP directionsSEXP, SEXP distancesSEXP, SEXP sampleSEXP, SEXP build_samplerSEXP) {
@@ -171,6 +206,9 @@ RcppExport SEXP run_testthat_tests(SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
+    {"_rayrender_animation_evaluate_track", (DL_FUNC) &_rayrender_animation_evaluate_track, 2},
+    {"_rayrender_animation_evaluate_transform", (DL_FUNC) &_rayrender_animation_evaluate_transform, 2},
+    {"_rayrender_animation_euler_quaternions", (DL_FUNC) &_rayrender_animation_euler_quaternions, 1},
     {"_rayrender_query_prague_atmosphere", (DL_FUNC) &_rayrender_query_prague_atmosphere, 6},
     {"_rayrender_cpp_has_metal", (DL_FUNC) &_rayrender_cpp_has_metal, 0},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},

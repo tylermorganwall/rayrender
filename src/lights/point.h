@@ -16,6 +16,12 @@ struct PointLight {
   vec3f direction{0, -1, 0};
   bool spot = false;
   double cos_outer = 0, cos_inner = 1;
+  bool projection = false;
+  vec3f right{1, 0, 0}, up{0, 1, 0};
+  double half_width = 1, half_height = 1, projection_power = 0;
+  int width = 0, height = 0;
+  std::vector<point3f> image; // Linear RGB, row-major, first row at image top.
+  point3f Project(const vec3f &outgoing) const;
   double Falloff(const vec3f &outgoing) const;
   double Power() const;
   PointLightSample Sample(const point3f &p) const;

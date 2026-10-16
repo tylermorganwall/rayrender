@@ -13,6 +13,27 @@ post_process_frame = function(
   write_file = TRUE,
   plot_scene = TRUE
 ) {
+  if (debug_channel %in% c(10, 11, 13)) {
+    # Numerical geometry channels must retain signed world-space values, just
+    # like stills. Color-space conversion changes the data used for parity checks.
+    channel = switch(
+      as.character(debug_channel),
+      `10` = "position",
+      `11` = "direction",
+      `13` = "shape"
+    )
+    return(post_process_scene(
+      rgb_mat,
+      iso = 1,
+      use_iso = FALSE,
+      tonemap = tonemap,
+      debug_channel = channel,
+      filename = if (write_file) filename else NA_character_,
+      plot_scene = plot_scene,
+      bloom = FALSE,
+      transparent_background = transparent_background
+    ))
+  }
   path_record = save_path_warnings(
     attr(rgb_mat, "path_warnings"),
     if (write_file) filename else NA_character_

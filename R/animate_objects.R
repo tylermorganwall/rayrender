@@ -121,6 +121,18 @@ animate_objects = function(
   end_scale = c(1, 1, 1),
   end_axis_rotation = NA
 ) {
+  if (
+    any(vapply(
+      scene$animation_info,
+      function(info) !is.null(info$keyframes),
+      logical(1)
+    ))
+  ) {
+    stop(
+      "The fragment already has a keyframe animation attachment.",
+      call. = FALSE
+    )
+  }
   stopifnot(length(start_pivot_point) == 3)
   stopifnot(length(start_position) == 3)
   stopifnot(length(start_order_rotation) == 3)

@@ -178,7 +178,7 @@ std::string AnimatedHitable::GetName() const {
 
 bool AnimatedHitable::bounding_box(Float t0, Float t1, aabb& box) const {
   primitive->bounding_box(t0, t1, box);
-  box = PrimitiveToWorld.MotionBounds(box);
+  box = PrimitiveToWorld.MotionBounds(box, t0, t1);
   return(true);
 }
 

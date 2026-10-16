@@ -43,7 +43,7 @@ Supports static and animated affine transforms, attribute scopes, named coordina
 includes and serial imports (relative to the main file, as in PBRT), object instances, perspective
 orthographic and realistic cameras, spheres, disks, cylinders, triangle/PLY meshes,
 bilinear patches (triangulated), cubic Bezier and uniform B-spline curves, diffuse area lights,
-point/spot lights, uniform and equal-area image infinite lights,
+point/spot/projection lights, uniform and equal-area image infinite lights,
 RGB diffuse/translucent/conductor/dielectric/hair materials, OpenPBR
 approximations of coated and Disney materials, constant/image/Ptex/UV checker/direction-mix textures, and
 homogeneous, uniform-grid, and NanoVDB interior media. Material displacement

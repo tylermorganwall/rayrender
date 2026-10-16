@@ -329,6 +329,8 @@ class environment_camera : public RayCamera {
 class RealisticCamera  : public RayCamera {
   friend void ExportWavefrontCamera(RayCamera &, struct WFCamera &, std::vector<struct WFVector> &);
 public:
+  // Called at a completed-batch boundary when the scene-time exposure changes.
+  void SetShutterInterval(Float begin, Float end) { shutterOpen = begin; shutterClose = end; }
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,

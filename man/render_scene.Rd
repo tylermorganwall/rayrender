@@ -60,7 +60,11 @@ render_scene(
   start_frame = 1,
   end_frame = NA,
   mode = c("auto", "image", "animation", "preview"),
-  camera_flip_x = FALSE
+  camera_flip_x = FALSE,
+  time = NULL,
+  timeline = NULL,
+  fps = 30,
+  shutter_offsets = NULL
 )
 }
 \arguments{
@@ -362,6 +366,23 @@ rendering so text size and justification are independent of scene scale and view
 \item{mode}{Default `"auto"`. Rendering mode. `"auto"` renders a still image for static cameras and an animation for animated cameras.}
 
 \item{camera_flip_x}{Default `FALSE`. Reverse horizontal film coordinates before tracing.}
+
+\item{time}{Default `NULL`. Scene time in seconds; NULL retains legacy timing.
+Explicit times sample object and camera tracks without playback history.}
+
+\item{timeline}{Default `NULL`. Ordered playback range in scene seconds.
+With preview and interactive enabled, shows seeking and playback controls.
+Authored perspective, orthographic, and panoramic camera rows follow scene
+time with zero-width exposure and a fixed projection. Manual camera changes
+pause and override the track until the next timeline command. M plays saved
+camera keyframes at fps, starting at the timeline's first second.}
+
+\item{fps}{Default `30`. Positive display/output frame rate.}
+
+\item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
+With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
+stored as frame-relative floats; absolute scene time remains double precision.
+Explicit time rejects explicitly supplied legacy shutter controls.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
