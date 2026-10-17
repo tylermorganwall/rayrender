@@ -134,8 +134,13 @@ animation_default_plot_scene = function(
 #'   (index - 1) / fps when no explicit time column is present.
 #' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
 #'   With times, NULL freezes each requested scene time. Explicit legacy shutter
-#'   controls conflict with times. Moving cameras currently require zero-width
-#'   explicit exposures. Geometry is compiled once for the output sequence.
+#'   controls conflict with times. Moving perspective, orthographic, and panoramic
+#'   cameras sample authored keys within the exposure; projection changes are
+#'   cuts at the next key. Moving physical cameras support exact rigid exposure with
+#'   constant aperture and focus. Varying physical optics require zero-width
+#'   offline snapshots. Geometry is compiled once for the output sequence.
+#'   Physical lens cameras use unit exposure weighting with explicit times;
+#'   offsets select poses and ISO controls brightness. Legacy weighting is unchanged.
 #' @export
 #' @importFrom  grDevices col2rgb
 #' @return Raytraced plot to current device, or an image saved to a file.
@@ -647,6 +652,8 @@ render_animation_camera = function(
 
   camera_info = scene_list$camera_info
   camera_info$shutter_offsets = camera$shutter_offsets
+  camera_info$authored_cameras = list(camera$authored_motion)
+  camera_motion$track_index = rep(1L, nrow(camera_motion))
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
   render_info$transparent_background = transparent_background
@@ -826,6 +833,10 @@ render_camera_batch = function(
 
   camera_info = scene_list$camera_info
   camera_info$shutter_offsets = camera$shutter_offsets
+  camera_info$authored_cameras = lapply(cameras, function(cam) {
+    cam$authored_motion
+  })
+  camera_motion$track_index = plan$camera_index
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
   render_info$transparent_background = transparent_background

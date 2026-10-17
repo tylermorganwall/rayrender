@@ -348,11 +348,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       context.BeginFrame(world, hlist, *cam, nx*ny, sample_method,
                          *wavefront_report, numbercores);
       display.integrator_name = wavefront ? "Metal" : cpu_integrator;
+      if (!wavefront) {
+        reset_sampler_state(nx, ny, seeds, rngs, samplers);
+        reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
+      }
     }
   };
 
   auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, ns, sample_method,
-                             &rngs, fov, &samplers, cam, &world, &hlist,
+                             &rngs, &fov, &samplers, &cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
                              &render_cancelled, &render_pool, &display, &report_diffusion_interior,
                              &wavefront, &wavefront_scene, wavefront_report,
@@ -453,7 +457,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto render_small_sample = [&adaptive_pixel_sampler_small, nx_small, ny_small, sample_method,
-                              &rngs_small, fov, &samplers_small, cam, &world, &hlist,
+                              &rngs_small, &fov, &samplers_small, &cam, &world, &hlist,
                               clampval, sample_floor, max_depth, roulette_active, integrator_type,
                               &render_cancelled, &render_pool, &display, &report_diffusion_interior,
                              &wavefront, &wavefront_scene, wavefront_report,
@@ -619,11 +623,17 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     bool atmosphere = display.ConsumeAtmosphereChange();
     bool timeline = display.ConsumeTimelineChange();
     if(!atmosphere && !timeline) return false;
-    reset_render_state();
-    if(timeline && wavefront_report && wavefront_report->requested) {
+    // Timeline projection cuts replace the camera only after the old batch
+    // has finished. All subsequent workers capture this newly published view.
+    cam = display.cam;
+    fov = cam->get_fov();
+    if(wavefront_report && wavefront_report->requested) {
       context.BeginFrame(world, hlist, *cam, nx*ny, sample_method, *wavefront_report, numbercores);
       display.integrator_name = wavefront ? "Metal" : cpu_integrator;
     }
+    // Backend selection can fall back for this exposure. Allocate/reset the
+    // sampler state after that decision, before either worker path can run.
+    reset_render_state();
     return true;
   };
   auto finish_preview_termination = [&](size_t rendered_samples) {

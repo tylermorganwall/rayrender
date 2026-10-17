@@ -133,6 +133,11 @@ camera_at_scene_times = function(camera, times, fps, shutter_offsets) {
       camera$motion
     }
   )
+  # A lens descriptor overrides the row's projection in both render APIs.
+  # Preserve that choice in the authored track as well as sampled rows.
+  if (!is.na(camera$camera_description_file)) {
+    motion$fov = -1
+  }
   key_times = if ("time" %in% names(motion)) {
     motion$time
   } else {
@@ -148,9 +153,15 @@ camera_at_scene_times = function(camera, times, fps, shutter_offsets) {
       call. = FALSE
     )
   }
-  if (nrow(motion) > 1L && any(shutter_offsets != 0)) {
+  if (
+    nrow(motion) > 1L &&
+      any(shutter_offsets != 0) &&
+      any(motion$fov < 0) &&
+      (any(motion$aperture != motion$aperture[1]) ||
+        any(motion$focal != motion$focal[1]))
+  ) {
     stop(
-      "Nonzero explicit exposure with a moving camera is not supported yet; use a zero-width snapshot.",
+      "Physical-camera exposure requires constant aperture and focus; use offline zero-width snapshots for varying optics.",
       call. = FALSE
     )
   }

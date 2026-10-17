@@ -988,7 +988,20 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   const bool has_timeline = camera_info.containsElementNamed("timeline") && !Rf_isNull(camera_info["timeline"]);
   const double time_origin = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]) ?
     as<double>(camera_info["scene_time"]) : 0;
-  auto scene_time = has_timeline ? std::make_shared<SceneTimeContext>() : nullptr;
+  const bool explicit_time = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]);
+  auto scene_time = explicit_time ? std::make_shared<SceneTimeContext>() : nullptr;
+  if (scene_time) scene_time->epoch = time_origin;
+  cam->scene_camera_time = scene_time;
+  std::shared_ptr<const animation::CameraTrack> camera_track;
+  if (camera_info.containsElementNamed("timeline_camera") && !Rf_isNull(camera_info["timeline_camera"])) {
+    DataFrame motion = as<DataFrame>(camera_info["timeline_camera"]);
+    if (motion.nrows() > 1 && (has_timeline || shutteropen != 0 || shutterclose != 0)) {
+      camera_track = read_camera_track(motion, 1, 0);
+      cam->scene_camera_track = camera_track;
+      cam->scene_camera_time = scene_time;
+      cam->scene_camera_aspect = Float(nx)/Float(ny);
+    }
+  }
   NumericVector timeline_range = has_timeline ? as<NumericVector>(camera_info["timeline"]) : NumericVector();
   Float bounds_open = shutteropen, bounds_close = shutterclose;
   if (has_timeline) {
@@ -1143,10 +1156,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   if (has_timeline) {
     Display.ConfigureTimeline(timeline_range[0], timeline_range[1], time_origin,
       as<double>(camera_info["timeline_fps"]), scene_time, shutteropen, shutterclose);
-    if (camera_info.containsElementNamed("timeline_camera") && !Rf_isNull(camera_info["timeline_camera"])) {
-      DataFrame motion = as<DataFrame>(camera_info["timeline_camera"]);
-      if (motion.nrows() > 1) Display.ConfigureTimelineCamera(read_camera_track(motion, 1, 0));
-    }
+    if (camera_track) Display.ConfigureTimelineCamera(camera_track, &cam);
   }
   // Keep complete, immutable light variants for interactive atmosphere changes.
   // Rebuilding the mixture also updates altitude-dependent sampling weights and

@@ -317,9 +317,10 @@ test_that("static scene brightness is independent of shutter speed", {
 
   base = render_once(1)
 
-  expect_identical(render_once(2), base)
-  expect_identical(render_once(4), base)
-  expect_identical(render_once(Inf), base)
+  # Compare image samples, not the independently measured Metal render timings.
+  expect_identical(as.numeric(render_once(2)), as.numeric(base))
+  expect_identical(as.numeric(render_once(4)), as.numeric(base))
+  expect_identical(as.numeric(render_once(Inf)), as.numeric(base))
 })
 
 test_that("camera_batch_plan combines static and animated cameras", {

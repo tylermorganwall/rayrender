@@ -71,6 +71,8 @@ test_that("nested instances do not shift subsequent bump texture assignments", {
     actual = render_bump(add_object(nested, tail))
     expect_true(all(is.finite(actual)))
     # Instance bounds can change the last float bit of camera/BVH arithmetic.
-    expect_equal(actual, reference, tolerance = 1e-6)
+    # Metal timing metadata is independent of the rendered image.
+    expect_identical(dim(actual), dim(reference))
+    expect_equal(as.numeric(actual), as.numeric(reference), tolerance = 1e-6)
   }
 })

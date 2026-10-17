@@ -157,10 +157,14 @@ struct WFLight {
 };
 struct WFCamera {
   WFVector origin, lower_left, horizontal, vertical, right, up, forward;
+  // padding carries runtime atmosphere capacity/flags; track metadata is separate.
   uint32_t orthographic = 0, flip_x = 0, padding[2]{};
   // Camera kind: perspective=0, orthographic=1, panorama=2, physical lens=3.
   WFVector shutter, motion_origin[2], motion_rotation[2], lens;
   uint32_t moving = 0, elements = 0, pupils = 0, simple_weighting = 0;
+  uint32_t track_count = 0, track_offset = 0;
+  float exposure_weight = 1;
+  uint32_t track_reserved = 0;
 };
 void ExportWavefrontCamera(RayCamera &, WFCamera &, std::vector<WFVector> &);
 struct WFParameters {
@@ -195,8 +199,8 @@ static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
               sizeof(WFLightNode) == 32 &&
               sizeof(WFQuadric) == 176 && sizeof(WFCurve) == 144 && sizeof(WFCsgInstruction) == 80 && sizeof(WFSurface) == 240 && sizeof(WFTriangle) == 160 &&
               sizeof(WFTexture) == 80 && sizeof(WFMaterial) == 144 && sizeof(WFBoundary) == 112 &&
-              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 112 && sizeof(WFCamera) == 240 &&
-              sizeof(WFParameters) == 320 && sizeof(WFPixel) == 48);
+              sizeof(WFDiffusionExit) == 48 && sizeof(WFLight) == 112 && sizeof(WFCamera) == 256 &&
+              sizeof(WFParameters) == 336 && sizeof(WFPixel) == 48);
 
 struct WavefrontScene {
   bool transparent_background = false;

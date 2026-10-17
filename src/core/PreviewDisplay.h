@@ -104,7 +104,9 @@ public:
   void TimelineFocusLost() noexcept;
   bool UpdateTimeline() noexcept;
   bool ConsumeTimelineChange();
-  void ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track);
+  void ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track,
+                               std::unique_ptr<RayCamera>* owner = nullptr,
+                               const RealisticCamera *optics = nullptr);
   void TimelineCameraEdited();
   std::string TimelineStatusText() const;
   std::unique_ptr<animation::TimelineController> timeline;
@@ -290,6 +292,11 @@ private:
   bool timeline_changed = false, timeline_fast = false, timeline_restore_fast = false;
   std::string timeline_error;
   std::shared_ptr<const animation::CameraTrack> timeline_camera, timeline_camera_restore;
+  // Optional owner permits a projection cut to replace the renderer's camera
+  // at the completed-batch handoff. It outlives this display.
+  std::unique_ptr<RayCamera>* timeline_camera_owner = nullptr;
+  // Retain authored optics when manual navigation temporarily changes focus.
+  std::unique_ptr<const RealisticCamera> timeline_physical_camera, timeline_physical_restore;
   bool timeline_camera_override = false, timeline_saved_camera = false;
   bool navigation_initialized = false;
   PreviewNavigationInput navigation_input;

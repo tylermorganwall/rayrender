@@ -22,10 +22,17 @@ struct CameraSample {
     pFilm(point2f(pFilm_.xy.x,pFilm_.xy.y)), pLens(point2f(pLens_.xy.x,pLens_.xy.y)), time(time_) {};
 };
 
+namespace animation { class CameraTrack; }
+
 class RayCamera {
   public:
     RayCamera() {};
     virtual ~RayCamera() {};
+    // Authored camera data are immutable. Only the frame clock is republished,
+    // on the owning thread between completed sampling batches.
+    std::shared_ptr<const animation::CameraTrack> scene_camera_track;
+  std::shared_ptr<const SceneTimeContext> scene_camera_time;
+  Float scene_camera_aspect = 1;
     virtual Ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(Ray());
     };
@@ -331,6 +338,8 @@ class RealisticCamera  : public RayCamera {
 public:
   // Called at a completed-batch boundary when the scene-time exposure changes.
   void SetShutterInterval(Float begin, Float end) { shutterOpen = begin; shutterClose = end; }
+  // Updates only the rigid pose, preserving the initialized lens and pupils.
+  void SetScenePose(point3f position, point3f target, vec3f up);
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,
@@ -370,7 +379,7 @@ public:
   vec3f get_u();
   vec3f get_v();
   Float get_fov() {return(-1);}
-  Float get_aperture() {return(0);}
+  Float get_aperture() {return(authored_aperture);}
   Float get_focal_distance() {return(focusDistance);}
   point3f get_origin();
   Float get_iso() {return(iso);}
@@ -437,6 +446,7 @@ private:
   vec3f start_camera_up;
   Transform CamTransform;
   point3f origin;
+  Float authored_aperture;
   Float focusDistance;
   Float start_focusDistance;
   point3f start_lookat;

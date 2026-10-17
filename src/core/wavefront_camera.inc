@@ -18,7 +18,7 @@ float camera_ray(Camera c, float2 film, float2 lens_sample, float time, device c
                  thread float3 &origin, thread float3 &direction) {
   float3 right = c.right.xyz, up = c.up.xyz, forward = c.forward.xyz, center = c.origin.xyz;
   float focal = 1;
-  if (c.moving) {
+  if (c.moving == 1) {
     float4 q = camera_slerp(time, c.motion_rotation[0], c.motion_rotation[1]);
     right = camera_rotate(q, float3(1, 0, 0));
     up = camera_rotate(q, float3(0, 1, 0));
@@ -26,6 +26,45 @@ float camera_ray(Camera c, float2 film, float2 lens_sample, float time, device c
     float4 position = mix(c.motion_origin[0], c.motion_origin[1], time);
     center = position.xyz;
     focal = position.w > 0 && isfinite(position.w) ? position.w : 1;
+  }
+  if (c.moving == 2) {
+    float scene_time = mix(c.shutter.x, c.shutter.y, time) - c.shutter.w;
+    uint count = c.track_count, offset = c.track_offset;
+    uint lo = 0, hi = count;
+    while (lo < hi) {
+      uint mid = lo + (hi-lo)/2;
+      if (data[offset+5*mid].x <= scene_time) lo = mid+1; else hi = mid;
+    }
+    uint left = lo == 0 ? 0 : lo-1, next = min(left+1, count-1);
+    float begin = data[offset+5*left].x, end = data[offset+5*next].x;
+    float fraction = left == next ? 0 : clamp((scene_time-begin)/(end-begin),0.f,1.f);
+    float left_fov = data[offset+5*left+3].w, next_fov = data[offset+5*next+3].w;
+    uint left_kind = left_fov < 0 ? 3 : left_fov == 0 ? 1 : left_fov == 360 ? 2 : 0;
+    uint next_kind = next_fov < 0 ? 3 : next_fov == 0 ? 1 : next_fov == 360 ? 2 : 0;
+    if (left_kind != next_kind) fraction = 0;
+    c.orthographic = left_kind;
+    float4 position = mix(data[offset+5*left+1],data[offset+5*next+1],fraction);
+    float4 target = mix(data[offset+5*left+2],data[offset+5*next+2],fraction);
+    float4 camera_up = mix(data[offset+5*left+3],data[offset+5*next+3],fraction);
+    float2 size = mix(data[offset+5*left+4].xy,data[offset+5*next+4].xy,fraction);
+    center = position.xyz;
+    forward = normalize(target.xyz-center);
+    right = normalize(cross(camera_up.xyz,forward));
+    up = normalize(cross(forward,right));
+    if (c.orthographic == 3) {
+      // Preserve the physical camera's historical LookAt basis, including its
+      // transverse scale when the authored up is not perpendicular to view.
+      right = cross(normalize(camera_up.xyz),forward);
+      up = cross(forward,right);
+    }
+    focal = target.w;
+    c.right.w = position.w*.5f;
+    if (c.orthographic == 1) c.lens.xy = size*.5f;
+    else if (c.orthographic == 0) {
+      float aspect = c.lens.z;
+      c.lens.y = tan(camera_up.w*pi/360.f);
+      c.lens.x = aspect*c.lens.y;
+    }
   }
   origin = center;
   direction = forward;
@@ -115,6 +154,6 @@ float camera_ray(Camera c, float2 film, float2 lens_sample, float time, device c
   float4 first = data[c.elements];
   return pow(cosine, 4.f) * area *
          (c.simple_weighting ? 1 / ((first.z - first.x) * (first.w - first.y))
-                             : (c.shutter.y - c.shutter.x) / (c.lens.w * c.lens.w));
+                             : c.exposure_weight / (c.lens.w * c.lens.w));
 }
 )MSL"

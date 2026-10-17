@@ -219,8 +219,13 @@ end_frame select positions in this sequence; filenames use output indices.}
 
 \item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
 With times, NULL freezes each requested scene time. Explicit legacy shutter
-controls conflict with times. Moving cameras currently require zero-width
-explicit exposures. Geometry is compiled once for the output sequence.}
+controls conflict with times. Moving perspective, orthographic, and panoramic
+cameras sample authored keys within the exposure; projection changes are
+cuts at the next key. Moving physical cameras support exact rigid exposure with
+constant aperture and focus. Varying physical optics require zero-width
+offline snapshots. Geometry is compiled once for the output sequence.
+Physical lens cameras use unit exposure weighting with explicit times;
+offsets select poses and ISO controls brightness. Legacy weighting is unchanged.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.

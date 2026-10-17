@@ -90,10 +90,13 @@ test_that("shared prototypes retain independent transforms, lights and media", {
     expected = do.call(render_scene, c(list(scene = separate), settings))
     expect_true(all(is.finite(actual)))
     expect_gt(max(actual), 0)
-    expect_equal(actual, expected, tolerance = 1e-6)
+    # Upload and sampling timings vary even when the image samples agree.
+    expect_identical(dim(actual), dim(expected))
+    expect_equal(as.numeric(actual), as.numeric(expected), tolerance = 1e-6)
     set.seed(812)
     compact = do.call(render_scene, c(list(scene = packed), settings))
-    expect_equal(compact, expected, tolerance = 1e-6)
+    expect_identical(dim(compact), dim(expected))
+    expect_equal(as.numeric(compact), as.numeric(expected), tolerance = 1e-6)
   }
 })
 

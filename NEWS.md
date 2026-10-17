@@ -16,6 +16,33 @@
 
 ## New features
 
+- `render_scene(timeline = ...)` Adds a preview slider, reverse playback, frame
+  stepping, speed controls, and progressive convergence when paused. Authored
+  camera rows and saved camera playback use scene time, including shutter
+  exposure, with perspective, orthographic, or panoramic projections.
+  Camera exposures visit interior keys on CPU and Metal and remain independent
+  of seek history in preview, explicit stills, and offline output.
+  Projection changes cut at the authored key, including within an exposure.
+  Physical-camera tracks support exact rigid exposure and preview playback with
+  constant aperture and focus, preserving initialized lens optics while seeking.
+  Frozen explicit-time lens-camera snapshots retain unit exposure weighting
+  instead of becoming black; legacy lens exposure weighting is unchanged.
+- `clip_player()` Maps scene time to independent hold, repeat, or pingpong
+  clocks, including reverse and frozen playback. `animate_keyframes(player = ...)`
+  applies the clock to each shutter ray on CPU and Metal; `animation_loop_seam()`
+  diagnoses endpoint pose jumps without altering authored keys.
+- `animate_keyframes()` Adds multi-key outer object transforms with independently
+  timed position, quaternion rotation, and scale channels. `keyframe_track()`
+  and `transform_track()` support STEP, linear/SLERP, cubic, and smooth rotation.
+  `render_scene(time = ...)` evaluates snapshots in scene seconds, with optional
+  relative shutter offsets and preserved legacy two-endpoint motion.
+- `render_animation(times = ...)` Renders explicit, possibly nonmonotonic scene
+  times while retaining compiled geometry. Camera tracks use explicit time
+  columns or timestamps derived from `fps`. Wavefront motion packs independent
+  property tracks and rejects key schedules that lose device time precision.
+- `projection_light()` Projects an image onto surfaces and through participating
+  media on CPU and Metal, with image orientation, field of view, and intensity
+  controls. `read_pbrt()` imports projection lights.
 - `csg_object()` Supports per-component surface materials, with `NULL` inheriting
   the enclosing object's material. `csg_combine()` blends these materials across
   smooth joins on CPU and Metal; `blend_materials = FALSE` retains sharp material
@@ -219,6 +246,12 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `render_scene()` Saved physical-camera keyframes retain their lens projection,
+  aperture, and viewing direction. Timeline picking uses the displayed lens
+  pose, and rigid saved-camera navigation restores the authored position.
+
+- `spot_light()` Uses the same smooth angular falloff on Metal as on the CPU.
 
 - `render_scene()` Preserves camera elevation when orbiting horizontally with
   A/D, including repeated taps and held keys, in CPU and Metal previews.
@@ -695,6 +728,16 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `render_scene()` Reuses identical motion groups throughout Metal scenes,
+  including matching objects separated by scene traversal order. This avoids
+  redundant ray traversal and preserves hardware-mask acceleration for repeated
+  animations without changing their motion or shutter timing.
+
+- `render_scene()` Uses less memory and renders repeated primitive instances
+  faster with Metal. Animated scenes with up to seven motion groups also use
+  hardware masks to avoid unnecessary intersection filtering; larger motion
+  hierarchies retain the existing traversal path.
 
 - `csg_group()` Accelerates Metal rendering of grouped curves with a shared
   distance-query BVH while preserving geometry, smooth joins, and material

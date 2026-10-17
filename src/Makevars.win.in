@@ -21,6 +21,7 @@ $(SHLIB): $(OBJECTS)
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): math/animatedtransform.h math/keyframe.h
 $(CPP_OBJECTS): core/timeline.h core/camera_track.h
+$(CPP_OBJECTS): core/camera.h
 $(CPP_OBJECTS): core/wavefront_motion_layout.h
 $(CPP_OBJECTS): core/wavefront.h
 render_scene_rcpp.o render_animation_rcpp.o: core/wavefront_report.h

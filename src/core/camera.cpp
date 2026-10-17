@@ -1,4 +1,5 @@
 #include "../core/camera.h"
+#include "camera_track.h"
 #include "low_discrepancy.h"
 #include "../math/quaternion.h"
 #include <cmath>
@@ -169,6 +170,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   time0 = t0;
   time1 = t1;
   aspect = _aspect;
+  scene_camera_aspect = _aspect;
   fov = vfov;
   start_fov = fov;
   lens_radius = aperture / 2;
@@ -192,6 +194,11 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  if (scene_camera_track) {
+    Float ray_time = time0 + (time1-time0)*sample_motion_time(u1);
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, aspect, iso, camera_flip_x);
+  }
   s = film_x(s);
   Float motion_time = sample_motion_time(u1);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
@@ -408,6 +415,11 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+  if (scene_camera_track) {
+    Float ray_time = time0 + (time1-time0)*sample_motion_time(u);
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
+  }
   s = film_x(s);
   Float motion_time = sample_motion_time(u);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
@@ -597,6 +609,11 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  if (scene_camera_track) {
+    Float ray_time = time0 + (time1-time0)*sample_motion_time(u1);
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
+  }
   s = film_x(s);
   Float motion_time = sample_motion_time(u1);
   const Float ray_time = time0 + (time1 - time0) * motion_time;
@@ -807,7 +824,7 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
     diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up),
     start_camera_up(_camera_up), CamTransform(_CamTransform),
-    focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
+    authored_aperture(apertureDiameter), focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
     lookat(_lookat) {
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
@@ -1263,8 +1280,16 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   if (!TraceLensesFromFilm(rFilm, ray2)) {
     return 0;
   }
-  // Finish initialization of _RealisticCamera_ ray
-  if(camera_motion_blur && camera_motion_blur_has_range) {
+  // Exact authored pose at this ray's scene time; lens data stay immutable.
+  if (scene_camera_track && scene_camera_time) {
+    const double scene_time = scene_camera_time->epoch +
+      (double(ray_time)-double(scene_camera_time->ray_anchor));
+    const auto key = scene_camera_track->At(scene_time);
+    const auto &v = key.values;
+    Transform pose = Inverse(LookAt(point3f(v[0],v[1],v[2]),
+                                    point3f(v[3],v[4],v[5]),vec3f(v[11],v[12],v[13])));
+    *ray2 = pose(*ray2);
+  } else if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
       camera_motion_start_origin,
@@ -1291,10 +1316,28 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   if (simpleWeighting) {
     return cos4Theta * exitPupilBoundsArea / exitPupilBounds[0].Area();
   } else {
-    return (shutterClose - shutterOpen) *
+    // Explicit scene-time offsets choose poses, not photographic brightness.
+    // Keep legacy exposure weighting, while a frozen explicit snapshot retains
+    // the unit exposure used by other projections (with ISO still applied).
+    Float exposure = scene_camera_time ? Float(1) : shutterClose-shutterOpen;
+    return exposure *
       (cos4Theta * exitPupilBoundsArea) / (LensRearZ() * LensRearZ());
   }
   return(0);
+}
+
+void RealisticCamera::SetScenePose(point3f position, point3f target, vec3f up) {
+  // Compute and validate before publishing any mutable navigation state.
+  Transform pose = Inverse(LookAt(position,target,up));
+  for (int row = 0; row < 4; ++row)
+    for (int col = 0; col < 4; ++col)
+      if (!std::isfinite(pose.GetMatrix().m[row][col]) ||
+          !std::isfinite(pose.GetInverseMatrix().m[row][col]))
+        throw std::runtime_error("Physical-camera pose exceeds renderer precision.");
+  CamTransform = pose;
+  lookat = target;
+  camera_up = up;
+  camera_motion_blur = false;
 }
 
 point3f RealisticCamera::get_origin() {
@@ -1577,6 +1620,41 @@ context("Camera shutter speed temporal mapping") {
     expect_true((flipped.o - expected.o).squared_length() < 1e-10);
     expect_true((flipped.d - expected.d).squared_length() < 1e-10);
     expect_true(flipped.has_differentials);
+
+    cam.set_camera_motion_blur(false);
+    cam.set_camera_flip_x(false);
+    auto clock = std::make_shared<SceneTimeContext>();
+    clock->epoch=2; clock->ray_anchor=7;
+    cam.scene_camera_time=clock;
+    cam.SetShutterInterval(7,7.4);
+    animation::CameraKey a{2,{0,0,-10, 0,0,0, 10,-1,10, 4,4, 0,1,0}};
+    auto b=a,c=a;
+    b.time=2.2; b.values[0]=4; b.values[3]=4;
+    c.time=2.4;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c});
+    auto reference=cam;
+    cam.scene_camera_track=track;
+    for (Float fraction : {1.f,0.f,.5f,.25f,.75f,.5f}) {
+      Ray actual, expected;
+      CameraSample sample(point2f(.5,.5),point2f(.5,.5),fraction);
+      Float weight=cam.GenerateRay(sample,&actual);
+      double time=2+(double(actual.time())-7);
+      double x=time<=2.2 ? 20*(time-2) : 20*(2.4-time);
+      reference.SetScenePose(point3f(x,0,-10),point3f(x,0,0),vec3f(0,1,0));
+      Float expected_weight=reference.GenerateRay(sample,&expected);
+      expect_true(weight > 0);
+      expect_true(weight == expected_weight);
+      expect_true((actual.o-expected.o).length()<1e-5);
+      expect_true((actual.d-expected.d).length()<1e-6);
+      expect_true(actual.time()==expected.time());
+      auto replacement=track->MakeCamera(track->At(time),1,1,7,7.4,false,&reference);
+      expect_true(std::abs(replacement->get_origin()[0]-x)<1e-5);
+    }
+    // Invalid replacement never modifies the initialized lens or live pose.
+    auto invalid=a; invalid.values[3]=invalid.values[0]; invalid.values[5]=invalid.values[2];
+    point3f before=cam.get_origin();
+    expect_error(track->Apply(invalid,cam));
+    expect_true((cam.get_origin()-before).length()==0);
   }
 }
 #endif
@@ -1691,6 +1769,7 @@ void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVecto
   };
   data.clear();
   if (auto *cam = dynamic_cast<camera *>(&source)) {
+    out.orthographic = 0;
     out.origin = pack(cam->origin);
     out.lower_left = pack(cam->lower_left_corner);
     out.horizontal = pack(cam->horizontal);
@@ -1739,6 +1818,7 @@ void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVecto
     out.elements = cam->elementInterfaces.size();
     out.pupils = cam->exitPupilBounds.size();
     out.simple_weighting = cam->simpleWeighting;
+    out.exposure_weight = cam->scene_camera_time ? 1 : cam->shutterClose-cam->shutterOpen;
     for (const auto &e : cam->elementInterfaces)
       data.push_back(
           {float(e.curvatureRadius), float(e.thickness), float(e.eta), float(e.apertureRadius)});
@@ -1747,4 +1827,47 @@ void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVecto
     motion(*cam);
   } else
     throw std::runtime_error("Unsupported Metal camera class");
+  out.track_count = out.track_offset = 0;
+  if (source.scene_camera_track) {
+    // Five aligned vectors per camera row. Key times are relative to the exact
+    // double frame epoch; the ray keeps its existing scene-relative time.
+    const auto &clock = *source.scene_camera_time;
+    const auto &keys = source.scene_camera_track->Keys();
+    if (keys.size() > UINT32_MAX / 5 || data.size() > UINT32_MAX - keys.size()*5)
+      throw std::runtime_error("Camera track exceeds Metal buffer indexing limits.");
+    out.track_count = uint32_t(keys.size());
+    out.track_offset = uint32_t(data.size());
+    out.shutter.w = clock.ray_anchor;
+    out.moving = 2;
+    if (out.orthographic != 3) out.lens.z = source.scene_camera_aspect;
+    Float previous = -std::numeric_limits<Float>::infinity();
+    for (size_t index = 0; index < keys.size(); ++index) {
+      const auto &key = keys[index];
+      const double relative = key.time-clock.epoch;
+      const Float packed = Float(relative);
+      if (!std::isfinite(packed) || std::abs(double(packed)-relative) > 1e-5 || packed <= previous)
+        throw std::runtime_error("Camera key times exceed Metal float precision.");
+      auto kind = [](double fov) { return fov == 0 ? 0 : fov == 360 ? 2 : 1; };
+      if (index && kind(key.values[7]) != kind(keys[index-1].values[7])) {
+        double open = double(out.shutter.x)-double(clock.ray_anchor);
+        double close = double(out.shutter.y)-double(clock.ray_anchor);
+        Float device_open = out.shutter.x-out.shutter.w, device_close = out.shutter.y-out.shutter.w;
+        // Outside this exposure, rounding a cut is harmless only if both
+        // backends still select the same side. Inside it, require exact time.
+        bool interior = (relative >= open && relative <= close) ||
+                        (packed >= device_open && packed <= device_close);
+        if ((interior && double(packed) != relative) ||
+            ((open >= relative) != (device_open >= packed)) ||
+            ((close >= relative) != (device_close >= packed)))
+          throw std::runtime_error("Projection cut exceeds exact Metal time precision.");
+      }
+      previous = packed;
+      const auto &v = key.values;
+      data.push_back({float(packed),0,0,0});
+      data.push_back({float(v[0]),float(v[1]),float(v[2]),float(v[6])});
+      data.push_back({float(v[3]),float(v[4]),float(v[5]),float(v[8])});
+      data.push_back({float(v[11]),float(v[12]),float(v[13]),float(v[7])});
+      data.push_back({float(v[9]),float(v[10]),0,0});
+    }
+  }
 }

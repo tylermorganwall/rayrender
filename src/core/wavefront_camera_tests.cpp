@@ -1,5 +1,6 @@
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 #include "camera.h"
+#include "camera_track.h"
 #include "hlbvh.h"
 #include "wavefront.h"
 #include "wavefront_motion.h"
@@ -10,6 +11,10 @@ void compare_camera(RayCamera &camera) {
   WFCamera exported;
   std::vector<WFVector> data;
   ExportWavefrontCamera(camera, exported, data);
+  // Production rendering writes atmosphere bookkeeping after camera export.
+  // Camera probes must remain independent of those shared runtime fields.
+  exported.padding[0] = 1024;
+  exported.padding[1] = 4;
   std::vector<WFCameraProbe> probes;
   for (int i = 0; i < 127; ++i)
     probes.push_back(
@@ -49,6 +54,50 @@ void compare_camera(RayCamera &camera) {
 }
 } // namespace
 context("Scene-wide motion identity") {
+  test_that("projection cuts sample the correct camera on either side of the key") {
+    if(!MetalBVHAvailable()) return;
+    animation::CameraKey a{0,{0,0,-10, 0,0,0, .1,60,10, 4,3, 0,1,0}};
+    auto b=a,c=a,d=a;
+    b.time=1; b.values[7]=0; b.values[0]=2;
+    c.time=2; c.values[7]=360;
+    d.time=3;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c,d});
+    auto clock=std::make_shared<SceneTimeContext>();
+    for (const auto &key : {a,b,c}) {
+      auto cam=track->MakeCamera(key,1.5,1,0,3,false);
+      cam->scene_camera_track=track; cam->scene_camera_time=clock;
+      compare_camera(*cam);
+      cam->set_camera_flip_x(true);
+      compare_camera(*cam);
+    }
+    auto cam=track->MakeCamera(a,1.5,1,0,3,false);
+    cam->scene_camera_track=track; cam->scene_camera_time=clock;
+    clock->epoch=.1;
+    WFCamera descriptor;
+    std::vector<WFVector> data;
+    expect_error(ExportWavefrontCamera(*cam,descriptor,data));
+  }
+  test_that("multi-key camera exposures agree with device rays") {
+    if(!MetalBVHAvailable()) return;
+    for (double projection : {60.,0.,360.}) {
+      animation::CameraKey a{100,{0,0,-10, 0,0,0, .2,projection,10, 4,3, 0,1,0}};
+      auto b=a,c=a,d=a;
+      b.time=100.13; b.values[0]=2; b.values[4]=1; b.values[12]=.8;
+      c.time=100.37; c.values[0]=-2; c.values[6]=.5; c.values[9]=6;
+      d.time=100.6;
+      auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c,d});
+      auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=100; clock->ray_anchor=5;
+      std::unique_ptr<RayCamera> cam;
+      if(projection==60) cam=std::make_unique<camera>(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60,1.5,.2,10,5,5.6,1);
+      else if(projection==0) cam=std::make_unique<ortho_camera>(point3f(0,0,-10),point3f(0),vec3f(0,1,0),4,3,5,5.6,1);
+      else cam=std::make_unique<environment_camera>(point3f(0,0,-10),point3f(0),vec3f(0,1,0),5,5.6,1);
+      cam->set_shutter_speed(1);
+      cam->scene_camera_track=track; cam->scene_camera_time=clock;
+      compare_camera(*cam);
+      cam->set_camera_flip_x(true);
+      compare_camera(*cam);
+    }
+  }
   test_that("nonadjacent repeats preserve exact transforms, times and parents") {
     Transform start, end = Translate(vec3f(1, 2, 3)) * RotateY(35) * Scale(.7, 1.3, .9);
     Transform other_end = Translate(vec3f(2, 1, -1));
@@ -418,6 +467,32 @@ context("Metal cameras and density threshold intervals") {
                                        point3f(0), vec3f(0, 1, 0), 8);
       cam.set_camera_motion_blur(true);
       compare_camera(cam);
+      cam.set_camera_motion_blur(false);
+      cam.scene_camera_time = std::make_shared<SceneTimeContext>();
+      cam.SetShutterInterval(0,0);
+      compare_camera(cam);
+      cam.SetShutterInterval(-.1,.2);
+      compare_camera(cam);
+      animation::CameraKey a{100,{0,0,-10, 0,0,0, 10,-1,10, 4,3, 0,1,0}};
+      auto b=a,c=a;
+      b.time=100.2; b.values[0]=3; b.values[4]=1; b.values[11]=.2;
+      c.time=100.4;
+      cam.scene_camera_track=std::make_shared<const animation::CameraTrack>(
+        std::vector<animation::CameraKey>{a,b,c});
+      auto clock=std::make_shared<SceneTimeContext>();
+      clock->epoch=100; clock->ray_anchor=5;
+      cam.scene_camera_time=clock;
+      cam.SetShutterInterval(5,5.4);
+      for (bool flip : {false,true}) {
+        cam.set_camera_flip_x(flip);
+        compare_camera(cam);
+      }
+      // Seek order and a large absolute epoch must not alter the lens model.
+      for (double time : {100.2,100.4,100.,100.1,100.2}) {
+        clock->epoch=time;
+        cam.SetShutterInterval(5,5);
+        compare_camera(cam);
+      }
     }
   }
   test_that("cubic cutoff keeps all three crossings and constant equality") {

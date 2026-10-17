@@ -118,14 +118,22 @@
 #' @param timeline Default `NULL`. Ordered playback range in scene seconds.
 #'   With preview and interactive enabled, shows seeking and playback controls.
 #'   Authored perspective, orthographic, and panoramic camera rows follow scene
-#'   time with zero-width exposure and a fixed projection. Manual camera changes
+#'   time, including each shutter sample. Projection changes are cuts that hold
+#'   the left camera until the next key. Manual camera changes
 #'   pause and override the track until the next timeline command. M plays saved
 #'   camera keyframes at fps, starting at the timeline's first second.
 #' @param fps Default `30`. Positive display/output frame rate.
 #' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
 #'   With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
 #'   stored as frame-relative floats; absolute scene time remains double precision.
+#'   Moving perspective, orthographic, and panoramic cameras sample all authored
+#'   keys within the exposure. Physical cameras support authored playback and exact rigid
+#'   exposure with constant aperture and focus. Varying physical optics require
+#'   offline zero-width snapshots.
 #'   Explicit time rejects explicitly supplied legacy shutter controls.
+#'   In explicit-time mode, physical lens cameras use unit exposure weighting;
+#'   offsets select poses and ISO controls brightness. Legacy exposure weighting
+#'   is unchanged when time is NULL.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
@@ -585,6 +593,25 @@ render_scene = function(
       fps = fps,
       shutter_offsets = timing$offsets
     )
+    if (
+      !is.null(timeline) &&
+        any(vapply(
+          cameras,
+          function(cam) {
+            motion = cam$authored_motion
+            nrow(motion) > 1L &&
+              any(motion$fov < 0) &&
+              (any(motion$aperture != motion$aperture[1]) ||
+                any(motion$focal != motion$focal[1]))
+          },
+          logical(1)
+        ))
+    ) {
+      stop(
+        "Physical-camera timeline playback requires constant aperture and focus; use offline zero-width snapshots for varying optics.",
+        call. = FALSE
+      )
+    }
   }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
@@ -946,7 +973,7 @@ HAS_OIDN: %s
   camera_info = scene_list$camera_info
   camera_info$timeline = timeline
   camera_info$timeline_fps = fps
-  camera_info$timeline_camera = if (!is.null(timeline)) {
+  camera_info$timeline_camera = if (!is.null(time)) {
     selected_camera$authored_motion
   } else {
     NULL

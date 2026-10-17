@@ -180,6 +180,11 @@ tween = function(vals, n, ease = "cubic", closed = FALSE) {
   if (length(vals) == 1) {
     return(rep(vals, n))
   }
+  # A constant authored property must remain bitwise constant. Weighted sums
+  # can otherwise introduce roundoff that appears to animate fixed lens optics.
+  if (length(vals) > 1 && n >= length(vals) && isTRUE(all(vals == vals[1]))) {
+    return(rep(vals[1], n))
+  }
   if (ease == "spline") {
     return(tween_spline(vals, n, closed))
   }

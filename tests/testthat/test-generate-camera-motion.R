@@ -499,3 +499,28 @@ test_that("bezier camera motion handles repeated scalar keyframe values", {
   expect_equal(nrow(motion), 4)
   expect_true(all(is.finite(as.matrix(motion))))
 })
+
+
+test_that("constant saved-camera optics remain exactly constant", {
+  keys = generate_camera_motion(
+    rbind(c(0, 0, -10), c(3, 0, -10)),
+    lookats = rbind(c(0, 0, 0), c(3, 0, 0)),
+    apertures = 10,
+    focal_distances = 10,
+    fovs = -1,
+    frames = 2,
+    type = "linear",
+    damp_motion = FALSE
+  )
+  for (interpolation in c("linear", "spline", "bezier")) {
+    motion = generate_camera_motion(
+      keys,
+      frames = 31,
+      type = interpolation,
+      damp_motion = FALSE
+    )
+    expect_true(all(motion$aperture == 10))
+    expect_true(all(motion$focal == 10))
+    expect_true(all(motion$fov == -1))
+  }
+})

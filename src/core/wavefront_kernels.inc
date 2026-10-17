@@ -49,6 +49,9 @@ R"MSL(
     uint orthographic, flip_x, padding[2];
     float4 shutter, motion_origin[2], motion_rotation[2], lens;
     uint moving, elements, pupils, simple_weighting;
+    uint track_count, track_offset;
+    float exposure_weight;
+    uint track_reserved;
   };
   struct Params {
     Camera camera;
@@ -87,7 +90,7 @@ R"MSL(
   };
   static_assert(sizeof(Triangle) == 160 && sizeof(Texture) == 80 && sizeof(Material) == 144 &&
                     sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 112 &&
-                    sizeof(Camera) == 240 && sizeof(Params) == 320 && sizeof(Pixel) == 48 &&
+                    sizeof(Camera) == 256 && sizeof(Params) == 336 && sizeof(Pixel) == 48 &&
                     sizeof(Path) == 80 && sizeof(Hit) == 32 && sizeof(Shadow) == 144 &&
                     sizeof(Counts) == 32,
                 "wavefront host/device ABI mismatch");

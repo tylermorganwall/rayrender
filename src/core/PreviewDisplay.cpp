@@ -82,7 +82,8 @@ std::string PreviewDisplay::AtmosphereStatusText() const {
 
 static point3f PreviewCameraLookat(RayCamera* cam) {
   point3f origin = cam->get_origin(), pivot = cam->get_lookat();
-  vec3f forward = unit_vector(cam->get_w()), to_pivot = pivot - origin;
+  vec3f forward = unit_vector(cam->get_fov() < 0 ? -cam->get_w() : cam->get_w());
+  vec3f to_pivot = pivot - origin;
   if(to_pivot.length() > 0 && dot(unit_vector(to_pivot), forward) > .999999f) {
     return pivot;
   }
@@ -134,7 +135,18 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
   }
   Ray ray;
   Float fov = cam->get_fov();
-  if(fov < 0) {
+  if (cam->scene_camera_track && timeline_scene_time && fov < 0) {
+    auto *physical = dynamic_cast<RealisticCamera *>(cam);
+    if (!physical) return false;
+    auto snapshot = *physical;
+    snapshot.SetShutterInterval(timeline_scene_time->ray_anchor,timeline_scene_time->ray_anchor);
+    CameraSample sample(point2f(1-u,1-v),point2f(.5,.5),0);
+    if (!(snapshot.GenerateRay(sample,&ray) > 0)) return false;
+  } else if (cam->scene_camera_track && timeline_scene_time) {
+    ray = cam->scene_camera_track->SampleRay(timeline_scene_time->epoch,
+      timeline_scene_time->ray_anchor, u, v, point3f(0), Float(width)/Float(height),
+      cam->get_iso(), cam->get_camera_flip_x());
+  } else if(fov < 0) {
     // Match GenerateRay's film convention, using the center of the lens and
     // a fixed shutter sample rather than the current rendering sample.
     CameraSample sample(point2f(1 - u, 1 - v), point2f(.5f, .5f), .5f);
@@ -521,7 +533,7 @@ void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
 
 bool PreviewDisplay::ToggleCameraMotionBlur() {
   if (timeline) {
-    Rprintf("Timeline camera motion blur is not implemented; rigid object shutter_offsets remain active.\n");
+    Rprintf("Timeline camera and object exposure use shutter_offsets; B controls legacy camera blur.\n");
     return false;
   }
   SetCameraMotionBlur(!camera_motion_blur_enabled);
@@ -537,8 +549,8 @@ Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
   vec3f cam_up = cam->get_up();
   point2f ortho = cam->get_ortho();
   point3f key_lookat = PreviewCameraLookat(cam);
-  Float key_aperture = fov > 0 ? cam_aperture : 0;
-  Float key_fov = fov > 0 ? fov : 0;
+  Float key_aperture = fov != 0 ? cam_aperture : 0;
+  Float key_fov = fov;
 
   return Rcpp::List::create(Named("x") = origin.xyz.x,
                             Named("y") = origin.xyz.y,
@@ -592,6 +604,16 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
   }
   vec2f key_ortho = vec2f(Rcpp::as<Float>(state["orthox"]),
                           Rcpp::as<Float>(state["orthoy"]));
+  if (auto *physical = dynamic_cast<RealisticCamera *>(cam)) {
+    if (key_fov >= 0 || key_focal != physical->get_focal_distance() ||
+        key_aperture != physical->get_aperture()) {
+      Rprintf("Physical saved-camera navigation requires matching lens aperture and focus.\n");
+      return false;
+    }
+    physical->SetScenePose(key_pos,key_lookat,key_up);
+    navigation.SetDistance((key_lookat-key_pos).length());
+    return true;
+  }
   cam->update_focal_absolute(key_focal);
   cam->update_position_absolute(key_pos);
   cam->update_lookat(key_lookat);
@@ -614,7 +636,7 @@ bool PreviewDisplay::ApplyKeyframe(int index, Float* env_rotation) {
   }
 
   Rcpp::List keyframe = Keyframes.at(index);
-  ApplyCameraState(keyframe, env_rotation);
+  if (!ApplyCameraState(keyframe, env_rotation)) return false;
   current_keyframe = index;
   return true;
 }
@@ -791,9 +813,12 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     try {
       auto track = read_camera_track(preview_motion, timeline->Fps(), timeline->Begin());
       auto previous_track = timeline_camera;
+      auto previous_optics = timeline_physical_camera ?
+        std::make_unique<const RealisticCamera>(*timeline_physical_camera) : nullptr;
       auto previous_state = CreateCurrentKeyframe(env_rotation);
       ConfigureTimelineCamera(std::move(track));
       timeline_camera_restore = std::move(previous_track);
+      timeline_physical_restore = std::move(previous_optics);
       preview_motion_restore_state = previous_state;
       preview_motion_restore_keyframe = current_keyframe;
       timeline_saved_camera = true;
@@ -820,13 +845,15 @@ bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
   if (timeline && timeline_saved_camera) {
     timeline->Pause(true);
     if (timeline_camera_restore)
-      ConfigureTimelineCamera(timeline_camera_restore);
+      ConfigureTimelineCamera(timeline_camera_restore,nullptr,timeline_physical_restore.get());
     else {
       ApplyCameraState(preview_motion_restore_state, env_rotation);
       timeline_camera.reset();
+      cam->scene_camera_track.reset();
       timeline->Invalidate(animation::Camera);
     }
     timeline_camera_restore.reset();
+    timeline_physical_restore.reset();
     timeline_saved_camera = false;
     current_keyframe = preview_motion_restore_keyframe;
     return true;
@@ -3401,6 +3428,121 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
 }
 
 context("Preview atmosphere controls") {
+  test_that("physical timeline seeks reuse optics and restore authored focus after navigation") {
+    Transform pose=Inverse(LookAt(point3f(0,0,-10),point3f(0),vec3f(0,1,0)));
+    AnimatedTransform transform(&pose,0,&pose,0);
+    std::vector<Float> lens={29.475,3.76,1.67,25.2,84.83,.12,1,25.2,
+      19.275,4.025,1.67,23,40.77,3.275,1.699,23,12.75,5.705,1,18,
+      0,4.5,0,17.1,-14.495,1.18,1.603,17,40.77,6.065,1.658,20,
+      -20.385,.19,1,20,437.065,3.22,1.717,20,-39.73,0,1,20};
+    std::unique_ptr<RayCamera> cam=std::make_unique<RealisticCamera>(
+      transform,-.1,.2,10,4,4,10,false,lens,.022,1,1,vec3f(0,1,0),pose,point3f(0));
+    cam->set_shutter_speed(1);
+    auto reference=*static_cast<RealisticCamera *>(cam.get());
+    auto display=MakeTestPreviewDisplay(*cam,pose);
+    auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
+    display->ConfigureTimeline(2,9,2,30,clock,-.1,.2);
+    animation::CameraKey a{2,{0,0,-10, 0,0,0, 10,-1,10, 4,4, 0,1,0}};
+    auto b=a,c=a; b.time=5; b.values[0]=3; b.values[3]=3; c.time=9;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c});
+    display->ConfigureTimelineCamera(track,&cam);
+    reference.scene_camera_time=clock;
+    for (double time : {9.,2.,5.,6.,9.,5.}) {
+      display->timeline->Seek(time);
+      expect_true(display->UpdateTimeline());
+      expect_true(display->cam==cam.get());
+      const auto key=track->At(time);
+      expect_true(std::abs(cam->get_origin()[0]-key.values[0])<1e-6);
+      Ray actual, expected;
+      Float weight=cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),.5),&actual);
+      double ray_scene=time+(double(actual.time())-double(clock->ray_anchor));
+      auto ray_key=track->At(ray_scene);
+      reference.SetScenePose(point3f(ray_key.values[0],0,-10),point3f(ray_key.values[3],0,0),vec3f(0,1,0));
+      reference.SetShutterInterval(actual.time(),actual.time());
+      Float expected_weight=reference.GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&expected);
+      expect_true(weight>0);
+      expect_true(weight==expected_weight);
+      expect_true((actual.o-expected.o).length()<1e-5);
+      expect_true((actual.d-expected.d).length()<1e-6);
+      // Each seek retains the requested .3-second exposure, not the seek gap.
+      Ray first,last;
+      cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&first);
+      cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),1),&last);
+      expect_true(std::abs(last.time()-first.time()-.3)<1e-5);
+    }
+    cam->update_focal_distance(1);
+    display->TimelineCameraEdited();
+    expect_true(cam->get_focal_distance()!=10);
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_focal_distance()==10);
+    expect_true(cam->get_origin()[0]==0);
+    display->SaveCurrentKeyframe(0);
+    static_cast<RealisticCamera *>(cam.get())->SetScenePose(point3f(3,0,-10),point3f(3,0,0),vec3f(0,1,0));
+    display->TimelineCameraEdited();
+    display->SaveCurrentKeyframe(0);
+    display->SetKeyframeMotionArgs(Rcpp::List::create(Rcpp::Named("frames")=31,
+      Rcpp::Named("type")="linear",Rcpp::Named("damp_motion")=false));
+    expect_true(display->StartPreviewMotion(0));
+    display->timeline->Pause(true);
+    display->timeline->Seek(3);
+    expect_true(display->UpdateTimeline());
+    expect_true(std::abs(cam->get_origin()[0]-3)<1e-5);
+    expect_true(cam->get_aperture()==10);
+    cam->update_focal_distance(1);
+    display->TimelineCameraEdited();
+    Float environment=0;
+    expect_true(display->CancelPreviewMotion(&environment));
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_focal_distance()==10);
+    expect_true(cam->get_origin()[0]==1);
+    expect_true(cam->get_fov()==-1);
+    // Pick at the displayed pose, not the exposure midpoint or a queued seek.
+    display->timeline->Seek(2);
+    display->UpdateTimeline();
+    display->timeline->Seek(5);
+    Transform identity;
+    auto mat=std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
+    hitable_list world;
+    world.add(std::make_shared<sphere>(2,mat,nullptr,nullptr,&identity,&identity,false));
+    reference.SetScenePose(point3f(0,0,-10),point3f(0),vec3f(0,1,0));
+    reference.SetShutterInterval(clock->ray_anchor,clock->ray_anchor);
+    Ray pick_ray;
+    reference.GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&pick_ray);
+    auto expected_pick=PickRay(pick_ray,&world,nullptr);
+    expect_true(bool(expected_pick));
+    expect_true(display->PickCameraTarget(.5,.5,false,&world));
+    expect_true((cam->get_lookat()-expected_pick->p).length()<1e-5);
+    expect_true(cam->get_focal_distance()==10);
+    Float env=0;
+    expect_true(display->ApplyKeyframe(1,&env));
+    expect_true(cam->get_origin()[0]==3);
+    expect_true(cam->get_lookat()[2]==0);
+  }
+  test_that("timeline projection cuts replace the owned camera without seek history") {
+    Transform identity;
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto middle=first,last=first;
+    middle.time=5; middle.values[7]=0; middle.values[0]=3;
+    last.time=9; last.values[7]=360;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{first,middle,last});
+    auto cam=track->MakeCamera(first,1,1,-.1,.2,false);
+    auto display=MakeTestPreviewDisplay(*cam,identity);
+    auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
+    display->ConfigureTimeline(2,9,2,30,clock,-.1,.2);
+    display->ConfigureTimelineCamera(track,&cam);
+    for (double time : {9.,2.,5.,4.9,9.,5.}) {
+      display->timeline->Seek(time);
+      expect_true(display->UpdateTimeline());
+      expect_true(display->cam == cam.get());
+      expect_true(cam->get_fov() == track->At(time).values[7]);
+      auto actual=cam->get_ray(.3,.6,point3f(0),.5);
+      auto expected=track->SampleRay(time+(double(actual.time())-double(clock->ray_anchor)),
+                                    actual.time(),.3,.6,point3f(0),1,1,false);
+      expect_true((actual.o-expected.o).length()<1e-6);
+      expect_true((actual.d-expected.d).length()<1e-6);
+    }
+  }
   test_that("camera tracks seek, allow a manual override, and restore saved playback") {
     Transform identity;
     camera cam(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60,1,0,10,0,0,1);
@@ -3447,11 +3589,21 @@ context("Preview atmosphere controls") {
     auto scene_time = std::make_shared<SceneTimeContext>();
     scene_time->epoch = 2;
     display->ConfigureTimeline(2,9,2,30,scene_time,-.1f,.2f);
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto last = first; last.time = 9; last.values[0] = 7;
+    display->ConfigureTimelineCamera(std::make_shared<const animation::CameraTrack>(
+      std::vector<animation::CameraKey>{first,last}));
     display->TimelineAction(animation::TimelineCommand::End);
     expect_true(display->UpdateTimeline());
     expect_true(scene_time->epoch == 9);
     expect_true(scene_time->ray_anchor == 7);
     expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    // Seeking seven seconds changes the epoch, not the exposure duration.
+    // The first ray is at 8.9 seconds and the last holds the authored endpoint.
+    auto before = cam.get_ray(.5,.5,point3f(0),0);
+    auto after = cam.get_ray(.5,.5,point3f(0),1);
+    expect_true(std::abs(before.o[0]-6.9) < 1e-5);
+    expect_true(after.o[0] == 7);
     expect_false(cam.get_camera_motion_blur());
     expect_true(display->ConsumeTimelineChange());
     expect_false(display->ConsumeTimelineChange());
@@ -3459,9 +3611,11 @@ context("Preview atmosphere controls") {
     expect_true(display->UpdateTimeline());
     expect_true(scene_time->epoch == 2);
     expect_true(cam.time0 == cam.time1);
+    expect_true(cam.get_ray(.5,.5,point3f(0),.5).o[0] == 0);
     expect_true(display->TimelinePointer(-100,-100,false,true));
     expect_true(display->UpdateTimeline());
     expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    expect_true(std::abs(cam.get_ray(.5,.5,point3f(0),1).o[0]-.2) < 1e-5);
     expect_true(display->timeline->Paused());
     display->TimelineFocusLost();
     expect_false(display->timeline->Requested().dragging);

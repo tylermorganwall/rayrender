@@ -4,13 +4,31 @@
 #include <cstdio>
 #include <sstream>
 
-void PreviewDisplay::ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track) {
+void PreviewDisplay::ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track,
+                                             std::unique_ptr<RayCamera>* owner,
+                                             const RealisticCamera *optics) {
   if (!timeline) throw std::runtime_error("Camera playback requires a scene timeline.");
-  if (timeline_open != 0 || timeline_close != 0)
-    throw std::runtime_error("Animated camera timeline requires a zero-width exposure until exact camera exposure sampling is implemented.");
-  // Probe a copy before replacing the published camera or the active track.
-  track->Apply(track->At(timeline->Requested().time), *cam);
+  if (owner) {
+    if (owner->get() != cam) throw std::runtime_error("Timeline camera owner does not match the preview.");
+    timeline_camera_owner = owner;
+  }
+  std::unique_ptr<const RealisticCamera> physical;
+  if (auto *lens = optics ? optics : dynamic_cast<RealisticCamera *>(cam)) {
+    physical = std::make_unique<const RealisticCamera>(*lens);
+    if (!timeline_camera_owner)
+      throw std::runtime_error("Physical-camera playback requires an owned preview camera.");
+  }
+  // Validate a replacement before changing the active track. The owner is
+  // replaced only by UpdateTimeline at the render handoff.
+  if (timeline_camera_owner)
+    track->MakeCamera(track->At(timeline->Requested().time),Float(width)/Float(height),
+                      cam->get_iso(),timeline_open,timeline_close,cam->get_camera_flip_x(),physical.get());
+  else track->Apply(track->At(timeline->Requested().time), *cam);
+  timeline_physical_camera = std::move(physical);
   timeline_camera = std::move(track);
+  cam->scene_camera_track = timeline_camera;
+  cam->scene_camera_time = timeline_scene_time;
+  cam->scene_camera_aspect = Float(width)/Float(height);
   timeline_camera_override = false;
   timeline->Invalidate(animation::Camera);
 }
@@ -21,6 +39,7 @@ void PreviewDisplay::TimelineCameraEdited() {
   // Hold this manual view until an explicit scene-time command resumes the
   // immutable camera track. Navigation never writes back into authored keys.
   timeline_camera_override = true;
+  cam->scene_camera_track.reset();
   timeline->Invalidate(animation::Camera);
 }
 
@@ -124,15 +143,24 @@ bool PreviewDisplay::UpdateTimeline() noexcept {
           std::abs(double(Float(open)) - open) > 1e-5 || std::abs(double(Float(close)) - close) > 1e-5 ||
           (open < close && Float(open) >= Float(close)))
         throw std::runtime_error("Requested timeline exposure exceeds float time precision.");
-      auto perspective = dynamic_cast<camera *>(cam);
-      auto orthographic = dynamic_cast<ortho_camera *>(cam);
-      auto panoramic = dynamic_cast<environment_camera *>(cam);
-      auto physical = dynamic_cast<RealisticCamera *>(cam);
+      std::unique_ptr<RayCamera> replacement;
+      if (timeline_camera && !timeline_camera_override && timeline_camera_owner) {
+        replacement = timeline_camera->MakeCamera(timeline_camera->At(request.time),
+          Float(width)/Float(height),cam->get_iso(),open,close,cam->get_camera_flip_x(),
+          timeline_physical_camera.get());
+      }
+      RayCamera* next = replacement ? replacement.get() : cam;
+      auto perspective = dynamic_cast<camera *>(next);
+      auto orthographic = dynamic_cast<ortho_camera *>(next);
+      auto panoramic = dynamic_cast<environment_camera *>(next);
+      auto physical = dynamic_cast<RealisticCamera *>(next);
       if (!perspective && !orthographic && !panoramic && !physical)
         throw std::runtime_error("Timeline does not support this camera type.");
       if (timeline_camera && !timeline_camera_override) {
-        timeline_camera->Apply(timeline_camera->At(request.time), *cam);
-        navigation.SetDistance((cam->get_lookat() - cam->get_origin()).length());
+        if (!replacement) timeline_camera->Apply(timeline_camera->At(request.time), *next);
+        next->scene_camera_track = timeline_camera;
+        next->scene_camera_time = timeline_scene_time;
+        next->scene_camera_aspect = Float(width)/Float(height);
         if (timeline_saved_camera && !Keyframes.empty()) {
           double row = (request.time-timeline->Begin()) * timeline->Fps();
           double key = row * Keyframes.size() / std::max<R_xlen_t>(1, preview_motion.nrows());
@@ -140,6 +168,11 @@ bool PreviewDisplay::UpdateTimeline() noexcept {
         }
       }
       if (!timeline->Publish(request)) return false;
+      if (replacement) {
+        *timeline_camera_owner = std::move(replacement);
+        SetCamera(timeline_camera_owner->get());
+      }
+      navigation.SetDistance((cam->get_lookat() - cam->get_origin()).length());
       if (perspective) { perspective->time0 = open; perspective->time1 = close; }
       if (orthographic) { orthographic->time0 = open; orthographic->time1 = close; }
       if (panoramic) { panoramic->time0 = open; panoramic->time1 = close; }

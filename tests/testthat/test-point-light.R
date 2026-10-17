@@ -35,6 +35,7 @@ test_that("attached point lights validate and survive scene composition", {
 point_light_test_pixel = function(scene) {
   image = render_scene(
     scene,
+    integrator_type = "nee",
     width = 4,
     height = 4,
     samples = 8,

@@ -373,7 +373,8 @@ Explicit times sample object and camera tracks without playback history.}
 \item{timeline}{Default `NULL`. Ordered playback range in scene seconds.
 With preview and interactive enabled, shows seeking and playback controls.
 Authored perspective, orthographic, and panoramic camera rows follow scene
-time with zero-width exposure and a fixed projection. Manual camera changes
+time, including each shutter sample. Projection changes are cuts that hold
+the left camera until the next key. Manual camera changes
 pause and override the track until the next timeline command. M plays saved
 camera keyframes at fps, starting at the timeline's first second.}
 
@@ -382,7 +383,14 @@ camera keyframes at fps, starting at the timeline's first second.}
 \item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
 With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
 stored as frame-relative floats; absolute scene time remains double precision.
-Explicit time rejects explicitly supplied legacy shutter controls.}
+Moving perspective, orthographic, and panoramic cameras sample all authored
+keys within the exposure. Physical cameras support authored playback and exact rigid
+exposure with constant aperture and focus. Varying physical optics require
+offline zero-width snapshots.
+Explicit time rejects explicitly supplied legacy shutter controls.
+In explicit-time mode, physical lens cameras use unit exposure weighting;
+offsets select poses and ISO controls brightness. Legacy exposure weighting
+is unchanged when time is NULL.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

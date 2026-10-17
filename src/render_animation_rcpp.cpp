@@ -1,4 +1,5 @@
 #include "core/wavefront.h"
+#include "animation_rcpp.h"
 #include "core/wavefront_report.h"
 #include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
@@ -295,6 +296,27 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   if (explicit_time && (shutter_offsets.size() != 2 || absolute_frame_times.size() != frame_times.size() ||
       frame_times.size() != as<NumericVector>(camera_movement["x"]).size()))
     stop("Explicit animation timing does not match the requested camera frames.");
+  std::vector<std::shared_ptr<const animation::CameraTrack>> camera_tracks;
+  IntegerVector track_indices;
+  if (explicit_time && (shutter_offsets[0] != 0 || shutter_offsets[1] != 0) &&
+      camera_info.containsElementNamed("authored_cameras")) {
+    List authored = camera_info["authored_cameras"];
+    track_indices = as<IntegerVector>(camera_movement["track_index"]);
+    if (track_indices.size() != frame_times.size()) stop("Camera track indices do not match output frames.");
+    for (int i = 0; i < authored.size(); ++i) {
+      std::shared_ptr<const animation::CameraTrack> track;
+      if (!Rf_isNull(authored[i])) {
+        DataFrame motion = as<DataFrame>(authored[i]);
+        if (motion.nrows() > 1) track = read_camera_track(motion, 1, 0);
+      }
+      camera_tracks.push_back(std::move(track));
+    }
+    for (int index : track_indices)
+      if (index < 1 || index > int(camera_tracks.size())) stop("Invalid authored camera track index.");
+  }
+  auto track_for_frame = [&](int frame) -> std::shared_ptr<const animation::CameraTrack> {
+    return camera_tracks.empty() ? nullptr : camera_tracks[track_indices[frame]-1];
+  };
   Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
     as<Float>(camera_info["shutter_speed"]) :
     static_cast<Float>(2);
@@ -509,6 +531,31 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     pb_frames.set_total(n_frames - start_frame);
   }
 
+  // All frames in this native batch share the lens descriptor and film setup.
+  // Reuse the most recently initialized optics when only rigid pose/time changes.
+  // Variable-optics snapshots still construct their exact lens configuration.
+  std::unique_ptr<RealisticCamera> physical_optics;
+  auto make_frame_camera = [&](int frame) -> std::unique_ptr<RayCamera> {
+    point3f position(cam_x(frame),cam_y(frame),cam_z(frame));
+    point3f target(cam_dx(frame),cam_dy(frame),cam_dz(frame));
+    vec3f up(cam_upx(frame),cam_upy(frame),cam_upz(frame));
+    if (explicit_time && cam_fov(frame) < 0 && physical_optics &&
+        Float(cam_aperture(frame)) == physical_optics->get_aperture() &&
+        Float(cam_focal(frame)) == physical_optics->get_focal_distance()) {
+      auto result=std::make_unique<RealisticCamera>(*physical_optics);
+      result->SetScenePose(position,target,up);
+      result->SetShutterInterval(shutteropen,shutterclose);
+      return result;
+    }
+    auto result=make_animation_camera(position,target,up,cam_fov(frame),cam_aperture(frame),
+      cam_focal(frame),cam_orthox(frame),cam_orthoy(frame),nx,ny,shutteropen,shutterclose,
+      realCameraInfo,film_size,camera_scale,iso,shutter_speed,camera_flip_x,transformCache);
+    if (explicit_time)
+      if (auto *physical=dynamic_cast<RealisticCamera *>(result.get()))
+        physical_optics=std::make_unique<RealisticCamera>(*physical);
+    return result;
+  };
+
   if(debug_channel != 0) {
     for(int i = start_frame; i < n_frames; i++ ) {
       if (explicit_time) {
@@ -525,18 +572,15 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       point3f lookfrom(cam_x(i),cam_y(i),cam_z(i));
       point3f lookat(cam_dx(i),cam_dy(i),cam_dz(i));
       Float fov = cam_fov(i);
-      Float aperture = cam_aperture(i);
-      Float focus_distance = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
 
-      cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                  focus_distance, orthox, orthoy, nx, ny,
-                                  shutteropen, shutterclose, realCameraInfo,
-                                  film_size, camera_scale, iso, shutter_speed, camera_flip_x,
-                                  transformCache);
+      cam = make_frame_camera(i);
+      cam->scene_camera_track = track_for_frame(i);
+      cam->scene_camera_time = scene_time;
+      cam->scene_camera_aspect = Float(nx)/Float(ny);
       bool blur_enabled = frame_camera_motion_blur_enabled(
         i,
         camera_motion_blur,
@@ -635,22 +679,14 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                   lookfrom, lookat, aperture, fov,
                                   focus_distance, orthox, orthoy);
         } else {
-          preview_cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                              focus_distance, orthox, orthoy, nx, ny,
-                                              shutteropen, shutterclose, realCameraInfo,
-                                              film_size, camera_scale, iso, shutter_speed, camera_flip_x,
-                                              transformCache);
+          preview_cam = make_frame_camera(i);
           preview_cam_initialized = true;
           preview_camera_type = current_camera_type;
           preview_camera_up = camera_up;
         }
         frame_cam = preview_cam.get();
       } else {
-        frame_cam_storage = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                                 focus_distance, orthox, orthoy, nx, ny,
-                                                 shutteropen, shutterclose, realCameraInfo,
-                                                 film_size, camera_scale, iso, shutter_speed, camera_flip_x,
-                                                 transformCache);
+        frame_cam_storage = make_frame_camera(i);
         frame_cam = frame_cam_storage.get();
       }
       bool blur_enabled = frame_camera_motion_blur_enabled(
@@ -671,6 +707,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        cam_dx, cam_dy, cam_dz,
                                        cam_upx, cam_upy, cam_upz,
                                        cam_focal, shutter_endpoints);
+      frame_cam->scene_camera_track = track_for_frame(i);
+      frame_cam->scene_camera_time = scene_time;
+      frame_cam->scene_camera_aspect = Float(nx)/Float(ny);
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
