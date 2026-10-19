@@ -16,6 +16,7 @@ class CameraTrack {
 public:
   explicit CameraTrack(std::vector<CameraKey> keys);
   CameraKey At(double time) const;
+  void ValidateExposure(Float open, Float close) const;
   void Apply(const CameraKey &key, RayCamera &camera) const;
   std::unique_ptr<RayCamera> MakeCamera(const CameraKey &key, Float aspect, Float iso,
                                       Float open, Float close, bool flip,

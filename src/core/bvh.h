@@ -168,6 +168,8 @@ public:
     // Mesh construction releases its temporary list; light sampling borrows
     // these same owned primitives instead of retaining a duplicate mesh list.
     std::span<const std::shared_ptr<hitable>> Primitives() const { return primitives; }
+    // Refit fixed topology after owning-thread deformation/placement updates.
+    void Refit(Float open, Float close);
 
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     

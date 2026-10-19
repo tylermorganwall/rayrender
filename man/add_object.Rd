@@ -9,7 +9,7 @@ add_object(scene, objects = NULL)
 \arguments{
 \item{scene}{Tibble of pre-existing object locations and properties.}
 
-\item{objects}{A tibble row or collection of rows representing each object.}
+\item{objects}{Default `NULL`. A tibble row or collection of object rows to add.}
 }
 \value{
 Tibble of object locations and properties.

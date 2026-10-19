@@ -17,6 +17,7 @@ struct TransformTrack {
   float4 pivot;
   float4 clock;
   float4 frame;
+  float4 root_position, root_yaw;
 };
 struct PropertyTrack {
   uint count, interpolation, property, keys;
@@ -35,7 +36,7 @@ struct MotionPose {
 };
 static_assert(sizeof(Animation) == 368 && sizeof(MotionHeader) == 48,
               "motion ABI mismatch");
-static_assert(sizeof(TransformTrack) == 64 && sizeof(PropertyTrack) == 16 && sizeof(TrackKey) == 64,
+static_assert(sizeof(TransformTrack) == 96 && sizeof(PropertyTrack) == 16 && sizeof(TrackKey) == 64,
               "track ABI mismatch");
 float4 motion_track(MotionContext m, uint offset, float4 rest) {
   if (!offset) return rest;
@@ -122,6 +123,14 @@ MotionPose motion_pose(MotionContext m, uint owner) {
         float3 p = motion_track(local, track->channels[0], float4(0)).xyz;
         float4 q = normalize(motion_track(local, track->channels[1], float4(0,0,0,1)));
         float3 s = motion_track(local, track->channels[2], float4(1,1,1,0)).xyz;
+        uint mask = uint(track->root_position.w);
+        for (uint k = 0; k < 3; ++k) if (mask & (1u << k)) p[k] = track->root_position[k];
+        if (track->root_yaw.x != 0) {
+          float2 twist = normalize(q.yw);
+          float dy = track->root_yaw.y*twist.y - track->root_yaw.w*twist.x;
+          float dw = track->root_yaw.w*twist.y + track->root_yaw.y*twist.x;
+          q = float4(dw*q.x+dy*q.z, dw*q.y+dy*q.w, dw*q.z-dy*q.x, dw*q.w-dy*q.y);
+        }
         float3 x = q.xyz, pivot = track->pivot.xyz;
         value[0] = float4(float3(1-2*(x.y*x.y+x.z*x.z), 2*(x.x*x.y-q.w*x.z), 2*(x.x*x.z+q.w*x.y))*s, 0);
         value[1] = float4(float3(2*(x.x*x.y+q.w*x.z), 1-2*(x.x*x.x+x.z*x.z), 2*(x.y*x.z-q.w*x.x))*s, 0);

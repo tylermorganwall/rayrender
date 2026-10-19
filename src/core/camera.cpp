@@ -826,6 +826,7 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
     start_camera_up(_camera_up), CamTransform(_CamTransform),
     authored_aperture(apertureDiameter), focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
     lookat(_lookat) {
+  lens_source = std::make_shared<const LensSource>(LensSource{lensData, film_size, camera_scale});
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
@@ -1326,6 +1327,28 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   return(0);
 }
 
+std::unique_ptr<RealisticCamera> RealisticCamera::WithSceneOptics(Float aperture, Float focus) const {
+  if (!std::isfinite(aperture) || aperture < 0 || !std::isfinite(focus) || focus <= 0)
+    throw std::runtime_error("Physical-camera aperture must be finite and nonnegative, and focus positive.");
+  if (scene_optics_prepared && aperture == authored_aperture && focus == focusDistance)
+    return std::make_unique<RealisticCamera>(*this);
+  if (!lens_source || lens_source->elements.empty())
+    throw std::runtime_error("Physical-camera snapshot requires an initialized lens descriptor.");
+  // Reuse the established focusing and pupil-bound algorithms. Preparing all
+  // 64 pupil bins is expensive, but no interpolated optics or stale bounds are
+  // substituted. This runs only at a completed-batch handoff, never per ray.
+  auto elements = lens_source->elements;
+  auto next = std::make_unique<RealisticCamera>(CameraToWorld, shutterOpen, shutterClose,
+    aperture, cam_width, cam_height, focus, simpleWeighting, elements,
+    lens_source->film_size, lens_source->camera_scale, iso, camera_up, CamTransform, lookat);
+  next->lens_source = lens_source;
+  next->scene_camera_time = scene_camera_time;
+  next->scene_camera_aspect = scene_camera_aspect;
+  next->set_camera_flip_x(get_camera_flip_x());
+  next->set_shutter_speed(1);
+  return next;
+}
+
 void RealisticCamera::SetScenePose(point3f position, point3f target, vec3f up) {
   // Compute and validate before publishing any mutable navigation state.
   Transform pose = Inverse(LookAt(position,target,up));
@@ -1371,6 +1394,9 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
   if(new_fd > 0) {
     focusDistance = focusDistance + delta_focus;
     elementInterfaces.back().thickness = new_fd;
+    // Legacy navigation changes lens spacing without rebuilding pupil bounds.
+    // Authored playback must prepare exact optics even if this focus is saved.
+    scene_optics_prepared = false;
   } else {
     Rprintf("Cannot focus to distance %.2f; Maintaining focal distance of %.2f\n",focusDistance + delta_focus,focusDistance);
   }
@@ -1468,6 +1494,7 @@ void RealisticCamera::reset() {
   camera_up = start_camera_up;
   camera_motion_blur_has_range = false;
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
+  scene_optics_prepared = false;
 }
 
 
@@ -1829,6 +1856,7 @@ void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVecto
     throw std::runtime_error("Unsupported Metal camera class");
   out.track_count = out.track_offset = 0;
   if (source.scene_camera_track) {
+    source.scene_camera_track->ValidateExposure(out.shutter.x,out.shutter.y);
     // Five aligned vectors per camera row. Key times are relative to the exact
     // double frame epoch; the ray keeps its existing scene-relative time.
     const auto &clock = *source.scene_camera_time;

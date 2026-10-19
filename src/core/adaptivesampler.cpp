@@ -150,6 +150,13 @@ void adaptive_sampler::split_remove_chunks(size_t s) {
           rgb(i,j,0) /= (float)(s+1);
           rgb(i,j,1) /= (float)(s+1);
           rgb(i,j,2) /= (float)(s+1);
+          // Once this block leaves the active set, all its buffers must hold
+          // averages. Preview and final Metal denoising reuse these guides
+          // directly, and must not receive sample-count-scaled normals/albedo.
+          for (int channel = 0; channel < 3; ++channel) {
+            normalOutput(i,j,channel) /= (float)(s+1);
+            albedoOutput(i,j,channel) /= (float)(s+1);
+          }
           a(i,j,0) = 1.f - a(i,j,0)/(float)(s+1);
           if(debug_channel == 5) {
             rgb(i,j,0) = (float)(s+1)/(float)ns;

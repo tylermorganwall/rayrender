@@ -1,5 +1,6 @@
 #include "wavefront.h"
 #include "wavefront_motion.h"
+#include "wavefront_deformation.h"
 #include "../hitables/box.h"
 #include "../hitables/cylinder.h"
 #include "../hitables/csg.h"
@@ -50,43 +51,11 @@ public:
       const auto &mesh = *tri->mesh;
       int material_id = mesh.face_material_id[tri->face_number];
       WFTriangle output;
-      // TriangleMesh has already applied its object transform. Instances are
-      // the only transforms still outstanding; normals use inverse transpose.
-      auto a = mesh.p[tri->v[0]], b = mesh.p[tri->v[1]], c = mesh.p[tri->v[2]];
-      normal3f geometric = convert_to_normal3(cross(b - a, c - a));
-      if (geometric.squared_length() == 0)
-        return;
-      if (tri->reverseOrientation ^ tri->transformSwapsHandedness)
-        geometric = -geometric;
-      output.geometric = Pack(unit_vector(placement(geometric)));
-      // Native triangles use a flat normal for the whole face when any corner
-      // lacks a normal. Do not blend a substituted corner with smooth normals.
-      bool smooth = mesh.has_normals && tri->n;
-      for (int k = 0; k < 3 && smooth; ++k)
-        smooth = tri->n[k] >= 0 && tri->n[k] < mesh.nNormals;
-      const bool placed = !placement.IsIdentity();
-      const auto &normal_matrix = placement.GetInverseMatrix();
-      for (int k = 0; k < 3; ++k) {
-        output.p[k] = Pack(placement(mesh.p[tri->v[k]]));
-        normal3f n = geometric;
-        if (smooth) {
-          n = mesh.n[tri->n[k]];
-          if (tri->reverseOrientation)
-            n = -n;
-        }
-        if (placed) {
-          // CPU instances transform the interpolated normal. Preserve lengths
-          // here so nonuniform scaling commutes with interpolation; normalizing
-          // each transformed vertex separately changes the shading direction.
-          normal3f transformed;
-          for (int axis = 0; axis < 3; ++axis)
-            transformed[axis] = normal_matrix.m[0][axis] * n[0] +
-                                normal_matrix.m[1][axis] * n[1] +
-                                normal_matrix.m[2][axis] * n[2];
-          output.n[k] = Pack(transformed);
-        } else
-          output.n[k] = Pack(placement(n));
-      }
+      bool nondegenerate = UpdateWavefrontTriangle(*tri, placement, output);
+      // A folded dynamic face can recover later. Keeping its slot preserves
+      // BLAS topology, emitter IDs and native face identity across every seek.
+      if (!nondegenerate && !dynamic_faces) return;
+      const bool smooth = output.flags & 8;
       point2f uv[3];
       tri->GetUVs(uv);
       if (mesh.has_vertex_colors) {
@@ -121,6 +90,7 @@ public:
       output.material = Material(mesh.mesh_materials[material_id].get());
       SetSurface(output, MeshSurface(*tri, material_id, placement));
       AddTriangle(output);
+      if (dynamic_faces) dynamic_faces->push_back(tri);
     } else if (const auto *body = dynamic_cast<const MediumBoundary *>(&object)) {
       const Medium *medium = body->medium.get();
       WFBoundary out;
@@ -177,7 +147,25 @@ public:
       Geometry(*inst->original_scene, placement * *inst->ObjectToWorld);
       current_placement = previous_placement;
     } else if (const auto *mesh = dynamic_cast<const mesh3d *>(&object)) {
+      const bool bind = mesh->HasDeformation() &&
+          (!current_placement || mesh_prototypes.find(&object) == mesh_prototypes.end());
+      WavefrontDeformation::Mesh binding;
+      if (bind) {
+        if (!scene.deformation) scene.deformation = std::make_shared<WavefrontDeformation>();
+        binding.source = mesh;
+        binding.revision = mesh->DeformationRevision();
+        binding.placement = current_placement ? Transform() : placement;
+        binding.range = {uint32_t(scene.triangles.size()), 0};
+        binding.prototype = current_placement ? uint32_t(prototypes.size()) : UINT32_MAX;
+        binding.orientation = current_placement ? 1 : boundary_orientation;
+        dynamic_faces = &binding.faces;
+      }
       Mesh(object, *mesh->mesh_bvh, mesh->mesh->nTriangles, placement);
+      if (bind) {
+        dynamic_faces = nullptr;
+        binding.range.count = binding.faces.size();
+        scene.deformation->meshes.push_back(std::move(binding));
+      }
     } else if (const auto *mesh = dynamic_cast<const plymesh *>(&object)) {
       Mesh(object, *mesh->ply_mesh_bvh, mesh->mesh->nTriangles, placement);
     } else if (const auto *mesh = dynamic_cast<const raymesh *>(&object)) {
@@ -309,6 +297,9 @@ public:
       }
     scene.instances.insert(scene.instances.begin(), prefix, WFMeshInstance());
     if (scene.motion) scene.motion->PrefixInstances(prefix);
+    if (scene.deformation)
+      for (auto &mesh : scene.deformation->meshes)
+        if (mesh.prototype != UINT32_MAX) mesh.range = scene.meshes.at(mesh.prototype);
     prototypes.clear(); // Release staging vertices before allocating GPU resources.
   }
 
@@ -451,6 +442,7 @@ private:
   }
 
 #include "wavefront_instances.inc"
+  std::vector<const triangle *> *dynamic_faces = nullptr;
 
   void ReserveTriangles(size_t additional) {
     const size_t required = scene.triangles.size() + additional;
@@ -1108,6 +1100,8 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
       throw std::runtime_error("scene without renderable geometry");
     auto session = MakeMetalWavefront(scene, capacity);
     report.used = true;
+    report.acceleration_builds = (scene.loose_triangles != 0) + !scene.quadrics.empty() +
+        scene.meshes.size() + (!scene.instances.empty() || !scene.quadrics.empty());
     report.triangles = scene.triangles.size();
     report.analytic_primitives = scene.quadrics.size();
     report.unique_meshes = scene.meshes.size();
@@ -1127,6 +1121,7 @@ std::unique_ptr<WavefrontSession> PrepareWavefront(const hitable_list &world,
 void WavefrontContext::BeginFrame(const hitable_list &new_world, const hitable_list &new_lights,
                                  RayCamera &camera, size_t capacity, int sampler,
                                  WavefrontReport &report, size_t workers) {
+  const uint64_t revision = camera.scene_camera_time ? camera.scene_camera_time->geometry_revision : 0;
   bool reusable = session && world == &new_world && lights == &new_lights &&
                   capacity <= pixel_capacity && sampler == sampling_method &&
                   !WavefrontLightsChanged(scene);
@@ -1146,7 +1141,21 @@ void WavefrontContext::BeginFrame(const hitable_list &new_world, const hitable_l
   if (reusable) {
     report = setup_report; // Reset per-frame counters, not resident resources.
     report.upload_seconds = 0;
+    report.acceleration_builds = 0;
+    report.acceleration_refits = 0;
+    report.geometry_bytes_updated = 0;
     report.scene_reused = true;
+    if (geometry_revision != revision) {
+      const auto started = Clock::now();
+      auto changed = scene.deformation ? scene.deformation->Update(scene) : std::vector<WFMeshRange>{};
+      if (!changed.empty()) {
+        if (scene.motion) scene.motion->RefitBounds(scene, changed);
+        if (!scene.light_nodes.empty()) RefitWavefrontLightBVH(scene);
+        session->Refit(changed, report);
+      }
+      geometry_revision = revision;
+      report.upload_seconds = std::chrono::duration<double>(Clock::now() - started).count();
+    }
     return;
   }
   // Release the device session before replacing data it references. The same
@@ -1160,6 +1169,7 @@ void WavefrontContext::BeginFrame(const hitable_list &new_world, const hitable_l
   pixel_capacity = capacity;
   camera_capacity = scene.camera_data.size();
   sampling_method = sampler;
+  geometry_revision = revision;
   setup_report = report;
 }
 

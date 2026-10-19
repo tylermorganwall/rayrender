@@ -20,6 +20,9 @@ $(SHLIB): $(OBJECTS)
 # Keep virtual sampler/light interfaces consistent during incremental builds.
 $(CPP_OBJECTS): math/sampler.h lights/infinite.h math/distributions.h
 $(CPP_OBJECTS): math/animatedtransform.h math/keyframe.h
+core/buildscene.o model_animation_rcpp.o math/model_animation.o math/model_animation_tests.o: math/model_animation.h model_animation_rcpp.h
+core/buildscene.o render_scene_rcpp.o render_animation_rcpp.o: core/buildscene.h
+gltf_rcpp.o: math/quaternion.h
 $(CPP_OBJECTS): core/timeline.h core/camera_track.h
 $(CPP_OBJECTS): core/camera.h
 $(CPP_OBJECTS): core/wavefront_motion_layout.h
@@ -42,3 +45,12 @@ $(CPP_OBJECTS): hitables/csg.h
 
 # Texture descriptors cross exporter/material translation units.
 $(CPP_OBJECTS): materials/texturegraph.h materials/ptextexture.h
+
+# Deformation ownership and mesh layout are shared with CPU/Metal exporters.
+$(CPP_OBJECTS): math/model_animation.h math/model_deformation.h hitables/mesh3d.h core/bvh.h
+model_animation_rcpp.o model_deformation_rcpp.o: model_deformation_rcpp.h
+
+render_scene_rcpp.o render_animation_rcpp.o: core/animation_report.h
+
+# Stable native mesh bindings support in-place Metal deformation refits.
+core/wavefront.o core/wavefront_deformation.o core/wavefront_deformation_tests.o core/wavefront_metal.o: core/wavefront_deformation.h

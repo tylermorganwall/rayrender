@@ -381,12 +381,16 @@ camera keyframes at fps, starting at the timeline's first second.}
 \item{fps}{Default `30`. Positive display/output frame rate.}
 
 \item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
+Nonzero intervals blur outer model placement while freezing internal poses
+at frame time. Zero-width intervals sample time plus the given offset.
 With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
 stored as frame-relative floats; absolute scene time remains double precision.
 Moving perspective, orthographic, and panoramic cameras sample all authored
 keys within the exposure. Physical cameras support authored playback and exact rigid
-exposure with constant aperture and focus. Varying physical optics require
-offline zero-width snapshots.
+exposure with constant aperture and focus. Varying physical optics support
+zero-width snapshots in preview and offline rendering. Each optics change
+prepares the complete lens and pupil bounds before display, which can make
+playback slow. Nonzero-width exposure with varying physical optics is rejected.
 Explicit time rejects explicitly supplied legacy shutter controls.
 In explicit-time mode, physical lens cameras use unit exposure weighting;
 offsets select poses and ISO controls brightness. Legacy exposure weighting

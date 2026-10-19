@@ -124,12 +124,16 @@
 #'   camera keyframes at fps, starting at the timeline's first second.
 #' @param fps Default `30`. Positive display/output frame rate.
 #' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   Nonzero intervals blur outer model placement while freezing internal poses
+#'   at frame time. Zero-width intervals sample time plus the given offset.
 #'   With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
 #'   stored as frame-relative floats; absolute scene time remains double precision.
 #'   Moving perspective, orthographic, and panoramic cameras sample all authored
 #'   keys within the exposure. Physical cameras support authored playback and exact rigid
-#'   exposure with constant aperture and focus. Varying physical optics require
-#'   offline zero-width snapshots.
+#'   exposure with constant aperture and focus. Varying physical optics support
+#'   zero-width snapshots in preview and offline rendering. Each optics change
+#'   prepares the complete lens and pupil bounds before display, which can make
+#'   playback slow. Nonzero-width exposure with varying physical optics is rejected.
 #'   Explicit time rejects explicitly supplied legacy shutter controls.
 #'   In explicit-time mode, physical lens cameras use unit exposure weighting;
 #'   offsets select poses and ISO controls brightness. Legacy exposure weighting
@@ -593,25 +597,6 @@ render_scene = function(
       fps = fps,
       shutter_offsets = timing$offsets
     )
-    if (
-      !is.null(timeline) &&
-        any(vapply(
-          cameras,
-          function(cam) {
-            motion = cam$authored_motion
-            nrow(motion) > 1L &&
-              any(motion$fov < 0) &&
-              (any(motion$aperture != motion$aperture[1]) ||
-                any(motion$focal != motion$focal[1]))
-          },
-          logical(1)
-        ))
-    ) {
-      stop(
-        "Physical-camera timeline playback requires constant aperture and focus; use offline zero-width snapshots for varying optics.",
-        call. = FALSE
-      )
-    }
   }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
@@ -1090,6 +1075,7 @@ HAS_OIDN: %s
   attr(return_array, "bvh_build_seconds") = attr(rgb_mat, "bvh_build_seconds")
   attr(return_array, "bvh_build_count") = attr(rgb_mat, "bvh_build_count")
   attr(return_array, "trace_seconds") = attr(rgb_mat, "trace_seconds")
+  attr(return_array, "animation_timing") = attr(rgb_mat, "animation_timing")
   attr(return_array, "wavefront") = attr(rgb_mat, "wavefront")
   attr(return_array, "timeline") = attr(rgb_mat, "timeline")
 

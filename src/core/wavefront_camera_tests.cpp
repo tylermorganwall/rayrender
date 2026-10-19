@@ -493,6 +493,17 @@ context("Metal cameras and density threshold intervals") {
         cam.SetShutterInterval(5,5);
         compare_camera(cam);
       }
+      b.values[6]=4; b.values[8]=6;
+      auto variable=std::make_shared<const animation::CameraTrack>(
+        std::vector<animation::CameraKey>{a,b,c});
+      expect_error(variable->MakeCamera(b,1,1,5,5.4,false,&cam));
+      for (double time : {100.2,100.,100.2}) {
+        clock->epoch=time;
+        auto snapshot=variable->MakeCamera(variable->At(time),1,1,5,5,false,&cam);
+        snapshot->scene_camera_time=clock;
+        snapshot->scene_camera_track=variable;
+        compare_camera(*snapshot);
+      }
     }
   }
   test_that("cubic cutoff keeps all three crossings and constant equality") {

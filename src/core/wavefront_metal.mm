@@ -1,6 +1,7 @@
 #include "wavefront_medium_probe.h"
 #include "sobol_directions.h"
 #include "wavefront.h"
+#include "wavefront_deformation.h"
 #include "wavefront_motion.h"
 #include <skymodelr/prague.hpp>
 #import <Foundation/Foundation.h>
@@ -182,6 +183,11 @@ class MetalWavefront final : public WavefrontSession {
   id<MTLCommandQueue> queue;
   id<MTLAccelerationStructure> acceleration, mixed_acceleration;
   NSArray<id<MTLAccelerationStructure>> *bottom_levels;
+  NSArray<MTLPrimitiveAccelerationStructureDescriptor *> *bottom_descriptors;
+  MTLInstanceAccelerationStructureDescriptor *top_descriptor;
+  id<MTLBuffer> refit_scratch;
+  std::vector<size_t> refit_offsets;
+  size_t top_refit_offset = 0;
   // Slots match SCENE_ARGUMENTS. Parameters use setBytes at 12; the acceleration
   // structure uses setAccelerationStructure at 16, so neither occupies a buffer.
   std::array<id<MTLBuffer>, 29> buffers;
@@ -545,12 +551,29 @@ public:
       [geometries addObject:geometry];
     }
     NSMutableArray<id<MTLAccelerationStructure>> *children = [NSMutableArray array];
+    NSMutableArray<MTLPrimitiveAccelerationStructureDescriptor *> *descriptors = [NSMutableArray array];
+    size_t scratch_bytes = 0;
+    std::vector<bool> dynamic_blas(geometries.count, false);
+    const size_t mesh_prefix = (loose != 0) + !scene.quadrics.empty();
+    if (scene.deformation)
+      for (const auto &mesh : scene.deformation->meshes)
+        dynamic_blas[mesh.prototype == UINT32_MAX ? 0 : mesh_prefix + mesh.prototype] = true;
+    size_t geometry_index = 0;
     for (MTLAccelerationStructureGeometryDescriptor *geometry in geometries) {
       auto descriptor = [MTLPrimitiveAccelerationStructureDescriptor descriptor];
       descriptor.geometryDescriptors = @[ geometry ];
+      const bool dynamic = dynamic_blas[geometry_index++];
+      if (dynamic) descriptor.usage = MTLAccelerationStructureUsageRefit;
       [children addObject:BuildAcceleration(descriptor)];
+      [descriptors addObject:descriptor];
+      refit_offsets.push_back(scratch_bytes);
+      if (dynamic) {
+        const auto sizes = [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
+        scratch_bytes += (sizes.refitScratchBufferSize + 255) & ~size_t(255);
+      }
     }
     bottom_levels = children;
+    bottom_descriptors = scene.deformation ? descriptors : nil;
     acceleration = children[0];
     if (kernels.mixed_support) {
       // Mesh prototypes each have one BLAS. Placements reference it through a
@@ -588,9 +611,80 @@ public:
       descriptor.instancedAccelerationStructures = children;
       descriptor.instanceCount = instances.size();
       descriptor.instanceDescriptorBuffer = Upload(instances);
+      if (scene.deformation) descriptor.usage = MTLAccelerationStructureUsageRefit;
       mixed_acceleration = BuildAcceleration(descriptor);
+      top_descriptor = scene.deformation ? descriptor : nil;
+      top_refit_offset = scratch_bytes;
+      if (scene.deformation) {
+        const auto sizes = [kernels.device accelerationStructureSizesWithDescriptor:descriptor];
+        scratch_bytes += sizes.refitScratchBufferSize;
+      }
     }
 
+    if (scene.deformation) refit_scratch = Buffer(scratch_bytes);
+  }
+
+  void Refit(const std::vector<WFMeshRange> &changed, WavefrontReport &report) override {
+    @autoreleasepool {
+      // BeginFrame is reached only after the prior batch completed. Update the
+      // original shared buffers; descriptors, indices, pipeline state and AS
+      // allocations stay resident. Each scratch slice has a disjoint lifetime
+      // within this command, even if Metal overlaps independent BLAS work.
+      const size_t loose = scene_data.meshes.empty() ? scene_data.triangles.size() : scene_data.loose_triangles;
+      const size_t prefix = (loose != 0) + !scene_data.quadrics.empty();
+      std::vector<bool> dirty(bottom_levels.count, false);
+      for (const auto &range : changed) {
+        const size_t bytes = size_t(range.count) * sizeof(WFTriangle);
+        std::memcpy(static_cast<WFTriangle *>(buffers[0].contents) + range.start,
+                    scene_data.triangles.data() + range.start, bytes);
+        report.geometry_bytes_updated += bytes;
+        if (range.start < loose) dirty[0] = true;
+        for (size_t i = 0; i < scene_data.meshes.size(); ++i)
+          if (range.start == scene_data.meshes[i].start) dirty[prefix + i] = true;
+        for (size_t i = range.start; i < size_t(range.start) + range.count; ++i) {
+          const auto &face = scene_data.triangles[i];
+          if (!(face.flags & 128)) continue;
+          uint32_t offset;
+          std::memcpy(&offset, &face.geometric.w, sizeof(offset));
+          static_cast<WFVector *>(buffers[3].contents)[offset] = scene_data.texels[offset];
+        }
+      }
+      std::memcpy(buffers[17].contents, scene_data.boundaries.data(),
+                  scene_data.boundaries.size() * sizeof(WFBoundary));
+      auto *metadata = static_cast<unsigned char *>(buffers[28].contents);
+      if (scene_data.motion)
+        std::memcpy(metadata + geometry_storage.motion_offset,
+                    scene_data.motion->packed.data(), scene_data.motion->packed.size());
+      if (!scene_data.light_nodes.empty())
+        std::memcpy(metadata + geometry_storage.light_offset, scene_data.light_nodes.data(),
+                    scene_data.light_nodes.size() * sizeof(WFLightNode));
+      auto command = [queue commandBuffer];
+      command.label = @"Wavefront deformation refit";
+      auto encoder = [command accelerationStructureCommandEncoder];
+      for (size_t i = 0; i < dirty.size(); ++i) {
+        if (!dirty[i]) continue;
+        [encoder refitAccelerationStructure:bottom_levels[i]
+                                  descriptor:bottom_descriptors[i]
+                                 destination:nil
+                               scratchBuffer:refit_scratch
+                         scratchBufferOffset:refit_offsets[i]];
+        ++report.acceleration_refits;
+      }
+      [encoder endEncoding];
+      // TLAS boxes depend on the newly refitted BLAS boxes. A separate encoder
+      // creates the resource dependency before any subsequent ray dispatch.
+      if (mixed_acceleration) {
+        encoder = [command accelerationStructureCommandEncoder];
+        [encoder refitAccelerationStructure:mixed_acceleration
+                                  descriptor:top_descriptor
+                                 destination:nil
+                               scratchBuffer:refit_scratch
+                         scratchBufferOffset:top_refit_offset];
+        [encoder endEncoding];
+        ++report.acceleration_refits;
+      }
+      Wait(command, [] { return false; });
+    }
   }
 
 #ifdef NOT_CRAN
@@ -770,6 +864,12 @@ std::vector<WFGeometryResult> ProbeMetalGeometry(const WavefrontScene &scene,
                                       !scene.quadrics.empty(), !scene.meshes.empty());
     MetalWavefront session(pipelines, scene, 1);
     return session.Probe(input);
+  }
+}
+std::vector<WFGeometryResult> ProbeMetalSessionGeometry(WavefrontSession &session,
+    const std::vector<WFGeometryProbe> &input) {
+  @autoreleasepool {
+    return dynamic_cast<MetalWavefront &>(session).Probe(input);
   }
 }
 #endif

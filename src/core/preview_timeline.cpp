@@ -21,7 +21,8 @@ void PreviewDisplay::ConfigureTimelineCamera(std::shared_ptr<const animation::Ca
   // Validate a replacement before changing the active track. The owner is
   // replaced only by UpdateTimeline at the render handoff.
   if (timeline_camera_owner)
-    track->MakeCamera(track->At(timeline->Requested().time),Float(width)/Float(height),
+    track->MakeCamera(track->At(timeline->Requested().time +
+                        (timeline_open == timeline_close ? timeline_open : 0)),Float(width)/Float(height),
                       cam->get_iso(),timeline_open,timeline_close,cam->get_camera_flip_x(),physical.get());
   else track->Apply(track->At(timeline->Requested().time), *cam);
   timeline_physical_camera = std::move(physical);
@@ -145,7 +146,9 @@ bool PreviewDisplay::UpdateTimeline() noexcept {
         throw std::runtime_error("Requested timeline exposure exceeds float time precision.");
       std::unique_ptr<RayCamera> replacement;
       if (timeline_camera && !timeline_camera_override && timeline_camera_owner) {
-        replacement = timeline_camera->MakeCamera(timeline_camera->At(request.time),
+        const double camera_time = request.time +
+          (!request.dragging && timeline_open == timeline_close ? timeline_open : 0);
+        replacement = timeline_camera->MakeCamera(timeline_camera->At(camera_time),
           Float(width)/Float(height),cam->get_iso(),open,close,cam->get_camera_flip_x(),
           timeline_physical_camera.get());
       }
@@ -167,6 +170,7 @@ bool PreviewDisplay::UpdateTimeline() noexcept {
           current_keyframe = int(std::clamp(key, 0., double(Keyframes.size()-1)));
         }
       }
+      timeline_scene_time->UpdateGeometry(request.time, anchor, Float(open), Float(close));
       if (!timeline->Publish(request)) return false;
       if (replacement) {
         *timeline_camera_owner = std::move(replacement);

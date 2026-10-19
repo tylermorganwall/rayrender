@@ -66,7 +66,7 @@ test_that("players map independent absolute clocks with documented endpoints", {
   expect_identical(poses[[1]], poses[[2]])
   expect_error(clip_player(speed = NA_real_), "finite")
   expect_error(clip_player(offset = 1:2), "finite")
-  expect_error(clip_player(root_motion = "extract"), "preserve")
+  expect_error(clip_player(root_motion = "extract"), "not implemented")
   expect_error(
     animate_keyframes(sphere(), path, clip_player(clip = "missing")),
     "named clips"
@@ -179,8 +179,8 @@ test_that("looped offline frames and seam exposures agree on CPU and Metal", {
       }
     }
   }
-  # A tiny negative time must remain just before the seam. If float packing
-  # would round it to the beginning, the documented warning/fallback is exact.
+  # A tiny negative time must remain just before the seam. The packer now
+  # selects the last interior float rather than rounding to the next cycle.
   scene$animation_info[[1]]$keyframes$player = clip_player(loop = "repeat")
   set.seed(814)
   expected = do.call(
@@ -193,8 +193,16 @@ test_that("looped offline frames and seam exposures agree on CPU and Metal", {
       render_scene,
       c(list(scene = scene, time = -1e-10, integrator_type = "metal"), settings)
     ),
-    "rounding crosses a loop boundary"
+    NA
   )
-  expect_false(isTRUE(attr(actual, "wavefront")$used))
-  expect_identical(as.numeric(actual), as.numeric(expected))
+  expect_true(isTRUE(attr(actual, "wavefront")$used))
+  expect_lt(mean(abs(as.numeric(actual) - as.numeric(expected))), .02)
+  set.seed(814)
+  beginning = do.call(
+    render_scene,
+    c(list(scene = scene, time = 0, integrator_type = "metal"), settings)
+  )
+  # This clip has different endpoint positions. Checking the discontinuity
+  # prevents a wrong first-pose result from passing as mere sampling noise.
+  expect_gt(mean(abs(as.numeric(actual) - as.numeric(beginning))), .02)
 })

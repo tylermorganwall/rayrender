@@ -35,6 +35,7 @@ public:
   Value At(double time) const;
   std::array<Value, 2> Range(double begin, double end) const;
   void ValidateFloatPacking() const;
+  void ValidateYaw(double relative_margin = 1e-8) const;
   int Dimensions() const { return property == Property::Rotation ? 4 : property == Property::Scalar ? 1 : 3; }
   Property property;
   Interpolation interpolation;
@@ -45,10 +46,18 @@ private:
   std::array<double, 4> Polynomial(size_t segment, int component) const;
 };
 
+// Remove only explicitly selected locomotion components, relative to the clip's
+// first pose. Yaw is the quaternion's twist about asset +Y; swing is retained.
+struct RootMotion {
+  std::array<bool, 3> translation{};
+  Value position{}, reference_yaw{0, 0, 0, 1};
+  bool yaw = false;
+};
 struct TransformTrack {
   std::shared_ptr<const Track> position, rotation, scale;
   Value pivot{};
   std::shared_ptr<const ClipClock> clock;
+  std::shared_ptr<const RootMotion> root_motion;
   Transform At(double time) const;
   aabb Bounds(const aabb &box, double begin, double end) const;
 private:

@@ -133,12 +133,15 @@ animation_default_plot_scene = function(
 #' @param fps Default `30`. Frame rate used to timestamp camera-motion rows as
 #'   (index - 1) / fps when no explicit time column is present.
 #' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   Nonzero intervals blur outer model placement while freezing internal poses
+#'   at frame time. Zero-width intervals sample time plus the given offset.
 #'   With times, NULL freezes each requested scene time. Explicit legacy shutter
 #'   controls conflict with times. Moving perspective, orthographic, and panoramic
 #'   cameras sample authored keys within the exposure; projection changes are
 #'   cuts at the next key. Moving physical cameras support exact rigid exposure with
 #'   constant aperture and focus. Varying physical optics require zero-width
-#'   offline snapshots. Geometry is compiled once for the output sequence.
+#'   snapshots. Equal nonzero offsets sample optics at time plus that offset.
+#'   Geometry is compiled once for the output sequence.
 #'   Physical lens cameras use unit exposure weighting with explicit times;
 #'   offsets select poses and ISO controls brightness. Legacy weighting is unchanged.
 #' @export
@@ -148,6 +151,8 @@ animation_default_plot_scene = function(
 #' @details
 #' With \code{integrator_type = "metal"}, frames in the same native animation batch
 #' reuse the uploaded scene, acceleration structures, and GPU work buffers.
+#' Skin and morph pose changes update the affected mesh buffers and refit
+#' existing acceleration structures without rebuilding their topology.
 #' Camera parameters update for each frame while image accumulation and sampling
 #' restart independently. Resources are released when the batch finishes or is
 #' interrupted. Changes that require new camera storage or replace a sky model
@@ -156,7 +161,12 @@ animation_default_plot_scene = function(
 #'
 #' Returned Metal frames carry a \code{wavefront} attribute with \code{scene_reused},
 #' \code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
-#' Reused frames report zero scene-upload time; sampling time remains per frame.
+#' Reused frames with unchanged geometry report zero scene-upload time. Pose
+#' changes report their update/refit time in \code{upload_seconds}; sampling time
+#' remains per frame. \code{acceleration_builds} and \code{acceleration_refits}
+#' count device acceleration operations in that frame's preparation, and
+#' \code{geometry_bytes_updated} counts updated packed triangle bytes, excluding
+#' auxiliary bounds and shading metadata. Repeated identical poses need no refit.
 #'
 #' Motion generated with \code{generate_camera_motion(closed = TRUE)} wraps its
 #' last shutter interval toward the first frame when camera motion blur is enabled.
@@ -656,6 +666,7 @@ render_animation_camera = function(
   camera_motion$track_index = rep(1L, nrow(camera_motion))
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
@@ -839,6 +850,7 @@ render_camera_batch = function(
   camera_motion$track_index = plan$camera_index
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)

@@ -32,8 +32,6 @@ CameraTrack::CameraTrack(std::vector<CameraKey> input) : keys(std::move(input)) 
     if (projection < 0 || ProjectionOf(keys.front().values[7]) < 0) {
       if (projection != ProjectionOf(keys.front().values[7]))
         throw std::runtime_error("Physical-camera tracks cannot switch lens projection.");
-      if (key.values[6] != keys.front().values[6] || key.values[8] != keys.front().values[8])
-        throw std::runtime_error("Physical-camera playback requires constant aperture and focus; use offline zero-width snapshots for varying optics.");
       if (key.values[8] <= 0)
         throw std::runtime_error("Physical-camera focus must be positive.");
     }
@@ -62,6 +60,13 @@ CameraTrack::CameraTrack(std::vector<CameraKey> input) : keys(std::move(input)) 
   }
 }
 
+void CameraTrack::ValidateExposure(Float open, Float close) const {
+  if (open == close || ProjectionOf(keys.front().values[7]) >= 0) return;
+  for (const auto &key : keys)
+    if (key.values[6] != keys.front().values[6] || key.values[8] != keys.front().values[8])
+      throw std::runtime_error("Physical-camera exposure requires constant aperture and focus; use zero-width snapshots for varying optics.");
+}
+
 std::unique_ptr<RayCamera> CameraTrack::MakeCamera(const CameraKey &key, Float aspect, Float iso,
                                                  Float open, Float close, bool flip,
                                                  const RealisticCamera *physical) const {
@@ -70,9 +75,10 @@ std::unique_ptr<RayCamera> CameraTrack::MakeCamera(const CameraKey &key, Float a
   vec3f up(v[11],v[12],v[13]);
   std::unique_ptr<RayCamera> result;
   const int projection = ProjectionOf(v[7]);
+  ValidateExposure(open,close);
   if (projection < 0) {
     if (!physical) throw std::runtime_error("Physical-camera playback requires initialized lens optics.");
-    result = std::make_unique<RealisticCamera>(*physical);
+    result = physical->WithSceneOptics(v[6],v[8]);
     static_cast<RealisticCamera *>(result.get())->SetShutterInterval(open,close);
     result->scene_camera_track.reset();
   } else if (projection == 0)

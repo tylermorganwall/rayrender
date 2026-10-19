@@ -1,6 +1,8 @@
 #include "core/wavefront.h"
 #include "animation_rcpp.h"
 #include "core/wavefront_report.h"
+#include "core/animation_report.h"
+#include <chrono>
 #include "volumes/boundary.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION 
@@ -990,13 +992,21 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     as<double>(camera_info["scene_time"]) : 0;
   const bool explicit_time = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]);
   auto scene_time = explicit_time ? std::make_shared<SceneTimeContext>() : nullptr;
-  if (scene_time) scene_time->epoch = time_origin;
+  if (scene_time) {
+    scene_time->epoch = time_origin;
+    scene_time->benchmark_timing = benchmark_timing;
+    scene_time->frozen_pose_notice = [] {
+      Rcpp::message(Rcpp::CharacterVector(
+        "Internal model poses are sampled at frame time; placement and other scene motion retain motion blur."));
+    };
+  }
   cam->scene_camera_time = scene_time;
   std::shared_ptr<const animation::CameraTrack> camera_track;
   if (camera_info.containsElementNamed("timeline_camera") && !Rf_isNull(camera_info["timeline_camera"])) {
     DataFrame motion = as<DataFrame>(camera_info["timeline_camera"]);
     if (motion.nrows() > 1 && (has_timeline || shutteropen != 0 || shutterclose != 0)) {
       camera_track = read_camera_track(motion, 1, 0);
+      camera_track->ValidateExposure(shutteropen,shutterclose);
       cam->scene_camera_track = camera_track;
       cam->scene_camera_time = scene_time;
       cam->scene_camera_aspect = Float(nx)/Float(ny);
@@ -1010,6 +1020,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     bounds_open = std::nextafter(Float(timeline_range[0] - time_origin + std::min(Float(0), shutteropen)), -std::numeric_limits<Float>::infinity());
     bounds_close = std::nextafter(Float(timeline_range[1] - time_origin + std::max(Float(0), shutterclose)), std::numeric_limits<Float>::infinity());
   }
+  const auto compile_started = benchmark_timing ? std::chrono::steady_clock::now() :
+    std::chrono::steady_clock::time_point{};
   std::shared_ptr<hitable> worldbvh = build_scene(scene, 
                                                    shape, 
                                                    bounds_open,
@@ -1030,6 +1042,9 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                                                    verbose, 
                                                    rng, nullptr,
                                                    time_origin, scene_time);
+  if (scene_time && benchmark_timing) scene_time->compile_seconds =
+    std::chrono::duration<double>(std::chrono::steady_clock::now()-compile_started).count();
+  if (scene_time) scene_time->UpdateGeometry(time_origin, 0, shutteropen, shutterclose);
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -1308,6 +1323,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
     final_image.attr("bvh_build_seconds") = bvh_timing.count ? bvh_timing.seconds : NA_REAL;
     final_image.attr("bvh_build_count") = bvh_timing.count;
     final_image.attr("trace_seconds") = trace_seconds;
+    if (scene_time) final_image.attr("animation_timing") = AnimationTimingToR(*scene_time);
   }
   if(wavefront_report.requested) {
     final_image.attr("wavefront") = WavefrontReportToR(wavefront_report);

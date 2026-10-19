@@ -31,6 +31,113 @@ std::shared_ptr<const animation::Track> Decode(const std::vector<unsigned char> 
 }
 }
 context("Packed scene-time tracks") {
+  test_that("frozen internal clocks share a frame pose while placement follows ray time") {
+    using namespace animation;
+    auto track = std::make_shared<TransformTrack>();
+    track->position = std::make_shared<Track>(Property::Position, Interpolation::Linear,
+      std::vector<double>{0, 1, 2}, std::vector<Value>{{0,0,0,0},{2,0,0,0},{4,0,0,0}});
+    track->clock = std::make_shared<ClipClock>(0,2,0,.25,-1,Loop::Repeat);
+    auto frame = std::make_shared<SceneTimeContext>();
+    frame->has_model_poses = true;
+    Transform identity;
+    AnimatedTransform pose(&identity,0,&identity,0,track,0,frame,true);
+    AnimatedTransform placement(&identity,0,&identity,0,track,0,frame);
+    expect_true(!pose.SameMotion(placement));
+    WavefrontMotion motion;
+    const auto pose_owner = motion.Add(0,pose,identity);
+    expect_true(pose_owner != motion.Add(0,placement,identity));
+    WavefrontScene scene;
+    motion.Seal(scene);
+    auto header = Read<WFMotionHeader>(motion.packed,0);
+    auto node = Read<WFMotionNode>(motion.packed,header.nodes);
+    for (double time : {1., .5, 0., -1., 1e12, .5}) {
+      frame->UpdateGeometry(time,8,7.5,8.75);
+      motion.ValidateTimes(7.5,8.75);
+      motion.UpdateClocks();
+      const auto descriptor = Read<WFTransformTrack>(motion.packed,node.track);
+      expect_true(descriptor.clock.y == 0);
+      expect_true(std::abs(descriptor.clock.x - track->clock->At(time)) < 1e-6);
+      const auto expected = track->At(time)(point3f(0));
+      for (Float ray_time : {7.5f,8.f,8.75f}) {
+        expect_true((pose(ray_time,point3f(0))-expected).length() < 1e-6);
+        expect_true((placement(ray_time,point3f(0))-
+          track->At(time+double(ray_time)-8)(point3f(0))).length() < 1e-6);
+      }
+      const auto bounds = pose.MotionBounds(aabb(point3f(0)),7.5,8.75);
+      expect_true(((bounds.min()-expected).length()<1e-6 && (bounds.max()-expected).length()<1e-6));
+    }
+    frame->UpdateGeometry(.5,8,8.25,8.25);
+    motion.UpdateClocks();
+    const auto descriptor = Read<WFTransformTrack>(motion.packed,node.track);
+    expect_true(std::abs(descriptor.clock.x-track->clock->At(.75))<1e-6);
+    expect_true((pose(8.25,point3f(0))-track->At(.75)(point3f(0))).length()<1e-6);
+  }
+  test_that("dense imported clips retain the snapshot clock precision budget") {
+    using namespace animation;
+    auto track=std::make_shared<TransformTrack>();
+    std::vector<double> times;
+    std::vector<Value> values;
+    for (int i=1;i<=49;++i) { times.push_back(double(float(i/24.))); values.push_back({double(i),0,0,0}); }
+    track->position=std::make_shared<Track>(Property::Position,Interpolation::Linear,times,values);
+    track->clock=std::make_shared<ClipClock>(times.front(),times.back(),0,.65,1.5,Loop::Repeat);
+    auto frame=std::make_shared<SceneTimeContext>();
+    Transform identity;
+    AnimatedTransform animation(&identity,0,&identity,0,track,0,frame);
+    WavefrontMotion motion; motion.Add(0,animation,identity);
+    for (int i=0;i<96;++i) {
+      frame->epoch=i/24.; frame->ray_anchor=Float(frame->epoch);
+      motion.ValidateTimes(frame->ray_anchor,frame->ray_anchor);
+      expect_true(std::isfinite(track->At(frame->epoch).GetMatrix().m[0][3]));
+    }
+    expect_error(motion.ValidateTimes(-1e10,1e10));
+  }
+  test_that("snapshot phase packing preserves the side of an imported repeat seam") {
+    using namespace animation;
+    const double begin=double(float(1/24.)), end=double(float(49/24.));
+    for (auto method : {Interpolation::Linear,Interpolation::Step}) {
+      auto track=std::make_shared<TransformTrack>();
+      track->position=std::make_shared<Track>(Property::Position,method,
+        std::vector<double>{begin,begin+1,end},std::vector<Value>{{0,0,0,0},{10,0,0,0},{100,0,0,0}});
+      track->clock=std::make_shared<ClipClock>(begin,end,0,0,1,Loop::Repeat);
+      auto frame=std::make_shared<SceneTimeContext>(); Transform identity;
+      AnimatedTransform animation(&identity,0,&identity,0,track,0,frame);
+      WavefrontMotion motion; motion.Add(0,animation,identity); WavefrontScene scene;
+      motion.Seal(scene);
+      auto header=Read<WFMotionHeader>(motion.packed,0);
+      auto node=Read<WFMotionNode>(motion.packed,header.nodes);
+      for (double time : {2.,end-begin,0.,2.,-1e-8}) {
+        frame->epoch=time; frame->ray_anchor=Float(time);
+        motion.ValidateTimes(frame->ray_anchor,frame->ray_anchor); motion.UpdateClocks();
+        auto packed=Read<WFTransformTrack>(motion.packed,node.track);
+        auto property=Decode(motion.packed,packed.channels[0]);
+        float local=std::fmod(packed.clock.x,packed.clock.z);
+        expect_true(std::abs(property->At(local)[0]-track->position->At(track->clock->At(time))[0])<3e-5);
+        if (time==2.) {
+          expect_true(local>1.99f);
+          expect_error(motion.ValidateTimes(frame->ray_anchor-.01,frame->ray_anchor+.01));
+        }
+        if (time==end-begin) expect_true(local==0);
+      }
+    }
+  }
+  test_that("device yaw removal rejects float-sensitive projected curves") {
+    using namespace animation;
+    auto track = std::make_shared<TransformTrack>();
+    track->rotation = std::make_shared<Track>(Property::Rotation, Interpolation::Cubic,
+      std::vector<double>{0,1}, std::vector<Value>{{0,0,0,1},{0,0,0,1}},
+      std::vector<Value>{{0,0,0,0},{-4,0,0,4-4e-6}},
+      std::vector<Value>{{4,0,0,-4+4e-6},{0,0,0,0}});
+    track->rotation->ValidateYaw();
+    auto root = std::make_shared<RootMotion>(); root->yaw = true;
+    track->root_motion = root;
+    auto pose = track->At(.5).GetMatrix();
+    expect_true(std::isfinite(pose.m[0][0]));
+    Transform identity;
+    AnimatedTransform animation(&identity,0,&identity,0,track);
+    WavefrontMotion motion; motion.Add(0,animation,identity);
+    WavefrontScene scene;
+    expect_error(motion.Seal(scene));
+  }
   test_that("frame clock publication changes phase without changing resident keys") {
     using namespace animation;
     auto track = std::make_shared<TransformTrack>();
@@ -89,11 +196,11 @@ context("Packed scene-time tracks") {
     motion.owners[1] = {1};
     motion.Seal(scene);
     auto header = Read<WFMotionHeader>(motion.packed, 0);
-    expect_true(header.version == 3);
+    expect_true(header.version == 4);
     expect_true(header.byte_size == motion.packed.size());
     auto node = Read<WFMotionNode>(motion.packed, header.nodes);
     auto descriptor = Read<WFTransformTrack>(motion.packed, node.track);
-    expect_true(descriptor.version == 2);
+    expect_true(descriptor.version == 3);
     TransformTrack decoded;
     decoded.position = Decode(motion.packed, descriptor.channels[0]);
     decoded.rotation = Decode(motion.packed, descriptor.channels[1]);
@@ -137,7 +244,7 @@ context("Packed scene-time tracks") {
       return;
     }
     using namespace animation;
-    for (int clock_case = 0; clock_case < 7; ++clock_case) {
+    for (int clock_case = 0; clock_case < 9; ++clock_case) {
       auto track = std::make_shared<TransformTrack>();
       track->position = std::make_shared<Track>(Property::Position, Interpolation::Cubic,
         std::vector<double>{0, .7, 2.3, 4}, std::vector<Value>{{0,0,0,0}, {1,2,0,0}, {-1,1,1,0}, {0,0,0,0}});
@@ -149,6 +256,13 @@ context("Packed scene-time tracks") {
         Loop mode = clock_case == 6 ? Loop::Hold : clock_case % 2 ? Loop::Repeat : Loop::PingPong;
         double speed = clock_case == 5 ? 0 : clock_case >= 3 && clock_case <= 4 ? -1 : 1;
         track->clock = std::make_shared<ClipClock>(0, 4, 0, clock_case == 5 ? .5 : 0, speed, mode);
+      }
+      if (clock_case >= 7) {
+        auto removal = std::make_shared<RootMotion>();
+        removal->translation = {true, false, true};
+        removal->position = track->position->At(0);
+        removal->yaw = clock_case == 8;
+        track->root_motion = removal;
       }
       Transform identity;
       AnimatedTransform animation(&identity, 0, &identity, 0, track);
@@ -194,7 +308,7 @@ context("Packed scene-time tracks") {
         for (int k = 0; k < 3; ++k) expect_true(std::abs((&hits[i].point.x)[k] - points[i][k]) < 5e-5);
       }
     }
-    Rcpp::Rcout << "Keyframe device probes executed: 105 scene-time and loop-boundary hits\n";
+    Rcpp::Rcout << "Keyframe device probes executed: 135 scene-time, root-motion and loop-boundary hits\n";
   }
 #endif
 }

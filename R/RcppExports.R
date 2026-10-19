@@ -53,6 +53,22 @@ cppdef_HAS_SSE41 <- function() {
     .Call(`_rayrender_cppdef_HAS_SSE41`)
 }
 
+read_gltf_native <- function(filename) {
+    .Call(`_rayrender_read_gltf_native`, filename)
+}
+
+model_pose_native <- function(asset, player, placement, times) {
+    .Call(`_rayrender_model_pose_native`, asset, player, placement, times)
+}
+
+animation_model_surface <- function(asset, player, time) {
+    .Call(`_rayrender_animation_model_surface`, asset, player, time)
+}
+
+animation_model_clips <- function(input) {
+    .Call(`_rayrender_animation_model_clips`, input)
+}
+
 pbrt_lex_cpp <- function(filename, source = "") {
     .Call(`_rayrender_pbrt_lex_cpp`, filename, source)
 }

@@ -7,7 +7,7 @@
 animation_loop_seam(track, tolerance = 1e-06)
 }
 \arguments{
-\item{track}{A transform_track() to inspect.}
+\item{track}{An animation_transform_track() to inspect.}
 
 \item{tolerance}{Default `1e-6`. Maximum absolute difference between matrix
 entries considered continuous; translation entries use scene distance units.}
@@ -21,7 +21,7 @@ Compare a transform's first and last local poses before configuring repetition.
 }
 \examples{
 # This path returns to its initial position.
-path = transform_track(c(0, 1, 2),
+path = animation_transform_track(c(0, 1, 2),
   position = rbind(c(0, 0, 0), c(1, 1, 0), c(0, 0, 0)))
 animation_loop_seam(path)
 }

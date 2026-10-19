@@ -9,6 +9,9 @@ inline Rcpp::List WavefrontReportToR(const WavefrontReport &report) {
   return Rcpp::List::create(
     _["used"] = report.used, _["fallback"] = report.fallback,
     _["scene_reused"] = report.scene_reused,
+    _["acceleration_builds"] = double(report.acceleration_builds),
+    _["acceleration_refits"] = double(report.acceleration_refits),
+    _["geometry_bytes_updated"] = double(report.geometry_bytes_updated),
     _["triangles"] = double(report.triangles),
     _["tessellated_primitives"] = double(report.tessellated_primitives),
     _["analytic_primitives"] = double(report.analytic_primitives),

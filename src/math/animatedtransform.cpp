@@ -1,4 +1,6 @@
 #include "../math/animatedtransform.h"
+#include <stdexcept>
+#include <chrono>
 
 // AnimatedTransform Method Definitions
 AnimatedTransform::AnimatedTransform(Transform* startTransform,
@@ -7,9 +9,11 @@ AnimatedTransform::AnimatedTransform(Transform* startTransform,
                                      Float endTime,
                                      std::shared_ptr<const animation::TransformTrack> track,
                                      double time_origin,
-                                     std::shared_ptr<SceneTimeContext> scene_time)
+                                     std::shared_ptr<SceneTimeContext> scene_time,
+                                     bool frame_pose)
                                      : track(std::move(track)), time_origin(time_origin),
                                        scene_time(std::move(scene_time)),
+                                       frame_pose(frame_pose),
                                        startTransform(startTransform),
                                        endTransform(endTransform),
                                        startTime(startTime),
@@ -868,6 +872,9 @@ aabb AnimatedTransform::MotionBounds(const aabb &b) const {
 }
 
 aabb AnimatedTransform::MotionBounds(const aabb &b, double begin, double end) const {
+  // The child geometry and the complete internal hierarchy use one pose time;
+  // only the enclosing placement sweeps this box over the exposure interval.
+  if (frame_pose && track) return track->At(FrameEpoch())(b);
   if (track) return track->Bounds(b, FrameEpoch() + (begin - FrameAnchor()), FrameEpoch() + (end - FrameAnchor()));
   if (begin == end) { Transform t; Interpolate(Float(begin), &t); return t(b); }
   // The original analytic legacy bound encloses the full segment, also when
@@ -955,4 +962,35 @@ vec3f AnimatedTransform::v() {
   return(vec3f(startTransform->m.m[0][1],
                startTransform->m.m[1][1],
                startTransform->m.m[2][1]));
+}
+
+void SceneTimeContext::UpdateGeometry(double frame_time, Float anchor, Float open, Float close) {
+  using Clock = std::chrono::steady_clock;
+  const auto started = benchmark_timing ? Clock::now() : Clock::time_point{};
+  std::vector<std::function<void()>> commits;
+  const double new_pose_offset = open == close ? double(open) - double(anchor) : 0;
+  const double pose_time = frame_time + new_pose_offset;
+  for (const auto &prepare : deformation_updates) {
+    auto commit = prepare(pose_time);
+    if (commit) commits.push_back(std::move(commit));
+  }
+  epoch = frame_time;
+  ray_anchor = anchor;
+  pose_offset = new_pose_offset;
+  for (const auto &commit : commits) commit();
+  const auto posed = benchmark_timing ? Clock::now() : Clock::time_point{};
+  meshes_updated = commits.size();
+  // Registered during recursive scene construction, children before parents.
+  // Rigid-only time changes refit placement bounds but never reskin a mesh.
+  if (has_model_poses || !deformation_updates.empty())
+    for (const auto &refit : deformation_bounds) refit(open, close);
+  if (!commits.empty()) ++geometry_revision;
+  if (has_model_poses && open != close && !pose_notice_sent && frozen_pose_notice) {
+    frozen_pose_notice();
+    pose_notice_sent = true;
+  }
+  if (benchmark_timing) {
+    pose_seconds = std::chrono::duration<double>(posed-started).count();
+    refit_seconds = std::chrono::duration<double>(Clock::now()-posed).count();
+  }
 }

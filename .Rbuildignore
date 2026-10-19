@@ -50,7 +50,7 @@
 ^\.codex-sccache($|/)
 ^\.sccache-.*($|/)
 ^tools/codex($|/)
-^inst/doc/(?!composable-textures\.(html|Rmd|R)$)
+^inst/doc/(?!(composable-textures|model-animation)\.(html|Rmd|R)$)
 ^inst/examples($|/)
 ^air\.toml$
 ^Rplots\.pdf$

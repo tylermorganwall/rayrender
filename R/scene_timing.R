@@ -101,19 +101,22 @@ scene_has_keyframes = function(scene) {
   if (
     any(vapply(
       scene$animation_info,
-      function(info) !is.null(info$keyframes),
+      function(info) {
+        !is.null(info$keyframes) ||
+          !is.null(info$model_node) ||
+          !is.null(info$model_instance)
+      },
       logical(1)
     ))
   ) {
     return(TRUE)
   }
   for (info in scene$shape_info) {
-    if (
-      !is.null(info$original_scene) &&
-        scene_has_keyframes(info$original_scene[[1]])
-    ) {
-      return(TRUE)
+    prototype = info$shape_properties$original_scene
+    if (is.null(prototype)) {
+      prototype = info$original_scene
     }
+    if (!is.null(prototype) && scene_has_keyframes(prototype[[1]])) return(TRUE)
   }
   FALSE
 }
@@ -155,13 +158,13 @@ camera_at_scene_times = function(camera, times, fps, shutter_offsets) {
   }
   if (
     nrow(motion) > 1L &&
-      any(shutter_offsets != 0) &&
+      shutter_offsets[1] != shutter_offsets[2] &&
       any(motion$fov < 0) &&
       (any(motion$aperture != motion$aperture[1]) ||
         any(motion$focal != motion$focal[1]))
   ) {
     stop(
-      "Physical-camera exposure requires constant aperture and focus; use offline zero-width snapshots for varying optics.",
+      "Physical-camera exposure requires constant aperture and focus; use zero-width snapshots for varying optics.",
       call. = FALSE
     )
   }
@@ -171,13 +174,21 @@ camera_at_scene_times = function(camera, times, fps, shutter_offsets) {
   camera$authored_motion$time = key_times
   # Projection changes are cuts. Within one projection, interpolate camera
   # parameters against authored time, never against a previously shown pose.
-  index = pmax(1L, pmin(nrow(motion), findInterval(times, key_times)))
+  # A zero-width exposure can still have an offset from the frame clock.
+  # Prepare optics at that exposure time while keeping frame timestamps intact.
+  camera_times = if (shutter_offsets[1] == shutter_offsets[2]) {
+    times + shutter_offsets[1]
+  } else {
+    times
+  }
+  index = pmax(1L, pmin(nrow(motion), findInterval(camera_times, key_times)))
   sampled = motion[index, , drop = FALSE]
   next_index = pmin(index + 1L, nrow(motion))
   fraction = ifelse(
     index == next_index,
     0,
-    (times - key_times[index]) / (key_times[next_index] - key_times[index])
+    (camera_times - key_times[index]) /
+      (key_times[next_index] - key_times[index])
   )
   fraction = pmax(0, pmin(1, fraction))
   type = function(fov) {

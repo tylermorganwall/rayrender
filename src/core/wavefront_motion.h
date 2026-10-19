@@ -83,12 +83,19 @@ public:
   // Refresh only per-frame clock fields, never keys or immutable geometry.
   void UpdateClocks();
   void CopyClockState(void *destination) const;
+  // Recompute only changed mesh boxes, then union placements in their original
+  // traversal frames. Authored transforms and packed owner IDs never change.
+  void RefitBounds(WavefrontScene &, const std::vector<WFMeshRange> &);
 
 private:
   // Store IDs rather than keys or pointers into nodes: vector growth keeps IDs
   // valid, and the retained node already owns the transform comparison data.
   std::unordered_multimap<size_t, uint32_t> motion_lookup;
   std::vector<uint32_t> packed_transform_offsets;
+  std::vector<aabb> mesh_bounds, loose_groups, loose_boundaries;
+  std::vector<std::pair<uint32_t, uint32_t>> boundary_owners;
+  std::vector<WFVector> ReferenceBounds(WavefrontScene &, const std::vector<WFMeshRange> &, bool initialize);
+  void SweepBoundaries(WavefrontScene &) const;
 
   static size_t MotionHash(uint32_t parent, const AnimatedTransform &animation, const Transform &before) {
     size_t hash = std::hash<uint32_t>{}(parent);

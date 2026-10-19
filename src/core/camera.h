@@ -340,6 +340,8 @@ public:
   void SetShutterInterval(Float begin, Float end) { shutterOpen = begin; shutterClose = end; }
   // Updates only the rigid pose, preserving the initialized lens and pupils.
   void SetScenePose(point3f position, point3f target, vec3f up);
+  // Prepare exact snapshot optics before publishing a new render revision.
+  std::unique_ptr<RealisticCamera> WithSceneOptics(Float aperture, Float focus) const;
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,
@@ -399,6 +401,16 @@ private:
   // RealisticCamera Private Data
   std::vector<LensElementInterface> elementInterfaces;
   std::vector<Bounds2f> exitPupilBounds;
+  // Keep the unmodified descriptor: the legacy constructor adjusts its input
+  // aperture stop. Reusing that adjusted input would make reverse seeks depend
+  // on the narrowest aperture previously visited.
+  struct LensSource {
+    std::vector<Float> elements;
+    Float film_size;
+    Float camera_scale;
+  };
+  std::shared_ptr<const LensSource> lens_source;
+  bool scene_optics_prepared = true;
   
   // RealisticCamera Private Methods
   Float LensRearZ() const { 

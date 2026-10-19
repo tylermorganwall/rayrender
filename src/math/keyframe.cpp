@@ -305,6 +305,37 @@ std::array<Value, 2> Track::Range(double begin, double end) const {
   return range;
 }
 
+void Track::ValidateYaw(double relative_margin) const {
+  if (property != Property::Rotation) throw std::runtime_error("Yaw removal requires a rotation track.");
+  for (const auto &q : values)
+    if (std::hypot(q[1], q[3]) < relative_margin)
+      throw std::runtime_error("Locomotion yaw is singular; preserve yaw for this rotation.");
+  for (size_t i = 0; i + 1 < times.size(); ++i) {
+    if (interpolation == Interpolation::Step) continue;
+    std::array<Value, 4> hull{};
+    for (int k = 0; k < 4; ++k) {
+      hull[0][k] = values[i][k];
+      hull[3][k] = values[i+1][k];
+      double duration = times[i+1] - times[i];
+      // SLERP uses positive weights on the shortest arc. Its projected path
+      // has the same directions as this chord. Cubic uses its exact controls.
+      hull[1][k] = interpolation == Interpolation::Linear ? (2*hull[0][k]+hull[3][k])/3 :
+        hull[0][k] + duration*outgoing[i][k]/3;
+      hull[2][k] = interpolation == Interpolation::Linear ? (hull[0][k]+2*hull[3][k])/3 :
+        hull[3][k] - duration*incoming[i+1][k]/3;
+    }
+    // Certify the normalized quaternion, not just its unnormalized polynomial.
+    // Large swing tangents can otherwise hide a near-zero normalized twist.
+    double norm_bound = 1;
+    for (const auto &control : hull)
+      norm_bound = std::max(norm_bound, std::hypot(std::hypot(control[0], control[1]),
+                                                  std::hypot(control[2], control[3])));
+    for (auto &control : hull) { control[0] = 0; control[2] = 0; }
+    if (!Separated(hull, 0, relative_margin * norm_bound))
+      throw std::runtime_error("Locomotion yaw is singular or too close to certify between keys.");
+  }
+}
+
 Transform TransformTrack::At(double time) const {
   return AtLocal(clock ? clock->At(time) : time);
 }
@@ -312,6 +343,18 @@ Transform TransformTrack::At(double time) const {
 Transform TransformTrack::AtLocal(double time) const {
   Value p = position ? position->At(time) : Value{}, s = scale ? scale->At(time) : Value{1, 1, 1, 0};
   Value q = rotation ? rotation->At(time) : Value{0, 0, 0, 1};
+  if (root_motion) {
+    for (int k = 0; k < 3; ++k)
+      if (root_motion->translation[k]) p[k] = root_motion->position[k];
+    if (root_motion->yaw) {
+      double norm = std::hypot(q[1], q[3]);
+      double y = q[1]/norm, w = q[3]/norm;
+      // q' = reference_twist * inverse(current_twist) * q.
+      double dy = root_motion->reference_yaw[1]*w - root_motion->reference_yaw[3]*y;
+      double dw = root_motion->reference_yaw[3]*w + root_motion->reference_yaw[1]*y;
+      q = {dw*q[0]+dy*q[2], dw*q[1]+dy*q[3], dw*q[2]-dy*q[0], dw*q[3]-dy*q[1]};
+    }
+  }
   Quaternion orientation; orientation.v = vec3f(q[0], q[1], q[2]); orientation.w = q[3];
   return Translate(vec3f(p[0] + pivot[0], p[1] + pivot[1], p[2] + pivot[2])) *
     orientation.ToTransform() * Scale(s[0], s[1], s[2]) * Translate(vec3f(-pivot[0], -pivot[1], -pivot[2]));
@@ -332,6 +375,8 @@ aabb TransformTrack::LocalBounds(const aabb &box, double begin, double end) cons
   if (begin == end) return AtLocal(begin)(box);
   std::array<Value, 2> translation{}, scaling{Value{1, 1, 1, 0}, Value{1, 1, 1, 0}};
   if (position) translation = position->Range(begin, end);
+  if (root_motion) for (int k = 0; k < 3; ++k)
+    if (root_motion->translation[k]) translation[0][k] = translation[1][k] = root_motion->position[k];
   if (scale) scaling = scale->Range(begin, end);
   // Every scaled point is in a sphere around the pivot with this radius.
   // Rotation preserves that sphere, independently of asynchronous key times.

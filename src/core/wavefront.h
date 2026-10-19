@@ -22,6 +22,7 @@ class Medium;
 class VolumeScene;
 class InfiniteAreaLight;
 class WavefrontMotion;
+class WavefrontDeformation;
 
 // Explicit float4 storage keeps the C++/MSL ABI independent of native Float,
 // SIMD configuration and Objective-C. No GPU record owns a native pointer.
@@ -205,6 +206,7 @@ static_assert(sizeof(WFMedium) == 240 && sizeof(WFField) == 16 &&
 struct WavefrontScene {
   bool transparent_background = false;
   std::shared_ptr<WavefrontMotion> motion;
+  std::shared_ptr<WavefrontDeformation> deformation;
   std::vector<WFVector> camera_data;
   std::shared_ptr<const skymodelr::PragueMetalSnapshot> atmosphere_snapshot;
   WFAtmosphereData atmosphere_data;
@@ -254,6 +256,7 @@ struct WavefrontScene {
 
 struct WavefrontReport {
   bool requested = false, used = false, scene_reused = false;
+  size_t acceleration_builds = 0, acceleration_refits = 0, geometry_bytes_updated = 0;
   std::string fallback;
   double upload_seconds = 0, sample_seconds = 0, atmosphere_seconds = 0;
   size_t triangles = 0, completed_samples = 0;
@@ -267,6 +270,9 @@ struct WavefrontReport {
 class WavefrontSession {
 public:
   virtual ~WavefrontSession() = default;
+  // Called only between completed render batches. Ranges retain their original
+  // triangle ordering and all resource sizes; topology changes require a new scene.
+  virtual void Refit(const std::vector<WFMeshRange> &, WavefrontReport &) = 0;
   virtual bool Render(const WFParameters &, const std::vector<uint32_t> &active,
                       const std::vector<WFLight> &lights, const std::function<bool()> &cancelled,
                       const WFPixel *&pixels, WavefrontReport &report) = 0;
@@ -288,6 +294,7 @@ private:
   const hitable_list *world = nullptr, *lights = nullptr;
   size_t pixel_capacity = 0, camera_capacity = 0;
   int sampling_method = -1;
+  uint64_t geometry_revision = 0;
   WavefrontReport setup_report;
 };
 // Empty output means this primitive has no faithful static triangulation.

@@ -40,6 +40,22 @@ double clock_phase(const animation::ClipClock &clock, double epoch) {
   }
   return phase;
 }
+// Keep a canonical phase on its authored side of a repeat seam. Nearest-float
+// rounding can turn a phase just below a nonrepresentable period into the
+// period itself, making fmod select the first pose instead of the last segment.
+// The adjusted quantization error is still checked against the track budget.
+float packed_clock_phase(const animation::ClipClock &clock, double epoch) {
+  const double phase = clock_phase(clock, epoch);
+  float packed = float(phase);
+  if (clock.loop != animation::Loop::Hold && clock.end > clock.begin) {
+    const double duration = clock.end-clock.begin;
+    const double period = clock.loop == animation::Loop::Repeat ? duration : 2*duration;
+    const float packed_period = clock.loop == animation::Loop::Repeat ? float(duration) : 2*float(duration);
+    if (phase < period && packed >= packed_period)
+      packed = std::nextafter(packed_period,0.f);
+  }
+  return packed;
+}
 } // namespace
 
 void WavefrontMotion::ValidateTimes(double begin, double end) const {
@@ -51,14 +67,18 @@ void WavefrontMotion::ValidateTimes(double begin, double end) const {
     if (duration == 0) continue;
     double phase = clock_phase(clock, node.animation->FrameEpoch());
     double anchor = node.animation->FrameAnchor();
-    double extent = std::max(std::abs(begin - anchor), std::abs(end - anchor));
+    double extent = node.animation->FreezesPose() ? 0 :
+      std::max(std::abs(begin - anchor), std::abs(end - anchor));
     double distance = std::abs(phase) + std::abs(clock.speed) * extent;
     // Bound float input, multiply/add, and period quantization error before a
     // batch is published. Excessive cycle counts must not silently lose phase.
-    double error = std::abs(double(float(phase)) - phase) +
+    double error = std::abs(double(packed_clock_phase(clock,node.animation->FrameEpoch())) - phase) +
       extent * std::abs(double(float(clock.speed)) - clock.speed) +
       (2 + distance / duration) * std::abs(double(float(duration)) - duration) +
-      4 * std::numeric_limits<float>::epsilon() * distance;
+      // At the exact frame anchor the shader adds speed * 0 to the packed
+      // phase. This introduces no multiply/add rounding; charging it once per
+      // clip phase incorrectly rejects ordinary dense glTF snapshot tracks.
+      (extent == 0 ? 0 : 4 * std::numeric_limits<float>::epsilon() * distance);
     double tolerance = std::min(1e-5, duration * 1e-5);
     for (const auto &channel : {track->position, track->rotation, track->scale}) {
       if (!channel) continue;
@@ -70,11 +90,14 @@ void WavefrontMotion::ValidateTimes(double begin, double end) const {
       throw std::runtime_error("Device clip clock exceeds key-interval or ten-microsecond precision; use CPU or a shorter scene interval.");
     // A small time error can be a large pose error at a discontinuity. Refuse
     // snapshots whose packed phase would cross a repeat seam or a STEP key.
-    float packed_duration = float(duration), local = float(phase);
+    float packed_duration = float(duration), local = packed_clock_phase(clock,node.animation->FrameEpoch());
     if (clock.loop == animation::Loop::Hold) local = std::clamp(local, 0.f, packed_duration);
     else {
       float period = clock.loop == animation::Loop::Repeat ? packed_duration : 2 * packed_duration;
-      if (local >= period && phase < (clock.loop == animation::Loop::Repeat ? duration : 2 * duration))
+      // Interior-side packing is safe at the exact anchor. Across an exposure,
+      // its small phase shift could move a discontinuous repeat boundary.
+      if ((local >= period || (extent != 0 && float(phase) >= period)) &&
+          phase < (clock.loop == animation::Loop::Repeat ? duration : 2 * duration))
         throw std::runtime_error("Device clock rounding crosses a loop boundary; use CPU for this exact time.");
       local = std::fmod(local, period);
       if (clock.loop == animation::Loop::PingPong && local > packed_duration) local = period - local;
@@ -96,7 +119,7 @@ void WavefrontMotion::UpdateClocks() {
     const auto &clock = *animation.Track()->clock;
     WFTransformTrack descriptor;
     std::memcpy(&descriptor, packed.data() + packed_transform_offsets[i], sizeof(descriptor));
-    descriptor.clock.x = float(clock_phase(clock, animation.FrameEpoch()));
+    descriptor.clock.x = packed_clock_phase(clock, animation.FrameEpoch());
     descriptor.frame.x = animation.FrameAnchor();
     std::memcpy(packed.data() + packed_transform_offsets[i], &descriptor, sizeof(descriptor));
   }
@@ -186,14 +209,39 @@ std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
       if (track->clock) {
         const auto &clock = *track->clock;
         key_epoch = clock.begin;
-        descriptor.clock = {float(clock_phase(clock, node.animation->FrameEpoch())),
-          clock.end == clock.begin ? 0.f : float(clock.speed), float(clock.end - clock.begin), float(clock.loop)};
+        descriptor.clock = {packed_clock_phase(clock, node.animation->FrameEpoch()),
+          clock.end == clock.begin || node.animation->FreezesPose() ? 0.f : float(clock.speed),
+          float(clock.end - clock.begin), float(clock.loop)};
         descriptor.frame.x = node.animation->FrameAnchor();
       }
       descriptor.channels[0] = export_track(track->position, key_epoch);
       descriptor.channels[1] = export_track(track->rotation, key_epoch);
       descriptor.channels[2] = export_track(track->scale, key_epoch);
       descriptor.pivot = {float(track->pivot[0]), float(track->pivot[1]), float(track->pivot[2]), 0};
+      if (track->root_motion) {
+        const auto &root = *track->root_motion;
+        uint32_t mask = 0;
+        for (int k = 0; k < 3; ++k) if (root.translation[k]) mask |= 1u << k;
+        descriptor.root_position = {float(root.position[0]), float(root.position[1]), float(root.position[2]), float(mask)};
+        descriptor.root_yaw = {float(root.yaw), float(root.reference_yaw[1]), 0, float(root.reference_yaw[3])};
+        if (root.yaw && track->rotation) {
+          // Revalidate the quantized rotation as well: device packing must not
+          // turn a valid native twist into a singular one.
+          std::vector<animation::Value> values = track->rotation->values;
+          auto incoming = track->rotation->incoming, outgoing = track->rotation->outgoing;
+          for (auto *collection : {&values, &incoming, &outgoing})
+            for (auto &value : *collection) for (auto &component : value) component = float(component);
+          auto method = track->rotation->interpolation == animation::Interpolation::Smooth ?
+            animation::Interpolation::Cubic : track->rotation->interpolation;
+          std::vector<double> times;
+          for (double time : track->rotation->times) times.push_back(float(time - key_epoch));
+          animation::Track quantized(animation::Property::Rotation, method, times,
+            values, incoming, outgoing);
+          // Match the packed time schedule and reserve room for float cubic
+          // arithmetic and the exporter's relative interval precision budget.
+          quantized.ValidateYaw(1e-4);
+        }
+      }
       a.track = append(&descriptor, sizeof(descriptor));
     }
     Quaternion rotations[2];
@@ -228,43 +276,7 @@ std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
     scene.texture_features |= 4096;
 
 
-  // Bounds in each owner's reference frame reject unrelated animation groups
-  // before querying the shared immutable hardware BVH. Prototype bounds are
-  // computed once, irrespective of the number of placements.
-  std::vector<aabb> groups(nodes.size() + 1), meshes(scene.meshes.size());
-  for (size_t i = 0; i < scene.meshes.size(); ++i) {
-    const auto &mesh = scene.meshes[i];
-    for (uint32_t j = 0; j < mesh.count; ++j)
-      for (const auto &p : scene.triangles[mesh.start + j].p)
-        meshes[i] = surrounding_box(meshes[i], aabb(point3f(p.x, p.y, p.z)));
-  }
-  size_t loose = scene.meshes.empty() ? scene.triangles.size() : scene.loose_triangles;
-  for (size_t i = 0; i < loose; ++i)
-    for (const auto &p : scene.triangles[i].p)
-      groups[owners[0][i]] = surrounding_box(groups[owners[0][i]], aabb(point3f(p.x, p.y, p.z)));
-  for (size_t i = 0; i < scene.quadrics.size(); ++i) {
-    const auto &lo = scene.quadric_bounds[2 * i], &hi = scene.quadric_bounds[2 * i + 1];
-    groups[owners[1][i]] =
-        surrounding_box(groups[owners[1][i]], aabb(point3f(lo.x, lo.y, lo.z), point3f(hi.x, hi.y, hi.z)));
-  }
-  for (size_t i = 0; i < scene.instances.size(); ++i) {
-    const auto &instance = scene.instances[i];
-    if (instance.triangle_count)
-      groups[owners[3][i]] = surrounding_box(groups[owners[3][i]], unpack(instance.forward)(meshes[instance.mesh]));
-  }
-  std::vector<WFVector> boxes;
-  for (const auto &box : groups) {
-    auto lo = box.min(), hi = box.max();
-    if (lo[0] > hi[0]) {
-      boxes.push_back({INFINITY, INFINITY, INFINITY, 0});
-      boxes.push_back({-INFINITY, -INFINITY, -INFINITY, 0});
-      continue;
-    }
-    Float pad = 64 * std::numeric_limits<float>::epsilon() *
-                std::max(Float(1), std::max(MaxComponent(Abs(lo)), MaxComponent(Abs(hi))));
-    boxes.push_back({float(lo[0] - pad), float(lo[1] - pad), float(lo[2] - pad), 0});
-    boxes.push_back({float(hi[0] + pad), float(hi[1] + pad), float(hi[2] + pad), 0});
-  }
+  auto boxes = ReferenceBounds(scene, {}, true);
   header.bounds = append(boxes.data(), boxes.size() * sizeof(WFVector));
   header.byte_size = bytes.size();
   std::memcpy(bytes.data(), &header, sizeof(header));
@@ -281,8 +293,94 @@ std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
   collect(scene.triangles, 0);
   collect(scene.quadrics, 1);
   collect(scene.instances, 3);
+  boundary_owners.assign(bodies.begin(), bodies.end());
+  SweepBoundaries(scene);
+  return bytes;
+}
+
+std::vector<WFVector> WavefrontMotion::ReferenceBounds(WavefrontScene &scene,
+    const std::vector<WFMeshRange> &changed, bool initialize) {
+  // Bounds in each owner's reference frame reject unrelated animation groups
+  // before querying the shared immutable hardware BVH. Prototype bounds are
+  // computed once, irrespective of the number of placements.
+  if (initialize) mesh_bounds.resize(scene.meshes.size());
+  for (size_t i = 0; i < scene.meshes.size(); ++i) {
+    const auto &mesh = scene.meshes[i];
+    bool dirty = initialize;
+    for (const auto &range : changed)
+      dirty |= range.start == mesh.start && range.count == mesh.count;
+    if (!dirty) continue;
+    mesh_bounds[i] = aabb();
+    for (uint32_t j = 0; j < mesh.count; ++j)
+      for (const auto &p : scene.triangles[mesh.start + j].p)
+        mesh_bounds[i] = surrounding_box(mesh_bounds[i], aabb(point3f(p.x, p.y, p.z)));
+  }
+  const size_t loose = scene.meshes.empty() ? scene.triangles.size() : scene.loose_triangles;
+  bool loose_changed = initialize;
+  for (const auto &range : changed) loose_changed |= range.start < loose;
+  if (loose_changed) {
+    loose_groups.assign(nodes.size() + 1, aabb());
+    loose_boundaries.assign(scene.boundaries.size(), aabb());
+    for (size_t i = 0; i < loose; ++i)
+      for (const auto &p : scene.triangles[i].p) {
+        const aabb point(point3f(p.x, p.y, p.z));
+        auto &group = loose_groups[owners[0][i]];
+        group = surrounding_box(group, point);
+        auto &body = loose_boundaries[scene.triangles[i].boundary];
+        body = surrounding_box(body, point);
+      }
+  }
+  auto groups = loose_groups;
+  auto boundary_boxes = loose_boundaries;
+  for (size_t i = 0; i < scene.quadrics.size(); ++i) {
+    const auto &lo = scene.quadric_bounds[2 * i], &hi = scene.quadric_bounds[2 * i + 1];
+    aabb box(point3f(lo.x, lo.y, lo.z), point3f(hi.x, hi.y, hi.z));
+    groups[owners[1][i]] = surrounding_box(groups[owners[1][i]], box);
+    auto &body = boundary_boxes[scene.quadrics[i].boundary];
+    body = surrounding_box(body, box);
+  }
+  for (size_t i = 0; i < scene.instances.size(); ++i) {
+    const auto &instance = scene.instances[i];
+    if (instance.triangle_count) {
+      const aabb box = unpack(instance.forward)(mesh_bounds[instance.mesh]);
+      groups[owners[3][i]] = surrounding_box(groups[owners[3][i]], box);
+      auto &body = boundary_boxes[instance.boundary];
+      body = surrounding_box(body, box);
+    }
+  }
+  std::vector<WFVector> boxes;
+  for (const auto &box : groups) {
+    auto lo = box.min(), hi = box.max();
+    if (lo[0] > hi[0]) {
+      boxes.push_back({INFINITY, INFINITY, INFINITY, 0});
+      boxes.push_back({-INFINITY, -INFINITY, -INFINITY, 0});
+      continue;
+    }
+    Float pad = 64 * std::numeric_limits<float>::epsilon() *
+                std::max(Float(1), std::max(MaxComponent(Abs(lo)), MaxComponent(Abs(hi))));
+    boxes.push_back({float(lo[0] - pad), float(lo[1] - pad), float(lo[2] - pad), 0});
+    boxes.push_back({float(hi[0] + pad), float(hi[1] + pad), float(hi[2] + pad), 0});
+  }
+  if (!initialize) {
+    // The spare lanes carry membership/diffusion flags, not coordinates.
+    scene.boundary_lo = {INFINITY, INFINITY, INFINITY, scene.boundary_lo.w};
+    scene.boundary_hi = {-INFINITY, -INFINITY, -INFINITY, scene.boundary_hi.w};
+    for (size_t i = 1; i < scene.boundaries.size(); ++i) {
+      auto &body = scene.boundaries[i];
+      if (body.lo.w != 0) continue;
+      const auto lo = boundary_boxes[i].min(), hi = boundary_boxes[i].max();
+      body.lo = {float(lo[0]), float(lo[1]), float(lo[2]), 0};
+      body.hi = {float(hi[0]), float(hi[1]), float(hi[2]), 0};
+      extend(scene.boundary_lo, scene.boundary_hi, body.lo);
+      extend(scene.boundary_lo, scene.boundary_hi, body.hi);
+    }
+  }
+  return boxes;
+}
+
+void WavefrontMotion::SweepBoundaries(WavefrontScene &scene) const {
   const auto reference_bounds = scene.boundaries;
-  for (const auto &body : bodies) {
+  for (const auto &body : boundary_owners) {
     const auto &b = reference_bounds[body.first];
     if (b.lo.w != 0)
       continue; // Open interfaces have no interior bounds to sweep.
@@ -303,5 +401,12 @@ std::vector<unsigned char> WavefrontMotion::Export(WavefrontScene &scene) {
     extend(scene.boundary_lo, scene.boundary_hi, l);
     extend(scene.boundary_lo, scene.boundary_hi, h);
   }
-  return bytes;
+}
+
+void WavefrontMotion::RefitBounds(WavefrontScene &scene, const std::vector<WFMeshRange> &changed) {
+  auto boxes = ReferenceBounds(scene, changed, false);
+  WFMotionHeader header;
+  std::memcpy(&header, packed.data(), sizeof(header));
+  std::memcpy(packed.data() + header.bounds, boxes.data(), boxes.size() * sizeof(WFVector));
+  SweepBoundaries(scene);
 }

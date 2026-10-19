@@ -1751,3 +1751,39 @@ void BVHAggregate::validateBVH4() const {
         primitiveCount != primitives.size())
         throw std::runtime_error("BVH4 storage or primitive count mismatch.");
 }
+
+void BVHAggregate::Refit(Float open, Float close) {
+  auto primitive_bounds = [&](int first, int count) {
+    aabb result;
+    for (int i=first;i<first+count;++i) {
+      aabb box;
+      if (!primitives[i]->bounding_box(open,close,box))
+        throw std::runtime_error("Updated BVH primitive has no bounds.");
+      result=surrounding_box(result,box);
+    }
+    return result;
+  };
+#ifndef RAYSIMD
+  for (int i=n_nodes-1;i>=0;--i) {
+    auto &node=nodes[i];
+    node.bounds=node.nPrimitives ? primitive_bounds(node.primitivesOffset,node.nPrimitives) :
+      surrounding_box(nodes[i+1].bounds,nodes[node.secondChildOffset].bounds);
+  }
+  if (n_nodes) scene_bounds=nodes[0].bounds;
+#else
+  std::vector<aabb> leaves(totalLeaves4), interiors(totalNodes4);
+  for (int i=0;i<totalLeaves4;++i)
+    leaves[i]=primitive_bounds(leaves4[i].primitivesOffset,leaves4[i].nPrimitives);
+  auto bounds=[&](int reference) { return reference>=0 ? interiors[reference] : leaves[-reference-2]; };
+  for (int i=totalNodes4-1;i>=0;--i) {
+    auto &node=nodes4[i];
+    aabb children[4];
+    for (int j=0;j<node.nChildren;++j) {
+      children[j]=bounds(node.childOffsets[j]);
+      interiors[i]=surrounding_box(interiors[i],children[j]);
+    }
+    node.bbox4=BBox4(children[0],children[1],children[2],children[3]);
+  }
+  if (root4!=-1) scene_bounds=bounds(root4);
+#endif
+}

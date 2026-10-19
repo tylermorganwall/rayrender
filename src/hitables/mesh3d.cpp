@@ -164,3 +164,80 @@ bool mesh3d::bounding_box(Float t0, Float t1, aabb& box) const {
 std::pair<size_t,size_t> mesh3d::CountNodeLeaf() {
   return(mesh_bvh->CountNodeLeaf());
 }
+
+void mesh3d::BindDeformation(std::shared_ptr<const animation::ModelInstance> instance,
+                            size_t node, size_t primitive) {
+  const auto &source=*instance->asset->nodes.at(node).meshes.at(primitive);
+  if (source.positions.size()!=mesh->nVertices || (source.recalculate_normals ? source.positions.size() : source.normals.size())!=mesh->nNormals ||
+      source.indices!=mesh->vertexIndices)
+    throw std::runtime_error("Deforming meshes cannot change source topology or normal indexing.");
+  deformation=std::move(instance);
+  deformation_node=node; deformation_primitive=primitive;
+}
+
+std::function<void()> mesh3d::PrepareDeformation(double time) {
+  auto pose=deformation->At(time);
+  if (last_pose && !animation::ComparePoses(*last_pose,pose).pose) return {};
+  auto surface=deformation->Deform(pose,deformation_node,deformation_primitive);
+  // Mesh3d stores its existing static object/group transform in the vertices;
+  // model node globals and outer placement remain in their instance wrappers.
+  for (auto &position : surface.positions) position=(*ObjectToWorld)(position);
+  for (auto &normal : surface.normals) normal=unit_vector((*ObjectToWorld)(normal));
+  for (size_t i=0;i<surface.tangents.size();++i) {
+    auto tangent=(*ObjectToWorld)(surface.tangents[i]);
+    const auto &n=surface.normals[i];
+    vec3f normal(n[0],n[1],n[2]);
+    surface.tangents[i]=unit_vector(tangent-dot(tangent,normal)*normal);
+    if (ObjectToWorld->SwapsHandedness()) surface.handedness[i]*=-1;
+  }
+  return [this,pose=std::move(pose),surface=std::move(surface)]() mutable {
+    for (size_t i=0;i<surface.positions.size();++i) mesh->p[i]=surface.positions[i];
+    for (size_t i=0;i<surface.normals.size();++i) mesh->n[i]=surface.normals[i];
+    if (!surface.tangents.empty()) {
+      if (!mesh->t) mesh->t=std::make_unique<vec3f[]>(surface.tangents.size());
+      mesh->nTangents=surface.tangents.size(); mesh->has_tangents=true;
+      mesh->tangent_right_handed.resize(mesh->nTangents);
+      for (size_t i=0;i<surface.tangents.size();++i) {
+        mesh->t[i]=surface.tangents[i];
+        mesh->tangent_right_handed[i]=surface.handedness[i]>0;
+      }
+    }
+    if (mesh->has_consistent_normals) mesh->CalculateConsistentNormals();
+    last_pose=std::move(pose);
+    ++deformation_revision;
+  };
+}
+
+namespace {
+// BVH random() chooses triangles uniformly, then samples each triangle's area.
+// Convert that same mixture to solid-angle density using current hit geometry.
+// Keep standalone triangle sampling behavior outside this mesh path unchanged.
+template<class SamplerType>
+Float mesh_area_pdf(const BVHAggregate &bvh, const point3f &origin,
+                    const vec3f &direction, SamplerType &&sampler, Float time) {
+  const auto primitives = bvh.Primitives();
+  const Float length = direction.length();
+  if (primitives.empty() || !(length > 0)) return 0;
+  const Ray ray(origin,direction,time);
+  Float sum = 0;
+  for (const auto &primitive : primitives) {
+    const auto &face = static_cast<const triangle&>(*primitive);
+    hit_record hit;
+    if (!face.hit(ray,.001,FLT_MAX,hit,sampler)) continue;
+    const auto &positions = face.mesh->p;
+    const vec3f area_normal = cross(positions[face.v[1]]-positions[face.v[0]],
+                                   positions[face.v[2]]-positions[face.v[0]]);
+    const Float projected_twice_area = std::abs(dot(area_normal,direction));
+    if (projected_twice_area > 0)
+      sum += 2*hit.t*hit.t*length*length*length/projected_twice_area;
+  }
+  return sum/Float(primitives.size());
+}
+}
+
+Float mesh3d::pdf_value(const point3f &o, const vec3f &v, random_gen &rng, Float time) {
+  return mesh_area_pdf(*mesh_bvh,o,v,rng,time);
+}
+Float mesh3d::pdf_value(const point3f &o, const vec3f &v, Sampler *sampler, Float time) {
+  return mesh_area_pdf(*mesh_bvh,o,v,sampler,time);
+}

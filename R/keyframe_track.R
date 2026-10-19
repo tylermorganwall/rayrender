@@ -29,11 +29,11 @@
 #' orientations less than 180 degrees apart to author multiple turns.
 #' @examples
 #' # Position and rotation can use different key times.
-#' position = keyframe_track(c(0, 1, 3), rbind(c(0, 0, 0), c(1, 2, 0), c(4, 0, 0)),
+#' position = animation_keyframe_track(c(0, 1, 3), rbind(c(0, 0, 0), c(1, 2, 0), c(4, 0, 0)),
 #'   interpolation = "cubic")
-#' rotation = keyframe_track(c(0, 2), rbind(c(0, 0, 0, 1), c(0, 1, 0, 0)),
+#' rotation = animation_keyframe_track(c(0, 2), rbind(c(0, 0, 0, 1), c(0, 1, 0, 0)),
 #'   property = "rotation")
-keyframe_track = function(
+animation_keyframe_track = function(
   time,
   value,
   property = "position",
@@ -101,11 +101,11 @@ keyframe_track = function(
 #' A supplied keyframe track retains its own key times and interpolation.
 #' @examples
 #' # Four keys make a curved path without constraining output frame times.
-#' flight = transform_track(time = c(0, 2, 5, 8),
+#' flight = animation_transform_track(time = c(0, 2, 5, 8),
 #'   position = rbind(c(0, 1, 0), c(2, 3, 0), c(6, 4, 2), c(9, 2, 4)),
 #'   angle = rbind(c(0, 0, 0), c(0, 15, 0), c(0, 40, 0), c(0, 60, 0)),
 #'   position_interpolation = "cubic", rotation_interpolation = "smooth")
-transform_track = function(
+animation_transform_track = function(
   time = NULL,
   position = NULL,
   angle = NULL,
@@ -154,7 +154,7 @@ transform_track = function(
       next
     }
     if (!inherits(value, "ray_keyframe_track")) {
-      channels[i] = list(keyframe_track(
+      channels[i] = list(animation_keyframe_track(
         time,
         value,
         names(channels)[i],
@@ -175,8 +175,8 @@ transform_track = function(
 #' Move a scene fragment along a deterministic path while retaining its static transforms.
 #'
 #' @param scene Scene or object fragment to animate.
-#' @param track A transform track created by transform_track().
-#' @param player Default `NULL`. A clip_player() mapping scene seconds to the
+#' @param track A transform track created by animation_transform_track().
+#' @param player Default `NULL`. An animation_clip_player() mapping scene seconds to the
 #'   track's local key interval. NULL evaluates keys directly in scene time.
 #' @return The scene with an animation attachment in each selected row.
 #' @export
@@ -190,15 +190,15 @@ transform_track = function(
 #' floats; an unrepresentable key schedule produces an explicit CPU fallback.
 #' @examples
 #' # Keep the sphere's static offset inside the animated placement.
-#' path = transform_track(c(0, 1, 2, 3),
+#' path = animation_transform_track(c(0, 1, 2, 3),
 #'   position = rbind(c(0, 0, 0), c(1, 1, 0), c(2, 0, 0), c(3, 1, 0)))
-#' scene = animate_keyframes(sphere(x = 0.2), path)
-animate_keyframes = function(scene, track, player = NULL) {
+#' scene = animation_keyframes(sphere(x = 0.2), path)
+animation_keyframes = function(scene, track, player = NULL) {
   if (!inherits(track, "ray_transform_track")) {
-    stop("track must be a transform_track().", call. = FALSE)
+    stop("track must be an animation_transform_track().", call. = FALSE)
   }
   if (!is.null(player) && !inherits(player, "ray_clip_player")) {
-    stop("player must be a clip_player().", call. = FALSE)
+    stop("player must be an animation_clip_player().", call. = FALSE)
   }
   track$player = player
   animation_evaluate_transform(track, numeric())
@@ -214,3 +214,15 @@ animate_keyframes = function(scene, track, player = NULL) {
   }
   scene
 }
+
+#' @rdname animation_keyframe_track
+#' @export
+keyframe_track = animation_keyframe_track
+
+#' @rdname animation_transform_track
+#' @export
+transform_track = animation_transform_track
+
+#' @rdname animation_keyframes
+#' @export
+animate_keyframes = animation_keyframes

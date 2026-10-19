@@ -1,6 +1,8 @@
 #include "core/wavefront.h"
 #include "animation_rcpp.h"
 #include "core/wavefront_report.h"
+#include "core/animation_report.h"
+#include <chrono>
 #include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
 
@@ -290,8 +292,17 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   const double time_origin = explicit_time ? as<double>(camera_info["scene_time"]) : 0;
   NumericVector frame_times = explicit_time ? as<NumericVector>(camera_movement["scene_offset"]) : NumericVector();
   NumericVector absolute_frame_times = explicit_time ? as<NumericVector>(camera_movement["time"]) : NumericVector();
+  const bool benchmark_timing = render_info.containsElementNamed("benchmark_timing") &&
+    as<bool>(render_info["benchmark_timing"]);
   auto scene_time = explicit_time ? std::make_shared<SceneTimeContext>() : nullptr;
-  if (scene_time) scene_time->epoch = time_origin;
+  if (scene_time) {
+    scene_time->epoch = time_origin;
+    scene_time->benchmark_timing = benchmark_timing;
+    scene_time->frozen_pose_notice = [] {
+      Rcpp::message(Rcpp::CharacterVector(
+        "Internal model poses are sampled at frame time; placement and other scene motion retain motion blur."));
+    };
+  }
   NumericVector shutter_offsets = explicit_time ? as<NumericVector>(camera_info["shutter_offsets"]) : NumericVector();
   if (explicit_time && (shutter_offsets.size() != 2 || absolute_frame_times.size() != frame_times.size() ||
       frame_times.size() != as<NumericVector>(camera_movement["x"]).size()))
@@ -307,7 +318,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       std::shared_ptr<const animation::CameraTrack> track;
       if (!Rf_isNull(authored[i])) {
         DataFrame motion = as<DataFrame>(authored[i]);
-        if (motion.nrows() > 1) track = read_camera_track(motion, 1, 0);
+        if (motion.nrows() > 1) {
+          track = read_camera_track(motion, 1, 0);
+          track->ValidateExposure(shutter_offsets[0],shutter_offsets[1]);
+        }
       }
       camera_tracks.push_back(std::move(track));
     }
@@ -419,6 +433,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::vector<std::shared_ptr<roughness_texture> > roughness;
   std::vector<int> texture_idx;
 
+  const auto compile_started = benchmark_timing ? std::chrono::steady_clock::now() :
+    std::chrono::steady_clock::time_point{};
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
                                                   shutteropen, shutterclose,
                                                   textures, 
@@ -435,6 +451,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instance_importance_sampled,
                                                   texture_idx,
                                                   verbose, rng, nullptr, time_origin, scene_time);
+  if (scene_time && benchmark_timing) scene_time->compile_seconds =
+    std::chrono::duration<double>(std::chrono::steady_clock::now()-compile_started).count();
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -563,6 +581,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         scene_time->ray_anchor = Float(frame_times[i]);
         shutteropen = Float(frame_times[i] + shutter_offsets[0]);
         shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+        scene_time->UpdateGeometry(absolute_frame_times[i], Float(frame_times[i]), shutteropen, shutterclose);
       }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : &rng;
@@ -632,6 +651,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, 
                          as<std::string>(tonemap(0)), bloom,
                          transparent_background, write_current_image, plot_scene);
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
       output_frames[output_frame_index++] = frame_output;
     }
   } else {
@@ -651,6 +672,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         scene_time->ray_anchor = Float(frame_times[i]);
         shutteropen = Float(frame_times[i] + shutter_offsets[0]);
         shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+        scene_time->UpdateGeometry(absolute_frame_times[i], Float(frame_times[i]), shutteropen, shutterclose);
       }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : nullptr;
@@ -884,6 +906,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                        transparent_background, write_current_image, plot_scene);
       if (wavefront_report.requested)
         frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
       output_frames[output_frame_index++] = frame_output;
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
@@ -901,6 +925,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                        transparent_background, write_current_image, plot_scene);
       if (wavefront_report.requested)
         frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
       output_frames[output_frame_index++] = frame_output;
 #endif
     }

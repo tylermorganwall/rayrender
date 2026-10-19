@@ -16,6 +16,50 @@
 
 ## New features
 
+- `animation_model_instance()` Freezes complete internal poses at frame time
+  during nonzero exposures, while outer placement and other scene objects retain
+  motion blur. Rendering reports this once as a message instead of rejecting
+  skinned or morph-animated models. Offset point exposures remain exact.
+- Overall: New animation authoring, import, and inspection functions use the
+  `animation_` prefix. The five unprefixed `model_*()` development aliases are
+  removed; use the corresponding `animation_model_*()` functions.
+
+- `read_gltf()` Adds `recalculate_normals = TRUE` to derive smooth normals from
+  each deformed pose, preventing skin-weight gradients from leaving shading
+  normals inconsistent with the surface. Authored normals remain the default.
+
+- Blender example generators now create a feathered bird flap, a pulsing
+  jellyfish, and a walking cycle from a supplied Rigify character, with editable
+  scenes, GLB exports, preview movies, and export/loop validation. Walk checks
+  cover forward knee alignment, foot spacing, extended heel-first steps,
+  upright posture, reduced vertical bob, stance contact, and a smooth pelvic
+  crease. `inst/animation/blender-models.R`
+  renders all three GLBs natively in rayrender, with two independently phased
+  instances following separate multi-key placement paths.
+
+- `read_gltf()` Imports local glTF/GLB triangle models and rigid node clips into
+  shared model assets, including sparse/interleaved accessors, independent
+  property schedules, and authored cubic quaternion tracks. The parser headers
+  are supplied by the separate `gltfheader` package through `LinkingTo`.
+  Native morph and skeletal animation support all supplied joint-weight sets,
+  inverse binds, rest weights, and STEP/linear/cubic morph channels. Morphs
+  precede skinning; normals and tangents follow the blended deformation.
+  Exact-time snapshots update CPU bounds and Metal geometry, including during
+  preview seeks. Mesh light sampling uses the current triangle areas and
+  matching probability densities. Deforming models require explicit scene times. Nonzero exposures freeze
+  internal poses while retaining outer placement motion blur.
+
+- `animation_model_asset()` Shares rigid model geometry and named clips across independently
+  clocked `animation_model_instance()` placements. `animation_model_node()` and
+  `animation_model_clip()` author
+  parent/child parts with local pivots and independent property schedules;
+  `animation_model_pose()` evaluates exact local, global, and world matrices without a
+  renderer. `list_animations()` exposes stable clip IDs and target metadata.
+  `clip_player(root_motion = "in_place")` removes explicitly selected translation
+  axes and optional yaw while preserving vertical bob and child articulation.
+  Saved scenes retain shared native geometry after reload, and copied instances
+  keep independent playback settings through nested scene composition.
+
 - `render_scene(timeline = ...)` Adds a preview slider, reverse playback, frame
   stepping, speed controls, and progressive convergence when paused. Authored
   camera rows and saved camera playback use scene time, including shutter
@@ -25,6 +69,8 @@
   Projection changes cut at the authored key, including within an exposure.
   Physical-camera tracks support exact rigid exposure and preview playback with
   constant aperture and focus, preserving initialized lens optics while seeking.
+  Zero-width physical-camera playback also supports changing aperture and focus;
+  complete lens preparation preserves the same optics after reverse seeks.
   Frozen explicit-time lens-camera snapshots retain unit exposure weighting
   instead of becoming black; legacy lens exposure weighting is unchanged.
 - `clip_player()` Maps scene time to independent hold, repeat, or pingpong
@@ -40,6 +86,8 @@
   times while retaining compiled geometry. Camera tracks use explicit time
   columns or timestamps derived from `fps`. Wavefront motion packs independent
   property tracks and rejects key schedules that lose device time precision.
+  Exact snapshots preserve the authored side of imported repeat seams when
+  the clip period is not exactly representable on the device.
 - `projection_light()` Projects an image onto surfaces and through participating
   media on CPU and Metal, with image orientation, field of view, and intensity
   controls. `read_pbrt()` imports projection lights.
@@ -246,6 +294,13 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- Overall: Animated skin and morph poses update resident Metal geometry and
+  refit existing acceleration structures, preserving BVH topology and static
+  scene buffers across frames and timeline seeks.
+
+- Overall: Adaptive sampling now preserves correctly averaged denoising guides,
+  fixing residual noise and inconsistent smoothing in Metal renders and previews.
 
 - `render_scene()` Saved physical-camera keyframes retain their lens projection,
   aperture, and viewing direction. Timeline picking uses the displayed lens
@@ -715,6 +770,9 @@
   minimum. Transparent renders retain their coverage estimator and minimum.
 
 ## Documentation
+
+- Overall: Adds a rendered model-animation vignette covering nodes, clips, shared
+  assets, independently placed instances, and exact-time pose inspection.
 
 - Overall: Adds a distinct rendered example directly to each new function's
   roxygen documentation, including texture composition, OpenPBR, diffusion,

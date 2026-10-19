@@ -3,14 +3,22 @@
 #include <testthat.h>
 
 context("Scene camera tracks") {
-  test_that("physical tracks validate constant optics before rendering") {
+  test_that("physical tracks allow variable snapshot optics but reject varying exposure") {
     animation::CameraKey a{2,{0,0,-10, 0,0,0, 10,-1,10, 4,4, 0,1,0}};
     auto b=a; b.time=9; b.values[0]=3;
     animation::CameraTrack track({a,b});
     expect_true(track.At(5.5).values[0] == 1.5);
     auto invalid=b; invalid.values[6]=5;
-    expect_error(animation::CameraTrack({a,invalid}));
+    animation::CameraTrack aperture({a,invalid});
+    expect_true(aperture.At(5.5).values[6]==7.5);
+    expect_error(aperture.ValidateExposure(0,1));
+    aperture.ValidateExposure(.1,.1);
     invalid=b; invalid.values[8]=5;
+    animation::CameraTrack focus({a,invalid});
+    expect_true(focus.At(5.5).values[8]==7.5);
+    expect_error(focus.ValidateExposure(-.1,.2));
+    focus.ValidateExposure(0,0);
+    invalid.values[8]=0;
     expect_error(animation::CameraTrack({a,invalid}));
     invalid=b; invalid.values[7]=60;
     expect_error(animation::CameraTrack({a,invalid}));

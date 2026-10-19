@@ -11,8 +11,14 @@
 #' @param speed Default `1`. Local seconds per scene second; negative and zero
 #'   values select reverse and frozen playback.
 #' @param loop Default `"hold"`. One of hold, repeat, or pingpong.
-#' @param root_motion Default `"preserve"`. Root-motion policy. Only preserve
-#'   is currently supported; removal requires an explicit locomotion root.
+#' @param root_motion Default `"preserve"`. Preserve motion or select in_place
+#'   to remove explicitly designated locomotion. Extract is not implemented.
+#' @param locomotion_root Default `NULL`. Explicit top-level model node ID for
+#'   in_place. Names are not searched and a bare transform has no locomotion root.
+#' @param translation_axes Default `c("x", "z")`. Asset-space translation axes
+#'   held at the clip's first pose by in_place. Y bob is retained by default.
+#' @param remove_yaw Default `FALSE`. Whether in_place also removes changing twist
+#'   about asset +Y, relative to the clip's first pose, while retaining swing.
 #' @return A serializable ray_clip_player configuration.
 #' @export
 #' @details
@@ -21,23 +27,31 @@
 #' to [a,b), and pingpong reflects at both ends. Exact repeat boundaries select
 #' a; pingpong and hold can select b. A zero-duration clip stays at a. Start time
 #' is an anchor, not a visibility gate, so negative scene times are defined.
-#' For animate_keyframes(), the interval spans all channel keys. The player maps
+#' For animation_keyframes(), the interval spans all channel keys. The player maps
 #' each ray's time, including exposures crossing a loop boundary. Authored
 #' endpoints are retained, so repeating different endpoints creates a jump.
 #' animation_loop_seam() checks endpoint pose agreement without changing keys.
+#' For in_place, the locomotion root must be a top-level node. Translation is
+#' replaced only on selected axes. Yaw removal left-multiplies the local rotation
+#' by reference_twist * inverse(current_twist), where twist is the normalized
+#' quaternion (0,y,0,w). Singular or uncertifiably near-singular twist trajectories
+#' are rejected before rendering. Scale, pivot, and child articulation remain.
 #' @examples
 #' # Reverse from the end of a two-second clip, then reflect at each end.
-#' path = transform_track(c(0, 1, 2),
+#' path = animation_transform_track(c(0, 1, 2),
 #'   position = rbind(c(-1, 0, 0), c(0, 1, 0), c(1, 0, 0)))
-#' player = clip_player(offset = 2, speed = -1, loop = "pingpong")
-#' scene = animate_keyframes(sphere(), path, player = player)
-clip_player = function(
+#' player = animation_clip_player(offset = 2, speed = -1, loop = "pingpong")
+#' scene = animation_keyframes(sphere(), path, player = player)
+animation_clip_player = function(
   clip = NULL,
   start_time = 0,
   offset = 0,
   speed = 1,
   loop = "hold",
-  root_motion = "preserve"
+  root_motion = "preserve",
+  locomotion_root = NULL,
+  translation_axes = c("x", "z"),
+  remove_yaw = FALSE
 ) {
   loop = match.arg(loop, c("hold", "repeat", "pingpong"))
   for (value in list(start_time, offset, speed)) {
@@ -54,11 +68,41 @@ clip_player = function(
   ) {
     stop("clip must be NULL or one nonempty name or identifier.", call. = FALSE)
   }
-  if (!identical(root_motion, "preserve")) {
+  if (
+    !is.character(root_motion) ||
+      length(root_motion) != 1L ||
+      is.na(root_motion) ||
+      !root_motion %in% c("preserve", "in_place")
+  ) {
     stop(
-      "Only preserve root motion is currently supported; removal requires an explicit locomotion root.",
+      "Unsupported root-motion policy; extract is not implemented.",
       call. = FALSE
     )
+  }
+  if (!is.null(locomotion_root)) {
+    validate_model_label(locomotion_root, "locomotion_root")
+  }
+  if (root_motion == "in_place" && is.null(locomotion_root)) {
+    stop(
+      "In-place playback requires an explicit locomotion root ID.",
+      call. = FALSE
+    )
+  }
+  if (
+    !is.character(translation_axes) ||
+      anyNA(translation_axes) ||
+      any(!translation_axes %in% c("x", "y", "z")) ||
+      anyDuplicated(translation_axes)
+  ) {
+    stop(
+      "translation_axes must contain distinct x, y, or z axes.",
+      call. = FALSE
+    )
+  }
+  if (
+    !is.logical(remove_yaw) || length(remove_yaw) != 1L || is.na(remove_yaw)
+  ) {
+    stop("remove_yaw must be TRUE or FALSE.", call. = FALSE)
   }
   structure(
     list(
@@ -68,7 +112,10 @@ clip_player = function(
       offset = offset,
       speed = speed,
       loop = loop,
-      root_motion = root_motion
+      root_motion = root_motion,
+      locomotion_root = locomotion_root,
+      translation_axes = translation_axes,
+      remove_yaw = remove_yaw
     ),
     class = "ray_clip_player"
   )
@@ -78,7 +125,7 @@ clip_player = function(
 #'
 #' Compare a transform's first and last local poses before configuring repetition.
 #'
-#' @param track A transform_track() to inspect.
+#' @param track An animation_transform_track() to inspect.
 #' @param tolerance Default `1e-6`. Maximum absolute difference between matrix
 #'   entries considered continuous; translation entries use scene distance units.
 #' @return A list with the local interval, maximum matrix-entry gap, and a
@@ -86,12 +133,12 @@ clip_player = function(
 #' @export
 #' @examples
 #' # This path returns to its initial position.
-#' path = transform_track(c(0, 1, 2),
+#' path = animation_transform_track(c(0, 1, 2),
 #'   position = rbind(c(0, 0, 0), c(1, 1, 0), c(0, 0, 0)))
 #' animation_loop_seam(path)
 animation_loop_seam = function(track, tolerance = 1e-6) {
   if (!inherits(track, "ray_transform_track")) {
-    stop("track must be a transform_track().", call. = FALSE)
+    stop("track must be an animation_transform_track().", call. = FALSE)
   }
   if (
     !is.numeric(tolerance) ||
@@ -114,3 +161,7 @@ animation_loop_seam = function(track, tolerance = 1e-6) {
     pose_continuous = gap <= tolerance
   )
 }
+
+#' @rdname animation_clip_player
+#' @export
+clip_player = animation_clip_player

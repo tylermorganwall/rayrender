@@ -8,15 +8,126 @@ test_that("lens selection is retained in authored physical-camera tracks", {
     camera_at_scene_times(physical, 0, 30, c(0, .1)),
     "Physical-camera"
   )
-  expect_error(
-    render_scene(
-      add_camera(sphere(), physical),
-      time = 0,
-      timeline = c(0, 1),
-      preview = FALSE
-    ),
-    "Physical-camera timeline"
+  expect_no_error(camera_at_scene_times(physical, 0, 30, c(.01, .01)))
+})
+
+test_that("zero-width optics use exposure time without changing the scene clock", {
+  motion = generate_camera_motion(
+    rbind(c(0, 0, 6), c(1, 0, 6)),
+    frames = 2,
+    apertures = c(4, 10),
+    focal_distances = c(6, 12)
   )
+  motion$time = c(2, 4)
+  authored = camera(motion = motion, camera_description_file = "50mm")
+  sampled = camera_at_scene_times(authored, c(3, 2, 3), 30, c(.5, .5))
+  expect_equal(sampled$motion$aperture, c(8.5, 5.5, 8.5))
+  expect_equal(sampled$motion$focal, c(10.5, 7.5, 10.5))
+  expect_equal(sampled$motion$time, c(3, 2, 3))
+  expect_equal(sampled$motion$scene_offset, c(1, 0, 1))
+  expect_equal(sampled$scene_time, 2)
+  expect_identical(sampled$authored_motion$aperture, motion$aperture)
+  expect_error(
+    camera_at_scene_times(authored, 3, 30, c(0, .1)),
+    "constant aperture"
+  )
+})
+
+test_that("variable physical snapshots match timeline, still and offline paths", {
+  withr::local_options(list(cores = 2L))
+  motion = generate_camera_motion(
+    rbind(c(0, 0, 6), c(0, 0, 6)),
+    lookats = rbind(c(0, 0, 0), c(0, 0, 0)),
+    frames = 2,
+    apertures = c(4, 10),
+    focal_distances = c(6, 12)
+  )
+  motion$time = c(2, 9)
+  settings = list(
+    scene = add_camera(
+      sphere(radius = .6, material = light(color = "#356F95", intensity = 1)),
+      camera(motion = motion, camera_description_file = "50mm", iso = 100)
+    ),
+    width = 32,
+    height = 24,
+    samples = 64,
+    preview = FALSE,
+    plot_scene = FALSE,
+    progress = FALSE,
+    denoise = FALSE,
+    bloom = FALSE,
+    ambient_light = FALSE,
+    backgroundhigh = "black",
+    backgroundlow = "black",
+    integrator_type = "nee"
+  )
+  set.seed(119)
+  still = do.call(render_scene, c(settings, list(time = 5.5)))
+  set.seed(119)
+  timeline = do.call(
+    render_scene,
+    c(settings, list(time = 5.5, timeline = c(2, 9)))
+  )
+  expect_gt(mean(still[,, 1:3]), .001)
+  expect_equal(as.numeric(timeline), as.numeric(still), tolerance = 1e-7)
+  set.seed(119)
+  shifted = do.call(
+    render_scene,
+    c(settings, list(time = 5, timeline = c(2, 9), shutter_offsets = c(.5, .5)))
+  )
+  expect_equal(as.numeric(shifted), as.numeric(still), tolerance = 1e-7)
+  times = c(5.5, 9, 2, 5.5)
+  set.seed(119)
+  frames = do.call(render_animation, c(settings, list(times = times)))
+  expect_identical(as.numeric(frames[[1]]), as.numeric(frames[[4]]))
+  expect_lt(mean(abs(frames[[1]][,, 1:3] - still[,, 1:3])), .005)
+  expect_gt(mean(abs(frames[[2]][,, 1:3] - frames[[3]][,, 1:3])), .001)
+  set.seed(119)
+  shifted_frames = do.call(
+    render_animation,
+    c(settings, list(times = times - .5, shutter_offsets = c(.5, .5)))
+  )
+  for (i in seq_along(times)) {
+    expect_equal(
+      as.numeric(shifted_frames[[i]]),
+      as.numeric(frames[[i]]),
+      tolerance = 1e-7
+    )
+  }
+  expect_error(
+    do.call(
+      render_scene,
+      c(
+        settings,
+        list(time = 5.5, timeline = c(2, 9), shutter_offsets = c(-.1, .1))
+      )
+    ),
+    "constant aperture and focus"
+  )
+  settings$integrator_type = "metal"
+  set.seed(119)
+  device = suppressWarnings(do.call(
+    render_scene,
+    c(settings, list(time = 5.5, timeline = c(2, 9)))
+  ))
+  if (!isTRUE(attr(device, "wavefront")$used)) {
+    skip("Metal runtime unavailable")
+  }
+  expect_lt(mean(abs(device[,, 1:3] - still[,, 1:3])), .005)
+  set.seed(119)
+  device_frames = do.call(render_animation, c(settings, list(times = times)))
+  expect_true(all(vapply(
+    device_frames,
+    function(x) isTRUE(attr(x, "wavefront")$used),
+    logical(1)
+  )))
+  expect_identical(
+    as.numeric(device_frames[[1]]),
+    as.numeric(device_frames[[4]])
+  )
+  for (i in seq_along(times)) {
+    expect_lt(mean(abs(device_frames[[i]][,, 1:3] - frames[[i]][,, 1:3])), .005)
+  }
 })
 
 test_that("fixed physical optics allow authored exposures and preserve random seeks", {

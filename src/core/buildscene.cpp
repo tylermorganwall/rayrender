@@ -1,5 +1,6 @@
 #include "../core/buildscene.h"
 #include "../animation_rcpp.h"
+#include "../model_animation_rcpp.h"
 #include "../core/bvh.h"
 #include "../hitables/box.h"
 #include "../hitables/csg.h"
@@ -36,7 +37,19 @@ struct InstanceBuildCache {
     std::shared_ptr<hitable> geometry;
     std::shared_ptr<hitable_list> lights;
   };
-  std::unordered_map<SEXP, Prototype> prototypes;
+  // A copied hierarchy may retain its R list identity while its outer player
+  // changes. Such wrappers belong to the compiled instance, not just the list.
+  std::unordered_map<const animation::ModelInstance*, std::unordered_map<SEXP, Prototype>> prototypes;
+  std::unordered_map<SEXP, std::shared_ptr<const animation::ModelAsset>> model_assets;
+  std::unordered_map<SEXP, std::shared_ptr<const animation::ModelInstance>> model_instances;
+};
+
+// Stack-scoped during scene construction only. Render workers retain native
+// tracks, never this R reference. The outer binding is the sole clock owner.
+struct ModelBuildScope {
+  std::string id;
+  SEXP authored = R_NilValue;
+  std::shared_ptr<const animation::ModelInstance> model;
 };
 
 namespace {
@@ -449,7 +462,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
             std::vector<std::shared_ptr<hitable>> &instanced_objects,
             std::vector<std::shared_ptr<hitable_list>> &instance_importance_sampled, std::vector<int> &texture_idx,
             bool verbose, random_gen &rng, InstanceBuildCache *instance_cache, double time_origin,
-            std::shared_ptr<SceneTimeContext> scene_time) {
+            std::shared_ptr<SceneTimeContext> scene_time, const ModelBuildScope *model_scope) {
   InstanceBuildCache local_instance_cache;
   if (!instance_cache)
     instance_cache = &local_instance_cache;
@@ -618,7 +631,33 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       keyframes = found->second;
       is_animated = true;
     }
-    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time, keyframes, time_origin, scene_time);
+    ModelBuildScope owned_model;
+    const ModelBuildScope *row_model = model_scope;
+    if (SingleAnimation.containsElementNamed("model_instance") && !Rf_isNull(SingleAnimation["model_instance"])) {
+      List binding = SingleAnimation["model_instance"];
+      SEXP authored = binding["asset"], instance_key = binding;
+      auto asset = instance_cache->model_assets.find(authored);
+      if (asset == instance_cache->model_assets.end())
+        asset = instance_cache->model_assets.emplace(authored, read_model_asset(authored)).first;
+      auto model = instance_cache->model_instances.find(instance_key);
+      if (model == instance_cache->model_instances.end())
+        model = instance_cache->model_instances.emplace(instance_key,
+          read_model_instance(as<List>(binding["player"]), asset->second)).first;
+      owned_model = {as<std::string>(binding["id"]), authored, model->second};
+      row_model = &owned_model;
+    }
+    bool frame_pose = false;
+    if (SingleAnimation.containsElementNamed("model_node") && !Rf_isNull(SingleAnimation["model_node"])) {
+      if (is_animated) Rcpp::stop("A model node cannot also have an outer animation attachment.");
+      List node = SingleAnimation["model_node"], binding = node["instance"];
+      if (!row_model || as<std::string>(binding["id"]) != row_model->id)
+        Rcpp::stop("A model node must belong to its enclosing model instance.");
+      keyframes = row_model->model->nodes[row_model->model->asset->NodeIndex(as<std::string>(node["id"]))];
+      frame_pose = bool(scene_time);
+      if (scene_time) scene_time->has_model_poses = true;
+      is_animated = true;
+    }
+    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time, keyframes, time_origin, scene_time, frame_pose);
 
     List shape_properties = as<List>(SingleShape["shape_properties"]);
     bool is_flipped = as<bool>(SingleShape["flipped"]);
@@ -898,6 +937,31 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       entry = std::make_shared<mesh3d>(mesh_entry, shape_material, displacement_texture, displacement_intensity,
                                        is_vector_displacement, texCache, recalculate_normals, verbose, shutteropen,
                                        shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped);
+      if (SingleAnimation.containsElementNamed("model_deformation") && !Rf_isNull(SingleAnimation["model_deformation"])) {
+        if (!row_model || !scene_time)
+          Rcpp::stop("Deforming model instances require explicit time or times.");
+        if (!displacement_texture.empty() || as<int>(mesh_entry["subdivision_levels"]) != 1)
+          Rcpp::stop("Deforming meshes do not support subdivision or displacement.");
+        List binding = SingleAnimation["model_deformation"];
+        size_t node = row_model->model->asset->NodeIndex(as<std::string>(binding["node"]));
+        int primitive = as<int>(binding["primitive"]);
+        if (primitive < 1) Rcpp::stop("Invalid deformation primitive index.");
+        if (recalculate_normals != row_model->model->asset->nodes.at(node).meshes.at(size_t(primitive-1))->recalculate_normals)
+          Rcpp::stop("Set replacement normals through read_gltf(recalculate_normals = TRUE).");
+        auto dynamic_mesh = std::static_pointer_cast<mesh3d>(entry);
+        dynamic_mesh->BindDeformation(row_model->model,node,size_t(primitive-1));
+        auto initial = dynamic_mesh->PrepareDeformation(scene_time->epoch);
+        if (initial) initial();
+        dynamic_mesh->mesh_bvh->Refit(shutteropen,shutterclose);
+        std::weak_ptr<mesh3d> weak = dynamic_mesh;
+        scene_time->deformation_updates.push_back([weak](double time) -> std::function<void()> {
+          auto mesh = weak.lock();
+          return mesh ? mesh->PrepareDeformation(time) : std::function<void()>{};
+        });
+        scene_time->deformation_bounds.push_back([weak](Float open, Float close) {
+          if (auto mesh = weak.lock()) mesh->mesh_bvh->Refit(open,close);
+        });
+      }
       entry = finish_entry(entry);
       list.add(entry);
       break;
@@ -927,6 +991,27 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
     }
     case INSTANCE: {
       List original_scene = as<List>(shape_properties["original_scene"])(0);
+      const ModelBuildScope *child_model = row_model;
+      if (SingleAnimation.containsElementNamed("model_geometry") && !Rf_isNull(SingleAnimation["model_geometry"])) {
+        if (!row_model) Rcpp::stop("Model geometry requires an enclosing model instance.");
+        Environment asset(row_model->authored);
+        std::string geometry_node = as<std::string>(SingleAnimation["model_geometry"]);
+        if (asset.exists("geometry_nodes")) {
+          CharacterVector geometry_nodes = asset["geometry_nodes"];
+          geometry_node = as<std::string>(geometry_nodes[geometry_node]);
+        }
+        size_t node = row_model->model->asset->NodeIndex(geometry_node);
+        List prototypes = asset["prototypes"], prototype = prototypes[node];
+        List shapes = prototype["shape_info"], shape = shapes[0], properties = shape["shape_properties"];
+        List canonical = as<List>(properties["original_scene"])(0);
+        // Serialization can duplicate lists without changing their values.
+        // Explicit per-instance edits (for example set_scene_material()) must
+        // retain their private source instead of silently restoring the asset.
+        if (R_compute_identical(original_scene, canonical, 0)) original_scene = canonical;
+        // Canonical immutable geometry has no instance clock. Reset the scope
+        // so every placement, including reloaded scenes, shares this prototype.
+        child_model = row_model->model->asset->nodes[node].meshes.empty() ? nullptr : row_model;
+      }
       NumericVector x_values = as<NumericVector>(shape_properties["x_values"]);
       NumericVector y_values = as<NumericVector>(shape_properties["y_values"]);
       NumericVector z_values = as<NumericVector>(shape_properties["z_values"]);
@@ -938,10 +1023,11 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
       IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
       const SEXP prototype_key = original_scene;
-      auto cached = instance_cache->prototypes.find(prototype_key);
+      auto &prototypes = instance_cache->prototypes[child_model ? child_model->model.get() : nullptr];
+      auto cached = prototypes.find(prototype_key);
       std::shared_ptr<hitable_list> instance_importance_sample_list;
       std::shared_ptr<hitable> instance_scene;
-      if (cached == instance_cache->prototypes.end()) {
+      if (cached == prototypes.end()) {
         instance_importance_sample_list = std::make_shared<hitable_list>();
         if (volume_scene) {
           instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
@@ -951,8 +1037,8 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
           original_scene, shape_vec, shutteropen, shutterclose, textures, alpha_textures, bump_textures,
           roughness_textures, shared_materials, alpha, bump, roughness, bvh_type, transformCache, texCache,
           (*instance_importance_sample_list), instanced_objects, instance_importance_sampled, texture_idx, false, rng,
-          instance_cache, time_origin, scene_time);
-        instance_cache->prototypes.emplace(prototype_key,
+          instance_cache, time_origin, scene_time, child_model);
+        prototypes.emplace(prototype_key,
             InstanceBuildCache::Prototype{instance_scene, instance_importance_sample_list});
         instanced_objects.push_back(instance_scene);
         // Instances hold raw light-list pointers, even for empty light lists.
@@ -1031,6 +1117,12 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
   }
   std::shared_ptr<BVHAggregate> world_bvh =
       std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true, Iden, Iden, false, bvh_type);
+  if (scene_time) {
+    std::weak_ptr<BVHAggregate> weak = world_bvh;
+    scene_time->deformation_bounds.push_back([weak](Float open, Float close) {
+      if (auto bvh = weak.lock()) bvh->Refit(open,close);
+    });
+  }
 
 #ifdef FULL_DEBUG
   world_bvh->validate_bvh();

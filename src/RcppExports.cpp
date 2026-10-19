@@ -152,6 +152,55 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// read_gltf_native
+Rcpp::List read_gltf_native(std::string filename);
+RcppExport SEXP _rayrender_read_gltf_native(SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(read_gltf_native(filename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// model_pose_native
+Rcpp::List model_pose_native(SEXP asset, Rcpp::List player, Rcpp::List placement, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_model_pose_native(SEXP assetSEXP, SEXP playerSEXP, SEXP placementSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type asset(assetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type player(playerSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type placement(placementSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(model_pose_native(asset, player, placement, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_model_surface
+Rcpp::List animation_model_surface(SEXP asset, Rcpp::List player, double time);
+RcppExport SEXP _rayrender_animation_model_surface(SEXP assetSEXP, SEXP playerSEXP, SEXP timeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type asset(assetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type player(playerSEXP);
+    Rcpp::traits::input_parameter< double >::type time(timeSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_model_surface(asset, player, time));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_model_clips
+Rcpp::DataFrame animation_model_clips(SEXP input);
+RcppExport SEXP _rayrender_animation_model_clips(SEXP inputSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type input(inputSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_model_clips(input));
+    return rcpp_result_gen;
+END_RCPP
+}
 // pbrt_lex_cpp
 Rcpp::List pbrt_lex_cpp(std::string filename, std::string source);
 RcppExport SEXP _rayrender_pbrt_lex_cpp(SEXP filenameSEXP, SEXP sourceSEXP) {
@@ -218,6 +267,10 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_cppdef_HAS_SSE2", (DL_FUNC) &_rayrender_cppdef_HAS_SSE2, 0},
     {"_rayrender_cppdef_HAS_SSE3", (DL_FUNC) &_rayrender_cppdef_HAS_SSE3, 0},
     {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
+    {"_rayrender_read_gltf_native", (DL_FUNC) &_rayrender_read_gltf_native, 1},
+    {"_rayrender_model_pose_native", (DL_FUNC) &_rayrender_model_pose_native, 4},
+    {"_rayrender_animation_model_surface", (DL_FUNC) &_rayrender_animation_model_surface, 3},
+    {"_rayrender_animation_model_clips", (DL_FUNC) &_rayrender_animation_model_clips, 1},
     {"_rayrender_pbrt_lex_cpp", (DL_FUNC) &_rayrender_pbrt_lex_cpp, 2},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
