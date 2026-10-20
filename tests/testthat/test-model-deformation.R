@@ -213,6 +213,7 @@ test_that("CPU and Metal snapshots update mesh geometry and preserve independent
           scene = scene,
           time = 0,
           shutter_offsets = c(0, .1),
+          animation_motion_blur = 'placement',
           integrator_type = 'nee'
         ),
         settings
@@ -506,6 +507,7 @@ test_that("frozen internal poses retain placement and unrelated object blur", {
     NULL
   ))
   settings = list(
+    animation_motion_blur = "placement",
     width = 48,
     height = 40,
     samples = 32,
@@ -616,6 +618,7 @@ test_that("frozen internal poses retain placement and unrelated object blur", {
 
 test_that("skin-only, morph-only, and rigid models freeze their full internal hierarchy", {
   settings = list(
+    animation_motion_blur = "placement",
     width = 32,
     height = 32,
     samples = 16,

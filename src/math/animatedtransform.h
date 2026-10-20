@@ -20,6 +20,12 @@ struct SceneTimeContext {
   bool has_model_poses = false, pose_notice_sent = false;
   // Optional owner-thread notification; never invoked by tracing workers.
   std::function<void()> frozen_pose_notice;
+  // Full-pose exposure is coordinated on the owner thread, between samples.
+  bool full_pose_blur = false;
+  Float shutter_unit = -1;
+  size_t shutter_samples = 0;
+  double shutter_pose_seconds = 0, shutter_refit_seconds = 0;
+  std::vector<double> shutter_times;
   uint64_t geometry_revision = 0;
   // Opt-in owner-thread diagnostics; no clocks are read on the ray path.
   bool benchmark_timing = false;

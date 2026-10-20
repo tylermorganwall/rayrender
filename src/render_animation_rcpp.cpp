@@ -298,6 +298,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   if (scene_time) {
     scene_time->epoch = time_origin;
     scene_time->benchmark_timing = benchmark_timing;
+    scene_time->full_pose_blur = render_info.containsElementNamed("animation_motion_blur") &&
+      as<std::string>(render_info["animation_motion_blur"]) == "full";
     scene_time->frozen_pose_notice = [] {
       Rcpp::message(Rcpp::CharacterVector(
         "Internal model poses are sampled at frame time; placement and other scene motion retain motion blur."));
@@ -575,6 +577,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   };
 
   if(debug_channel != 0) {
+    if (scene_time && scene_time->full_pose_blur && scene_time->has_model_poses &&
+        shutteropen != shutterclose)
+      Rcpp::message(Rcpp::CharacterVector(
+        "Debug channels retain frame-frozen model poses; full-pose shutter integration is available for color renders."));
     for(int i = start_frame; i < n_frames; i++ ) {
       if (explicit_time) {
         scene_time->epoch = absolute_frame_times[i];
@@ -865,11 +871,11 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         oidn_aux_options.sample_method = sample_method;
         oidn_aux_options.stratified_x = stratified_x;
         oidn_aux_options.stratified_y = stratified_y;
-        if (has_media || wavefront_report.used) {
+        if (has_media || wavefront_report.used || (scene_time && scene_time->shutter_samples > 0)) {
           std::copy(normalOutput.begin(), normalOutput.end(), oidn_normal_output.begin());
           std::copy(albedoOutput.begin(), albedoOutput.end(), oidn_albedo_output.begin());
         }
-        if(!has_media && !wavefront_report.used) render_oidn_aux_features(numbercores,
+        if(!has_media && !wavefront_report.used && !(scene_time && scene_time->shutter_samples > 0)) render_oidn_aux_features(numbercores,
                                  nx,
                                  ny,
                                  frame_cam,

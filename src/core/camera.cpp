@@ -195,13 +195,13 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   if (scene_camera_track) {
-    Float ray_time = time0 + (time1-time0)*sample_motion_time(u1);
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u1));
     double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
     return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, aspect, iso, camera_flip_x);
   }
   s = film_x(s);
   Float motion_time = sample_motion_time(u1);
-  const Float ray_time = time0 + (time1 - time0) * motion_time;
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -416,13 +416,13 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
   if (scene_camera_track) {
-    Float ray_time = time0 + (time1-time0)*sample_motion_time(u);
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u));
     double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
     return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
   }
   s = film_x(s);
   Float motion_time = sample_motion_time(u);
-  const Float ray_time = time0 + (time1 - time0) * motion_time;
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -610,13 +610,13 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
   if (scene_camera_track) {
-    Float ray_time = time0 + (time1-time0)*sample_motion_time(u1);
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u1));
     double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
     return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
   }
   s = film_x(s);
   Float motion_time = sample_motion_time(u1);
-  const Float ray_time = time0 + (time1 - time0) * motion_time;
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   point3f ray_origin = origin;
   onb ray_uvw = uvw;
   if(camera_motion_blur && camera_motion_blur_has_range) {
@@ -1267,7 +1267,7 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 
 Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
   Float motion_time = sample_motion_time(sample.time);
-  const Float ray_time = shutterOpen + (shutterClose - shutterOpen) * motion_time;
+  const Float ray_time = sample_ray_time(shutterOpen, shutterClose, motion_time);
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
   point2f pFilm2 = GetPhysicalExtent().Lerp(point2f(film_x(sample.pFilm.xy.x), sample.pFilm.xy.y));
   point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
@@ -1774,9 +1774,18 @@ context("Camera ray differentials") {
 // Export current camera state at a sample boundary, including interactive focus
 // changes. Lens coefficients and pupil bounds stay in a small separate buffer;
 // static cameras retain the original compact primary-ray calculation on device.
+std::pair<Float, Float> RayCamera::ShutterInterval() const {
+  if (auto c = dynamic_cast<const camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const ortho_camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const environment_camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const RealisticCamera *>(this)) return c->GetShutterInterval();
+  return {0, 0};
+}
+
 void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVector> &data) {
   auto pack = [](const auto &v) { return WFVector{float(v[0]), float(v[1]), float(v[2]), 0}; };
   out.flip_x = source.get_camera_flip_x();
+  out.shutter_unit = source.scene_camera_time ? source.scene_camera_time->shutter_unit : -1;
   out.shutter.z = std::isinf(source.get_shutter_speed()) ? 0 : 1 / source.get_shutter_speed();
   auto motion = [&](const auto &cam) {
     out.moving = cam.camera_motion_blur && cam.camera_motion_blur_has_range;
@@ -1855,6 +1864,8 @@ void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVecto
   } else
     throw std::runtime_error("Unsupported Metal camera class");
   out.track_count = out.track_offset = 0;
+  if (source.scene_camera_time && source.scene_camera_time->shutter_unit >= 0)
+    out.shutter.x = out.shutter.y = source.scene_camera_time->ray_anchor;
   if (source.scene_camera_track) {
     source.scene_camera_track->ValidateExposure(out.shutter.x,out.shutter.y);
     // Five aligned vectors per camera row. Key times are relative to the exact

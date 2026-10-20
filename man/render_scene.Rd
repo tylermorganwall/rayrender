@@ -64,7 +64,8 @@ render_scene(
   time = NULL,
   timeline = NULL,
   fps = 30,
-  shutter_offsets = NULL
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement")
 )
 }
 \arguments{
@@ -310,13 +311,14 @@ point/spot, and image/disk infinite lights are supported. Camera movement, envir
 progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
 orthographic, panoramic, and physical lens cameras are supported, including camera motion
 blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
-Animated geometry and cameras use independent shutter samples for each pixel. Every
+Animated geometry and cameras use independent per-pixel shutter samples, except
+full-pose model exposures which share a shutter time per image sample. Every
 path retains its time through shading, shadows, emitter sampling, and volume transport.
 Metal evaluates the native translation, quaternion rotation, and scale/shear interpolation,
 including nested transforms, against immutable reference geometry. Each intersected
 animation group requires a reference-frame traversal, so many independently moving
-objects can increase traversal cost. This supports animated transforms, not deforming
-vertex keyframes. `shutter_speed = Inf` freezes
+objects can increase traversal cost. Full-pose exposures also update skinned and
+morphed geometry between samples. `shutter_speed = Inf` freezes
 time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
 approximation; see its documentation for filtering differences and memory limits.
 Unsupported geometry, materials, media, or stratified sampling produce a warning and use CPU
@@ -381,8 +383,8 @@ camera keyframes at fps, starting at the timeline's first second.}
 \item{fps}{Default `30`. Positive display/output frame rate.}
 
 \item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
-Nonzero intervals blur outer model placement while freezing internal poses
-at frame time. Zero-width intervals sample time plus the given offset.
+Nonzero intervals integrate motion using `animation_motion_blur`.
+Zero-width intervals sample time plus the given offset.
 With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
 stored as frame-relative floats; absolute scene time remains double precision.
 Moving perspective, orthographic, and panoramic cameras sample all authored
@@ -395,6 +397,17 @@ Explicit time rejects explicitly supplied legacy shutter controls.
 In explicit-time mode, physical lens cameras use unit exposure weighting;
 offsets select poses and ISO controls brightness. Legacy exposure weighting
 is unchanged when time is NULL.}
+
+\item{animation_motion_blur}{Default `c("full", "placement")`. With explicit
+time and animated models, "full" evaluates the complete scene, including
+skin and morph deformation, at one shared shutter time per image sample.
+Existing geometry and BVH topology are reused with tight bounds refits.
+The total ray budget remains `samples`; increase it for smoother blur.
+Adaptive stopping is disabled for these exposures, and denoising uses
+accumulated temporal features. "placement" freezes internal model poses at
+frame time while retaining outer placement and other scene motion blur.
+Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+channels retain frame-frozen internal poses and report this when requested.}
 }
 \value{
 A pathtraced image to the current device, or an image saved to a file. Invisibly returns the

@@ -165,7 +165,7 @@ struct WFCamera {
   uint32_t moving = 0, elements = 0, pupils = 0, simple_weighting = 0;
   uint32_t track_count = 0, track_offset = 0;
   float exposure_weight = 1;
-  uint32_t track_reserved = 0;
+  float shutter_unit = -1;
 };
 void ExportWavefrontCamera(RayCamera &, WFCamera &, std::vector<WFVector> &);
 struct WFParameters {

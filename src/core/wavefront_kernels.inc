@@ -51,7 +51,7 @@ R"MSL(
     uint moving, elements, pupils, simple_weighting;
     uint track_count, track_offset;
     float exposure_weight;
-    uint track_reserved;
+    float shutter_unit;
   };
   struct Params {
     Camera camera;
@@ -630,7 +630,9 @@ R"MSL(
     float lu = sample1(pixel, dim, p, directions, blue),
           lv = sample1(pixel, dim, p, directions, blue);
     // Match the native thin-lens camera's uniform disk; unused time retains its dimension.
-    float time=sample1(pixel, dim, p, directions, blue)*p.camera.shutter.z;
+    float time=sample1(pixel, dim, p, directions, blue);
+    if (p.camera.shutter_unit >= 0) time = p.camera.shutter_unit;
+    time *= p.camera.shutter.z;
     if (texture_features & 1024) {
       scene.motion.time = mix(p.camera.shutter.x,p.camera.shutter.y,time);
       reinterpret_cast<device float *>(const_cast<device uchar *>(bytes) + storage->padding[0])[pixel] = scene.motion.time;

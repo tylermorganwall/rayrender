@@ -54,7 +54,8 @@ render_animation(
   camera = NULL,
   times = NULL,
   fps = 30,
-  shutter_offsets = NULL
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement")
 )
 }
 \arguments{
@@ -218,8 +219,8 @@ end_frame select positions in this sequence; filenames use output indices.}
 (index - 1) / fps when no explicit time column is present.}
 
 \item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
-Nonzero intervals blur outer model placement while freezing internal poses
-at frame time. Zero-width intervals sample time plus the given offset.
+Nonzero intervals integrate motion using `animation_motion_blur`.
+Zero-width intervals sample time plus the given offset.
 With times, NULL freezes each requested scene time. Explicit legacy shutter
 controls conflict with times. Moving perspective, orthographic, and panoramic
 cameras sample authored keys within the exposure; projection changes are
@@ -229,6 +230,17 @@ snapshots. Equal nonzero offsets sample optics at time plus that offset.
 Geometry is compiled once for the output sequence.
 Physical lens cameras use unit exposure weighting with explicit times;
 offsets select poses and ISO controls brightness. Legacy weighting is unchanged.}
+
+\item{animation_motion_blur}{Default `c("full", "placement")`. With explicit
+time and animated models, "full" evaluates the complete scene, including
+skin and morph deformation, at one shared shutter time per image sample.
+Existing geometry and BVH topology are reused with tight bounds refits.
+The total ray budget remains `samples`; increase it for smoother blur.
+Adaptive stopping is disabled for these exposures, and denoising uses
+accumulated temporal features. "placement" freezes internal model poses at
+frame time while retaining outer placement and other scene motion blur.
+Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+channels retain frame-frozen internal poses and report this when requested.}
 }
 \value{
 Raytraced plot to current device, or an image saved to a file.

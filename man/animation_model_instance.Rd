@@ -28,11 +28,12 @@ Give a shared model its own outer path and independently timed internal clip.
 \details{
 World transforms are outer placement * parent globals * local pose. Each
 instance shares the asset's geometry and tracks, but owns its playback settings.
-In explicit-time rendering, internal node transforms, skins, and morphs are
-sampled once at frame time for a nonzero shutter interval. Only the outer
-placement follows each ray's shutter time. This supports whole-model motion
-blur without deformation blur; an informational message is emitted once per
-render or preview session. A zero-width interval samples the complete model
+In explicit-time rendering, the default `animation_motion_blur = "full"`
+evaluates internal nodes, skins, morphs, and outer placement at a shared
+shutter time per image sample. Geometry and bounds are updated between samples
+while BVH topology is retained. Select `animation_motion_blur = "placement"`
+in [render_scene()] or [render_animation()] to freeze internal poses at frame
+time and blur only placement. A zero-width interval samples the complete model
 at time plus its shutter offset. Seeking never depends on the preceding pose.
 Static group_objects() changes stay inside the outer animated placement.
 add_object() remaps colliding instance IDs and every nested reference when a

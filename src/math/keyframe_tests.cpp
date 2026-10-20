@@ -155,3 +155,78 @@ context("Absolute-time animation tracks") {
   }
 }
 #endif
+
+#ifdef NOT_CRAN
+#include "../core/full_pose_shutter.h"
+#include "../core/wavefront.h"
+context("Full-pose shutter sampling") {
+  test_that("progressive shutter samples cover strata without endpoints or history") {
+    for (uint32_t seed : {0u, 1u, 4278190080u, 4294967295u}) {
+      std::vector<bool> seen(64, false);
+      for (uint32_t s = 0; s < 64; ++s) {
+        Float u = FullPoseShutter::Unit(s, seed);
+        expect_true((u > 0 && u < 1));
+        size_t stratum = size_t(u * 64);
+        expect_false(seen[stratum]);
+        seen[stratum] = true;
+        expect_true(u == FullPoseShutter::Unit(s, seed));
+      }
+    }
+  }
+  test_that("pose, camera and bounds share each time and restore the frame") {
+    camera perspective(point3f(0,0,-10), point3f(0), vec3f(0,1,0), 60,1,0,10,-.25,.25,1);
+    ortho_camera orthographic(point3f(0,0,-10), point3f(0), vec3f(0,1,0), 2,2,-.25,.25,1);
+    environment_camera panorama(point3f(0,0,-10), point3f(0), vec3f(0,1,0), -.25,.25,1);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&panorama)}) {
+      auto clock = std::make_shared<SceneTimeContext>();
+      clock->full_pose_blur = clock->has_model_poses = clock->benchmark_timing = true;
+      cam->scene_camera_time = clock;
+      cam->set_shutter_speed(1);
+      double pose = 0;
+      Float begin = 0, end = 0;
+      clock->deformation_updates.push_back([&](double t) {
+        return [&,t] { pose = t; };
+      });
+      clock->deformation_bounds.push_back([&](Float a, Float b) { begin=a; end=b; });
+      for (double frame : {1e9, -1., 0., 1e9}) {
+        clock->UpdateGeometry(frame, 0, -.25, .25);
+        FullPoseShutter exposure;
+        for (size_t s : {4, 2, 0, 4}) {
+          expect_true(exposure.Prepare(*cam, s, 42));
+          Ray a = cam->get_ray(.5,.5,point3f(0),0);
+          Ray b = cam->get_ray(.5,.5,point3f(0),1);
+          expect_true(a.time() == b.time());
+          double expected = frame + double(Float(-.25 + .5 * double(FullPoseShutter::Unit(s, 42))));
+          expect_true(pose == expected);
+          expect_true(clock->epoch == expected);
+          expect_true(a.time() == 0);
+          expect_true((begin == a.time() && end == begin));
+          WFCamera descriptor;
+          std::vector<WFVector> data;
+          ExportWavefrontCamera(*cam, descriptor, data);
+          expect_true(descriptor.shutter_unit == clock->shutter_unit);
+          expect_true(descriptor.shutter.x + (descriptor.shutter.y-descriptor.shutter.x) *
+                      (descriptor.shutter_unit*descriptor.shutter.z) == a.time());
+        }
+        exposure.Restore();
+        expect_true((pose == frame && clock->pose_offset == 0));
+        expect_true((begin == Float(-.25) && end == Float(.25)));
+        expect_true(clock->shutter_unit == -1);
+        expect_true(cam->get_ray(.5,.5,point3f(0),0).time() !=
+                    cam->get_ray(.5,.5,point3f(0),1).time());
+      }
+      cam->set_shutter_speed(Infinity);
+      FullPoseShutter point;
+      double expected_open = clock->epoch - .25;
+      expect_true(point.Prepare(*cam, 0, 42));
+      expect_true(cam->get_ray(.5,.5,point3f(0),1).time() == 0);
+      expect_true(pose == expected_open);
+      point.Restore();
+      clock->full_pose_blur = false;
+      expect_false(FullPoseShutter::Enabled(*cam));
+    }
+  }
+}
+#endif

@@ -132,9 +132,19 @@ animation_default_plot_scene = function(
 #'   end_frame select positions in this sequence; filenames use output indices.
 #' @param fps Default `30`. Frame rate used to timestamp camera-motion rows as
 #'   (index - 1) / fps when no explicit time column is present.
+#' @param animation_motion_blur Default `c("full", "placement")`. With explicit
+#'   time and animated models, "full" evaluates the complete scene, including
+#'   skin and morph deformation, at one shared shutter time per image sample.
+#'   Existing geometry and BVH topology are reused with tight bounds refits.
+#'   The total ray budget remains `samples`; increase it for smoother blur.
+#'   Adaptive stopping is disabled for these exposures, and denoising uses
+#'   accumulated temporal features. "placement" freezes internal model poses at
+#'   frame time while retaining outer placement and other scene motion blur.
+#'   Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+#'   channels retain frame-frozen internal poses and report this when requested.
 #' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
-#'   Nonzero intervals blur outer model placement while freezing internal poses
-#'   at frame time. Zero-width intervals sample time plus the given offset.
+#'   Nonzero intervals integrate motion using `animation_motion_blur`.
+#'   Zero-width intervals sample time plus the given offset.
 #'   With times, NULL freezes each requested scene time. Explicit legacy shutter
 #'   controls conflict with times. Moving perspective, orthographic, and panoramic
 #'   cameras sample authored keys within the exposure; projection changes are
@@ -283,8 +293,10 @@ render_animation = function(
   camera = NULL,
   times = NULL,
   fps = 30,
-  shutter_offsets = NULL
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement")
 ) {
+  animation_motion_blur = match.arg(animation_motion_blur)
   if (
     !is.null(times) &&
       (!is.numeric(times) || !length(times) || any(!is.finite(times)))
@@ -422,6 +434,7 @@ render_animation = function(
     )
     if (camera_batch_metadata_compatible(cameras)) {
       return(render_camera_batch(
+        animation_motion_blur = animation_motion_blur,
         scene = scene,
         cameras = cameras,
         mode = "animation",
@@ -467,6 +480,7 @@ render_animation = function(
     )
     output = lapply(cameras, function(cam) {
       render_animation_camera(
+        animation_motion_blur = animation_motion_blur,
         scene = scene,
         camera = cam,
         start_frame = start_frame,
@@ -511,6 +525,7 @@ render_animation = function(
   }
 
   render_animation_camera(
+    animation_motion_blur = animation_motion_blur,
     scene = scene,
     camera = cameras[[1]],
     start_frame = start_frame,
@@ -590,7 +605,8 @@ render_animation_camera = function(
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
   integrator_type = "auto",
-  force_no_write = FALSE
+  force_no_write = FALSE,
+  animation_motion_blur = "full"
 ) {
   if (!inherits(camera, "ray_camera")) {
     stop("camera must inherit from class 'ray_camera'")
@@ -666,6 +682,7 @@ render_animation_camera = function(
   camera_motion$track_index = rep(1L, nrow(camera_motion))
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$animation_motion_blur = animation_motion_blur
   render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
@@ -765,7 +782,8 @@ render_camera_batch = function(
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
   integrator_type = "auto",
-  force_no_write = FALSE
+  force_no_write = FALSE,
+  animation_motion_blur = "full"
 ) {
   if (!camera_batch_metadata_compatible(cameras)) {
     stop(
@@ -850,6 +868,7 @@ render_camera_batch = function(
   camera_motion$track_index = plan$camera_index
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$animation_motion_blur = animation_motion_blur
   render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene

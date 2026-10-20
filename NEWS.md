@@ -16,10 +16,13 @@
 
 ## New features
 
-- `animation_model_instance()` Freezes complete internal poses at frame time
-  during nonzero exposures, while outer placement and other scene objects retain
-  motion blur. Rendering reports this once as a message instead of rejecting
-  skinned or morph-animated models. Offset point exposures remain exact.
+- `render_scene()` and `render_animation()` now integrate full node, skeletal,
+  and morph motion over explicit shutter intervals by default. One shared time
+  per image sample updates the complete pose and tight-refits existing bounds;
+  scene topology, worker pools, samplers, and linear film are retained. The ray
+  budget remains `samples`. `animation_motion_blur = "placement"` retains the
+  previous frame-frozen pose behavior. Full-pose exposures disable adaptive
+  stopping and denoise accumulated temporal features.
 - Overall: New animation authoring, import, and inspection functions use the
   `animation_` prefix. The five unprefixed `model_*()` development aliases are
   removed; use the corresponding `animation_model_*()` functions.

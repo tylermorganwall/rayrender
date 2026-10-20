@@ -31,7 +31,7 @@ class RayCamera {
     // Authored camera data are immutable. Only the frame clock is republished,
     // on the owning thread between completed sampling batches.
     std::shared_ptr<const animation::CameraTrack> scene_camera_track;
-  std::shared_ptr<const SceneTimeContext> scene_camera_time;
+  std::shared_ptr<SceneTimeContext> scene_camera_time;
   Float scene_camera_aspect = 1;
     virtual Ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(Ray());
@@ -69,6 +69,7 @@ class RayCamera {
       shutter_speed = value;
     }
     Float get_shutter_speed() const {return(shutter_speed);}
+    std::pair<Float, Float> ShutterInterval() const;
     // Reverse film coordinates before tracing, so preview, picking and ray
     // differentials use the same handedness as the final image.
     void set_camera_flip_x(bool value) { camera_flip_x = value; }
@@ -103,7 +104,16 @@ class RayCamera {
   protected:
     Float film_x(Float value) const { return camera_flip_x ? 1 - value : value; }
     bool camera_flip_x = false;
+    Float sample_ray_time(Float begin, Float end, Float motion_time) const {
+      // Full-pose samples publish a double scene epoch. Keep the ray exactly at
+      // its anchor instead of rounding epoch + shutter offset into a float.
+      if (scene_camera_time && scene_camera_time->shutter_unit >= 0)
+        return scene_camera_time->ray_anchor;
+      return begin + (end - begin) * motion_time;
+    }
     Float sample_motion_time(Float unit_time) const {
+      if (scene_camera_time && scene_camera_time->shutter_unit >= 0)
+        unit_time = scene_camera_time->shutter_unit;
       Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
       if(std::isinf(shutter_speed)) {
         return static_cast<Float>(0);
@@ -337,6 +347,7 @@ class RealisticCamera  : public RayCamera {
   friend void ExportWavefrontCamera(RayCamera &, struct WFCamera &, std::vector<struct WFVector> &);
 public:
   // Called at a completed-batch boundary when the scene-time exposure changes.
+  std::pair<Float, Float> GetShutterInterval() const { return {shutterOpen, shutterClose}; }
   void SetShutterInterval(Float begin, Float end) { shutterOpen = begin; shutterClose = end; }
   // Updates only the rigid pose, preserving the initialized lens and pupils.
   void SetScenePose(point3f position, point3f target, vec3f up);

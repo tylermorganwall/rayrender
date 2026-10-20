@@ -985,7 +985,7 @@ void SceneTimeContext::UpdateGeometry(double frame_time, Float anchor, Float ope
   if (has_model_poses || !deformation_updates.empty())
     for (const auto &refit : deformation_bounds) refit(open, close);
   if (!commits.empty()) ++geometry_revision;
-  if (has_model_poses && open != close && !pose_notice_sent && frozen_pose_notice) {
+  if (has_model_poses && !full_pose_blur && open != close && !pose_notice_sent && frozen_pose_notice) {
     frozen_pose_notice();
     pose_notice_sent = true;
   }

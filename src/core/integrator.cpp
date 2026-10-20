@@ -1,5 +1,6 @@
 #include "../core/integrator.h"
 #include "wavefront.h"
+#include "full_pose_shutter.h"
 
 #include "../math/RayMatrix.h"
 #include "../math/float.h"
@@ -65,7 +66,15 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   }
   RayMatrix rgb_output2(nx,ny,3);
   display.write_fast_output = false;
-  bool adaptive_on = min_variance > 0;
+  FullPoseShutter shutter;
+  if (cam->scene_camera_time) {
+    auto &clock = *cam->scene_camera_time;
+    clock.shutter_samples = 0;
+    clock.shutter_times.clear();
+    clock.shutter_pose_seconds = clock.shutter_refit_seconds = 0;
+  }
+  // Early spatial convergence must not remove pixels before temporal coverage.
+  bool adaptive_on = min_variance > 0 && !FullPoseShutter::Enabled(*cam);
   bool has_media = hlist.volume_scene && hlist.volume_scene->has_media;
   // Opaque output discards alpha. Do not impose alpha's 64-sample safety floor
   // on every pixel merely because some distant object contains a medium.
@@ -225,7 +234,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_full_preview_oidn_aux = [&]() {
-    if(has_media || wavefront) {
+    if(has_media || wavefront || FullPoseShutter::Enabled(*cam)) {
       if (display.denoise && display.oidn_normal_output && display.oidn_albedo_output)
         adaptive_pixel_sampler.copy_denoising_features(*display.oidn_normal_output,
                                                        *display.oidn_albedo_output);
@@ -260,7 +269,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   auto ensure_fast_preview_oidn_aux = [&]() {
-    if(has_media || wavefront) {
+    if(has_media || wavefront || FullPoseShutter::Enabled(*cam)) {
       if (denoise_fast_preview)
         adaptive_pixel_sampler_small.copy_denoising_features(oidn_normal_output_small,
                                                              oidn_albedo_output_small);
@@ -355,14 +364,41 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
     }
   };
 
+  auto prepare_shutter_sample = [&](size_t sample) {
+    if (!shutter.Prepare(*cam, sample, seeds[0] ^ 0x9e3779b9u)) return;
+    adaptive_pixel_sampler.adaptive_on = false;
+    adaptive_pixel_sampler_small.adaptive_on = false;
+    if (wavefront) {
+      // BeginFrame updates resident mesh ranges and refits existing structures.
+      // Keep accumulated render statistics instead of resetting them per pose.
+      WavefrontReport update;
+      update.requested = true;
+      context.BeginFrame(world, hlist, *cam, nx*ny, sample_method, update, numbercores);
+      wavefront_report->upload_seconds += update.upload_seconds;
+      wavefront_report->acceleration_builds += update.acceleration_builds;
+      wavefront_report->acceleration_refits += update.acceleration_refits;
+      wavefront_report->geometry_bytes_updated += update.geometry_bytes_updated;
+      if (!wavefront) {
+        wavefront_report->used = false;
+        wavefront_report->fallback = update.fallback;
+        display.integrator_name = cpu_integrator;
+        reset_sampler_state(nx, ny, seeds, rngs, samplers);
+        reset_sampler_state(nx_small, ny_small, seeds_small, rngs_small, samplers_small);
+        for (auto &sampler : samplers) sampler->SetSampleNumber(sample);
+        for (auto &sampler : samplers_small) sampler->SetSampleNumber(sample);
+      }
+    }
+  };
+
   auto render_full_sample = [&adaptive_pixel_sampler, nx, ny, ns, sample_method,
                              &rngs, &fov, &samplers, &cam, &world, &hlist,
                              clampval, sample_floor, max_depth, roulette_active, integrator_type,
                              &render_cancelled, &render_pool, &display, &report_diffusion_interior,
                              &wavefront, &wavefront_scene, wavefront_report,
-                             &validate_wavefront_camera, &seeds] (size_t s) -> bool {
+                             &validate_wavefront_camera, &prepare_shutter_sample, &seeds] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     validate_wavefront_camera();
+    prepare_shutter_sample(s);
     bool completed_sample;
     if(wavefront) {
       completed_sample = RenderWavefrontSample(*wavefront, wavefront_scene, *cam,
@@ -461,9 +497,10 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                               clampval, sample_floor, max_depth, roulette_active, integrator_type,
                               &render_cancelled, &render_pool, &display, &report_diffusion_interior,
                              &wavefront, &wavefront_scene, wavefront_report,
-                             &validate_wavefront_camera, &seeds] (size_t s) -> bool {
+                             &validate_wavefront_camera, &prepare_shutter_sample, &seeds] (size_t s) -> bool {
     render_cancelled.store(false, std::memory_order_relaxed);
     validate_wavefront_camera();
+    prepare_shutter_sample(s);
     bool completed_sample;
     if(wavefront) {
       completed_sample = RenderWavefrontSample(*wavefront, wavefront_scene, *cam,
@@ -680,6 +717,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           finish_preview_termination(preview_sample + (rendered_sample ? 1 : 0));
           break;
         }
+        if (display.preview) shutter.Restore();
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           preview_sample, pb, false,
                           0, &world, rng_interactive);
@@ -734,6 +772,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           finish_preview_termination(s + (rendered_sample ? 1 : 0));
           break;
         }
+        if (display.preview) shutter.Restore();
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           s, pb, progress_bar,
                           (Float)s/(Float)ns, &world, rng_interactive);
@@ -765,6 +804,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         break;
       }
       if(s >= ns && display.timeline) {
+        if (display.preview) shutter.Restore();
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           s, pb, false, 1, &world, rng_interactive);
         restart_after_atmosphere_change();
@@ -805,6 +845,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         finish_preview_termination(s + (rendered_sample ? 1 : 0));
         break;
       }
+      if (display.preview) shutter.Restore();
       display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                         s, pb, progress_bar,
                         (Float)s/(Float)ns, &world, rng_interactive);
@@ -815,6 +856,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
       restart_after_atmosphere_change();
     }
   }
+
+  shutter.Restore();
 
   #ifdef RAY_COLOR_DEBUG
   Rcpp::Rcout << "ns: " << adaptive_pixel_sampler.ns << " adaptive_pixel_sampler.rgb pre divide:\n";

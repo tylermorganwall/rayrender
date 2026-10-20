@@ -54,3 +54,7 @@ render_scene_rcpp.o render_animation_rcpp.o: core/animation_report.h
 
 # Stable native mesh bindings support in-place Metal deformation refits.
 core/wavefront.o core/wavefront_deformation.o core/wavefront_deformation_tests.o core/wavefront_metal.o: core/wavefront_deformation.h
+
+# Shared temporal sampler used by the integrator and its native acceptance tests.
+core/integrator.o math/keyframe_tests.o: core/full_pose_shutter.h
+$(CPP_OBJECTS): core/camera.h math/animatedtransform.h
