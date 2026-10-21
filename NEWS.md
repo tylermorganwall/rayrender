@@ -298,6 +298,10 @@
 
 ## Bugfixes
 
+- Overall: Improves CPU rendering performance for translating keyframed objects,
+  especially thin geometry passing close to the camera, by keeping motion
+  bounds tight and avoiding unnecessary rotation and scale calculations.
+
 - Overall: Animated skin and morph poses update resident Metal geometry and
   refit existing acceleration structures, preserving BVH topology and static
   scene buffers across frames and timeline seeks.

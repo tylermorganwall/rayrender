@@ -244,7 +244,7 @@ context("Packed scene-time tracks") {
       return;
     }
     using namespace animation;
-    for (int clock_case = 0; clock_case < 9; ++clock_case) {
+    for (int clock_case = 0; clock_case < 12; ++clock_case) {
       auto track = std::make_shared<TransformTrack>();
       track->position = std::make_shared<Track>(Property::Position, Interpolation::Cubic,
         std::vector<double>{0, .7, 2.3, 4}, std::vector<Value>{{0,0,0,0}, {1,2,0,0}, {-1,1,1,0}, {0,0,0,0}});
@@ -261,8 +261,16 @@ context("Packed scene-time tracks") {
         auto removal = std::make_shared<RootMotion>();
         removal->translation = {true, false, true};
         removal->position = track->position->At(0);
-        removal->yaw = clock_case == 8;
+        removal->yaw = clock_case == 8 || clock_case == 11;
+        if (clock_case == 11)
+          removal->reference_yaw = {0, std::sin(.3), 0, std::cos(.3)};
         track->root_motion = removal;
+      }
+      if (clock_case >= 9) {
+        track->rotation.reset();
+        track->scale.reset();
+        track->pivot = {13, -7, 4, 0};
+        if (clock_case == 9) track->root_motion.reset();
       }
       Transform identity;
       AnimatedTransform animation(&identity, 0, &identity, 0, track);
@@ -308,7 +316,7 @@ context("Packed scene-time tracks") {
         for (int k = 0; k < 3; ++k) expect_true(std::abs((&hits[i].point.x)[k] - points[i][k]) < 5e-5);
       }
     }
-    Rcpp::Rcout << "Keyframe device probes executed: 135 scene-time, root-motion and loop-boundary hits\n";
+    Rcpp::Rcout << "Keyframe device probes executed: 180 scene-time, translation, root-motion and loop-boundary hits\n";
   }
 #endif
 }

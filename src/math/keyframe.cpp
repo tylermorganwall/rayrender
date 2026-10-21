@@ -341,11 +341,18 @@ Transform TransformTrack::At(double time) const {
 }
 
 Transform TransformTrack::AtLocal(double time) const {
-  Value p = position ? position->At(time) : Value{}, s = scale ? scale->At(time) : Value{1, 1, 1, 0};
+  Value p = position ? position->At(time) : Value{};
+  if (root_motion) for (int k = 0; k < 3; ++k)
+    if (root_motion->translation[k]) p[k] = root_motion->position[k];
+  if (!rotation && !scale && !(root_motion && root_motion->yaw)) {
+    // Preserve the existing Float rounding around the pivot while avoiding
+    // quaternion conversion and three full forward/inverse matrix products.
+    vec3f translation(p[0] + pivot[0], p[1] + pivot[1], p[2] + pivot[2]);
+    return Translate(translation - vec3f(pivot[0], pivot[1], pivot[2]));
+  }
+  Value s = scale ? scale->At(time) : Value{1, 1, 1, 0};
   Value q = rotation ? rotation->At(time) : Value{0, 0, 0, 1};
   if (root_motion) {
-    for (int k = 0; k < 3; ++k)
-      if (root_motion->translation[k]) p[k] = root_motion->position[k];
     if (root_motion->yaw) {
       double norm = std::hypot(q[1], q[3]);
       double y = q[1]/norm, w = q[3]/norm;
@@ -377,6 +384,25 @@ aabb TransformTrack::LocalBounds(const aabb &box, double begin, double end) cons
   if (position) translation = position->Range(begin, end);
   if (root_motion) for (int k = 0; k < 3; ++k)
     if (root_motion->translation[k]) translation[0][k] = translation[1][k] = root_motion->position[k];
+  if (!rotation && !scale && !(root_motion && root_motion->yaw)) {
+    // Translation preserves the box's shape: a pivot-centered sphere would
+    // needlessly enclose the origin as well as distant, thin primitives.
+    // Range includes cubic extrema and STEP keys, not just the shutter ends.
+    point3f lo, hi;
+    for (int k = 0; k < 3; ++k) {
+      double lower = double(box.min()[k]) + translation[0][k];
+      double upper = double(box.max()[k]) + translation[1][k];
+      // Include operands in the error scale, including cancellation around a
+      // large pivot, and round outwards rather than risk pruning a real hit.
+      double magnitude = std::max({1., std::abs(lower), std::abs(upper),
+        std::abs(double(box.min()[k])), std::abs(double(box.max()[k])),
+        std::abs(translation[0][k]), std::abs(translation[1][k]), std::abs(pivot[k])});
+      double pad = 64 * std::numeric_limits<Float>::epsilon() * magnitude;
+      lo[k] = lower - pad;
+      hi[k] = upper + pad;
+    }
+    return aabb(lo, hi);
+  }
   if (scale) scaling = scale->Range(begin, end);
   // Every scaled point is in a sphere around the pivot with this radius.
   // Rotation preserves that sphere, independently of asynchronous key times.

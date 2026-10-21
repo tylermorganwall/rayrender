@@ -9,6 +9,64 @@ using animation::Property;
 using animation::Interpolation;
 
 context("Absolute-time animation tracks") {
+  test_that("translation specialization preserves inverse transforms, root masks and pivot rounding") {
+    animation::TransformTrack track;
+    track.position = std::make_shared<Track>(Property::Position, Interpolation::Linear,
+      std::vector<double>{0, 1}, std::vector<Value>{{.1, -3, 2, 0}, {3, .2, -1, 0}});
+    auto root = std::make_shared<animation::RootMotion>();
+    root->translation = {true, false, true};
+    root->position = {7, 0, -2, 0};
+    for (bool remove_translation : {false, true}) {
+      track.root_motion = remove_translation ? root : nullptr;
+      for (auto pivot : std::vector<Value>{{0,0,0,0}, {13,-7,4,0}, {1e6,-1e6,1e5,0}}) {
+        track.pivot = pivot;
+        auto general = track;
+        general.rotation = std::make_shared<Track>(Property::Rotation, Interpolation::Step,
+          std::vector<double>{0}, std::vector<Value>{{0,0,0,1}});
+        for (double time : {-1., 0., .1, .7, 1., 2.})
+          expect_true(track.At(time) == general.At(time));
+      }
+    }
+    // A root yaw can rotate a track even with no authored rotation channel.
+    root->yaw = true;
+    root->reference_yaw = {0, std::sin(.4), 0, std::cos(.4)};
+    track.root_motion = root;
+    track.pivot = {13,-7,4,0};
+    auto general = track;
+    general.rotation = std::make_shared<Track>(Property::Rotation, Interpolation::Step,
+      std::vector<double>{0}, std::vector<Value>{{0,0,0,1}});
+    aabb box(point3f(99,-.1,-.2), point3f(101,.1,.2));
+    auto bounds = track.Bounds(box, 0, 1);
+    for (int i = 0; i <= 100; ++i) {
+      expect_true(track.At(i / 100.) == general.At(i / 100.));
+      for (int corner = 0; corner < 8; ++corner) {
+        auto p = track.At(i / 100.)(box.Corner(corner));
+        for (int k = 0; k < 3; ++k)
+          expect_true((p[k] >= bounds.min()[k] && p[k] <= bounds.max()[k]));
+      }
+    }
+  }
+
+  test_that("translation sweeps stay tight away from the pivot and contain cubic extrema") {
+    animation::TransformTrack track;
+    track.pivot = {13, -7, 4, 0};
+    track.position = std::make_shared<Track>(Property::Position, Interpolation::Cubic,
+      std::vector<double>{0, 1}, std::vector<Value>{{0, 2, -4, 0}, {0, 2, -4, 0}},
+      std::vector<Value>{{0, 0, 0, 0}, {-12, 0, 0, 0}},
+      std::vector<Value>{{12, 0, 0, 0}, {0, 0, 0, 0}});
+    aabb box(point3f(99, -.1, -.2), point3f(101, .1, .2));
+    auto bounds = track.Bounds(box, 0, 1);
+    expect_true(std::abs(bounds.min()[0] - 99) < .002);
+    expect_true(std::abs(bounds.max()[0] - 104) < .002);
+    expect_true(bounds.max()[1] - bounds.min()[1] < .202);
+    expect_true(bounds.max()[2] - bounds.min()[2] < .402);
+    for (int i = 0; i <= 100; ++i) for (int corner = 0; corner < 8; ++corner) {
+      auto p = track.At(i / 100.)(box.Corner(corner));
+      for (int k = 0; k < 3; ++k)
+        expect_true((p[k] >= bounds.min()[k] && p[k] <= bounds.max()[k]));
+    }
+  }
+
   test_that("frame anchors preserve exact repeat and STEP boundaries after distant seeks") {
     auto track = std::make_shared<animation::TransformTrack>();
     track->position = std::make_shared<Track>(Property::Position, Interpolation::Step,
