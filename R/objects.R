@@ -643,7 +643,10 @@ disk = function(
 #' to the model.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
-#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param subdivision_levels Default `0`. Nonnegative integer number of Loop
+#' subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+#' into four and smooths the surface. Each additional pass multiplies the triangle
+#' count by four.
 #' @param displacement_texture Default `""`. File path to the displacement texture.
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect.
@@ -721,7 +724,7 @@ obj_model = function(
   load_normals = TRUE,
   vertex_colors = FALSE,
   calculate_consistent_normals = TRUE,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   displacement_texture = "",
   displacement_intensity = 1,
   displacement_vector = FALSE,
@@ -733,6 +736,7 @@ obj_model = function(
   flipped = FALSE,
   scale = c(1, 1, 1)
 ) {
+  subdivision_levels = validate_subdivision_levels(subdivision_levels)
   if (length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -2380,7 +2384,10 @@ text3d = function(
 #' @param z Default `0`. z-coordinate to offset the model.
 #' @param scale_ply Default `1`. Amount to scale the model. Use this to scale the object up or down on all axes, as it is
 #' more robust to numerical precision errors than the generic scale option.
-#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param subdivision_levels Default `0`. Nonnegative integer number of Loop
+#' subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+#' into four and smooths the surface. Each additional pass multiplies the triangle
+#' count by four.
 #' @param recalculate_normals Default `FALSE`. Whether to recalculate vertex normals based on the
 #' connecting face orientations. This can be used to compute normals for meshes lacking them or
 #' to calculate new normals after a displacement map has been applied to the mesh.
@@ -2405,7 +2412,7 @@ ply_model = function(
   y = 0,
   z = 0,
   scale_ply = 1,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   recalculate_normals = FALSE,
   material = diffuse(),
   angle = c(0, 0, 0),
@@ -2413,6 +2420,7 @@ ply_model = function(
   flipped = FALSE,
   scale = c(1, 1, 1)
 ) {
+  subdivision_levels = validate_subdivision_levels(subdivision_levels)
   if (length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -2499,7 +2507,10 @@ ply_model = function(
 #' @param verbose Default `FALSE`. If `TRUE`, prints information about the mesh to the console.
 #' @param override_material Default `FALSE`. If `TRUE`, overrides the material specified in the
 #' `mesh3d` object with the one specified in `material`.
-#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param subdivision_levels Default `0`. Nonnegative integer number of Loop
+#' subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+#' into four and smooths the surface. Each additional pass multiplies the triangle
+#' count by four.
 #' @param displacement_texture Default `""`. File path to the displacement texture.
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect.
@@ -2541,7 +2552,7 @@ mesh3d_model = function(
   z = 0,
   swap_yz = FALSE,
   reverse = FALSE,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   verbose = FALSE,
   displacement_texture = "",
   displacement_intensity = 1,
@@ -2554,6 +2565,7 @@ mesh3d_model = function(
   flipped = FALSE,
   scale = c(1, 1, 1)
 ) {
+  subdivision_levels = validate_subdivision_levels(subdivision_levels)
   if (length(scale) == 1) {
     scale = c(scale, scale, scale)
   }
@@ -3089,7 +3101,10 @@ extruded_path = function(
 #' loss at edges.
 #' @param importance_sample_lights Default `TRUE`. Whether to importance sample lights specified in the OBJ material
 #' (objects with a non-zero Ke MTL material).
-#' @param subdivision_levels Default `1`. Number of Loop subdivisions to be applied to the mesh.
+#' @param subdivision_levels Default `0`. Nonnegative integer number of Loop
+#' subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+#' into four and smooths the surface. Each additional pass multiplies the triangle
+#' count by four.
 #' @param displacement_texture Default `""`. File path to the displacement texture.
 #' This texture is used to displace the vertices of the mesh based on the texture's pixel values.
 #' @param displacement_intensity Default `1`. Intensity of the displacement effect.
@@ -3166,7 +3181,7 @@ raymesh_model = function(
   verbose = FALSE,
   importance_sample_lights = FALSE,
   calculate_consistent_normals = TRUE,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   displacement_texture = "",
   displacement_intensity = 1,
   displacement_vector = FALSE,
@@ -3179,6 +3194,7 @@ raymesh_model = function(
   scale = c(1, 1, 1),
   validate_mesh = TRUE
 ) {
+  subdivision_levels = validate_subdivision_levels(subdivision_levels)
   if (is.null(override_material)) {
     override_material = !missing(material)
   }

@@ -59,7 +59,11 @@ test_that('PBRT mesh batching preserves shading and leaves boundaries separate',
       tonemap = 'raw'
     )
   }
-  expect_equal(render(combined[[1]]), render(separate), tolerance = 1e-6)
+  expect_equal(
+    as.numeric(render(combined[[1]])),
+    as.numeric(render(separate)),
+    tolerance = 1e-6
+  )
   for (replacement in list(dielectric(), subsurface(), light(), openpbr())) {
     altered = lapply(rows, function(x) {
       x$material = replacement
@@ -80,7 +84,7 @@ test_that('PBRT mesh batching preserves shading and leaves boundaries separate',
       x$shape_info[[1]]$shape_properties[[setting]] = switch(
         setting,
         displacement_texture = 'unused.png',
-        subdivision_levels = 2,
+        subdivision_levels = 1,
         recalculate_normals = TRUE
       )
       x

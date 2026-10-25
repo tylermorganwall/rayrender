@@ -11,7 +11,7 @@ mesh3d_model(
   z = 0,
   swap_yz = FALSE,
   reverse = FALSE,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   verbose = FALSE,
   displacement_texture = "",
   displacement_intensity = 1,
@@ -41,7 +41,10 @@ only supports one image texture per mesh. All quads will be triangulated.}
 
 \item{reverse}{Default `FALSE`. Reverse the orientation of the indices, flipping their normals.}
 
-\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
+\item{subdivision_levels}{Default `0`. Nonnegative integer number of Loop
+subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+into four and smooths the surface. Each additional pass multiplies the triangle
+count by four.}
 
 \item{verbose}{Default `FALSE`. If `TRUE`, prints information about the mesh to the console.}
 

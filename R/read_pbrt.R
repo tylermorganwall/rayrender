@@ -1832,7 +1832,7 @@ pbrt_store_mesh_rows = function(rows, cache) {
     if (
       !isTRUE(settings$override_material) ||
         isTRUE(settings$importance_sample_lights) ||
-        !identical(settings$subdivision_levels, 1) ||
+        !identical(settings$subdivision_levels, 0) ||
         !identical(settings$displacement_texture, '') ||
         isTRUE(settings$recalculate_normals) ||
         !is.null(info$medium) ||
@@ -1889,7 +1889,7 @@ pbrt_store_mesh_rows = function(rows, cache) {
     info$shape_properties = list(
       scale_ply = 1,
       basename = dirname(filename),
-      subdivision_levels = 1,
+      subdivision_levels = 0,
       recalculate_normals = FALSE,
       calculate_consistent_normals = settings$calculate_consistent_normals
     )
@@ -2169,7 +2169,7 @@ pbrt_batch_mesh_rows = function(rows, file_backed = FALSE) {
           (is.null(mat$openpbr) || mat$openpbr$emission_luminance == 0) &&
           isTRUE(settings$override_material) &&
           !isTRUE(settings$importance_sample_lights) &&
-          identical(settings$subdivision_levels, 1) &&
+          identical(settings$subdivision_levels, 0) &&
           identical(settings$displacement_texture, '') &&
           !isTRUE(settings$recalculate_normals) &&
           length(normal_mode) &&
@@ -4436,10 +4436,6 @@ pbrt_displaced_ply = function(filename, p, state, material, flipped) {
     }
   }
   levels = max(0, ceiling(log2(max(maximum / edge, 1))))
-  # rayvertex treats level one as disabled; two refinements meet that bound.
-  if (levels == 1) {
-    levels = 2
-  }
   faces = sum(vapply(
     mesh$shapes,
     function(shape) nrow(shape$indices),
@@ -4577,7 +4573,7 @@ pbrt_mesh = function(p, type, material, flipped) {
     }
     uv = matrix(uv, ncol = 2, byrow = TRUE)
   }
-  levels = 1
+  levels = 0
   if (type == "loopsubdiv") {
     pbrt_note(
       p$context,
@@ -4615,12 +4611,6 @@ pbrt_mesh = function(p, type, material, flipped) {
       p$command,
       "Subdivision of Ptex-addressed meshes is not supported."
     )
-  }
-  if (type == "loopsubdiv" && levels <= 1) {
-    # rayrender's lazy subdivision uses level one to mean 'disabled'. Use the
-    # mesh API here so an explicitly requested single refinement is retained.
-    mesh = rayvertex::subdivide_mesh(mesh, subdivision_levels = levels)
-    levels = 1
   }
   raymesh_model(
     mesh,

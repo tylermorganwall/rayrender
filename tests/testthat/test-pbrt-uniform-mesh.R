@@ -116,5 +116,5 @@ test_that('uniform construction preserves subdivision, patches, and raw output',
   }
   im = render(candidate)
   expect_gt(max(im[,, 1:3]), .1)
-  expect_identical(im, render(control))
+  expect_identical(as.numeric(im), as.numeric(render(control)))
 })

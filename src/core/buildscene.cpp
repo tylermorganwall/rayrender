@@ -940,7 +940,7 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
       if (SingleAnimation.containsElementNamed("model_deformation") && !Rf_isNull(SingleAnimation["model_deformation"])) {
         if (!row_model || !scene_time)
           Rcpp::stop("Deforming model instances require explicit time or times.");
-        if (!displacement_texture.empty() || as<int>(mesh_entry["subdivision_levels"]) != 1)
+        if (!displacement_texture.empty() || as<int>(mesh_entry["subdivision_levels"]) != 0)
           Rcpp::stop("Deforming meshes do not support subdivision or displacement.");
         List binding = SingleAnimation["model_deformation"];
         size_t node = row_model->model->asset->NodeIndex(as<std::string>(binding["node"]));

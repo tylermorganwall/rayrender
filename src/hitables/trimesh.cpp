@@ -26,7 +26,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                                         scale, calculate_consistent_normals, texCache,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   //Loop subdivision automatically calculates new normals
-  if(subdivision_levels > 1) {
+  if(subdivision_levels > 0) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);

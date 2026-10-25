@@ -42,7 +42,7 @@ raymesh::raymesh(Rcpp::List raymesh_list,
                                                         default_material, 
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   //Loop subdivision automatically calculates new normals
-  if(subdivision_levels > 1) {
+  if(subdivision_levels > 0) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);

@@ -164,7 +164,7 @@ plymesh::plymesh(std::string inputfile, std::string basedir, std::shared_ptr<mat
   tri.reset();
 
   //Loop subdivision automatically calculates new normals
-  if(subdivision_levels > 1) {
+  if(subdivision_levels > 0) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);

@@ -15,7 +15,7 @@ obj_model(
   load_normals = TRUE,
   vertex_colors = FALSE,
   calculate_consistent_normals = TRUE,
-  subdivision_levels = 1,
+  subdivision_levels = 0,
   displacement_texture = "",
   displacement_intensity = 1,
   displacement_vector = FALSE,
@@ -54,7 +54,10 @@ to the model.}
 \item{calculate_consistent_normals}{Default `TRUE`. Whether to calculate consistent vertex normals to prevent energy
 loss at edges.}
 
-\item{subdivision_levels}{Default `1`. Number of Loop subdivisions to be applied to the mesh.}
+\item{subdivision_levels}{Default `0`. Nonnegative integer number of Loop
+subdivision passes. Zero leaves the mesh unsubdivided; one splits each triangle
+into four and smooths the surface. Each additional pass multiplies the triangle
+count by four.}
 
 \item{displacement_texture}{Default `""`. File path to the displacement texture.
 This texture is used to displace the vertices of the mesh based on the texture's pixel values.}

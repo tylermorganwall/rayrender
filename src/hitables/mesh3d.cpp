@@ -92,7 +92,7 @@ mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   
   //Loop subdivision automatically calculates new normals
-  if(subdivision_levels > 1) {
+  if(subdivision_levels > 0) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);
