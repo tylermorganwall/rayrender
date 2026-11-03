@@ -16,6 +16,19 @@
 
 ## New features
 
+- `write_usd()` streams geometry and metadata to disk, allowing objects and scenes whose USD text exceeds R's 2 GB string limit. Failed exports retain the previous destination and remove temporary stage files.
+
+- `write_usd()` and `read_usd()` Add explicit OpenUSD scene export/import,
+  collecting referenced files beside the stage and retaining renderer-specific
+  descriptors as typed USD metadata. Uses the registered native API in `libopenusd`; no Python process or JSON bridge is required. Textures, OBJ/MTL dependencies, and volume files are collected only during explicit export.
+
+- Overall: Render defaults are retained as scene attributes and preserved by USD export/import, with explicit rendering arguments taking precedence. Assets remain file-backed and are collected on explicit USD export. Scene cameras can retain editable preview keyframes with `camera(keyframes = ...)`.
+
+- Overall: The interactive viewer switches to an orthographic camera when FOV
+  decreases to zero or below, and back to perspective when FOV increases above
+  zero. Both cameras are initialized when the viewer starts, and switching
+  preserves the current camera position and orientation.
+
 - `render_scene()` and `render_animation()` now integrate full node, skeletal,
   and morph motion over explicit shutter intervals by default. One shared time
   per image sample updates the complete pose and tight-refits existing bounds;
@@ -297,6 +310,24 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- `generate_camera_motion()` Keeps unchanged look-at targets fixed between orbit
+  keyframes, including during damped preview playback, while preserving smoothed roll.
+
+- `add_object()` and scene row binding avoid repeated copying of list-backed material and transform columns when assembling large mesh batches.
+
+- `group_objects()` Transforms large scenes without repeatedly copying the full transform column.
+
+- `rbind()` Combines large batches of scene objects without repeatedly scanning the accumulated geometry, while preserving model-instance identities and scene cameras and lights.
+
+- `render_scene()` Interactive orbit movement keeps the perspective camera
+  focused on the orbit point, including while moving closer or farther away.
+
+- Overall: Mesh subdivision counts now mean the actual number of Loop passes:
+  `subdivision_levels = 0` disables subdivision and `1` performs one pass.
+  Mesh constructors default to zero, preserving their unsubdivided defaults.
+  Explicit callers using `1` to disable subdivision should use `0` instead.
+  PBRT imports now retain single-pass requests, and invalid counts are rejected.
 
 - Overall: Improves CPU rendering performance for translating keyframed objects,
   especially thin geometry passing close to the camera, by keeping motion

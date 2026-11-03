@@ -296,6 +296,15 @@ render_animation = function(
   shutter_offsets = NULL,
   animation_motion_blur = c("full", "placement")
 ) {
+  saved_call = saved_scene_render_call(
+    scene,
+    names(as.list(match.call())[-1L]),
+    environment(),
+    render_animation
+  )
+  if (!is.null(saved_call)) {
+    return(do.call(render_animation, saved_call))
+  }
   animation_motion_blur = match.arg(animation_motion_blur)
   if (
     !is.null(times) &&

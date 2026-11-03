@@ -250,6 +250,60 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// usd_inspect_native
+SEXP usd_inspect_native(SEXP filename, SEXP selectors, SEXP properties);
+RcppExport SEXP _rayrender_usd_inspect_native(SEXP filenameSEXP, SEXP selectorsSEXP, SEXP propertiesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< SEXP >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type selectors(selectorsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type properties(propertiesSEXP);
+    rcpp_result_gen = Rcpp::wrap(usd_inspect_native(filename, selectors, properties));
+    return rcpp_result_gen;
+END_RCPP
+}
+// usd_literal_native
+std::string usd_literal_native(SEXP value, std::string type);
+RcppExport SEXP _rayrender_usd_literal_native(SEXP valueSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< SEXP >::type value(valueSEXP);
+    Rcpp::traits::input_parameter< std::string >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(usd_literal_native(value, type));
+    return rcpp_result_gen;
+END_RCPP
+}
+// usd_stream_native
+void usd_stream_native(SEXP document, std::string filename);
+RcppExport SEXP _rayrender_usd_stream_native(SEXP documentSEXP, SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::traits::input_parameter< SEXP >::type document(documentSEXP);
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    usd_stream_native(document, filename);
+    return R_NilValue;
+END_RCPP
+}
+// usd_export_file_native
+void usd_export_file_native(std::string source, std::string destination);
+RcppExport SEXP _rayrender_usd_export_file_native(SEXP sourceSEXP, SEXP destinationSEXP) {
+BEGIN_RCPP
+    Rcpp::traits::input_parameter< std::string >::type source(sourceSEXP);
+    Rcpp::traits::input_parameter< std::string >::type destination(destinationSEXP);
+    usd_export_file_native(source, destination);
+    return R_NilValue;
+END_RCPP
+}
+// usd_instance_quaternions_native
+Rcpp::NumericMatrix usd_instance_quaternions_native(Rcpp::NumericMatrix angles, Rcpp::IntegerVector order);
+RcppExport SEXP _rayrender_usd_instance_quaternions_native(SEXP anglesSEXP, SEXP orderSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type angles(anglesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type order(orderSEXP);
+    rcpp_result_gen = Rcpp::wrap(usd_instance_quaternions_native(angles, order));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP run_testthat_tests(SEXP);
 
@@ -274,6 +328,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_pbrt_lex_cpp", (DL_FUNC) &_rayrender_pbrt_lex_cpp, 2},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
+    {"_rayrender_usd_inspect_native", (DL_FUNC) &_rayrender_usd_inspect_native, 3},
+    {"_rayrender_usd_literal_native", (DL_FUNC) &_rayrender_usd_literal_native, 2},
+    {"_rayrender_usd_stream_native", (DL_FUNC) &_rayrender_usd_stream_native, 2},
+    {"_rayrender_usd_export_file_native", (DL_FUNC) &_rayrender_usd_export_file_native, 2},
+    {"_rayrender_usd_instance_quaternions_native", (DL_FUNC) &_rayrender_usd_instance_quaternions_native, 2},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };

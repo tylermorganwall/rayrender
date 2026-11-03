@@ -406,7 +406,8 @@ tween_spline_path = function(points, n, closed = FALSE) {
 #' @param camera_ups Keyframe camera up vectors.
 #' @param output_positions Interpolated camera positions.
 #' @param closed Default `FALSE`. Whether to use periodic orientation tangents.
-#' @return List containing interpolated lookat positions and camera up vectors.
+#' @return List containing interpolated lookat positions, camera up vectors, and
+#' a logical mask identifying frames constrained to an unchanged target.
 #'
 #' @keywords internal
 tween_camera_orientation = function(
@@ -688,7 +689,29 @@ tween_camera_orientation = function(
   # Keep exact lookat targets; the interpolated up basis stays continuous
   # through keyframes so subsequent motion damping does not introduce roll.
   output_lookats[keyframe_frames, ] = lookats
-  list(lookats = output_lookats, camera_ups = output_camera_ups)
+
+  # Independent position, orientation and distance splines do not generally
+  # reconstruct a stationary orbit pivot. Identical adjacent targets are an
+  # explicit hold, not a direction to smooth. Use exact equality so even small
+  # intentional target movements remain animated.
+  fixed_lookat_rows = rep(FALSE, number_frames)
+  for (i in seq_len(number_segments)) {
+    if (all(lookats[i, ] == lookats[i + 1, ])) {
+      rows = seq.int(keyframe_frames[i], keyframe_frames[i + 1])
+      fixed_lookat_rows[rows] = TRUE
+      output_lookats[rows, ] = matrix(
+        lookats[i, ],
+        length(rows),
+        3,
+        byrow = TRUE
+      )
+    }
+  }
+  list(
+    lookats = output_lookats,
+    camera_ups = output_camera_ups,
+    fixed_lookat_rows = fixed_lookat_rows
+  )
 }
 
 #' Generate Translation Matrix

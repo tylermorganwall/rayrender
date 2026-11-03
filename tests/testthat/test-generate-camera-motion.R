@@ -382,9 +382,12 @@ test_that("open damped camera motion keeps the one-way recurrence", {
     c(0, 10, 0)
   )
 
+  # Direct component interpolation retains the legacy damping recurrence.
+  # Smoothed orbit holds additionally constrain targets and reproject camera up.
   undamped = generate_camera_motion(
     positions = positions,
     type = "linear",
+    smooth_orientation = FALSE,
     frames = 8,
     closed = FALSE,
     damp_motion = FALSE,
@@ -393,6 +396,7 @@ test_that("open damped camera motion keeps the one-way recurrence", {
   damped = generate_camera_motion(
     positions = positions,
     type = "linear",
+    smooth_orientation = FALSE,
     frames = 8,
     closed = FALSE,
     damp_motion = TRUE,

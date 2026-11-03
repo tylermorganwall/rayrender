@@ -656,11 +656,11 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
   };
 
   bool termination_sample_count_set = false;
-  auto restart_after_atmosphere_change = [&]() {
+  auto restart_after_preview_change = [&]() {
     bool atmosphere = display.ConsumeAtmosphereChange();
     bool timeline = display.ConsumeTimelineChange();
-    if(!atmosphere && !timeline) return false;
-    // Timeline projection cuts replace the camera only after the old batch
+    if(!atmosphere && !timeline && cam == display.cam && fov == display.cam->get_fov()) return false;
+    // Interactive and timeline projection cuts replace the camera after the old batch
     // has finished. All subsequent workers capture this newly published view.
     cam = display.cam;
     fov = cam->get_fov();
@@ -721,7 +721,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           preview_sample, pb, false,
                           0, &world, rng_interactive);
-        if(restart_after_atmosphere_change()) {
+        if(restart_after_preview_change()) {
           preview_sample = 0;
         } else if(!display.render_requested && !display.terminate) {
           // DrawImage may clear both films after a camera/light/F-key change.
@@ -780,7 +780,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
           finish_preview_termination(s + 1);
           break;
         }
-        restart_after_atmosphere_change();
+        restart_after_preview_change();
         if(!display.render_requested) {
           preview_sample = 0;
           reset_render_state();
@@ -807,7 +807,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         if (display.preview) shutter.Restore();
         display.DrawImage(adaptive_pixel_sampler, adaptive_pixel_sampler_small,
                           s, pb, false, 1, &world, rng_interactive);
-        restart_after_atmosphere_change();
+        restart_after_preview_change();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         continue;
       }
@@ -853,7 +853,7 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
         finish_preview_termination(s + 1);
         break;
       }
-      restart_after_atmosphere_change();
+      restart_after_preview_change();
     }
   }
 

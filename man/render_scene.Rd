@@ -100,6 +100,9 @@ Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right b
 Shift-Enter = Save Preview Snapshot, R = Reset Camera,
 Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
 Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
+For perspective and orthographic views, decreasing FOV to zero or below switches to orthographic
+projection using `ortho_dimensions`. Increasing FOV above zero switches back to perspective.
+Camera position and orientation are preserved; R restores the starting projection.
 If the interactive preview window is wide enough, a status bar below the image shows the current camera, exposure, environment rotation,
 keyframe state, and active integrator (including CPU fallback from Metal). The bar does not cover the image or appear in saved snapshots.
 K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
@@ -119,6 +122,8 @@ at that distance along the viewing direction, preserving framing and lens focus.
 Held movement keys use elapsed time rather than keyboard repeat. Orbiting uses
 angular speed; free-flight panning scales with viewport size at the navigation
 distance, and orbit-mode forward/backward movement scales with orbit radius.
+Each orbit movement step sets the perspective camera's focal distance to the
+distance from the camera to the orbit point, keeping that point in focus.
 Picking a surface updates the navigation distance. Free flight retains its
 scale until another target is selected; E/C adjust the speed multiplier.
 A long preview stall contributes at most 0.25 seconds of held movement per update.
@@ -130,7 +135,7 @@ allow selection of surfaces behind them; invisible container faces are skipped. 
 background without reaching this opacity turns perspective and panoramic cameras toward that
 direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
 view unchanged. Selected surface and volume points remain the orbit center when rotating.
-Right clicking preserves the focal distance.
+Right clicking preserves the focal distance until the next orbit movement.
 Some options aren't available for all cameras. When using a realistic camera,
 the aperture and field of view cannot be changed from their initial settings.}
 
@@ -220,7 +225,8 @@ motion blur. This does not affect exposure or brightness.}
 \item{focal_distance}{Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 otherwise specified.}
 
-\item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.}
+\item{ortho_dimensions}{Default `c(1,1)`. Width and height of the orthographic camera, used when
+`fov = 0` or when the interactive viewer switches to orthographic projection.}
 
 \item{tonemap}{Default `raw`, no tonemapping. Choose the tone mapping function,
 `reinhard` scales values by their individual color channels `color/(1+color)` and then performs the

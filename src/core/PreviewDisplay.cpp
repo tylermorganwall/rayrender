@@ -640,11 +640,13 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
     navigation.SetDistance((key_lookat-key_pos).length());
     return true;
   }
+  SelectCameraProjection(key_fov);
   cam->update_focal_absolute(key_focal);
   cam->update_position_absolute(key_pos);
   cam->update_lookat(key_lookat);
   navigation.SetDistance((key_lookat - key_pos).length());
   cam->update_up(key_up);
+  cam->update_lookat(key_lookat);
   cam->update_aperture_absolute(key_aperture);
   cam->update_fov_absolute(key_fov);
   cam->update_ortho_absolute(key_ortho);
@@ -2134,10 +2136,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == Down_key ) {
-            cam->update_fov(speed*1.f);
+            AdjustCameraFov(speed*1.f);
           }
           if (e.xkey.keycode == Up_key ) {
-            cam->update_fov(speed*-1.f);
+            AdjustCameraFov(speed*-1.f);
           }
           if (e.xkey.keycode == Left_key ) {
             cam->update_aperture(speed*-0.1f);
@@ -2178,7 +2180,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
           }
           if (e.xkey.keycode == R_key ) {
-            cam->reset(); navigation.Reset(*cam);
+            ResetCamera();
             speed = 1;
             (*EnvWorldToObject) = Start_EnvWorldToObject;
             (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2326,11 +2328,11 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               
             }
             if (e.xkey.keycode == Down_key ) {
-              cam->update_fov(speed*1.f);
+              AdjustCameraFov(speed*1.f);
 
             }
             if (e.xkey.keycode == Up_key ) {
-              cam->update_fov(speed*-1.f);
+              AdjustCameraFov(speed*-1.f);
             }
             if (e.xkey.keycode == Left_key ) {
               cam->update_aperture(speed*-0.1f);
@@ -2373,7 +2375,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
             if (e.xkey.keycode == R_key ) {
-              cam->reset(); navigation.Reset(*cam);
+              ResetCamera();
               speed = 1;
               (*EnvWorldToObject) = Start_EnvWorldToObject;
               (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2788,6 +2790,100 @@ void PreviewDisplay::SetCamera(RayCamera* _cam) {
     }
   }
 #endif
+}
+
+namespace {
+std::unique_ptr<RayCamera> MakeAlternatePreviewCamera(RayCamera& source,
+                                                      vec2f ortho_dimensions,
+                                                      Float aspect) {
+  auto shutter = source.ShutterInterval();
+  if (source.get_fov() == 0) {
+    return std::make_unique<camera>(source.get_origin(), source.get_lookat(), source.get_up(),
+      20, aspect, 0, std::max(Float(.001), (source.get_lookat()-source.get_origin()).length()),
+      shutter.first, shutter.second, source.get_iso());
+  }
+  return std::make_unique<ortho_camera>(source.get_origin(), source.get_lookat(), source.get_up(),
+    ortho_dimensions[0], ortho_dimensions[1], shutter.first, shutter.second, source.get_iso());
+}
+}
+
+void PreviewDisplay::ConfigureInteractiveCameras(std::unique_ptr<RayCamera>* owner,
+                                                vec2f ortho_dimensions) {
+  if (!owner || owner->get() != cam)
+    throw std::runtime_error("Interactive camera owner does not match the preview.");
+  if (!interactive || (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam))) return;
+  interactive_camera_owner = owner;
+  interactive_ortho_dimensions = ortho_dimensions;
+  initial_camera_fov = cam->get_fov();
+  alternate_camera = MakeAlternatePreviewCamera(*cam, ortho_dimensions, Float(width)/Float(height));
+}
+
+bool PreviewDisplay::SelectCameraProjection(Float fov) {
+  if (!interactive_camera_owner || fov < 0 || fov >= 180 ||
+      (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam)) ||
+      (cam->get_fov() == 0) == (fov == 0)) return false;
+
+  // Timeline playback can replace the active projection independently of the
+  // interactive pair. Recreate the missing counterpart at that handoff.
+  if ((alternate_camera->get_fov() == 0) != (fov == 0))
+    alternate_camera = MakeAlternatePreviewCamera(*cam, interactive_ortho_dimensions,
+                                                   Float(width)/Float(height));
+  RayCamera& next = *alternate_camera;
+  next.set_camera_flip_x(cam->get_camera_flip_x());
+  next.scene_camera_time = cam->scene_camera_time;
+  next.scene_camera_aspect = cam->scene_camera_aspect;
+  next.scene_camera_track.reset();
+  auto shutter = cam->ShutterInterval();
+  if (auto* perspective = dynamic_cast<camera*>(&next)) {
+    perspective->origin = cam->get_origin();
+    perspective->vup = cam->get_up();
+    perspective->time0 = shutter.first;
+    perspective->time1 = shutter.second;
+    perspective->iso = cam->get_iso();
+    perspective->camera_motion_blur_has_range = false;
+  } else if (auto* orthographic = dynamic_cast<ortho_camera*>(&next)) {
+    orthographic->origin = cam->get_origin();
+    orthographic->vup = cam->get_up();
+    orthographic->focus_dist = (cam->get_lookat()-cam->get_origin()).length();
+    orthographic->time0 = shutter.first;
+    orthographic->time1 = shutter.second;
+    orthographic->iso = cam->get_iso();
+    orthographic->camera_motion_blur_has_range = false;
+  }
+  // Set the complete pose before rebuilding the film plane: assigning position
+  // alone can temporarily coincide with the inactive camera's old target.
+  next.update_lookat(cam->get_lookat());
+  // Keep the renderer's owner, preview, and native window on the same camera.
+  // Both objects stay alive until the completed-batch render handoff.
+  std::swap(*interactive_camera_owner, alternate_camera);
+  SetCamera(interactive_camera_owner->get());
+  navigation.SetDistance((cam->get_lookat() - cam->get_origin()).length());
+  return true;
+}
+
+void PreviewDisplay::AdjustCameraFov(Float delta) {
+  if (!interactive_camera_owner ||
+      (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam))) {
+    cam->update_fov(delta);
+    return;
+  }
+  // Zero is the orthographic boundary; negative input stays at zero so the
+  // next increase immediately returns to perspective.
+  Float fov = std::max(Float(0), cam->get_fov() + delta);
+  fov = std::min(fov, Float(179.9));
+  SelectCameraProjection(fov);
+  cam->update_fov_absolute(fov);
+  TimelineCameraEdited();
+}
+
+void PreviewDisplay::ResetCamera() {
+  if (interactive_camera_owner) {
+    SelectCameraProjection(initial_camera_fov);
+    alternate_camera->reset();
+  }
+  cam->reset();
+  navigation.Reset(*cam);
+  TimelineCameraEdited();
 }
 
 void PreviewDisplay::SetSnapshotFilename(const std::string& filename) {
@@ -3220,13 +3316,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
         case VK_DOWN: {
           if(interactive_w) {
-            cam_w->update_fov(speed*1.f);
+            preview_display_w->AdjustCameraFov(speed*1.f);
         }
           break;
           }
         case VK_UP: {
           if(interactive_w) {
-            cam_w->update_fov(speed*-1.f);
+            preview_display_w->AdjustCameraFov(speed*-1.f);
         }
           break;
           }
@@ -3299,7 +3395,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_R: {
           if(interactive_w) {
-            cam_w->reset(); preview_display_w->navigation.Reset(*cam_w);
+            preview_display_w->ResetCamera();
             speed = 1;
             (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
             (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
@@ -3451,6 +3547,103 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
     &env_transform, &env_transform, false));
 #endif
 }
+}
+
+context("Preview camera projection switching") {
+  test_that("FOV crosses zero in either direction from either initial projection") {
+    for (bool start_orthographic : {false, true}) {
+      Transform identity;
+      const point3f origin(0, 0, -10), target(0, 0, 0);
+      std::unique_ptr<RayCamera> cam;
+      if (start_orthographic)
+        cam = std::make_unique<ortho_camera>(origin, target, vec3f(0,1,0), 8, 4, .2, .8, 2);
+      else
+        cam = std::make_unique<camera>(origin, target, vec3f(0,1,0), .5, 1, .4, 7, .2, .8, 2);
+      cam->set_camera_flip_x(true);
+      auto* initial = cam.get();
+      auto display = MakeTestPreviewDisplay(*cam, identity);
+      display->ConfigureInteractiveCameras(&cam, vec2f(8,4));
+      display->SetShutterSpeed(8);
+      display->SetCameraMotionBlur(true);
+      display->AdjustCameraFov(-1);
+      expect_true(cam->get_fov() == 0);
+      expect_true(display->cam == cam.get());
+      auto* orthographic = cam.get();
+      expect_true(cam->get_ortho()[0] == 8);
+      expect_true(cam->get_ortho()[1] == 4);
+      display->AdjustCameraFov(-128);
+      expect_true(cam.get() == orthographic);
+      expect_true(cam->get_ortho()[1] == 4);
+
+      // An origin at the inactive camera's old target must not reset the pose.
+      cam->update_position_absolute(point3f(0,0,0));
+      cam->update_lookat(point3f(3,2,8));
+      cam->rotate_up(20);
+      const point3f moved_origin = cam->get_origin(), moved_target = cam->get_lookat();
+      const vec3f moved_up = cam->get_up();
+      display->AdjustCameraFov(.5);
+      auto* perspective = cam.get();
+      expect_true(dynamic_cast<camera*>(cam.get()) != nullptr);
+      expect_true(cam->get_fov() == .5);
+      expect_true(cam->get_focal_distance() > 0);
+      if (!start_orthographic) {
+        expect_true(cam->get_aperture() == Approx(.4));
+        expect_true(cam->get_focal_distance() == 7);
+      }
+      expect_true((cam->get_origin()-moved_origin).length() == 0);
+      expect_true((cam->get_lookat()-moved_target).length() == 0);
+      expect_true((cam->get_up()-moved_up).length() == 0);
+      expect_true(cam->get_camera_flip_x());
+      expect_true(cam->get_iso() == 2);
+      expect_true(cam->get_shutter_speed() == 8);
+      expect_true(cam->get_camera_motion_blur());
+      expect_true(cam->ShutterInterval().first == Float(.2));
+      expect_true(cam->ShutterInterval().second == Float(.8));
+      display->SetCameraMotionBlur(false);
+      Ray left = cam->get_ray(.2,.5,point3f(0),.5);
+      Ray right = cam->get_ray(.8,.5,point3f(0),.5);
+      expect_true((left.origin()-right.origin()).length() == 0);
+      expect_true((left.direction()-right.direction()).length() > 0);
+
+      display->AdjustCameraFov(-.5);
+      expect_true(cam.get() == orthographic);
+      left = cam->get_ray(.2,.5,point3f(0),.5);
+      right = cam->get_ray(.8,.5,point3f(0),.5);
+      expect_true((left.origin()-right.origin()).length() > 0);
+      expect_true((left.direction()-right.direction()).length() == 0);
+      display->AdjustCameraFov(.25);
+      expect_true(cam.get() == perspective);
+      expect_true(cam->get_fov() == .25);
+      display->AdjustCameraFov(200);
+      expect_true(cam->get_fov() == Float(179.9));
+      display->ResetCamera();
+      expect_true(cam.get() == initial);
+      expect_true(cam->get_fov() == (start_orthographic ? 0 : .5));
+      expect_true((cam->get_origin()-origin).length() == 0);
+    }
+  }
+  test_that("saved views restore their projection and pose") {
+    Transform identity;
+    std::unique_ptr<RayCamera> cam = std::make_unique<camera>(
+      point3f(0,0,-10), point3f(0), vec3f(0,1,0), 20, 1, .3, 4, 0, 1, 1);
+    auto display = MakeTestPreviewDisplay(*cam, identity);
+    display->ConfigureInteractiveCameras(&cam, vec2f(8,4));
+    display->SaveCurrentKeyframe(0);
+    display->AdjustCameraFov(-30);
+    cam->update_position_absolute(point3f(2,3,-8));
+    cam->update_lookat(point3f(1,2,1));
+    cam->update_ortho_absolute(vec2f(6,3));
+    display->SaveCurrentKeyframe(0);
+    for (int index : {0,1,0,1}) {
+      expect_true(display->ApplyKeyframe(index, nullptr));
+      expect_true(display->cam == cam.get());
+      expect_true(cam->get_fov() == (index == 0 ? 20 : 0));
+      auto saved = display->GetKeyframes()[index];
+      expect_true(cam->get_lookat()[0] == Rcpp::as<Float>(saved["dx"]));
+      expect_true(cam->get_lookat()[2] == Rcpp::as<Float>(saved["dz"]));
+      if (index == 1) expect_true(cam->get_ortho()[1] == 3);
+    }
+  }
 }
 
 context("Preview atmosphere controls") {
@@ -3673,6 +3866,7 @@ context("Preview atmosphere controls") {
     auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{first,middle,last});
     auto cam=track->MakeCamera(first,1,1,-.1,.2,false);
     auto display=MakeTestPreviewDisplay(*cam,identity);
+    display->ConfigureInteractiveCameras(&cam, vec2f(4,4));
     auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
     display->ConfigureTimeline(2,9,2,30,clock,-.1,.2);
     display->ConfigureTimelineCamera(track,&cam);
@@ -3687,6 +3881,19 @@ context("Preview atmosphere controls") {
       expect_true((actual.o-expected.o).length()<1e-6);
       expect_true((actual.d-expected.d).length()<1e-6);
     }
+    display->AdjustCameraFov(1);
+    expect_true(cam->get_fov() == 1);
+    expect_true(!cam->scene_camera_track);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 1);
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 60);
+    display->AdjustCameraFov(-128);
+    expect_true(cam->get_fov() == 0);
+    expect_true(!cam->scene_camera_track);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 0);
   }
   test_that("camera tracks seek, allow a manual override, and restore saved playback") {
     Transform identity;

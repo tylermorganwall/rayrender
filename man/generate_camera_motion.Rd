@@ -102,7 +102,8 @@ less than `1`.}
 `spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
 and orientations while making angular velocity continuous through orientation keyframes. Closed
 paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
-directly with the selected `type`.}
+directly with the selected `type`. Identical lookat targets at adjacent keyframes
+stay fixed throughout that interval, including with damping enabled.}
 }
 \value{
 Data frame of camera positions, orientations, apertures, focal distances, and field of views

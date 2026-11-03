@@ -96,6 +96,9 @@ public:
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  void ConfigureInteractiveCameras(std::unique_ptr<RayCamera>* owner, vec2f ortho_dimensions);
+  void AdjustCameraFov(Float delta);
+  void ResetCamera();
   void ConfigureTimeline(double begin, double end, double initial, double fps,
                          std::shared_ptr<SceneTimeContext> scene_time,
                          Float shutter_open, Float shutter_close);
@@ -286,6 +289,11 @@ public:
   std::vector<PreviewLineOverlay> line_overlays;
 
 private:
+  bool SelectCameraProjection(Float fov);
+  std::unique_ptr<RayCamera>* interactive_camera_owner = nullptr;
+  std::unique_ptr<RayCamera> alternate_camera;
+  vec2f interactive_ortho_dimensions;
+  Float initial_camera_fov = 0;
   std::shared_ptr<SceneTimeContext> timeline_scene_time;
   double timeline_epoch = 0;
   Float timeline_open = 0, timeline_close = 0;

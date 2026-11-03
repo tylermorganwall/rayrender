@@ -31,7 +31,9 @@
 #' values produce less motion blur. `Inf` disables temporal motion blur.
 #' @param camera_flip_x Default `FALSE`. Reverse horizontal film coordinates before
 #' tracing. Useful for matching camera handedness in imported scenes.
-#'
+#' @param keyframes Default `NULL`. Editable keyframes from `get_saved_keyframes()`.
+#' Restored in interactive preview without changing the initial camera or sampled
+#' `motion`. Retains exposure and environment rotation along with camera geometry.
 #' @return A `ray_camera` object.
 #' @export
 #'
@@ -147,7 +149,8 @@ camera = function(
   shutterclose = 1,
   camera_motion_blur = FALSE,
   shutter_speed = 2,
-  camera_flip_x = FALSE
+  camera_flip_x = FALSE,
+  keyframes = NULL
 ) {
   if (
     !is.logical(camera_flip_x) ||
@@ -155,6 +158,46 @@ camera = function(
       is.na(camera_flip_x)
   ) {
     stop("camera_flip_x must be a single TRUE/FALSE value.")
+  }
+  if (!is.null(keyframes)) {
+    keyframes = as.data.frame(keyframes)
+    required = c(
+      "x",
+      "y",
+      "z",
+      "dx",
+      "dy",
+      "dz",
+      "aperture",
+      "fov",
+      "focal",
+      "orthox",
+      "orthoy",
+      "upx",
+      "upy",
+      "upz"
+    )
+    if (
+      !all(required %in% names(keyframes)) ||
+        anyDuplicated(names(keyframes)) ||
+        !all(vapply(
+          keyframes,
+          function(x) is.numeric(x) && all(is.finite(x)),
+          logical(1)
+        ))
+    ) {
+      stop(
+        "keyframes must contain finite numeric camera columns.",
+        call. = FALSE
+      )
+    }
+    validate_camera_motion(keyframes)
+    if (is.null(keyframes$exposure)) {
+      keyframes$exposure = rep(1, nrow(keyframes))
+    }
+    if (is.null(keyframes$env_rotation)) {
+      keyframes$env_rotation = rep(0, nrow(keyframes))
+    }
   }
   validate_camera_name(name)
   keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
@@ -205,6 +248,7 @@ camera = function(
       name = name,
       motion = motion,
       keyframe_motion_args = keyframe_motion_args,
+      keyframes = keyframes,
       filename = filename,
       camera_description_file = camera_description_file,
       camera_scale = camera_scale,
@@ -985,6 +1029,15 @@ preserve_ray_scene_attrs = function(newscene, scene, objects = NULL) {
     attr(newscene, "active_camera") = object_active
   }
 
+  # Keep the receiving scene's defaults; fill only settings it does not own.
+  settings = attr(scene, "ray_render_settings", exact = TRUE)
+  other_settings = attr(objects, "ray_render_settings", exact = TRUE)
+  if (length(settings) || length(other_settings)) {
+    attr(newscene, "ray_render_settings") = c(
+      settings,
+      other_settings[setdiff(names(other_settings), names(settings))]
+    )
+  }
   newscene
 }
 

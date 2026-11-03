@@ -165,3 +165,7 @@ importFrom(openvdbr,vdb_version)
 importFrom(ptexr,ptex_api)
 importFrom(skymodelr,get_prague_sky_metadata)
 useDynLib(rayrender, .registration = TRUE)
+
+
+export(write_usd)
+export(read_usd)

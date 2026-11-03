@@ -54,7 +54,8 @@
 #' `spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
 #' and orientations while making angular velocity continuous through orientation keyframes. Closed
 #' paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
-#' directly with the selected `type`.
+#' directly with the selected `type`. Identical lookat targets at adjacent keyframes
+#' stay fixed throughout that interval, including with damping enabled.
 #'
 #' @export
 #' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
@@ -549,6 +550,29 @@ generate_camera_motion = function(
     }
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
+    }
+    if (smooth_orientation) {
+      # Reapply target holds after damping: preceding moving targets must not
+      # leak into a stationary interval. Reproject the smoothed up vector onto
+      # the actual view plane, retaining its roll while aiming at the pivot.
+      for (row in which(orientation_motion$fixed_lookat_rows)) {
+        target = orientation_motion$lookats[row, ]
+        final_motion[row, c("dx", "dy", "dz")] = target
+        forward = target - as.numeric(final_motion[row, c("x", "y", "z")])
+        distance = sqrt(sum(forward^2))
+        if (distance <= sqrt(.Machine$double.eps)) {
+          next
+        }
+        forward = forward / distance
+        up = as.numeric(final_motion[row, c("upx", "upy", "upz")])
+        up = up - sum(up * forward) * forward
+        if (sum(up^2) < .Machine$double.eps) {
+          # At a singular up hint, use the world axis least aligned with view.
+          up = diag(3)[, which.min(abs(forward))]
+          up = up - sum(up * forward) * forward
+        }
+        final_motion[row, c("upx", "upy", "upz")] = up / sqrt(sum(up^2))
+      }
     }
     return(finish_camera_motion(final_motion, closed, type != "manual"))
   } else if (type == "manual") {

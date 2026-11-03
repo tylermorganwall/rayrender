@@ -116,7 +116,10 @@ bool PreviewNavigation::Move(RayCamera& cam, Float horizontal, Float vertical, F
     cam.update_position(delta, false, false);
     cam.update_lookat(cam.get_origin() + direction * distance);
   }
-  cam.update_focal_absolute(focal);
+  // Orbit movement keeps the pivot on the focal plane, including after dolly
+  // steps and shifted input that delegates to another movement step. Free
+  // flight retains the user's manually selected lens focus.
+  cam.update_focal_absolute(orbit ? (cam.get_lookat() - cam.get_origin()).length() : focal);
   return true;
 }
 
@@ -239,8 +242,43 @@ context("Preview navigation") {
           expect_true(std::abs(cam->get_origin().xyz.y-origin.xyz.y) < 1e-4);
           expect_true((cam->get_origin()-origin).length()/radius < 1e-4);
           expect_true((cam->get_lookat()-target).length() == 0);
-          expect_true(cam->get_focal_distance() == focal);
+          expect_true(cam->get_focal_distance() == Approx(cam == &perspective ? radius : focal));
         }
+      }
+    }
+  }
+  test_that("each orbit step focuses finite-aperture rays on the current pivot") {
+    for (bool flipped : {false, true}) {
+      for (Float scale : {Float(.01), Float(1), Float(1000)}) {
+        point3f pivot(2*scale, -3*scale, 4*scale);
+        camera cam(pivot + vec3f(-6,4,-8)*scale, pivot, vec3f(0,1,0),
+                   45, 1, .2*scale, 3*scale, 0, 1, 1);
+        cam.set_camera_flip_x(flipped);
+        PreviewNavigation nav;
+        nav.SetDistance((cam.get_origin()-pivot).length());
+        struct Step { Float horizontal, vertical, forward; bool shifted; };
+        for (const Step& step : {Step{1,0,0,false}, Step{0,1,0,false},
+                                 Step{0,0,1,false}, Step{0,0,-1,false},
+                                 Step{1,1,1,false}, Step{0,1,0,true}}) {
+          expect_true(nav.Move(cam, step.horizontal, step.vertical, step.forward,
+                               step.shifted, true, 1, .15));
+          point3f current_pivot = cam.get_lookat();
+          expect_true((current_pivot-pivot).length()/scale < 1e-4);
+          Float radius = (cam.get_origin()-current_pivot).length();
+          expect_true(cam.get_focal_distance() == Approx(radius));
+          // Rays through distinct lens positions must meet at the center of
+          // the new focal plane, rather than at the pre-movement focus depth.
+          for (point3f lens : {point3f(.1,.2,0), point3f(-.2,.1,0)}) {
+            Ray ray = cam.get_ray(.5,.5,lens,.5);
+            Float t = dot(current_pivot-ray.origin(), cam.get_w()) / dot(ray.direction(), cam.get_w());
+            expect_true((ray.origin()+t*ray.direction()-current_pivot).length()/scale < 1e-4);
+          }
+        }
+        cam.update_focal_absolute(2*scale);
+        nav.Move(cam, 1,0,1, false,false, 1,.15);
+        expect_true(cam.get_focal_distance() == 2*scale);
+        expect_false(nav.Move(cam, 0,0,0, false,true, 1,.15));
+        expect_true(cam.get_focal_distance() == 2*scale);
       }
     }
   }

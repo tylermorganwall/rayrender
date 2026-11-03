@@ -163,7 +163,7 @@ create_instances = function(
   scale_y = scales$y
   scale_z = scales$z
 
-  new_tibble_row(list(
+  result = new_tibble_row(list(
     x = 0,
     y = 0,
     z = 0,
@@ -203,4 +203,5 @@ create_instances = function(
       end_time = 1
     )
   ))
+  result
 }

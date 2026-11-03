@@ -19,7 +19,7 @@ add_object = function(scene, objects = NULL) {
     return(scene)
   }
   objects = remap_model_instances(objects, scene)
-  newscene = rbind.data.frame(scene, objects)
+  newscene = bind_ray_scene_rows(list(scene, objects))
   preserve_ray_scene_attrs(newscene, scene, objects)
 }
 
@@ -115,5 +115,86 @@ rebind_model_nodes = function(scene, binding) {
 #' @export
 rbind.ray_scene = function(..., deparse.level = 1) {
   scenes = Filter(Negate(is.null), list(...))
-  Reduce(add_object, scenes)
+  if (length(scenes) < 2L) {
+    return(if (length(scenes)) scenes[[1L]] else NULL)
+  }
+
+  # Preserve the first fragment's identities. Scan the remaining fragments as
+  # one batch so collisions (including nested instances) are resolved in input
+  # order without rescanning an ever-growing accumulated scene.
+  objects = bind_ray_scene_rows(unname(scenes[-1L]))
+  objects = remap_model_instances(objects, scenes[[1L]])
+  combined = bind_ray_scene_rows(list(scenes[[1L]], objects))
+
+  # Merge scene-level metadata separately from geometry. This retains duplicate
+  # camera/light validation and first-active-camera precedence without copying
+  # all previously accumulated object rows on every iteration.
+  metadata = scenes[[1L]][0, , drop = FALSE]
+  for (i in seq.int(2L, length(scenes))) {
+    metadata = preserve_ray_scene_attrs(metadata, metadata, scenes[[i]])
+  }
+  preserve_ray_scene_attrs(combined, metadata)
+}
+
+#' @param scenes Scene data frames to concatenate in order.
+#' @return Combined rows with the original scene column classes.
+#' @keywords internal
+#' @noRd
+bind_ray_scene_rows = function(scenes) {
+  scenes = Filter(Negate(is.null), scenes)
+  if (length(scenes) < 2L) {
+    return(if (length(scenes)) scenes[[1L]] else NULL)
+  }
+  prototype = scenes[[1L]]
+  columns = names(prototype)[vapply(
+    prototype,
+    inherits,
+    logical(1),
+    "vctrs_vctr"
+  )]
+  # These scene records are list-backed vectors. Base rbind dispatches a
+  # vctrs assignment for every fragment, copying the whole destination vector
+  # repeatedly. Bind their plain storage once, then restore their classes.
+  # Keep base's normal coercion path for heterogeneous/custom column schemas.
+  supported = c(
+    "ray_material",
+    "ray_shape_info",
+    "ray_animated_transform",
+    "ray_transform"
+  )
+  compatible = all(vapply(
+    scenes,
+    function(scene) {
+      identical(names(scene), names(prototype)) &&
+        all(vapply(
+          columns,
+          function(column) {
+            any(class(scene[[column]]) %in% supported) &&
+              identical(
+                attributes(scene[[column]]),
+                attributes(prototype[[column]])
+              )
+          },
+          logical(1)
+        ))
+    },
+    logical(1)
+  ))
+  if (!compatible || !length(columns)) {
+    return(do.call(rbind.data.frame, unname(scenes)))
+  }
+  storage = lapply(scenes, function(scene) {
+    for (column in columns) {
+      scene[[column]] = vctrs::vec_data(scene[[column]])
+    }
+    scene
+  })
+  combined = do.call(rbind.data.frame, unname(storage))
+  for (column in columns) {
+    combined[[column]] = vctrs::vec_restore(
+      combined[[column]],
+      prototype[[column]]
+    )
+  }
+  combined
 }

@@ -1078,7 +1078,8 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
      1.1*(lookfrom - world_center).length();
   world_radius *= interactive ? 100 : 1;
   
-  if(fov == 0) {
+  if(fov == 0 || (interactive && fov > 0 && fov < 180)) {
+    // The preview may switch to orthographic rays without rebuilding the sky.
     Float ortho_diag = sqrt(pow(ortho_dimensions(0),2) + pow(ortho_dimensions(1),2));
     world_radius += ortho_diag;
   }
@@ -1170,6 +1171,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                          auto_exposure);
 #endif
   Display.navigation_bounds = bounding_box_world;
+  Display.ConfigureInteractiveCameras(&cam, vec2f(ortho_dimensions(0), ortho_dimensions(1)));
   if (has_timeline) {
     Display.ConfigureTimeline(timeline_range[0], timeline_range[1], time_origin,
       as<double>(camera_info["timeline_fps"]), scene_time, shutteropen, shutterclose);
@@ -1208,6 +1210,14 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
   }
   Display.SetSnapshotFilename(snapshot_filename);
   Display.SetKeyframeMotionArgs(keyframe_motion_args);
+  // Restore this camera's authored keys, without consulting R's last-render
+  // keyframe buffer or moving away from the selected initial camera.
+  if(camera_info.containsElementNamed("keyframes")) {
+    Rcpp::List saved_keys = camera_info["keyframes"];
+    for(R_xlen_t i = 0; i < saved_keys.size(); ++i) {
+      Display.Keyframes.push_back(Rcpp::clone(Rcpp::as<Rcpp::List>(saved_keys[i])));
+    }
+  }
   Display.SetTextOverlays(text_overlays);
   Display.SetLineOverlays(line_overlays);
   
@@ -1244,6 +1254,7 @@ List render_scene_rcpp(List scene, List camera_info, List scene_info, List rende
                verbose, cam.get(),  fov,
                world, imp_sample_objects,
                clampval, max_depth, roulette_active, Display, integrator_type, nullptr, &wavefront_report);
+    fov = cam->get_fov();
   }
   const double trace_seconds = benchmark_timing ?
     std::chrono::duration<double>(std::chrono::steady_clock::now() - trace_start).count() : 0;

@@ -24,7 +24,8 @@ camera(
   shutterclose = 1,
   camera_motion_blur = FALSE,
   shutter_speed = 2,
-  camera_flip_x = FALSE
+  camera_flip_x = FALSE,
+  keyframes = NULL
 )
 }
 \arguments{
@@ -75,6 +76,10 @@ values produce less motion blur. `Inf` disables temporal motion blur.}
 
 \item{camera_flip_x}{Default `FALSE`. Reverse horizontal film coordinates before
 tracing. Useful for matching camera handedness in imported scenes.}
+
+\item{keyframes}{Default `NULL`. Editable keyframes from `get_saved_keyframes()`.
+Restored in interactive preview without changing the initial camera or sampled
+`motion`. Retains exposure and environment rotation along with camera geometry.}
 }
 \value{
 A `ray_camera` object.
