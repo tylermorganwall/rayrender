@@ -135,6 +135,8 @@ navbar:
       href: https://www.tylermw.com/raytracing-lenticular-gifs/
     - text: Getting Stated with Rayrender--Forging the R Sword
       href: https://www.tylermw.com/getting-started-with-rayrender/
+    - text: "Light Paths: An Interactive Essay on How Ray Tracing Works"
+      href: https://lightpaths.cloudish.app/
   right:
   - icon: fa-line-chart
     text: Benchmarks
