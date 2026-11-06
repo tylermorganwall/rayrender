@@ -23,10 +23,11 @@
 #' Installed sky datasets remain external dependencies. OBJ files collect their
 #' MTL files and texture dependencies. Unsupported R environments, functions and
 #' external pointers fail explicitly instead of producing incomplete archives.
-#' Export streams numeric data and metadata to a temporary USDA file beside the
-#' destination, then uses native OpenUSD to convert binary output. Temporary disk
-#' space is required for that text file and the output; they are cleaned up if
-#' export fails. Existing destination files are replaced only after validation.
+#' Geometry and metadata are authored directly through native OpenUSD using
+#' typed arrays. Binary export does not create or parse an intermediate text
+#' stage. The stage is held in memory, and a file in the requested format is
+#' written beside the destination before atomic replacement. Failed exports
+#' remove that staging file and retain any existing destination.
 #' @examplesIf requireNamespace("libopenusd", quietly = TRUE) && requireNamespace("digest", quietly = TRUE)
 #' # Export explicitly, then restore the scene from a binary USD file.
 #' scene = sphere() |> add_camera(camera(lookfrom = c(3, 2, 5)))
@@ -90,23 +91,10 @@ write_usd = function(scene, filename, copy_assets = TRUE, overwrite = FALSE) {
     tmpdir = dirname(filename),
     fileext = extension
   )
-  source = if (extension == ".usda") {
-    temporary
-  } else {
-    tempfile(
-      ".rayrender-usd-source-",
-      tmpdir = dirname(filename),
-      fileext = ".usda"
-    )
-  }
-  on.exit(unlink(unique(c(source, temporary))), add = TRUE)
-  # Stream directly to disk, including each numeric array and metadata record.
-  # OpenUSD reads that file natively; no stage-sized R or C++ string is created.
-  usd_stream_native(document, source)
-  usd_export_file_native(source, temporary)
-  if (source != temporary) {
-    unlink(source)
-  }
+  on.exit(unlink(temporary), add = TRUE)
+  # OpenUSD authors typed values in memory and writes the requested file format.
+  # Only the final-format staging file is needed for atomic publication.
+  usd_author_native(document, temporary)
   if (file.exists(filename) && !overwrite) {
     stop("Destination exists: ", filename)
   }
@@ -227,9 +215,9 @@ read_usd = function(filename) {
 usd_require_native = function() {
   if (
     !requireNamespace("libopenusd", quietly = TRUE) ||
-      utils::packageVersion("libopenusd") < "26.8.2"
+      utils::packageVersion("libopenusd") < "26.8.3"
   ) {
-    stop("USD import/export requires libopenusd >= 26.8-2.")
+    stop("USD import/export requires libopenusd >= 26.8-3.")
   }
   invisible(NULL)
 }

@@ -89,3 +89,62 @@ test_that("scene assembly and grouping preserve render settings", {
     attr(scene, "ray_render_settings")
   )
 })
+
+test_that("set_render_settings merges defaults and preserves explicit NULL", {
+  original = add_camera(sphere(), camera(iso = 2.5)) |>
+    set_render_settings(
+      samples = 128,
+      width = 1920,
+      height = 1080,
+      environment_light = "sky.exr"
+    )
+  updated = original |>
+    set_render_settings(samples = 512, environment_light = NULL)
+  expect_identical(
+    attr(updated, "ray_render_settings"),
+    list(samples = 512, width = 1920, height = 1080, environment_light = NULL)
+  )
+  expect_identical(attr(original, "ray_render_settings")$samples, 128)
+  expect_identical(
+    attr(original, "ray_render_settings")$environment_light,
+    "sky.exr"
+  )
+  expect_identical(get_camera(updated), get_camera(original))
+  expect_identical(set_render_settings(updated), updated)
+  expect_error(set_render_settings(list(), samples = 1), "ray_scene")
+  expect_error(set_render_settings(sphere(), 512), "must be named")
+  expect_error(
+    set_render_settings(sphere(), samples = 1, samples = 2),
+    "unique"
+  )
+  expect_error(
+    set_render_settings(sphere(), sampels = 1),
+    "Unknown render settings: sampels"
+  )
+})
+
+test_that("updated USD defaults render with explicit overrides", {
+  skip_if_not_installed("libopenusd", "26.8.3")
+  original_path = tempfile(fileext = ".usdc")
+  updated_path = tempfile(fileext = ".usdc")
+  on.exit(unlink(c(original_path, updated_path)))
+  original = add_camera(sphere(), camera(lookfrom = c(0, 0, 5))) |>
+    set_render_settings(
+      samples = 1,
+      width = 10,
+      height = 8,
+      preview = FALSE,
+      parallel = FALSE,
+      denoise = FALSE,
+      plot_scene = FALSE,
+      progress = FALSE
+    )
+  write_usd(original, original_path, copy_assets = FALSE)
+  updated = read_usd(original_path) |>
+    set_render_settings(width = 12, height = 6)
+  expect_equal(dim(render_scene(updated))[1:2], c(6, 12))
+  expect_equal(dim(render_scene(updated, width = 8))[1:2], c(6, 8))
+  write_usd(updated, updated_path, copy_assets = FALSE)
+  expect_identical(read_usd(updated_path), updated)
+  expect_identical(read_usd(original_path), original)
+})

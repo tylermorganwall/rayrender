@@ -16,7 +16,9 @@
 
 ## New features
 
-- `write_usd()` streams geometry and metadata to disk, allowing objects and scenes whose USD text exceeds R's 2 GB string limit. Failed exports retain the previous destination and remove temporary stage files.
+- `set_render_settings()` Updates saved render defaults on scenes, including USD imports. Explicit renderer arguments continue to take precedence, and USD exports preserve the updated defaults.
+
+- `write_usd()` Authors typed geometry, metadata, and animation directly through native OpenUSD. 
 
 - `write_usd()` and `read_usd()` Add explicit OpenUSD scene export/import,
   collecting referenced files beside the stage and retaining renderer-specific

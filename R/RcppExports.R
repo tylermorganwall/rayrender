@@ -85,16 +85,8 @@ usd_inspect_native <- function(filename, selectors, properties) {
     .Call(`_rayrender_usd_inspect_native`, filename, selectors, properties)
 }
 
-usd_literal_native <- function(value, type) {
-    .Call(`_rayrender_usd_literal_native`, value, type)
-}
-
-usd_stream_native <- function(document, filename) {
-    invisible(.Call(`_rayrender_usd_stream_native`, document, filename))
-}
-
-usd_export_file_native <- function(source, destination) {
-    invisible(.Call(`_rayrender_usd_export_file_native`, source, destination))
+usd_author_native <- function(document, filename) {
+    invisible(.Call(`_rayrender_usd_author_native`, document, filename))
 }
 
 usd_instance_quaternions_native <- function(angles, order) {

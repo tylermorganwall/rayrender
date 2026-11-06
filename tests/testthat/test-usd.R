@@ -1,5 +1,5 @@
 test_that("typed USD preserves renderer descriptors and camera animation", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -39,28 +39,18 @@ test_that("typed USD preserves renderer descriptors and camera animation", {
     date = as.POSIXct("2025-01-01", tz = "UTC")
   )
   metadata_file = file.path(directory, "metadata.usdc")
-  metadata_source = file.path(directory, "metadata.usda")
-  usd_stream_native(
-    list(
-      "#usda 1.0\ndef Xform \"World\" (customData = { dictionary probe = ",
-      usd_metadata(value),
-      "} ) {}"
-    ),
-    metadata_source
-  )
-  usd_export_file_native(metadata_source, metadata_file)
-  metadata = usd_inspect_native(metadata_file, "/World", character())[[
-    1
-  ]]$custom_data$probe
-  expect_identical(usd_unpack_value(metadata), value)
+  attr(scene, "probe") = value
+  write_usd(scene, metadata_file, copy_assets = FALSE)
+  expect_identical(attr(read_usd(metadata_file), "probe"), value)
+  attr(scene, "probe") = new.env()
   expect_error(
-    usd_stream_native(usd_metadata(new.env()), metadata_source),
+    write_usd(scene, metadata_file, copy_assets = FALSE, overwrite = TRUE),
     "cannot preserve"
   )
 })
 
 test_that("USD collects images and NanoVDB files without embedding them in R", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   source = tempfile()
   dir.create(source)
@@ -93,7 +83,7 @@ test_that("USD collects images and NanoVDB files without embedding them in R", {
 })
 
 test_that("OBJ instances collect relative material dependencies", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   source = tempfile()
   dir.create(source)
@@ -148,7 +138,7 @@ test_that("OBJ instances collect relative material dependencies", {
 })
 
 test_that("USD render round trips preserve images and explicit settings", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -182,7 +172,7 @@ test_that("USD render round trips preserve images and explicit settings", {
 })
 
 test_that("USD import rejects foreign stages instead of inventing renderer data", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   file = tempfile(fileext = ".usda")
   on.exit(unlink(file))
@@ -194,7 +184,7 @@ test_that("USD import rejects foreign stages instead of inventing renderer data"
 })
 
 test_that("native export validates assets and preserves an existing stage on failure", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -222,7 +212,7 @@ test_that("native export validates assets and preserves an existing stage on fai
 })
 
 test_that("native metadata preserves precision, strings, attributes and empty columns", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   file = tempfile(fileext = ".usdc")
   on.exit(unlink(file))
@@ -242,7 +232,7 @@ test_that("native metadata preserves precision, strings, attributes and empty co
 })
 
 test_that("USD preserves column names and custom attributes", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   scene = add_object(sphere(), cube(x = 2))
   names(scene$x) = c("first", "second")
   names(scene$material) = c("one", "two")
@@ -253,8 +243,8 @@ test_that("USD preserves column names and custom attributes", {
   expect_identical(read_usd(path), scene)
 })
 
-test_that("USD streams nested geometry and metadata without string assembly", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+test_that("USD authors nested geometry and metadata directly in the requested format", {
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -275,8 +265,8 @@ test_that("USD streams nested geometry and metadata without string assembly", {
   )
 })
 
-test_that("a failed streamed export leaves the previous stage and no scratch files", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+test_that("a failed native export leaves the previous stage and no scratch files", {
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -297,19 +287,24 @@ test_that("a failed streamed export leaves the previous stage and no scratch fil
   )
 })
 
-test_that("streamed numeric properties reject missing values", {
-  path = tempfile(fileext = ".usda")
+test_that("native numeric properties reject missing values", {
+  skip_if_not_installed("libopenusd", "26.8.3")
+  path = tempfile(fileext = ".usdc")
   on.exit(unlink(path))
   for (value in list(NA_integer_, NA, NA_real_, Inf)) {
-    expect_error(
-      usd_stream_native(usd_property("int[]", "probe", value), path),
-      "Missing|Nonfinite"
+    document = usd_stage_document(sphere(), character(), tempdir())
+    document$prims[[1]]$body = usd_property(
+      "int[]",
+      "probe",
+      value,
+      custom = TRUE
     )
+    expect_error(usd_author_native(document, path), "Missing|Nonfinite")
   }
 })
 
 test_that("USD preserves instance, texture-graph, and environment assets", {
-  skip_if_not_installed("libopenusd", "26.8.2")
+  skip_if_not_installed("libopenusd", "26.8.3")
   skip_if_not_installed("digest")
   source = tempfile(fileext = ".png")
   bundle = tempfile()
@@ -353,4 +348,77 @@ test_that("USD preserves instance, texture-graph, and environment assets", {
   expect_equal(args$width, 20)
   expect_equal(args$height, 8)
   expect_true(file.exists(args$environment_light))
+})
+
+
+test_that("native export identifies filesystem failures", {
+  skip_if_not_installed("libopenusd", "26.8.3")
+  directory = tempfile(fileext = ".usdc")
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  document = usd_stage_document(sphere(), character(), tempdir())
+  error = tryCatch(usd_author_native(document, directory), error = identity)
+  expect_s3_class(error, "error")
+  expect_match(conditionMessage(error), "Cannot write USD stage", fixed = TRUE)
+  expect_match(conditionMessage(error), directory, fixed = TRUE)
+})
+
+test_that("binary export passes typed data directly to OpenUSD", {
+  skip_if_not_installed("libopenusd", "26.8.3")
+  directory = tempfile()
+  dir.create(directory)
+  on.exit(unlink(directory, recursive = TRUE))
+  native = usd_author_native
+  calls = 0L
+  testthat::local_mocked_bindings(
+    usd_author_native = function(document, filename) {
+      calls <<- calls + 1L
+      expect_identical(tools::file_ext(filename), "usdc")
+      expect_identical(document$prims[[1]]$kind, "prim")
+      expect_identical(
+        document$prims[[
+          1
+        ]]$metadata$customData$rayrender$attributes$value$probe,
+        seq_len(10000)
+      )
+      native(document, filename)
+      expect_identical(
+        list.files(directory, all.files = TRUE, no.. = TRUE),
+        basename(filename)
+      )
+    },
+    .package = "rayrender"
+  )
+  scene = sphere()
+  attr(scene, "probe") = seq_len(10000)
+  path = file.path(directory, "native.usdc")
+  write_usd(scene, path, copy_assets = FALSE)
+  expect_identical(calls, 1L)
+  expect_identical(rawToChar(readBin(path, "raw", 8)), "PXR-USDC")
+  expect_identical(read_usd(path), scene)
+})
+
+test_that("native USD authors object and camera time samples", {
+  skip_if_not_installed("libopenusd", "26.8.3")
+  object = sphere()
+  endpoint = diag(4)
+  endpoint[1, 4] = 3
+  object$animation_info[[1]]$start_transform_animation = list(diag(4))
+  object$animation_info[[1]]$end_transform_animation = list(endpoint)
+  keys = as.data.frame(camera()$motion)
+  keys = keys[c(1, 1), ]
+  keys$x[2] = 2
+  keys$fov[2] = 0
+  scene = add_camera(object, camera(motion = keys))
+  path = tempfile(fileext = ".usdc")
+  on.exit(unlink(path))
+  write_usd(scene, path, copy_assets = FALSE)
+  expect_identical(read_usd(path), scene)
+  stage = libopenusd::usd_open(path)
+  on.exit(libopenusd::usd_close(stage), add = TRUE)
+  text = libopenusd::usd_to_usda(stage)
+  expect_match(text, "xformOp:transform.timeSamples", fixed = TRUE)
+  expect_match(text, "(3, 0, 0, 1)", fixed = TRUE)
+  expect_match(text, '0: "perspective"', fixed = TRUE)
+  expect_match(text, '1: "orthographic"', fixed = TRUE)
 })

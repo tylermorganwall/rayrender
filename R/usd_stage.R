@@ -1,7 +1,7 @@
 #' @param scene Scene with asset paths already remapped.
 #' @param assets Complete asset dependency paths.
 #' @param root Stage directory, used to read model geometry.
-#' @return Nested text fragments and deferred numeric data for native streaming.
+#' @return Typed stage description for native OpenUSD authoring.
 #' @keywords internal
 #' @noRd
 usd_stage_document = function(scene, assets, root) {
@@ -20,21 +20,23 @@ usd_stage_document = function(scene, assets, root) {
     row = lapply(scene, function(column) {
       if (is.list(column)) column[[i]] else column[i]
     })
-    usd_object_text(
+    usd_object_prims(
       row,
       sprintf("Object%08d", i - 1L),
       paste0("/World/Objects/", sprintf("Object%08d", i - 1L)),
       writer
     )
   })
-  cameras = usd_camera_text(attributes(scene), writer)
-  lights = usd_light_text(attributes(scene), writer)
+  cameras = usd_camera_prims(attributes(scene), writer)
+  lights = usd_light_prims(attributes(scene), writer)
   metadata = list(
-    "customData = { dictionary rayrender = {\nint version = 1\ndictionary attributes = ",
-    usd_metadata(attributes(scene), TRUE),
-    "\ndictionary columns = ",
-    usd_metadata(as.list(scene), TRUE, templates = TRUE),
-    "\n} }"
+    customData = list(
+      rayrender = list(
+        version = 1L,
+        attributes = usd_metadata(attributes(scene), TRUE),
+        columns = usd_metadata(as.list(scene), TRUE, templates = TRUE)
+      )
+    )
   )
   world = usd_prim(
     "Xform",
@@ -55,14 +57,10 @@ usd_stage_document = function(scene, assets, root) {
     )
   }
   list(
-    '#usda 1.0\n(\ndefaultPrim = "World"\nupAxis = "Y"\nmetersPerUnit = 1\nstartTimeCode = 0\nendTimeCode = ',
-    as.character(writer$last_time),
-    "\nframesPerSecond = ",
-    as.character(writer$fps),
-    "\ntimeCodesPerSecond = ",
-    as.character(writer$fps),
-    "\n)\n",
-    world
+    default_prim = "/World",
+    fps = writer$fps,
+    end_time = writer$last_time,
+    prims = world
   )
 }
 
@@ -74,15 +72,11 @@ usd_stage_document = function(scene, assets, root) {
 #' @return An object Xform and its geometry/material bindings.
 #' @keywords internal
 #' @noRd
-usd_object_text = function(row, name, path, writer, archive = TRUE) {
+usd_object_prims = function(row, name, path, writer, archive = TRUE) {
   metadata = if (archive) {
-    list(
-      "customData = { dictionary rayrender = { dictionary record = ",
-      usd_metadata(row, TRUE),
-      " } }"
-    )
+    list(customData = list(rayrender = list(record = usd_metadata(row, TRUE))))
   } else {
-    ""
+    list()
   }
   transform = usd_object_matrix(row)
   animation = row$animation_info
@@ -93,24 +87,11 @@ usd_object_text = function(row, name, path, writer, archive = TRUE) {
     times = c(animation$start_time, animation$end_time) * writer$fps
     transforms = c(
       transforms,
-      paste0(
-        "matrix4d xformOp:transform.timeSamples = {\n",
-        paste(
-          c(
-            paste0(
-              times[1],
-              ": ",
-              usd_literal_native(transform %*% t(start), "matrix4d")
-            ),
-            paste0(
-              times[2],
-              ": ",
-              usd_literal_native(transform %*% t(end), "matrix4d")
-            )
-          ),
-          collapse = ",\n"
-        ),
-        "\n}"
+      usd_property(
+        "matrix4d",
+        "xformOp:transform",
+        times = times,
+        samples = list(transform %*% t(start), transform %*% t(end))
       )
     )
     writer$last_time = max(writer$last_time, times)
@@ -121,8 +102,13 @@ usd_object_text = function(row, name, path, writer, archive = TRUE) {
       "Authored animation tracks are retained in rayrender metadata; interchange samples only endpoint transforms."
     )
   }
-  material = usd_material_text(row$material, writer)
-  geometry = usd_geometry_text(row, paste0(path, "/Geometry"), material, writer)
+  material = usd_material_prims(row$material, writer)
+  geometry = usd_geometry_prims(
+    row,
+    paste0(path, "/Geometry"),
+    material,
+    writer
+  )
   volume = NULL
   medium = row$shape_info$medium
   if (is.list(medium) && identical(medium$type, "nanovdb")) {
@@ -143,7 +129,10 @@ usd_object_text = function(row, name, path, writer, archive = TRUE) {
     volume = usd_prim(
       "Volume",
       "Volume",
-      c(paste0("rel field:density = <", path, "/Volume/Density>"), field)
+      c(
+        usd_relationship("field:density", paste0(path, "/Volume/Density")),
+        field
+      )
     )
     if (!is_vdb) {
       writer$warnings = c(
@@ -175,7 +164,7 @@ usd_object_text = function(row, name, path, writer, archive = TRUE) {
 #' @return Camera and render-settings prims.
 #' @keywords internal
 #' @noRd
-usd_camera_text = function(attrs, writer) {
+usd_camera_prims = function(attrs, writer) {
   cameras = attrs$ray_cameras
   settings = attrs$ray_render_settings
   width = if (is.null(settings$width)) 400 else settings$width
@@ -208,30 +197,15 @@ usd_camera_text = function(attrs, writer) {
         vertical * width / height
       }
       values = list(
-        "matrix4d xformOp:transform" = usd_literal_native(
-          transform,
-          "matrix4d"
-        ),
-        "token projection" = usd_literal_native(
-          if (fov == 0) "orthographic" else "perspective",
-          "token"
-        ),
-        "float focalLength" = "50",
-        "float focusDistance" = usd_literal_native(sample$focal, "float"),
-        "float fStop" = usd_literal_native(
-          if (sample$aperture == 0) 0 else 5 / sample$aperture,
-          "float"
-        )
+        "matrix4d xformOp:transform" = transform,
+        "token projection" = if (fov == 0) "orthographic" else "perspective",
+        "float focalLength" = 50,
+        "float focusDistance" = sample$focal,
+        "float fStop" = if (sample$aperture == 0) 0 else 5 / sample$aperture
       )
       if (fov >= 0 && fov < 180) {
-        values[["float verticalAperture"]] = usd_literal_native(
-          vertical,
-          "float"
-        )
-        values[["float horizontalAperture"]] = usd_literal_native(
-          horizontal,
-          "float"
-        )
+        values[["float verticalAperture"]] = vertical
+        values[["float horizontalAperture"]] = horizontal
       } else {
         writer$warnings = c(
           writer$warnings,
@@ -239,21 +213,20 @@ usd_camera_text = function(attrs, writer) {
         )
       }
       for (key in names(values)) {
-        properties[[key]] = c(properties[[key]], values[[key]])
+        properties[[key]] = c(properties[[key]], list(values[[key]]))
       }
     }
     body = lapply(names(properties), function(key) {
       values = properties[[key]]
+      parts = strsplit(key, " ", fixed = TRUE)[[1]]
       if (n == 1) {
-        return(list(key, " = ", values))
+        return(usd_property(parts[1], parts[2], values[[1]]))
       }
-      list(
-        key,
-        ".timeSamples = {",
-        lapply(seq_along(values), function(i) {
-          list(if (i > 1L) ", ", as.character(i - 1L), ": ", values[[i]])
-        }),
-        "}"
+      usd_property(
+        parts[1],
+        parts[2],
+        times = seq_len(n) - 1L,
+        samples = values
       )
     })
     writer$last_time = max(writer$last_time, n - 1)
@@ -269,11 +242,7 @@ usd_camera_text = function(attrs, writer) {
           uniform = TRUE
         )
       ),
-      paste0(
-        "customData = { dictionary rayrender = { string name = ",
-        usd_literal_native(names(cameras)[i], "string"),
-        " } }"
-      )
+      list(customData = list(rayrender = list(name = names(cameras)[i])))
     )
   })
   active = attrs$active_camera
@@ -283,7 +252,7 @@ usd_camera_text = function(attrs, writer) {
     c(
       usd_property("int2", "resolution", c(width, height)),
       if (length(active) && active %in% names(paths)) {
-        paste0("rel camera = <", paths[active], ">")
+        usd_relationship("camera", unname(paths[active]))
       }
     )
   )
@@ -295,7 +264,7 @@ usd_camera_text = function(attrs, writer) {
 #' @return Light prims.
 #' @keywords internal
 #' @noRd
-usd_light_text = function(attrs, writer) {
+usd_light_prims = function(attrs, writer) {
   result = list()
   for (i in seq_along(attrs$ray_infinite_lights)) {
     light = attrs$ray_infinite_lights[[i]]
@@ -402,7 +371,7 @@ usd_light_text = function(attrs, writer) {
       "SphereLight",
       paste0("Point", i - 1L),
       body,
-      if (light$type == "spot") 'prepend apiSchemas = ["ShapingAPI"]' else ""
+      if (light$type == "spot") list(apiSchemas = "ShapingAPI") else list()
     )
   }
   result
@@ -410,64 +379,79 @@ usd_light_text = function(attrs, writer) {
 
 #' @param type USD prim type.
 #' @param name Prim name.
-#' @param body Property declarations and child prims.
-#' @param metadata Default `""`. Prim metadata declarations.
-#' @return USDA prim definition.
+#' @param body Properties, relationships and child prims.
+#' @param metadata Default `list()`. Prim metadata.
+#' @return A typed prim description for native OpenUSD authoring.
 #' @keywords internal
 #' @noRd
-usd_prim = function(type, name, body, metadata = "") {
-  # Retain nested fragments: neither a prim nor its parent becomes one R string.
+usd_prim = function(type, name, body, metadata = list()) {
+  # Wrap each node once so c() combines siblings without flattening its fields.
   list(list(
-    "def ",
-    type,
-    " ",
-    usd_literal_native(name, "string"),
-    if (length(metadata) && !identical(metadata, "")) {
-      list(" (\n", metadata, "\n)")
-    },
-    " {\n",
-    lapply(body, function(fragment) list(fragment, "\n")),
-    "\n}\n"
+    kind = "prim",
+    type = type,
+    name = name,
+    body = body,
+    metadata = metadata
   ))
 }
 
 #' @param type USD value type.
 #' @param name Property name.
-#' @param value Property value.
+#' @param value Default `NULL`. Default value; NULL leaves it unauthored.
 #' @param custom Default `FALSE`. Mark a renderer-specific property.
 #' @param uniform Default `FALSE`. Mark a uniform property.
-#' @return USDA property declaration.
+#' @param times Default `NULL`. Sample times in stage time codes.
+#' @param samples Default `NULL`. List of values corresponding to times.
+#' @param connections Default `NULL`. Connected property paths.
+#' @param interpolation Default `NULL`. Mesh interpolation convention.
+#' @return A typed attribute description, retaining arrays without formatting.
 #' @keywords internal
 #' @noRd
-usd_property = function(type, name, value, custom = FALSE, uniform = FALSE) {
+usd_property = function(
+  type,
+  name,
+  value = NULL,
+  custom = FALSE,
+  uniform = FALSE,
+  times = NULL,
+  samples = NULL,
+  connections = NULL,
+  interpolation = NULL
+) {
   list(list(
-    paste0(
-      if (custom) "custom ",
-      if (uniform) "uniform ",
-      type,
-      " ",
-      name,
-      " = "
-    ),
-    structure(
-      list(value = value, type = type),
-      class = "rayrender_usd_literal"
-    )
+    kind = "attribute",
+    type = type,
+    name = name,
+    value = value,
+    custom = custom,
+    uniform = uniform,
+    times = times,
+    samples = samples,
+    connections = connections,
+    interpolation = interpolation
   ))
 }
 
-#' @param value Renderer metadata, retained by reference until writing.
+#' @param name Relationship name.
+#' @param targets Absolute target paths.
+#' @return A typed relationship description.
+#' @keywords internal
+#' @noRd
+usd_relationship = function(name, targets) {
+  list(list(kind = "relationship", name = name, targets = targets))
+}
+
+#' @param value R metadata, retained by reference until native authoring.
 #' @param fields Default `FALSE`. Encode named fields as a USD dictionary.
 #' @param templates Default `FALSE`. Retain column attributes without their data.
-#' @return A deferred metadata fragment for the native stream writer.
+#' @return An R-value encoding request for native typed metadata construction.
 #' @keywords internal
 #' @noRd
 usd_metadata = function(value, fields = FALSE, templates = FALSE) {
-  # The outer list keeps c() from flattening the typed node into ordinary fields.
-  list(structure(
+  structure(
     list(value = value, fields = fields, templates = templates),
-    class = "rayrender_usd_metadata"
-  ))
+    class = "usd_r_object"
+  )
 }
 
 #' @param row Object row.
@@ -493,7 +477,7 @@ usd_object_matrix = function(row) {
 #' @return Absolute path of a deduplicated preview material.
 #' @keywords internal
 #' @noRd
-usd_material_text = function(descriptor, writer) {
+usd_material_prims = function(descriptor, writer) {
   key = digest::digest(descriptor, algo = "sha256")
   if (exists(key, writer$material_paths, inherits = FALSE)) {
     return(writer$material_paths[[key]])
@@ -506,7 +490,7 @@ usd_material_text = function(descriptor, writer) {
     usd_property("token", "info:id", "UsdPreviewSurface", uniform = TRUE),
     usd_property("color3f", "inputs:diffuseColor", color),
     usd_property("float", "inputs:roughness", 0.5),
-    "token outputs:surface"
+    usd_property("token", "outputs:surface")
   )
   kind = descriptor$type
   if (kind %in% c("metal", 2)) {
@@ -528,10 +512,10 @@ usd_material_text = function(descriptor, writer) {
   ) {
     preview = c(
       preview,
-      paste0(
-        "color3f inputs:diffuseColor.connect = <",
-        path,
-        "/Texture.outputs:rgb>"
+      usd_property(
+        "color3f",
+        "inputs:diffuseColor",
+        connections = paste0(path, "/Texture.outputs:rgb")
       )
     )
     uv = usd_prim(
@@ -545,7 +529,7 @@ usd_material_text = function(descriptor, writer) {
           uniform = TRUE
         ),
         usd_property("token", "inputs:varname", "st"),
-        "float2 outputs:result"
+        usd_property("float2", "outputs:result")
       )
     )
     texture = c(
@@ -556,8 +540,12 @@ usd_material_text = function(descriptor, writer) {
         c(
           usd_property("token", "info:id", "UsdUVTexture", uniform = TRUE),
           usd_property("asset", "inputs:file", image),
-          paste0("float2 inputs:st.connect = <", path, "/UV.outputs:result>"),
-          "float3 outputs:rgb"
+          usd_property(
+            "float2",
+            "inputs:st",
+            connections = paste0(path, "/UV.outputs:result")
+          ),
+          usd_property("float3", "outputs:rgb")
         )
       )
     )
@@ -580,18 +568,16 @@ usd_material_text = function(descriptor, writer) {
     "Material",
     name,
     c(
-      paste0(
-        "token outputs:surface.connect = <",
-        path,
-        "/Preview.outputs:surface>"
+      usd_property(
+        "token",
+        "outputs:surface",
+        connections = paste0(path, "/Preview.outputs:surface")
       ),
       usd_prim("Shader", "Preview", preview),
       texture
     ),
     list(
-      "customData = { dictionary rayrender = { dictionary material = ",
-      usd_metadata(descriptor),
-      " } }"
+      customData = list(rayrender = list(material = usd_metadata(descriptor)))
     )
   )
   writer$material_paths[[key]] = path
@@ -602,10 +588,10 @@ usd_material_text = function(descriptor, writer) {
 #' @param path Geometry prim path.
 #' @param material Material path.
 #' @param writer Shared authoring state.
-#' @return Geometry prim text.
+#' @return Geometry prim description.
 #' @keywords internal
 #' @noRd
-usd_geometry_text = function(row, path, material, writer) {
+usd_geometry_prims = function(row, path, material, writer) {
   shapes = c(
     "sphere",
     "xy_rect",
@@ -627,7 +613,7 @@ usd_geometry_text = function(row, path, material, writer) {
   info = row$shape_info
   props = info$shape_properties
   type = "Xform"
-  body = c(paste0("rel material:binding = <", material, ">"))
+  body = usd_relationship("material:binding", material)
   if (isTRUE(info$flipped)) {
     body = c(
       body,
@@ -666,10 +652,10 @@ usd_geometry_text = function(row, path, material, writer) {
     if (kind == "yz_rect") {
       points = points[, c(3, 1, 2)]
     }
-    return(usd_mesh_text("Geometry", points, matrix(0:3, 1), body = body))
+    return(usd_mesh_prims("Geometry", points, matrix(0:3, 1), body = body))
   } else if (kind == "mesh3d") {
     mesh = info$mesh_info[[1]]
-    return(usd_mesh_text(
+    return(usd_mesh_prims(
       "Geometry",
       mesh$vertices,
       mesh$indices,
@@ -682,7 +668,7 @@ usd_geometry_text = function(row, path, material, writer) {
     for (i in seq_along(mesh$shapes)) {
       body = c(
         body,
-        usd_mesh_text(
+        usd_mesh_prims(
           paste0("Mesh", i - 1L),
           mesh$vertices[[i]],
           mesh$shapes[[i]]$indices,
@@ -710,7 +696,7 @@ usd_geometry_text = function(row, path, material, writer) {
       writer$warnings,
       "OBJ material libraries remain available for rayrender; interchange uses the object preview material."
     )
-    return(usd_mesh_text(
+    return(usd_mesh_prims(
       "Geometry",
       mesh$points,
       mesh$faces,
@@ -729,7 +715,7 @@ usd_geometry_text = function(row, path, material, writer) {
         if (is.list(column)) column[[i]] else column[i]
       })
       name = sprintf("Object%08d", i - 1L)
-      usd_object_text(
+      usd_object_prims(
         record,
         name,
         paste0(prototype_path, "/", name),
@@ -746,7 +732,7 @@ usd_geometry_text = function(row, path, material, writer) {
     body = c(
       body,
       usd_prim("Scope", "Prototypes", usd_prim("Xform", "Prototype", children)),
-      paste0("rel prototypes = <", prototype_path, ">"),
+      usd_relationship("prototypes", prototype_path),
       usd_property("int[]", "protoIndices", rep.int(0L, n)),
       usd_property(
         "point3f[]",
@@ -788,7 +774,7 @@ usd_geometry_text = function(row, path, material, writer) {
     type,
     "Geometry",
     body,
-    'prepend apiSchemas = ["MaterialBindingAPI"]'
+    list(apiSchemas = "MaterialBindingAPI")
   )
 }
 
@@ -850,10 +836,10 @@ usd_rotation_matrix = function(angles, order) {
 #' @param normal_indices Default `NULL`. Face-varying normal indices.
 #' @param uv_indices Default `NULL`. Face-varying UV indices.
 #' @param body Default `character()`. Additional properties.
-#' @return Mesh prim text.
+#' @return Mesh prim description.
 #' @keywords internal
 #' @noRd
-usd_mesh_text = function(
+usd_mesh_prims = function(
   name,
   points,
   faces,
@@ -892,23 +878,23 @@ usd_mesh_text = function(
     }
     body = c(
       body,
-      list(list(
-        usd_property("normal3f[]", "normals", normals[, 1:3, drop = FALSE]),
-        ' (interpolation = "',
-        if (varying) "faceVarying" else "vertex",
-        '")'
-      ))
+      usd_property(
+        "normal3f[]",
+        "normals",
+        normals[, 1:3, drop = FALSE],
+        interpolation = if (varying) "faceVarying" else "vertex"
+      )
     )
   }
   if (is.matrix(uv) && length(uv)) {
     body = c(
       body,
-      list(list(
-        usd_property("texCoord2f[]", "primvars:st", uv[, 1:2, drop = FALSE]),
-        ' (interpolation = "',
-        if (length(uv_indices)) "faceVarying" else "vertex",
-        '")'
-      ))
+      usd_property(
+        "texCoord2f[]",
+        "primvars:st",
+        uv[, 1:2, drop = FALSE],
+        interpolation = if (length(uv_indices)) "faceVarying" else "vertex"
+      )
     )
     if (length(uv_indices)) {
       body = c(
@@ -925,7 +911,7 @@ usd_mesh_text = function(
       )
     }
   }
-  usd_prim("Mesh", name, body, 'prepend apiSchemas = ["MaterialBindingAPI"]')
+  usd_prim("Mesh", name, body, list(apiSchemas = "MaterialBindingAPI"))
 }
 
 #' @param filename OBJ file.

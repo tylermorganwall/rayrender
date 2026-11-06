@@ -36,10 +36,11 @@ shaders, atmospheric sky, CSG or NanoVDB support.
 Installed sky datasets remain external dependencies. OBJ files collect their
 MTL files and texture dependencies. Unsupported R environments, functions and
 external pointers fail explicitly instead of producing incomplete archives.
-Export streams numeric data and metadata to a temporary USDA file beside the
-destination, then uses native OpenUSD to convert binary output. Temporary disk
-space is required for that text file and the output; they are cleaned up if
-export fails. Existing destination files are replaced only after validation.
+Geometry and metadata are authored directly through native OpenUSD using
+typed arrays. Binary export does not create or parse an intermediate text
+stage. The stage is held in memory, and a file in the requested format is
+written beside the destination before atomic replacement. Failed exports
+remove that staging file and retain any existing destination.
 }
 \examples{
 \dontshow{if (requireNamespace("libopenusd", quietly = TRUE) && requireNamespace("digest", quietly = TRUE)) withAutoprint(\{ # examplesIf}
