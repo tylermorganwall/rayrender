@@ -398,6 +398,44 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   List output_frames(n_frames - start_frame);
   int output_frame_index = 0;
 
+  // File output streams by default: keep only the filename and diagnostics,
+  // not the full image array. A NULL policy is resolved per frame because a
+  // camera batch can mix cameras that write files with cameras that do not.
+  int return_frames_policy = 1;
+  if (render_info.containsElementNamed("return_frames")) {
+    SEXP requested = render_info["return_frames"];
+    return_frames_policy = Rf_isNull(requested) ? -1 : (as<bool>(requested) ? 1 : 0);
+  }
+  auto store_frame_output = [&](RObject frame_output,
+                                const std::string& frame_filename,
+                                bool wrote_image) {
+    // Image output may finish here or be queued on the background worker. Report
+    // the complete frame here instead of timing between sampler setup messages.
+    std::string completion = frame_output.hasAttribute("rayrender_async_pending") ?
+      "Rendered frame (save queued) " : "Completed frame ";
+    print_time(verbose, completion +
+               std::to_string(start_frame + output_frame_index + 1) + "/" +
+               std::to_string(n_frames));
+    bool retain_image = return_frames_policy == 1 ||
+      (return_frames_policy == -1 && !wrote_image);
+    if (retain_image) {
+      output_frames[output_frame_index++] = frame_output;
+      return;
+    }
+
+    CharacterVector result(1);
+    if (wrote_image) result[0] = frame_filename;
+    else result[0] = NA_STRING;
+    // Image dimensions and color-space metadata do not belong on filenames.
+    // Keep the small diagnostics independently of the released pixel storage.
+    for (const char* name : {"path_warnings", "path_warning_log", "volume_statistics",
+                             "wavefront", "animation_timing"}) {
+      if (frame_output.hasAttribute(name)) result.attr(name) = frame_output.attr(name);
+    }
+    output_frames[output_frame_index++] = result;
+  };
+
+
   point3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   point3f backgroundlow(bglow[0],bglow[1],bglow[2]);
 
@@ -641,7 +679,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                   min_variance, min_adaptive_size,
                   rgb_output, normalOutput, albedoOutput,
                   progress_bar, sample_method, stratified_x, stratified_y,
-                  verbose, cam.get(), fov,
+                  false, cam.get(), fov,
                   world, imp_sample_objects, 
                   clampval, max_depth, roulette_active,
                   preview_light_direction, preview_exponent, *rng_for_frame, sample_dist, keep_colors, backgroundhigh);
@@ -659,7 +697,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                          transparent_background, write_current_image, plot_scene);
       if (scene_time && benchmark_timing)
         frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
-      output_frames[output_frame_index++] = frame_output;
+      store_frame_output(frame_output, frame_filename, write_current_image);
     }
   } else {
     // The native world above is immutable for this batch. Retain its Metal
@@ -795,7 +833,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
                    integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
@@ -815,7 +853,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
@@ -836,7 +874,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
                    integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
@@ -853,7 +891,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam,  fov,
+                   false, frame_cam,  fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
@@ -914,7 +952,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
       if (scene_time && benchmark_timing)
         frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
-      output_frames[output_frame_index++] = frame_output;
+      store_frame_output(frame_output, frame_filename, write_current_image);
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
@@ -933,7 +971,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
       if (scene_time && benchmark_timing)
         frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
-      output_frames[output_frame_index++] = frame_output;
+      store_frame_output(frame_output, frame_filename, write_current_image);
 #endif
     }
   }

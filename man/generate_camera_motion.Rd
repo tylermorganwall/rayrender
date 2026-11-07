@@ -103,7 +103,8 @@ less than `1`.}
 and orientations while making angular velocity continuous through orientation keyframes. Closed
 paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
 directly with the selected `type`. Identical lookat targets at adjacent keyframes
-stay fixed throughout that interval, including with damping enabled.}
+stay fixed throughout that interval before damping. Damping is applied last to
+the complete motion, so transitions into and out of a fixed target remain smoothed.}
 }
 \value{
 Data frame of camera positions, orientations, apertures, focal distances, and field of views

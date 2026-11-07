@@ -55,7 +55,9 @@ render_animation(
   times = NULL,
   fps = 30,
   shutter_offsets = NULL,
-  animation_motion_blur = c("full", "placement")
+  animation_motion_blur = c("full", "placement"),
+  return_frames = NULL,
+  async_write = TRUE
 )
 }
 \arguments{
@@ -241,9 +243,24 @@ accumulated temporal features. "placement" freezes internal model poses at
 frame time while retaining outer placement and other scene motion blur.
 Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
 channels retain frame-frozen internal poses and report this when requested.}
+
+\item{return_frames}{Default `NULL`. Whether to retain rendered image arrays
+in the returned list. `NULL` retains frames only when they are not written
+to files. `TRUE` retains every image, including saved frames; memory then
+grows with frame count. `FALSE` releases every image after output.}
+
+\item{async_write}{Default `TRUE`. Process and save file-output frames in one
+persistent background R worker while the next frame renders. At most one
+image is pending; all pending output finishes before this function returns.
+Worker errors and warnings are reported in the main R session. In-memory
+outputs and `return_frames = TRUE` use synchronous processing. Set `FALSE`
+to process all frames synchronously.}
 }
 \value{
-Raytraced plot to current device, or an image saved to a file.
+Invisibly, a list of frame results. Retained frames are image arrays;
+  otherwise each result is its filename, or `NA_character_` if no file was
+  written. Per-frame diagnostic attributes are preserved on either result.
+  Multiple cameras return a named list of camera results.
 }
 \description{
 Takes the scene description and renders an image, either to the device or to a filename.

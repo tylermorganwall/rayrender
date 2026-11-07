@@ -21,41 +21,67 @@ test_that("orbit targets stay exact across smoothing, damping and closed loops",
             progress = FALSE
           )
           actual = unname(as.matrix(motion[, c("dx", "dy", "dz")]))
-          expect_identical(
+          expect_equal(
             actual,
             matrix(target, nrow(motion), 3, byrow = TRUE)
           )
           view = actual - as.matrix(motion[, c("x", "y", "z")])
           view = view / sqrt(rowSums(view^2))
           up = as.matrix(motion[, c("upx", "upy", "upz")])
-          expect_equal(
-            rowSums(view * up),
-            rep(0, nrow(motion)),
-            tolerance = 1e-12
-          )
-          expect_equal(rowSums(up^2), rep(1, nrow(motion)), tolerance = 1e-12)
+          if (!damp) {
+            expect_equal(
+              rowSums(view * up),
+              rep(0, nrow(motion)),
+              tolerance = 1e-12
+            )
+            expect_equal(rowSums(up^2), rep(1, nrow(motion)), tolerance = 1e-12)
+          } else {
+            expect_true(all(is.finite(up)))
+            expect_true(all(rowSums(up^2) > 0))
+          }
         }
       }
     }
   }
 })
 
-test_that("a stationary target interval stays locked next to moving targets", {
+test_that("damping filters the complete motion across both target-hold boundaries", {
   positions = rbind(c(-5, 3, 10), c(3, 4, 10), c(-2, 3, 9), c(4, 4, 8))
   targets = rbind(c(-2, 0, 0), c(1, 0, 0), c(1, 0, 0), c(3, 1, 0))
-  for (damp in c(FALSE, TRUE)) {
-    motion = generate_camera_motion(
-      positions,
+  for (closed in c(FALSE, TRUE)) {
+    args = list(
+      positions = positions,
       lookats = targets,
-      frames = 121,
-      damp_motion = damp,
+      frames = if (closed) 160L else 121L,
+      closed = closed,
       progress = FALSE
     )
+    undamped = do.call(
+      generate_camera_motion,
+      c(args, list(damp_motion = FALSE))
+    )
+    damped = do.call(generate_camera_motion, c(args, list(damp_motion = TRUE)))
     expect_identical(
-      unname(as.matrix(motion[41:81, c("dx", "dy", "dz")])),
+      unname(as.matrix(undamped[41:81, c("dx", "dy", "dz")])),
       matrix(c(1, 0, 0), 41, 3, byrow = TRUE)
     )
-    expect_gt(max(abs(motion$dx[82:121] - 1)), 0.1)
+    # Independently apply the documented low-pass recurrence to every column.
+    # For a loop, the previous state is its periodic steady-state final row.
+    expected = as.matrix(undamped)
+    previous = if (closed) {
+      weights = .9^(nrow(expected) - seq_len(nrow(expected)))
+      colSums(expected * weights) * .1 / (1 - .9^nrow(expected))
+    } else {
+      expected[1, ]
+    }
+    for (row in seq_len(nrow(expected))) {
+      previous = .9 * previous + .1 * expected[row, ]
+      expected[row, ] = previous
+    }
+    expect_equal(as.matrix(damped), expected, tolerance = 1e-12)
+    # Entering a hold must preserve damping lag, not snap the target to the key.
+    expect_gt(abs(damped$dx[41] - 1), 1e-3)
+    expect_gt(max(abs(damped$dx[82:121] - 1)), .1)
   }
 })
 

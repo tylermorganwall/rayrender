@@ -16,6 +16,8 @@
 
 ## New features
 
+- `render_animation()` Overlaps frame post-processing and file saving with rendering using one persistent background worker by default. Only one image may be pending, and output is completed before return. Set `async_write = FALSE` for synchronous output; in-memory image returns stay synchronous.
+
 - `set_render_settings()` Updates saved render defaults on scenes, including USD imports. Explicit renderer arguments continue to take precedence, and USD exports preserve the updated defaults.
 
 - `write_usd()` Authors typed geometry, metadata, and animation directly through native OpenUSD. 
@@ -313,8 +315,13 @@
 
 ## Bugfixes
 
+- `render_animation()` Reports completed-frame timing with frame numbers instead of repeatedly labelling the preceding frame's rendering time as sampler allocation.
+
+- `render_animation()` Releases completed image arrays when writing frames to files, preventing memory growth proportional to animation length. Results retain filenames and diagnostics; use `return_frames = TRUE` to also keep the images in memory.
+
 - `generate_camera_motion()` Keeps unchanged look-at targets fixed between orbit
-  keyframes, including during damped preview playback, while preserving smoothed roll.
+  keyframes while preserving smoothed roll. Applies damping after all target and
+  orientation calculations, preventing abrupt resets at fixed-target boundaries.
 
 - `add_object()` and scene row binding avoid repeated copying of list-backed material and transform columns when assembling large mesh batches.
 

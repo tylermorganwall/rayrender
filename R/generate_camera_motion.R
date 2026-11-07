@@ -55,7 +55,8 @@
 #' and orientations while making angular velocity continuous through orientation keyframes. Closed
 #' paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
 #' directly with the selected `type`. Identical lookat targets at adjacent keyframes
-#' stay fixed throughout that interval, including with damping enabled.
+#' stay fixed throughout that interval before damping. Damping is applied last to
+#' the complete motion, so transitions into and out of a fixed target remain smoothed.
 #'
 #' @export
 #' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
@@ -548,13 +549,10 @@ generate_camera_motion = function(
       final_motion[, c("dx", "dy", "dz")] = orientation_motion$lookats
       final_motion[, c("upx", "upy", "upz")] = orientation_motion$camera_ups
     }
-    if (damp_motion) {
-      final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
-    }
     if (smooth_orientation) {
-      # Reapply target holds after damping: preceding moving targets must not
-      # leak into a stationary interval. Reproject the smoothed up vector onto
-      # the actual view plane, retaining its roll while aiming at the pivot.
+      # Finish the undamped orbit basis before filtering any camera components.
+      # Reproject the up vector onto the fixed target's view plane, preserving
+      # its roll. Target holds must never overwrite the final damped motion.
       for (row in which(orientation_motion$fixed_lookat_rows)) {
         target = orientation_motion$lookats[row, ]
         final_motion[row, c("dx", "dy", "dz")] = target
@@ -573,6 +571,11 @@ generate_camera_motion = function(
         }
         final_motion[row, c("upx", "upy", "upz")] = up / sqrt(sum(up^2))
       }
+    }
+    # Damping is the final motion operation, including at target-hold boundaries.
+    # A moving target settles into a hold instead of snapping to it at the key.
+    if (damp_motion) {
+      final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
     return(finish_camera_motion(final_motion, closed, type != "manual"))
   } else if (type == "manual") {
