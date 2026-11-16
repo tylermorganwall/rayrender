@@ -164,6 +164,12 @@ animation_default_plot_scene = function(
 #'   Worker errors and warnings are reported in the main R session. In-memory
 #'   outputs and `return_frames = TRUE` use synchronous processing. Set `FALSE`
 #'   to process all frames synchronously.
+#' @param screen_text Default `NULL`. Screen-space labels created with `screen_text()`,
+#'   or a list of label specifications. World anchors are projected for each frame;
+#'   text size stays fixed in pixels and the specified occlusion mode is preserved.
+#' @param screen_line Default `NULL`. Screen-space lines created with `screen_line()`,
+#'   or a list of line specifications. Endpoints are projected for each frame;
+#'   line width stays fixed in pixels and the specified occlusion mode is preserved.
 #' @return Invisibly, a list of frame results. Retained frames are image arrays;
 #'   otherwise each result is its filename, or `NA_character_` if no file was
 #'   written. Per-frame diagnostic attributes are preserved on either result.
@@ -309,7 +315,9 @@ render_animation = function(
   shutter_offsets = NULL,
   animation_motion_blur = c("full", "placement"),
   return_frames = NULL,
-  async_write = TRUE
+  async_write = TRUE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   saved_call = saved_scene_render_call(
     scene,
@@ -477,6 +485,8 @@ render_animation = function(
         animation_motion_blur = animation_motion_blur,
         return_frames = return_frames,
         async_write = async_write,
+        screen_text = screen_text,
+        screen_line = screen_line,
         scene = scene,
         cameras = cameras,
         mode = "animation",
@@ -525,6 +535,8 @@ render_animation = function(
         animation_motion_blur = animation_motion_blur,
         return_frames = return_frames,
         async_write = async_write,
+        screen_text = screen_text,
+        screen_line = screen_line,
         scene = scene,
         camera = cam,
         start_frame = start_frame,
@@ -572,6 +584,8 @@ render_animation = function(
     animation_motion_blur = animation_motion_blur,
     return_frames = return_frames,
     async_write = async_write,
+    screen_text = screen_text,
+    screen_line = screen_line,
     scene = scene,
     camera = cameras[[1]],
     start_frame = start_frame,
@@ -654,7 +668,9 @@ render_animation_camera = function(
   force_no_write = FALSE,
   animation_motion_blur = "full",
   return_frames = TRUE,
-  async_write = FALSE
+  async_write = FALSE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   if (!inherits(camera, "ray_camera")) {
     stop("camera must inherit from class 'ray_camera'")
@@ -729,10 +745,16 @@ render_animation_camera = function(
   camera_info$authored_cameras = list(camera$authored_motion)
   camera_motion$track_index = rep(1L, nrow(camera_motion))
   scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
+  render_info = prepare_animation_screen_overlays(
+    scene_list$render_info,
+    screen_text,
+    screen_line
+  )
   render_info$animation_motion_blur = animation_motion_blur
   render_info["return_frames"] = list(return_frames)
-  render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
+  render_info$benchmark_timing = isTRUE(getOption(
+    "rayrender.benchmark_timing"
+  ))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
@@ -839,7 +861,9 @@ render_camera_batch = function(
   force_no_write = FALSE,
   animation_motion_blur = "full",
   return_frames = TRUE,
-  async_write = FALSE
+  async_write = FALSE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   if (!camera_batch_metadata_compatible(cameras)) {
     stop(
@@ -923,10 +947,16 @@ render_camera_batch = function(
   })
   camera_motion$track_index = plan$camera_index
   scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
+  render_info = prepare_animation_screen_overlays(
+    scene_list$render_info,
+    screen_text,
+    screen_line
+  )
   render_info$animation_motion_blur = animation_motion_blur
   render_info["return_frames"] = list(return_frames)
-  render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
+  render_info$benchmark_timing = isTRUE(getOption(
+    "rayrender.benchmark_timing"
+  ))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
@@ -1007,6 +1037,24 @@ render_camera_batch = function(
   }
 
   invisible(output)
+}
+
+#' @param render_info Prepared renderer settings.
+#' @param screen_text Screen-space label specifications, or NULL.
+#' @param screen_line Screen-space line specifications, or NULL.
+#' @return Renderer settings with reusable text rasters and line specifications.
+#' @keywords internal
+#' @noRd
+prepare_animation_screen_overlays = function(
+  render_info,
+  screen_text,
+  screen_line
+) {
+  # Native composition handles every occlusion mode, including unoccluded
+  # overlays. This also keeps projection independent of output workers.
+  render_info$screen_text_preview = prepare_screen_text_preview(screen_text)
+  render_info$screen_line_preview = prepare_screen_line_preview(screen_line)
+  render_info
 }
 
 #' @param enabled Whether file output should run in a background R session.

@@ -41,6 +41,8 @@ using namespace Rcpp;
 
 
 using namespace std;
+#include "screen_overlays.h"
+using namespace rayrender_screen;
 
 namespace {
 
@@ -589,6 +591,24 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     pb_frames.set_total(n_frames - start_frame);
   }
 
+  // Rasterize label glyphs once, then project and occlude their immutable
+  // world anchors against each frame's camera and current geometry. Keep the
+  // display-space layers separate from HDR pixels until after tonemapping.
+  const auto text_overlays = parse_preview_text_overlays(render_info);
+  const auto line_overlays = parse_preview_line_overlays(render_info);
+  auto attach_frame_overlays = [&](List image, RayCamera* frame_camera) {
+    // Overlay visibility must not change the renderer's sampling sequence.
+    random_gen overlay_rng(0);
+    if (!text_overlays.empty()) {
+      image.attr("screen_text_overlay") = composite_screen_text_overlay(
+        text_overlays, nx, ny, frame_camera, worldbvh.get(), overlay_rng);
+    }
+    if (!line_overlays.empty()) {
+      image.attr("screen_line_overlay") = composite_screen_line_overlay(
+        line_overlays, nx, ny, frame_camera, worldbvh.get(), overlay_rng);
+    }
+  };
+
   // All frames in this native batch share the lens descriptor and film setup.
   // Reuse the most recently initialized optics when only rigid pose/time changes.
   // Variable-optics snapshots still construct their exact lens configuration.
@@ -828,6 +848,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        &oidn_normal_output,
                                        denoise_frame);
         }
+        preview_display->SetTextOverlays(text_overlays);
+        preview_display->SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -848,6 +870,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                      &oidn_albedo_output,
                      &oidn_normal_output,
                      denoise_frame, false);
+        d.SetTextOverlays(text_overlays);
+        d.SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -869,6 +893,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         } else {
           preview_display->SetCamera(frame_cam);
         }
+        preview_display->SetTextOverlays(text_overlays);
+        preview_display->SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -886,6 +912,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          false);
+        d.SetTextOverlays(text_overlays);
+        d.SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
@@ -946,6 +974,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
+      attach_frame_overlays(temp, frame_cam);
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
       if (wavefront_report.requested)
@@ -965,6 +994,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
+      attach_frame_overlays(temp, frame_cam);
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
       if (wavefront_report.requested)

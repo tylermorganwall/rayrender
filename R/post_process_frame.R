@@ -100,6 +100,21 @@ post_process_frame = function(
   if (any(is.na(full_array))) {
     full_array[is.na(full_array)] = 0
   }
+  # Composite in display space, matching still renders. Attributes travel with
+  # the pixels to the asynchronous writer, so both output paths use this step.
+  for (overlay_name in c("screen_text_overlay", "screen_line_overlay")) {
+    overlay = attr(rgb_mat, overlay_name, exact = TRUE)
+    if (!is.null(overlay)) {
+      full_array = composite_screen_text_image(
+        full_array,
+        overlay,
+        x = 1,
+        y = 1,
+        hjust = 0,
+        vjust = 0
+      )
+    }
+  }
   if (!is.null(attr(rgb_mat, "volume_statistics"))) {
     attr(full_array, "volume_statistics") = attr(rgb_mat, "volume_statistics")
   }

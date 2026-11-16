@@ -57,7 +57,9 @@ render_animation(
   shutter_offsets = NULL,
   animation_motion_blur = c("full", "placement"),
   return_frames = NULL,
-  async_write = TRUE
+  async_write = TRUE,
+  screen_text = NULL,
+  screen_line = NULL
 )
 }
 \arguments{
@@ -255,6 +257,14 @@ image is pending; all pending output finishes before this function returns.
 Worker errors and warnings are reported in the main R session. In-memory
 outputs and `return_frames = TRUE` use synchronous processing. Set `FALSE`
 to process all frames synchronously.}
+
+\item{screen_text}{Default `NULL`. Screen-space labels created with `screen_text()`,
+or a list of label specifications. World anchors are projected for each frame;
+text size stays fixed in pixels and the specified occlusion mode is preserved.}
+
+\item{screen_line}{Default `NULL`. Screen-space lines created with `screen_line()`,
+or a list of line specifications. Endpoints are projected for each frame;
+line width stays fixed in pixels and the specified occlusion mode is preserved.}
 }
 \value{
 Invisibly, a list of frame results. Retained frames are image arrays;

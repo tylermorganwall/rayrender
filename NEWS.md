@@ -319,6 +319,10 @@
 
 ## Bugfixes
 
+- `render_animation()` Supports screen-space text and lines, including overlays
+  stored in scene render settings. Labels and lines follow each frame's camera
+  while retaining pixel sizes and occlusion, in previews and saved frames.
+
 - Ptex textures on Metal report invalid face lookups once per render and expose the failed lookup count in the rendering diagnostics.
 
 - `render_animation()` Reports completed-frame timing with frame numbers instead of repeatedly labelling the preceding frame's rendering time as sampler allocation.

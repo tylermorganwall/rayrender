@@ -58,3 +58,6 @@ core/wavefront.o core/wavefront_deformation.o core/wavefront_deformation_tests.o
 # Shared temporal sampler used by the integrator and its native acceptance tests.
 core/integrator.o math/keyframe_tests.o: core/full_pose_shutter.h
 $(CPP_OBJECTS): core/camera.h math/animatedtransform.h
+
+# Shared screen projection and occlusion for stills and animation frames.
+render_scene_rcpp.o render_animation_rcpp.o: screen_overlays.h
