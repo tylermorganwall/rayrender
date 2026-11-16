@@ -86,13 +86,13 @@ R"MSL(
   };
   // Counters: current ray queue, hit queue, shadow queue, next ray queue, error.
   struct Counts {
-    atomic_uint rays, hits, shadows, next, error, discarded, scattering, csg_failed;
+    atomic_uint rays, hits, shadows, next, error, discarded, scattering, csg_failed, ptex_failed;
   };
   static_assert(sizeof(Triangle) == 160 && sizeof(Texture) == 80 && sizeof(Material) == 144 &&
                     sizeof(Boundary) == 112 && sizeof(VolumeState) == 80 && sizeof(Light) == 112 &&
                     sizeof(Camera) == 256 && sizeof(Params) == 336 && sizeof(Pixel) == 48 &&
                     sizeof(Path) == 80 && sizeof(Hit) == 32 && sizeof(Shadow) == 144 &&
-                    sizeof(Counts) == 32,
+                    sizeof(Counts) == 36,
                 "wavefront host/device ABI mismatch");
 
   uint hash_seed(uint x, uint seed) {
@@ -817,7 +817,7 @@ R"MSL(
           float2 uv = hit.coordinates.xy;
           float3 bary = float3(1 - uv.x - uv.y, uv);
           float3 position = contact.position;
-          float opacity = texture_value(alpha, surface_context(face, bary, position, surfaces, scene.motion),
+          float opacity = texture_value(alpha, surface_context(face, bary, position, surfaces, scene.motion, &counts.ptex_failed),
                                         textures, texels)
                               .x;
           skip = opacity < sample1(pixel, path.dimension, p, directions, blue);
@@ -1146,7 +1146,7 @@ R"MSL(
         enqueue(pixel, path, adjacent, p, paths, membership, next_queue, counts);
         return;
       }
-      TextureContext texture_hit = surface_context(t, bary, position, surfaces, scene.motion);
+      TextureContext texture_hit = surface_context(t, bary, position, surfaces, scene.motion, &counts.ptex_failed);
       base_normal = n;
       if (texture_features & 4) {
         Surface mapping = motion_surface(surfaces[as_type<uint>(t.uv2.w)],scene.motion,as_type<uint>(t.uv2.w));
@@ -1440,25 +1440,25 @@ R"MSL(
             // Emission is view dependent under OpenPBR's coating layers.
             auto emitter_pbr = prepare_pbr(
                 lm,
-                texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion), textures,
+                texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion, &counts.ptex_failed), textures,
                               texels),
                 -wi, en, emitter.geometric.xyz, source.tangent,
                 boundary_ior(body, boundaries, materials),
                 lm.second_texture == UINT_MAX
                     ? -1.f
                     : texture_value(lm.second_texture,
-                                    surface_context(emitter, b, target, surfaces, scene.motion), textures, texels)
+                                    surface_context(emitter, b, target, surfaces, scene.motion, &counts.ptex_failed), textures, texels)
                           .x,
                 material_data);
             emitted = emitter_pbr.prepared.emission;
           } else
-            emitted = texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion),
+            emitted = texture_value(lm.texture, surface_context(emitter, b, target, surfaces, scene.motion, &counts.ptex_failed),
                                     textures, texels) *
                       lm.diffuse.w;
           if (texture_features & 8) {
             uint alpha = surfaces[as_type<uint>(emitter.uv2.w)].alpha;
             if (alpha != UINT_MAX)
-              emitted *= clamp(texture_value(alpha, surface_context(emitter, b, target, surfaces, scene.motion),
+              emitted *= clamp(texture_value(alpha, surface_context(emitter, b, target, surfaces, scene.motion, &counts.ptex_failed),
                                              textures, texels)
                                    .x,
                                0.f, 1.f);
@@ -1857,7 +1857,7 @@ R"MSL(
           float opacity =
               clamp(texture_value(alpha,
                                   surface_context(t, float3(1 - uv.x - uv.y, uv),
-                                                  r.origin + endpoint * r.direction, surfaces, scene.motion),
+                                                  r.origin + endpoint * r.direction, surfaces, scene.motion, &counts.ptex_failed),
                                   textures, texels)
                         .x,
                     0.f, 1.f);

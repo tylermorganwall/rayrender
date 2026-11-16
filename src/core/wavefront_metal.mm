@@ -395,7 +395,7 @@ public:
     buffers[8] = Buffer(capacity * 4);
     buffers[9] = Buffer(capacity * 32);
     buffers[10] = Buffer(capacity * 144);
-    buffers[11] = Buffer(8 * 4);
+    buffers[11] = Buffer(9 * sizeof(uint32_t));
     buffers[13] = Buffer(capacity * 4);
     buffers[14] = kernels.directions;
     buffers[15] = kernels.blue;
@@ -741,6 +741,7 @@ public:
       // Primary rays can query CSG for initial membership. Reset on the host
       // before dispatch, rather than racing the first lane against those queries.
       static_cast<uint32_t *>(buffers[11].contents)[7]=0;
+      static_cast<uint32_t *>(buffers[11].contents)[8]=0;
       if (!active.empty())
         std::memcpy(buffers[13].contents, active.data(), active.size() * sizeof(uint32_t));
       if (!lights.empty())
@@ -849,6 +850,7 @@ public:
       report.discarded_paths += counts[5];
       report.scattering_events += counts[6];
       report.csg_failed_queries += counts[7];
+      report.ptex_failed_lookups += counts[8];
       pixels = static_cast<const WFPixel *>(buffers[6].contents);
       return true;
     }

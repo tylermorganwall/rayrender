@@ -5,8 +5,9 @@
 #' and \code{\link{homogeneous_medium}()}, \code{\link{grid_medium}()}, or
 #' \code{\link{vdb_medium}()}.
 #'
-#' @param color Default `white`. The color of the surface. Can be either
-#' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param color Default `"#ffffff"`. Surface color as an R color name, hexadecimal
+#' code, an `rgb(r, g, b)` string with channels from `0` to `255`, or a numeric
+#' RGB vector with three intensities between `0` and `1`.
 #' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param checkerperiod Default `3`. The period of the checker pattern. Increasing this value makes the checker

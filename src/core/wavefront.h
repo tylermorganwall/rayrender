@@ -262,7 +262,7 @@ struct WavefrontReport {
   size_t triangles = 0, completed_samples = 0;
   size_t tessellated_primitives = 0, discarded_paths = 0, scattering_events = 0;
   size_t analytic_primitives = 0, unique_meshes = 0, mesh_instances = 0;
-  size_t csg_failed_queries = 0;
+  size_t csg_failed_queries = 0, ptex_failed_lookups = 0;
 };
 
 // Device work is transactional: cancellation never commits a partial sample.

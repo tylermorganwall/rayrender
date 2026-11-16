@@ -201,6 +201,9 @@ screen_text = function(
   occlusion_mode = "anchor",
   occlusion_tolerance = 0.001
 ) {
+  color = normalize_rgb_color(color)
+  background_color = normalize_rgb_color(background_color)
+  halo_color = normalize_rgb_color(halo_color)
   if (!is.null(point)) {
     point = as.matrix(point)
     if (ncol(point) != 3) {
@@ -391,6 +394,9 @@ normalize_screen_text = function(screen_text_spec) {
       output[[name]] = defaults[[name]]
     }
   }
+  output$color = normalize_rgb_color(output$color)
+  output$background_color = normalize_rgb_color(output$background_color)
+  output$halo_color = normalize_rgb_color(output$halo_color)
   output
 }
 

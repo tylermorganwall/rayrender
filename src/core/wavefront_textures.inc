@@ -10,6 +10,7 @@ R"MSL(
     float3 position, object_position, normal, object_normal;
     float4 footprint; // dudx, dvdx, dudy, dvdy; zero means no differentials.
     int face_index;
+    device atomic_uint *ptex_failures;
   };
   static_assert(sizeof(Surface) == 240, "wavefront surface ABI mismatch");
   Surface motion_surface(Surface s, MotionContext m, uint id) {
@@ -23,16 +24,18 @@ R"MSL(
     return s;
   }
   TextureContext texture_context(float2 uv, float3 position) {
-    return {uv, position, position, float3(0, 1, 0), float3(0, 1, 0), float4(0), -1};
+    return {uv, position, position, float3(0, 1, 0), float3(0, 1, 0), float4(0), -1, nullptr};
   }
   float3 object_point(Surface s, float3 p) {
     return float3(dot(s.inverse[0], float4(p, 1)), dot(s.inverse[1], float4(p, 1)),
                   dot(s.inverse[2], float4(p, 1)));
   }
   TextureContext surface_context(Triangle t, float3 bary, float3 position,
-                                 device const Surface *surfaces, MotionContext motion = {}) {
+                                 device const Surface *surfaces, MotionContext motion = {},
+                                 device atomic_uint *ptex_failures = nullptr) {
     TextureContext h =
         texture_context(bary.x * t.uv01.xy + bary.y * t.uv01.zw + bary.z * t.uv2.xy, position);
+    h.ptex_failures = ptex_failures;
     h.normal = t.geometric.xyz;
     h.face_index = (t.flags & 64) ? as_type<int>(t.uv2.z) : -1;
     if (texture_features & 2) {
@@ -102,7 +105,13 @@ R"MSL(
     return result;
   }
   float3 ptex_atlas(Texture t, TextureContext h, device const float4 *texels) {
-    if (h.face_index<0 || uint(h.face_index)>=t.width) return float3(0);
+    if (h.face_index < 0 || uint(h.face_index) >= t.width) {
+      // Only count on the device. The host reports after the command buffer
+      // completes, including lookups from alpha, bump and emitter textures.
+      if (h.ptex_failures)
+        atomic_fetch_add_explicit(h.ptex_failures, 1, memory_order_relaxed);
+      return float3(0);
+    }
     uint4 face=as_type<uint4>(texels[t.offset+uint(h.face_index)]);
     float2 uv=clamp(h.uv,0.f,1.f);
     if (t.c.w==0 && uv.x+uv.y>1) uv/=uv.x+uv.y;

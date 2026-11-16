@@ -2317,6 +2317,8 @@ text3d = function(
   flipped = FALSE,
   scale = c(1, 1, 1)
 ) {
+  font_color = normalize_rgb_color(font_color)
+  background_color = normalize_rgb_color(background_color)
   labelfile = tempfile(fileext = ".png")
   text_image = rayimage::render_text_image(
     label,

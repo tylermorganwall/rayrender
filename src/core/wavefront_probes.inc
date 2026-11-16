@@ -57,7 +57,7 @@ R"MSL(
                              uint i [[thread_position_in_grid]]) {
     TextureProbe p = inputs[i];
     TextureContext h = {p.uv.xy,      p.position.xyz,      p.object_position.xyz,
-                        p.normal.xyz, p.object_normal.xyz, p.footprint, int(p.uv.w)};
+                        p.normal.xyz, p.object_normal.xyz, p.footprint, int(p.uv.w), nullptr};
     outputs[i] = float4(texture_value(uint(p.uv.z), h, textures, texels), 0);
   }
   struct BsdfProbe {

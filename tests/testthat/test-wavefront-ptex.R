@@ -212,3 +212,31 @@ test_that("Metal Ptex rejects an atlas that cannot fit without corrupting the sc
   expect_false(attr(image, "wavefront")$used)
   expect_true(all(is.finite(image)))
 })
+
+test_that("Metal aggregates invalid Ptex lookups and resets diagnostics between renders", {
+  file = tempfile(fileext = '.ptx')
+  on.exit(unlink(file))
+  ptexr::ptex_write(file, list(array(.5, c(4, 4, 1))))
+  material = diffuse(texture_ptex(file))
+  valid = raymesh_model(wavefront_ptex_panel(), material = material)
+  clean = wavefront_ptex_render(valid, settings = list(samples = 4))
+  expect_equal(attr(clean, 'wavefront')$ptex_failed_lookups, 0)
+  invalid = raymesh_model(wavefront_ptex_panel(10L), material = material)
+  warnings = character()
+  image = withCallingHandlers(
+    wavefront_ptex_render(invalid, settings = list(samples = 4)),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart('muffleWarning')
+    }
+  )
+  expect_length(warnings, 1L)
+  expect_match(warnings, 'Ptex:.*failed and returned zero')
+  expect_gt(attr(image, 'wavefront')$ptex_failed_lookups, 0)
+  expect_true(all(is.finite(image)))
+  expect_equal(max(image[,, 1:3]), 0)
+  expect_no_warning(
+    clean <- wavefront_ptex_render(valid, settings = list(samples = 4))
+  )
+  expect_equal(attr(clean, 'wavefront')$ptex_failed_lookups, 0)
+})

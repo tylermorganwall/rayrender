@@ -1207,8 +1207,12 @@ bool RenderWavefrontSample(WavefrontSession &session, WavefrontScene &scene, Ray
   const WFPixel *pixels = nullptr;
   size_t previous_discarded = report.discarded_paths;
   size_t previous_csg_failures = report.csg_failed_queries;
+  size_t previous_ptex_failures = report.ptex_failed_lookups;
   if (!session.Render(p, active, scene.lights, cancelled, pixels, report))
     return false;
+  if (!previous_ptex_failures && report.ptex_failed_lookups)
+    Rcpp::warning("Ptex: Metal texture lookups failed and returned zero because face IDs "
+                  "are missing or out of range. See wavefront$ptex_failed_lookups.");
   if (!previous_discarded && report.discarded_paths)
     Rcpp::warning("Metal wavefront terminated rays with unresolvable positions, nonfinite weights, "
                   "or more than 16 "

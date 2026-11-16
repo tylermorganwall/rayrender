@@ -16,6 +16,10 @@
 
 ## New features
 
+- Overall: Color inputs accept comma-separated `rgb(r, g, b)` strings with
+  channels from `0` to `255`, including optional whitespace. Existing named,
+  hexadecimal, and numeric colors retain their behavior.
+
 - `render_animation()` Overlaps frame post-processing and file saving with rendering using one persistent background worker by default. Only one image may be pending, and output is completed before return. Set `async_write = FALSE` for synchronous output; in-memory image returns stay synchronous.
 
 - `set_render_settings()` Updates saved render defaults on scenes, including USD imports. Explicit renderer arguments continue to take precedence, and USD exports preserve the updated defaults.
@@ -60,7 +64,7 @@
 - `read_gltf()` Imports local glTF/GLB triangle models and rigid node clips into
   shared model assets, including sparse/interleaved accessors, independent
   property schedules, and authored cubic quaternion tracks. The parser headers
-  are supplied by the separate `gltfheader` package through `LinkingTo`.
+  are supplied by the separate `cgltf` package through `LinkingTo`.
   Native morph and skeletal animation support all supplied joint-weight sets,
   inverse binds, rest weights, and STEP/linear/cubic morph channels. Morphs
   precede skinning; normals and tangents follow the blended deformation.
@@ -314,6 +318,8 @@
   diameter, and direction controls, without image files or sky datasets.
 
 ## Bugfixes
+
+- Ptex textures on Metal report invalid face lookups once per render and expose the failed lookup count in the rendering diagnostics.
 
 - `render_animation()` Reports completed-frame timing with frame numbers instead of repeatedly labelling the preceding frame's rendering time as sampler allocation.
 
@@ -833,6 +839,8 @@
   material-input and filtering limitations.
 
 ## Other
+
+- Overall: Uses `cgltf` (renamed from `gltfheader`) for the glTF parser headers.
 
 - `render_scene()` Reuses identical motion groups throughout Metal scenes,
   including matching objects separated by scene traversal order. This avoids

@@ -161,6 +161,7 @@ screen_line = function(
   occlusion_mode = "anchor",
   occlusion_tolerance = 0.001
 ) {
+  color = normalize_rgb_color(color)
   if (!is.null(start)) {
     start = as.matrix(start)
     if (ncol(start) != 3) {
@@ -307,6 +308,7 @@ normalize_screen_line = function(screen_line_spec) {
   }
   output$occlusion_mode = tolower(output$occlusion_mode)
   output$occlusion_mode[output$occlusion_mode == "partial"] = "line"
+  output$color = normalize_rgb_color(output$color)
   output
 }
 

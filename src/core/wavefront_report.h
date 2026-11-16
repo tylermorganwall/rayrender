@@ -20,6 +20,7 @@ inline Rcpp::List WavefrontReportToR(const WavefrontReport &report) {
     _["scattering_events"] = double(report.scattering_events),
     _["discarded_paths"] = double(report.discarded_paths),
     _["csg_failed_queries"] = double(report.csg_failed_queries),
+    _["ptex_failed_lookups"] = double(report.ptex_failed_lookups),
     _["upload_seconds"] = report.upload_seconds,
     _["sample_seconds"] = report.sample_seconds,
     _["atmosphere_seconds"] = report.atmosphere_seconds,
