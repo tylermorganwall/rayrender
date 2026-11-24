@@ -215,9 +215,9 @@ read_usd = function(filename) {
 usd_require_native = function() {
   if (
     !requireNamespace("libopenusd", quietly = TRUE) ||
-      utils::packageVersion("libopenusd") < "26.8.3"
+      utils::packageVersion("libopenusd") < "26.8.0-0"
   ) {
-    stop("USD import/export requires libopenusd >= 26.8-3.")
+    stop("USD import/export requires libopenusd >= 26.8.0-0.")
   }
   invisible(NULL)
 }

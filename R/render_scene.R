@@ -15,55 +15,8 @@
 #' The total number of samples in this case will be the product of the two numbers.
 #' @param preview Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 #' If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.
-#' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
-#' lookat point (unless the mode is switched to free flying), with the following control mapping:
-#' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
-#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
-#' E = 2x Speed (max 128), C = 0.5x Speed (min 1/128), Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
-#' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-#' 3/4 = Rotate Environment Light,
-#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
-#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
-#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-#' Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
-#' For perspective and orthographic views, decreasing FOV to zero or below switches to orthographic
-#' projection using `ortho_dimensions`. Increasing FOV above zero switches back to perspective.
-#' Camera position and orientation are preserved; R restores the starting projection.
-#' If the interactive preview window is wide enough, a status bar below the image shows the current camera, exposure, environment rotation,
-#' keyframe state, and active integrator (including CPU fallback from Metal). The bar does not cover the image or appear in saved snapshots.
-#' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
-#' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
-#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
-#' M: Preview/cancel keyframe motion,
-#' F: Toggle Fast Travel Mode,
-#' B: Toggle Camera Motion Blur,
-#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
-#' Haze requires altitude queries: enabling haze also enables altitude queries,
-#' and disabling altitude queries also disables haze. Each change restarts sampling.
-#'
-#' Initial navigation distance is estimated from visible geometry near the center
-#' of the image, with finite scene bounds as a fallback. The orbit target is placed
-#' at that distance along the viewing direction, preserving framing and lens focus.
-#' Held movement keys use elapsed time rather than keyboard repeat. Orbiting uses
-#' angular speed; free-flight panning scales with viewport size at the navigation
-#' distance, and orbit-mode forward/backward movement scales with orbit radius.
-#' Each orbit movement step sets the perspective camera's focal distance to the
-#' distance from the camera to the orbit point, keeping that point in focus.
-#' Picking a surface updates the navigation distance. Free flight retains its
-#' scale until another target is selected; E/C adjust the speed multiplier.
-#' A long preview stall contributes at most 0.25 seconds of held movement per update.
-#'
-#' With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
-#' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
-#' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
-#' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
-#' background without reaching this opacity turns perspective and panoramic cameras toward that
-#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
-#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
-#' Right clicking preserves the focal distance until the next orbit movement.
-#' Some options aren't available for all cameras. When using a realistic camera,
-#' the aperture and field of view cannot be changed from their initial settings.
+#' @param interactive Default `TRUE`. Enable camera and keyboard controls when the
+#' preview is open. See Interactive preview controls in Details.
 #' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 #' updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
 #' same window; pressing Return again returns to deferred mode.
@@ -187,71 +140,9 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
-#' @param integrator_type Default `"auto"`, selecting Metal when the package was built
-#' with Metal support and a ray-tracing-capable device is available, otherwise CPU
-#' `"nee"` (Next Event Estimation, with direct light sampling). An explicit choice
-#' overrides automatic selection. Unsupported Metal scene features retain the CPU fallback below.
-#' Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
-#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
-#' `"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.
-#' It traces static meshes and instances with [diffuse()] (including rough diffuse),
-#' [metal()], [microfacet()] reflection/transmission, [glossy()], [dielectric()],
-#' [translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
-#' random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
-#' Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
-#' textures, and area emission. Flat, cylindrical, and ribbon [bezier_curve()] objects
-#' use direct GPU intersections with the CPU curve model, preserving tapered widths,
-#' texture coordinates, hair shading, and animated transforms. Cylinders and disks
-#' are triangulated automatically.
-#' [csg_object()] evaluates distance fields directly on the GPU, including blends,
-#' shells, emission, and closed dielectric/subsurface boundaries.
-#' It supports constant/checker/gradient/image textures, legacy Perlin noise, nested checkers,
-#' RGB/HSV gradients in UV or world coordinates, composable color and roughness graphs,
-#' image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
-#' and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
-#' point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
-#' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
-#' orthographic, panoramic, and physical lens cameras are supported, including camera motion
-#' blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
-#' Animated geometry and cameras use independent per-pixel shutter samples, except
-#' full-pose model exposures which share a shutter time per image sample. Every
-#' path retains its time through shading, shadows, emitter sampling, and volume transport.
-#' Metal evaluates the native translation, quaternion rotation, and scale/shear interpolation,
-#' including nested transforms, against immutable reference geometry. Each intersected
-#' animation group requires a reference-frame traversal, so many independently moving
-#' objects can increase traversal cost. Full-pose exposures also update skinned and
-#' morphed geometry between samples. `shutter_speed = Inf` freezes
-#' time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
-#' approximation; see its documentation for filtering differences and memory limits.
-#' Unsupported geometry, materials, media, or stratified sampling produce a warning and use CPU
-#' `nee` for the whole scene.
-#' GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
-#' but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
-#' buffers and acceleration structures, including nested placements. Image environments
-#' use luminance-weighted alias sampling in solid angle; interactive rotation reuses the table.
-#' Homogeneous, dense-grid, and sparse OpenVDB/NanoVDB media support absorption, HG scattering,
-#' RGB and thermal emission, invisible boundaries, transformed fields, and nested regions.
-#' Density and emission fields retain their native interpolation; sparse grids stay sparse.
-#' Thermal spectra use a 10 K lookup spacing; spatial temperature fields above 20,000 K
-#' fall back to CPU rendering.
-#' Prague [sky_light()] evaluates skymodelr's spectral coefficients directly on Metal for
-#' altitude-dependent lighting and finite haze, preserving atmospheric light before blockers
-#' and within scattering volumes. GPU arithmetic uses floats; CPU evaluation uses doubles.
-#' Density-threshold haze splits the trilinear density field at every cutoff crossing on the GPU.
-#' Scenes with multiple Prague skies retain batched CPU atmosphere queries, which can be slower
-#' for small images. Camera movement, environment rotation,
-#' haze/altitude controls, and cancellation remain available.
-#' The returned image's `wavefront` attribute reports use/fallback, stored triangle,
-#' unique-mesh, mesh-placement, analytic-primitive, and tessellated-primitive counts,
-#' scattering events, discarded paths, upload time, and sampling time. `atmosphere_seconds`
-#' records CPU atmosphere work within `sample_seconds`, excluding GPU synchronization.
-#' `csg_failed_queries` counts CSG queries skipped after nonfinite distances,
-#' stalled progress, or 8192 marching steps; the first failure also issues a warning.
-#' Other platforms retain the CPU renderer and do not require Metal.
-#' With `nee`, surfaces and participating media use RGB null-scattering transport;
-#' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
-#' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
-#' See \code{\link{set_medium}()}.
+#' @param integrator_type Default `"auto"`. Rendering integrator. Select `"metal"`,
+#' `"nee"`, `"rtiow"`, or `"basic"` explicitly, or use automatic selection.
+#' See Rendering integrators in Details for selection and fallback rules.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image
@@ -293,18 +184,132 @@
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
 #' array (containing either debug data or the RGB).
-#' @details Recoverable medium/subsurface tracking failures terminate only the affected
-#' path, retaining its accumulated light. Rendering continues silently by default:
-#' no warning is emitted and no diagnostic log file is written. These terminated paths
-#' can bias the result. Diagnostics are attached to the returned array as `path_warnings`,
-#' with counts by failure category and up to eight examples per category containing ray
-#' origins, directions, and path state. Collection occurs only on failed paths, not on
-#' successful scattering events.
-#' Set the environment variable `RAYRENDER_DEBUG_PATHS=true` (or `1`) to opt into a
-#' summarized warning after image output and a diagnostic log. The `path_warning_log`
-#' attribute then gives its filename. Saved images use `<filename>.warnings.log`;
-#' renders without a filename, or with an unwritable log directory, use a temporary log.
-#' Scene validation errors and unclassified exceptions remain errors.
+#' @details
+#' \subsection{Interactive preview controls}{
+#' Camera movement orbits around the
+#' lookat point (unless the mode is switched to free flying), with the following control mapping:
+#' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
+#' E = 2x Speed (max 128), C = 0.5x Speed (min 1/128), Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
+#' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
+#' 3/4 = Rotate Environment Light,
+#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
+#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+#' Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
+#' For perspective and orthographic views, decreasing FOV to zero or below switches to orthographic
+#' projection using `ortho_dimensions`. Increasing FOV above zero switches back to perspective.
+#' Camera position and orientation are preserved; R restores the starting projection.
+#' If the interactive preview window is wide enough, a status bar below the image shows the current camera, exposure, environment rotation,
+#' keyframe state, and active integrator (including CPU fallback from Metal). The bar does not cover the image or appear in saved snapshots.
+#' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
+#' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions).
+#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+#' M: Preview/cancel keyframe motion,
+#' F: Toggle Fast Travel Mode,
+#' B: Toggle Camera Motion Blur,
+#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+#' Haze requires altitude queries: enabling haze also enables altitude queries,
+#' and disabling altitude queries also disables haze. Each change restarts sampling.
+#'
+#' Initial navigation distance is estimated from visible geometry near the center
+#' of the image, with finite scene bounds as a fallback. The orbit target is placed
+#' at that distance along the viewing direction, preserving framing and lens focus.
+#' Held movement keys use elapsed time rather than keyboard repeat. Orbiting uses
+#' angular speed; free-flight panning scales with viewport size at the navigation
+#' distance, and orbit-mode forward/backward movement scales with orbit radius.
+#' Each orbit movement step sets the perspective camera's focal distance to the
+#' distance from the camera to the orbit point, keeping that point in focus.
+#' Picking a surface updates the navigation distance. Free flight retains its
+#' scale until another target is selected; E/C adjust the speed multiplier.
+#' A long preview stall contributes at most 0.25 seconds of held movement per update.
+#'
+#' With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
+#' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
+#' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
+#' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
+#' background without reaching this opacity turns perspective and panoramic cameras toward that
+#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
+#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
+#' Right clicking preserves the focal distance until the next orbit movement.
+#' Some options aren't available for all cameras. When using a realistic camera,
+#' the aperture and field of view cannot be changed from their initial settings.
+#' }
+#'
+#' \subsection{Rendering integrators}{
+#' Automatic selection uses Metal when the package was built with Metal support
+#' and a ray-tracing-capable device is available. Otherwise it uses the CPU
+#' `"nee"` integrator (next event estimation with direct light sampling).
+#' Other CPU integrators include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
+#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' `"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.
+#' It traces static meshes and instances with [diffuse()] (including rough diffuse),
+#' [metal()], [microfacet()] reflection/transmission, [glossy()], [dielectric()],
+#' [translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
+#' random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
+#' Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
+#' textures, and area emission. Flat, cylindrical, and ribbon [bezier_curve()] objects
+#' use direct GPU intersections with the CPU curve model, preserving tapered widths,
+#' texture coordinates, hair shading, and animated transforms. Cylinders and disks
+#' are triangulated automatically.
+#'
+#' [csg_object()] evaluates distance fields directly on the GPU, including blends,
+#' shells, emission, and closed dielectric/subsurface boundaries.
+#'
+#' It supports constant/checker/gradient/image textures, legacy Perlin noise, nested checkers,
+#' RGB/HSV gradients in UV or world coordinates, composable color and roughness graphs,
+#' image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
+#' and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
+#' point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
+#' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
+#' orthographic, panoramic, and physical lens cameras are supported, including camera motion
+#' blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
+#'
+#' Animated geometry and cameras use independent per-pixel shutter samples, except
+#' full-pose model exposures which share a shutter time per image sample. Every
+#' path retains its time through shading, shadows, emitter sampling, and volume transport.
+#' Metal evaluates the native translation, quaternion rotation, and scale/shear interpolation,
+#' including nested transforms, against immutable reference geometry. Each intersected
+#' animation group requires a reference-frame traversal, so many independently moving
+#' objects can increase traversal cost. Full-pose exposures also update skinned and
+#' morphed geometry between samples. `shutter_speed = Inf` freezes
+#' time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
+#' approximation; see its documentation for filtering differences and memory limits.
+#' Unsupported geometry, materials, media, or stratified sampling produce a warning and use CPU
+#' `nee` for the whole scene.
+#'
+#' GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
+#' but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
+#' buffers and acceleration structures, including nested placements. Image environments
+#' use luminance-weighted alias sampling in solid angle; interactive rotation reuses the table.
+#'
+#' Homogeneous, dense-grid, and sparse OpenVDB/NanoVDB media support absorption, HG scattering,
+#' RGB and thermal emission, invisible boundaries, transformed fields, and nested regions.
+#' Density and emission fields retain their native interpolation; sparse grids stay sparse.
+#' Thermal spectra use a 10 K lookup spacing; spatial temperature fields above 20,000 K
+#' fall back to CPU rendering.
+#'
+#' Prague [sky_light()] evaluates skymodelr's spectral coefficients directly on Metal for
+#' altitude-dependent lighting and finite haze, preserving atmospheric light before blockers
+#' and within scattering volumes. GPU arithmetic uses floats; CPU evaluation uses doubles.
+#' Density-threshold haze splits the trilinear density field at every cutoff crossing on the GPU.
+#' Scenes with multiple Prague skies retain batched CPU atmosphere queries, which can be slower
+#' for small images. Camera movement, environment rotation,
+#' haze/altitude controls, and cancellation remain available.
+#'
+#' The returned image's `wavefront` attribute reports use/fallback, stored triangle,
+#' unique-mesh, mesh-placement, analytic-primitive, and tessellated-primitive counts,
+#' scattering events, discarded paths, upload time, and sampling time. `atmosphere_seconds`
+#' records CPU atmosphere work within `sample_seconds`, excluding GPU synchronization.
+#' `csg_failed_queries` counts CSG queries skipped after nonfinite distances,
+#' stalled progress, or 8192 marching steps; the first failure also issues a warning.
+#' Other platforms retain the CPU renderer and do not require Metal.
+#'
+#' With `nee`, surfaces and participating media use RGB null-scattering transport;
+#' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
+#' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
+#' See \code{\link{set_medium}()}.
 #'
 #' Metal uses the same homogeneous SSS coefficients, HG phase function, dielectric
 #' Fresnel boundary, and priority convention as CPU rendering. Its RGB free-flight
@@ -336,6 +341,22 @@
 #' Overflow, unresolvable positions, and nonfinite transport weights terminate affected
 #' rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.
 #' These terminated paths can bias the result, so inspect that count for extreme scenes.
+#' }
+#'
+#' \subsection{Path diagnostics}{
+#' Recoverable medium/subsurface tracking failures terminate only the affected
+#' path, retaining its accumulated light. Rendering continues silently by default:
+#' no warning is emitted and no diagnostic log file is written. These terminated paths
+#' can bias the result. Diagnostics are attached to the returned array as `path_warnings`,
+#' with counts by failure category and up to eight examples per category containing ray
+#' origins, directions, and path state. Collection occurs only on failed paths, not on
+#' successful scattering events.
+#' Set the environment variable `RAYRENDER_DEBUG_PATHS=true` (or `1`) to opt into a
+#' summarized warning after image output and a diagnostic log. The `path_warning_log`
+#' attribute then gives its filename. Saved images use `<filename>.warnings.log`;
+#' renders without a filename, or with an unwritable log directory, use a temporary log.
+#' Scene validation errors and unclassified exceptions remain errors.
+#' }
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Generate a large checkered sphere as the ground

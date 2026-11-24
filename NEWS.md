@@ -319,6 +319,9 @@
 
 ## Bugfixes
 
+- Overall: Corrects the minimum `libopenusd` version to `26.8.0-0` for
+  installation and USD import/export.
+
 - `render_animation()` Supports screen-space text and lines, including overlays
   stored in scene render settings. Labels and lines follow each frame's camera
   while retaining pixel sizes and occlusion, in previews and saved frames.

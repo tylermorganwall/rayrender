@@ -1,5 +1,5 @@
 test_that("typed USD preserves renderer descriptors and camera animation", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -50,7 +50,7 @@ test_that("typed USD preserves renderer descriptors and camera animation", {
 })
 
 test_that("USD collects images and NanoVDB files without embedding them in R", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   source = tempfile()
   dir.create(source)
@@ -83,7 +83,7 @@ test_that("USD collects images and NanoVDB files without embedding them in R", {
 })
 
 test_that("OBJ instances collect relative material dependencies", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   source = tempfile()
   dir.create(source)
@@ -138,7 +138,7 @@ test_that("OBJ instances collect relative material dependencies", {
 })
 
 test_that("USD render round trips preserve images and explicit settings", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -172,7 +172,7 @@ test_that("USD render round trips preserve images and explicit settings", {
 })
 
 test_that("USD import rejects foreign stages instead of inventing renderer data", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   file = tempfile(fileext = ".usda")
   on.exit(unlink(file))
@@ -184,7 +184,7 @@ test_that("USD import rejects foreign stages instead of inventing renderer data"
 })
 
 test_that("native export validates assets and preserves an existing stage on failure", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -212,7 +212,7 @@ test_that("native export validates assets and preserves an existing stage on fai
 })
 
 test_that("native metadata preserves precision, strings, attributes and empty columns", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   file = tempfile(fileext = ".usdc")
   on.exit(unlink(file))
@@ -232,7 +232,7 @@ test_that("native metadata preserves precision, strings, attributes and empty co
 })
 
 test_that("USD preserves column names and custom attributes", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   scene = add_object(sphere(), cube(x = 2))
   names(scene$x) = c("first", "second")
   names(scene$material) = c("one", "two")
@@ -244,7 +244,7 @@ test_that("USD preserves column names and custom attributes", {
 })
 
 test_that("USD authors nested geometry and metadata directly in the requested format", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -266,7 +266,7 @@ test_that("USD authors nested geometry and metadata directly in the requested fo
 })
 
 test_that("a failed native export leaves the previous stage and no scratch files", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   directory = tempfile()
   dir.create(directory)
@@ -288,7 +288,7 @@ test_that("a failed native export leaves the previous stage and no scratch files
 })
 
 test_that("native numeric properties reject missing values", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   path = tempfile(fileext = ".usdc")
   on.exit(unlink(path))
   for (value in list(NA_integer_, NA, NA_real_, Inf)) {
@@ -304,7 +304,7 @@ test_that("native numeric properties reject missing values", {
 })
 
 test_that("USD preserves instance, texture-graph, and environment assets", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   skip_if_not_installed("digest")
   source = tempfile(fileext = ".png")
   bundle = tempfile()
@@ -352,7 +352,7 @@ test_that("USD preserves instance, texture-graph, and environment assets", {
 
 
 test_that("native export identifies filesystem failures", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   directory = tempfile(fileext = ".usdc")
   dir.create(directory)
   on.exit(unlink(directory, recursive = TRUE))
@@ -364,7 +364,7 @@ test_that("native export identifies filesystem failures", {
 })
 
 test_that("binary export passes typed data directly to OpenUSD", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   directory = tempfile()
   dir.create(directory)
   on.exit(unlink(directory, recursive = TRUE))
@@ -399,7 +399,7 @@ test_that("binary export passes typed data directly to OpenUSD", {
 })
 
 test_that("native USD authors object and camera time samples", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   object = sphere()
   endpoint = diag(4)
   endpoint[1, 4] = 3

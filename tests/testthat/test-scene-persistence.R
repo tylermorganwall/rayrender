@@ -124,7 +124,7 @@ test_that("set_render_settings merges defaults and preserves explicit NULL", {
 })
 
 test_that("updated USD defaults render with explicit overrides", {
-  skip_if_not_installed("libopenusd", "26.8.3")
+  skip_if_not_installed("libopenusd", "26.8.0-0")
   original_path = tempfile(fileext = ".usdc")
   updated_path = tempfile(fileext = ".usdc")
   on.exit(unlink(c(original_path, updated_path)))
