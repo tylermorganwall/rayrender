@@ -4,7 +4,6 @@
 #include "../materials/openpbr.h"
 #include "../volumes/subsurface.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 
@@ -17,7 +16,7 @@ float probe_error(float actual, float expected) {
 } // namespace
 context("Metal material evaluation") {
   test_that("guided SSS uses normalized RGB proposal mixtures") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     const size_t count=65536;
     std::vector<WFSubsurfaceProbe> inputs(count);
     SubsurfaceProposal proposal;
@@ -55,7 +54,7 @@ context("Metal material evaluation") {
     expect_true(std::abs(moment-expected)<.001);
   }
   test_that("GPU BSDF values and reported PDFs match the native models") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     auto color = std::make_shared<constant_texture>(point3f(.3, .5, .7));
     auto transmission = std::make_shared<constant_texture>(point3f(.4, .3, .2));

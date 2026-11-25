@@ -458,7 +458,7 @@ inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& ref
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
-    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    refracted = ni_over_nt * (uv - n * dt) - n * std::sqrt(discriminant);
     return(true);
   } else {
     return(false);
@@ -471,7 +471,7 @@ inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f&
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
-    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    refracted = ni_over_nt * (uv - n * dt) - n * std::sqrt(discriminant);
     return(true);
   } else {
     return(false);

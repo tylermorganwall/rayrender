@@ -1,7 +1,6 @@
 #ifdef NOT_CRAN
 #include <testthat.h>
 #include "wavefront.h"
-#include "hlbvh.h"
 #include "camera.h"
 #include "adaptivesampler.h"
 #include "../hitables/rectangle.h"
@@ -12,7 +11,7 @@
 
 context("Metal wavefront session") {
   test_that("a numerically repeated dielectric triangle cannot stall a queue") {
-    if (MetalBVHAvailable()) {
+    if (MetalWavefrontAvailable()) {
       // Captured from a glass/milk render on M1 Max: Metal returns a positive
       // 2.3e-7 hit although this outward ray is already outside the first face.
       // Close that face into a tetrahedron and make its interface index matched.
@@ -72,7 +71,7 @@ context("Metal wavefront session") {
     }
   }
   test_that("a persistent session follows camera and light changes and cancels atomically") {
-    if (MetalBVHAvailable()) {
+    if (MetalWavefrontAvailable()) {
       for (bool with_subsurface : {false, true}) {
         Transform identity, environment, inverse_environment;
         hitable_list world, lights;

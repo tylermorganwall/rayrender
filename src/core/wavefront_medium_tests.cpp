@@ -1,6 +1,6 @@
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 #include "wavefront_medium_probe.h"
-#include "hlbvh.h"
+#include "wavefront.h"
 #include <algorithm>
 #include <array>
 #include <random>
@@ -51,7 +51,7 @@ std::vector<std::array<double, 3>> medium_intervals(const WFMediumProbe &p,
 }
 context("Metal retained majorant flights") {
   test_that("successive flights invert the world-distance optical-depth CDF") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     std::vector<float> values(2*8*8*8);
     for (size_t j = 0; j < 512; ++j) {
       values[j] = 1;

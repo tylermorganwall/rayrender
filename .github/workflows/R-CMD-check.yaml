@@ -76,10 +76,21 @@ jobs:
       - name: Install OIDN (Windows)
         if: runner.os == 'Windows' && matrix.config.oidn == 'true'
         run: |
-          cd $RUNNER_TEMP
-          curl -LO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip
+          cd $env:RUNNER_TEMP
+          curl.exe -fLO https://github.com/OpenImageDenoise/oidn/releases/download/v2.3.1/oidn-2.3.1.x64.windows.zip
           7z x oidn-2.3.1.x64.windows.zip
-          echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
+          $oidn = "$env:RUNNER_TEMP/oidn-2.3.1.x64.windows"
+          "OIDN_PATH=$oidn" >> $env:GITHUB_ENV
+          "$oidn/bin" >> $env:GITHUB_PATH
+
+      - name: Select Windows 10 SDK declarations for openvdbr's bundled oneTBB
+        if: runner.os == 'Windows'
+        shell: Rscript {0}
+        run: |
+          dir.create("~/.R", showWarnings = FALSE)
+          write(c("ifeq ($(R_PACKAGE_NAME),openvdbr)",
+                  "backend: CPPFLAGS += -D_WIN32_WINNT=0x0A00 -DNTDDI_VERSION=NTDDI_WIN10_RS1",
+                  "endif"), file = "~/.R/Makevars.win", append = TRUE)
 
       - name: Set color debugging env + single core
         if: matrix.config.ray_color_debug == 'true'

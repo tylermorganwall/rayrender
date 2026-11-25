@@ -5,13 +5,12 @@
 #include "../hitables/triangle.h"
 #include "../hitables/instance.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 
 context("Metal analytic intersections") {
   test_that("mesh consistent normals preserve the native view-dependent frame") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     float vertices[] = {-2,-2,0, 2,-2,0, 0,2,0};
     float normals[] = {-.4f,0,.916515f, .6f,0,.8f, 0,.3f,.953939f};
     int indices[] = {0,1,2};
@@ -66,7 +65,7 @@ context("Metal analytic intersections") {
     }
   }
   test_that("mixed traversal preserves both roots, transforms, normals, and clipped segments") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     auto material =
         std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
@@ -164,7 +163,7 @@ context("Metal analytic intersections") {
 }
 context("Metal native curves") {
   test_that("Bezier hits preserve CPU distance, UV, normal, taper and transformations") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     auto material = std::make_shared<hair>(point3f(.4), 1.55, .3, .4, 2);
     camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
@@ -242,7 +241,7 @@ context("Metal native curves") {
     expect_true(uv_error < .002);
   }
   test_that("direct curves keep the closest folded segment and reject degenerate curves") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     Transform identity;
     camera cam({0, 0, 0}, {0, 0, 1}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);
@@ -285,7 +284,7 @@ context("Metal native curves") {
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 context("Metal shared mesh intersections") {
   test_that("persistent sessions retain every indirectly referenced mesh BLAS") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     // Three separate prototypes make two BLASes reachable only through the
     // TLAS. Binding the first BLAS is insufficient to keep the others resident.
@@ -342,7 +341,7 @@ context("Metal shared mesh intersections") {
     }
   }
   test_that("shared BLAS placements preserve hits, normals, UVs and containment identity") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     WavefrontScene scene;
     WFTriangle face;

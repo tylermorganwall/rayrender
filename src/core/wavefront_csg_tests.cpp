@@ -2,7 +2,6 @@
 #include "../hitables/csg.h"
 #include "../volumes/boundary.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 
@@ -147,7 +146,7 @@ context("CSG boundary and sampling") {
 #if defined(RAY_HAS_METAL_BVH)
 context("Metal CSG intersections") {
   test_that("small distant CSG solids retain local marching precision") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     Transform identity;
     auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
@@ -179,7 +178,7 @@ context("Metal CSG intersections") {
     expect_true(missed == 0);
   }
   test_that("all distance operations preserve CPU hits and normals") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     auto material = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(.5)));
     auto ball = std::make_shared<csg_sphere>(vec3f(0), .8);

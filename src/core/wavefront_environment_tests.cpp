@@ -2,14 +2,13 @@
 #include "../hitables/infinite_area_light.h"
 #include "../hitables/rectangle.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <cstring>
 #include <testthat.h>
 
 context("Metal image environment proposals") {
   test_that("tiny solar-cone samples retain their solar mixture density") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     WavefrontScene scene;
     WFLight light; light.flags=128;
     double radius=.53*M_PI/360;
@@ -49,7 +48,7 @@ context("Metal image environment proposals") {
     expect_true(old_lost>0);
   }
   test_that("finite light BVH sampling and emitter-hit probabilities agree") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     Transform identity;
     camera cam({0,0,4},{0,0,0},{0,1,0},30,1,0,4,0,1,1);
     for (bool black : {false,true}) {
@@ -90,7 +89,7 @@ context("Metal image environment proposals") {
     }
   }
   test_that("alias frequencies, solid-angle PDFs, seams and rotation agree") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     Transform identity;
     camera cam({0, 0, 4}, {0, 0, 0}, {0, 1, 0}, 30, 1, 0, 4, 0, 1, 1);

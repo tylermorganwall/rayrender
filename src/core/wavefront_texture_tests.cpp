@@ -2,13 +2,12 @@
 #include "../hitables/rectangle.h"
 #include "../materials/texturegraph.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 
 context("Metal texture evaluation") {
   test_that("legacy noise, gradients and nested checkers match native evaluation") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     auto noise = std::make_shared<noise_texture>(1.7, point3f(.1, .3, .8),
                                                 point3f(.9, .7, .2), .73, 8.3);
     std::vector<std::shared_ptr<texture>> cases{noise};
@@ -64,7 +63,7 @@ context("Metal texture evaluation") {
     }
   }
   test_that("Ptex atlas lookups preserve face IDs and decode after interpolation") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     Rcpp::Function temporary = Rcpp::Environment::base_env()["tempfile"];
     Rcpp::Function remove = Rcpp::Environment::base_env()["unlink"];
     Rcpp::Function write = Rcpp::Environment::namespace_env("ptexr")["ptex_write"];
@@ -122,7 +121,7 @@ context("Metal texture evaluation") {
     remove(filename);
   }
   test_that("graph instructions reproduce native values before shading and tonemapping") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     auto ns = Rcpp::Environment::namespace_env("rayrender");
     Rcpp::Function coordinates = ns["texture_coordinates"], noise = ns["texture_noise"],
@@ -193,7 +192,7 @@ context("Metal texture evaluation") {
     }
   }
   test_that("mapped diffuse GPU values and PDFs match the energy-conserving CPU model") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     std::vector<WFBsdfProbe> probes;
     std::vector<WFBsdfResult> expected;

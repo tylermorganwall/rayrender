@@ -1,14 +1,13 @@
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 #include "../hitables/rectangle.h"
 #include "camera.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include <testthat.h>
 #include <iostream>
 
 context("Metal glossy sampling") {
   test_that("mapped glossy GPU samples reproduce solid-angle density and furnace energy") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     Transform identity;
     camera cam({0,0,4}, {0,0,0}, {0,1,0}, 30, 1, 0, 4, 0, 1, 1);
     for (bool beckmann : {false, true}) {
@@ -77,7 +76,7 @@ context("Metal glossy sampling") {
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 context("Metal order-16 normal mapping") {
   test_that("conditional GPU closures recover the analytic white and absorbing diffuse series") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     const int count=131072;
     for (float tilt : {.5235987756f, 1.0471975512f}) for (float rho : {1.f,.5f}) {
       std::vector<WFBsdfProbe> inputs(count);

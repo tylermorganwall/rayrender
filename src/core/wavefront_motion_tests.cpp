@@ -1,7 +1,7 @@
 #ifdef NOT_CRAN
 #include "wavefront_motion.h"
 #include "wavefront_motion_layout.h"
-#include "hlbvh.h"
+#include "wavefront.h"
 #include <testthat.h>
 #include <cstring>
 
@@ -239,7 +239,7 @@ context("Packed scene-time tracks") {
   }
 #ifdef RAY_HAS_METAL_BVH
   test_that("device keyframe intersections match native transforms at keys and midpoints") {
-    if (!MetalBVHAvailable()) {
+    if (!MetalWavefrontAvailable()) {
       Rcpp::Rcout << "Keyframe device probes: unavailable\n";
       return;
     }

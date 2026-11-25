@@ -319,6 +319,10 @@
 
 ## Bugfixes
 
+- `subsurface()` Restores light transmission through rough interfaces on GCC
+  builds. The same correction fixes refracted ray directions used for texture
+  filtering.
+
 - Overall: Corrects the minimum `libopenusd` version to `26.8.0-0` for
   installation and USD import/export.
 

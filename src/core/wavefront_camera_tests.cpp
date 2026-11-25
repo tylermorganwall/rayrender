@@ -1,7 +1,6 @@
 #if defined(NOT_CRAN) && defined(RAY_HAS_METAL_BVH)
 #include "camera.h"
 #include "camera_track.h"
-#include "hlbvh.h"
 #include "wavefront.h"
 #include "wavefront_motion.h"
 #include <testthat.h>
@@ -55,7 +54,7 @@ void compare_camera(RayCamera &camera) {
 } // namespace
 context("Scene-wide motion identity") {
   test_that("projection cuts sample the correct camera on either side of the key") {
-    if(!MetalBVHAvailable()) return;
+    if(!MetalWavefrontAvailable()) return;
     animation::CameraKey a{0,{0,0,-10, 0,0,0, .1,60,10, 4,3, 0,1,0}};
     auto b=a,c=a,d=a;
     b.time=1; b.values[7]=0; b.values[0]=2;
@@ -78,7 +77,7 @@ context("Scene-wide motion identity") {
     expect_error(ExportWavefrontCamera(*cam,descriptor,data));
   }
   test_that("multi-key camera exposures agree with device rays") {
-    if(!MetalBVHAvailable()) return;
+    if(!MetalWavefrontAvailable()) return;
     for (double projection : {60.,0.,360.}) {
       animation::CameraKey a{100,{0,0,-10, 0,0,0, .2,projection,10, 4,3, 0,1,0}};
       auto b=a,c=a,d=a;
@@ -184,7 +183,7 @@ context("Scene-wide motion identity") {
 
 context("Metal hardware motion partitions") {
   test_that("masked traversal matches owner filtering for hits and boundaries") {
-    if (!MetalBVHAvailable()) return;
+    if (!MetalWavefrontAvailable()) return;
     for (int group_count : {1, 7, 8}) {
       WavefrontScene scene;
       scene.motion = std::make_shared<WavefrontMotion>();
@@ -335,7 +334,7 @@ context("Metal cameras and density threshold intervals") {
     expect_true(motion.Add(1, different_time, Translate(vec3f(1, 0, 0))) == 4);
   }
   test_that("per-ray motion intersections match native nested transforms") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     Transform start, end = Translate(vec3f(1, -.4, .7)) * RotateY(137) * Scale(.7, 1.3, .9);
     Float shear[4][4] = {{1, .2, 0, 0}, {0, 1, .15, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
@@ -426,7 +425,7 @@ context("Metal cameras and density threshold intervals") {
     expect_true(normal_error < 5e-5);
   }
   test_that("camera projections and motion match native rays") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     point3f origin(2, 3, 6), target(0, 1, 0);
     vec3f up(0, 1, 0);
@@ -448,7 +447,7 @@ context("Metal cameras and density threshold intervals") {
     }
   }
   test_that("real lens rejection and radiometric weights match native lens tracing") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     Transform placement = Inverse(LookAt(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0)));
     AnimatedTransform animation(&placement, 0, &placement, 1);
@@ -507,7 +506,7 @@ context("Metal cameras and density threshold intervals") {
     }
   }
   test_that("cubic cutoff keeps all three crossings and constant equality") {
-    if (!MetalBVHAvailable())
+    if (!MetalWavefrontAvailable())
       return;
     WFHazeProbe cubic = {{{.92f, 1.14f, 1.14f, .86f}, {1.14f, .86f, .86f, 1.08f}}, {}, {1, 1, 1, 1}};
     WFHazeProbe equal = {{{1, 1, 1, 1}, {1, 1, 1, 1}}, {}, {1, 1, 1, 1}};

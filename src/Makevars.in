@@ -33,6 +33,7 @@ $(CPP_OBJECTS): core/PreviewDisplay.h core/preview_navigation.h core/preview_nav
 # Per-hit closures change scatter_record layout across material/integrator calls.
 $(CPP_OBJECTS): materials/material.h materials/normalmap.h math/pdf.h
 $(CPP_OBJECTS): volumes/medium.h
+hitables/hitable.o volumes/subsurface.o: math/mathinline.h
 
 core/hlbvh_metal.o: core/hlbvh_metal.mm core/hlbvh.h
 	$(CXX) $(CXXSTD) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -fobjc-arc -c $< -o $@
