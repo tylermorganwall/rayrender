@@ -1,16 +1,21 @@
 #include <Rcpp.h>
-#include <libopenusd.h>
+#include <R_ext/Rdynload.h>
 #include <cmath>
 #include <algorithm>
 
 // [[Rcpp::export(rng = false)]]
 SEXP usd_inspect_native(SEXP filename, SEXP selectors, SEXP properties) {
-    return libopenusd_inspect(filename, selectors, properties);
+    // The R entry points load the optional provider before looking up its v1 ABI.
+    using Inspect = SEXP (*)(SEXP, SEXP, SEXP);
+    auto inspect = reinterpret_cast<Inspect>(R_GetCCallable("libopenusd", "libopenusd_inspect_v1"));
+    return inspect(filename, selectors, properties);
 }
 
 // [[Rcpp::export(rng = false)]]
 void usd_author_native(SEXP document, SEXP filename) {
-    libopenusd_write_stage(document, filename);
+    using WriteStage = SEXP (*)(SEXP, SEXP);
+    auto write_stage = reinterpret_cast<WriteStage>(R_GetCCallable("libopenusd", "libopenusd_write_stage_v1"));
+    write_stage(document, filename);
 }
 
 // [[Rcpp::export(rng = false)]]

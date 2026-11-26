@@ -28,7 +28,7 @@
 
 - `write_usd()` and `read_usd()` Add explicit OpenUSD scene export/import,
   collecting referenced files beside the stage and retaining renderer-specific
-  descriptors as typed USD metadata. Uses the registered native API in `libopenusd`; no Python process or JSON bridge is required. Textures, OBJ/MTL dependencies, and volume files are collected only during explicit export.
+  descriptors as typed USD metadata. Only USD operations require the optional `libopenusd` package. It can be installed after rayrender. Textures, OBJ/MTL dependencies, and volume files are collected only during explicit export.
 
 - Overall: Render defaults are retained as scene attributes and preserved by USD export/import, with explicit rendering arguments taking precedence. Assets remain file-backed and are collected on explicit USD export. Scene cameras can retain editable preview keyframes with `camera(keyframes = ...)`.
 

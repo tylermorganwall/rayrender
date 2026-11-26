@@ -17,7 +17,7 @@ Reconstruct a scene exported by \code{\link[=write_usd]{write_usd()}}, resolving
 relative to the stage. The returned scene can be rendered or edited in R.
 }
 \details{
-Uses the registered native \code{libopenusd} API to read schema version 1 archives.
+USD import requires the optional \code{libopenusd} package and reads schema version 1 archives.
 This importer reconstructs rayrender's typed descriptors; it does not infer
 shaders from arbitrary third-party stages. Edits to standard interchange
 prims do not replace those descriptors. Unsupported schema versions fail.

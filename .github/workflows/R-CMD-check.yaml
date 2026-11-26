@@ -20,7 +20,7 @@ jobs:
           - {os: windows-latest, r: 'release', oidn: 'true'}
           - {os: ubuntu-latest,  r: 'devel',   http-user-agent: 'release', oidn: 'false'}
           - {os: ubuntu-latest,  r: 'devel',   http-user-agent: 'release', oidn: 'true'}
-          - {os: ubuntu-latest,  r: 'release', oidn: 'false'}  
+          - {os: ubuntu-latest,  r: 'release', oidn: 'false', without_usd: true}
           - {os: ubuntu-latest,  r: 'release', oidn: 'true'}  
           - {os: ubuntu-latest,  r: 'oldrel-1', oidn: 'false'}
 
@@ -97,8 +97,15 @@ jobs:
         run: Rscript .github/dependency-pins.R
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck ${{ steps.dependency-pins.outputs.packages }}
+          extra-packages: any::rcmdcheck ${{ steps.dependency-pins.outputs.packages }} ${{ matrix.config.without_usd && 'libopenusd=?ignore' || '' }}
   
+      - name: Check that rayrender builds and renders without OpenUSD
+        if: matrix.config.without_usd
+        shell: Rscript {0}
+        run: |
+          stopifnot(!requireNamespace("libopenusd", quietly = TRUE))
+          cat("_R_CHECK_FORCE_SUGGESTS_=false\n", file = Sys.getenv("GITHUB_ENV"), append = TRUE)
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true

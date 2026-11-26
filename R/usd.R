@@ -12,8 +12,9 @@
 #' @export
 #' @md
 #' @details
-#' Uses the registered native interface from `libopenusd` and the optional
-#' `digest` package for asset hashes. No Python interpreter is used.
+#' USD export requires the optional packages `libopenusd` and `digest`.
+#' Rayrender writes the stage through OpenUSD's native interface and uses
+#' `digest` for asset hashes.
 #' Standard USD geometry, cameras, instancers, materials and volume references
 #' provide an interchange representation. Typed, versioned rayrender metadata
 #' preserves renderer descriptors for [read_usd()]; no RDS payload is stored.
@@ -113,7 +114,7 @@ write_usd = function(scene, filename, copy_assets = TRUE, overwrite = FALSE) {
 #' @export
 #' @md
 #' @details
-#' Uses the registered native `libopenusd` API to read schema version 1 archives.
+#' USD import requires the optional `libopenusd` package and reads schema version 1 archives.
 #' This importer reconstructs rayrender's typed descriptors; it does not infer
 #' shaders from arbitrary third-party stages. Edits to standard interchange
 #' prims do not replace those descriptors. Unsupported schema versions fail.

@@ -25,8 +25,9 @@ Write a USD stage and collect its referenced files for later rendering.
 Asset collection happens only during explicit export.
 }
 \details{
-Uses the registered native interface from \code{libopenusd} and the optional
-\code{digest} package for asset hashes. No Python interpreter is used.
+USD export requires the optional packages \code{libopenusd} and \code{digest}.
+Rayrender writes the stage through OpenUSD's native interface and uses
+\code{digest} for asset hashes.
 Standard USD geometry, cameras, instancers, materials and volume references
 provide an interchange representation. Typed, versioned rayrender metadata
 preserves renderer descriptors for \code{\link[=read_usd]{read_usd()}}; no RDS payload is stored.
