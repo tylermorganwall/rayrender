@@ -72,8 +72,18 @@ jobs:
         run: |
           cat('\noptions(repos = c(getOption("repos"), rayverse = "https://tylermorganwall.r-universe.dev"))\n',
               file = path.expand("~/.Rprofile"), append = TRUE)
+      - name: Select a compatible vctrs for the March C23 snapshot
+        if: matrix.config.label == 'c23'
+        id: c23-vctrs
+        shell: Rscript {0}
+        run: |
+          # This R-devel revision rejects symbol bindings used by vctrs 0.7.2.
+          if (identical(as.character(R.version[["svn rev"]]), "89623")) {
+            cat("package=vctrs@0.7.1\n", file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
+          }
       - uses: r-hub/actions/setup-deps@v1
         with:
+          extra-packages: any::rcmdcheck ${{ steps.c23-vctrs.outputs.package }}
           token: ${{ secrets.RHUB_TOKEN }}
           job-config: ${{ matrix.config.job-config }}
       - uses: r-hub/actions/run-check@v1
