@@ -1,3 +1,4 @@
+#include "intel_functional.h"
 #include "../core/bvh.h"
 #include "bvh_timing.h"
 #include "../utils/assert.h"

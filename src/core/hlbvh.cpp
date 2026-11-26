@@ -1,3 +1,4 @@
+#include "intel_functional.h"
 #include "hlbvh.h"
 #include <RcppThread.h>
 #include <algorithm>

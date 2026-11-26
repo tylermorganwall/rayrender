@@ -1,3 +1,4 @@
+#include "intel_functional.h"
 #include "wavefront_motion.h"
 #include "../lights/atmosphere.h"
 #include "../materials/material.h"
