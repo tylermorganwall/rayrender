@@ -103,6 +103,11 @@ jobs:
         if: matrix.config.without_usd
         shell: Rscript {0}
         run: |
+          # setup-r-dependencies can restore extra packages from a previous cache.
+          lib = Sys.getenv("R_LIBS_USER")
+          if (dir.exists(file.path(lib, "libopenusd"))) {
+            remove.packages("libopenusd", lib = lib)
+          }
           stopifnot(!requireNamespace("libopenusd", quietly = TRUE))
           cat("_R_CHECK_FORCE_SUGGESTS_=false\n", file = Sys.getenv("GITHUB_ENV"), append = TRUE)
 
