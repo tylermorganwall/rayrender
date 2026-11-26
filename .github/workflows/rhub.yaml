@@ -49,6 +49,9 @@ jobs:
         config: ${{ fromJson(needs.setup.outputs.containers) }}
     container:
       image: ${{ matrix.config.container }}
+    env:
+      # The dependency cache includes the library path in its version, even for fallback restores.
+      R_LIBS_USER: /github/home/R/${{ matrix.config.label }}/%p-library/%v
 
     steps:
       - uses: r-hub/actions/checkout@v1
