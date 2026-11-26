@@ -824,9 +824,8 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     Rcpp::Function generate_camera_motion = pkg["generate_camera_motion"];
     Rcpp::Environment base = Rcpp::Environment::base_env();
     Rcpp::Function do_call = base["do.call"];
-    preview_motion = Rcpp::as<Rcpp::DataFrame>(
-      do_call(generate_camera_motion, call_args)
-    );
+    Rcpp::Shield<SEXP> motion(do_call(generate_camera_motion, call_args));
+    preview_motion = Rcpp::as<Rcpp::DataFrame>(motion);
   } catch(std::exception& ex) {
     Rprintf("Can't preview keyframe motion: %s\n", ex.what());
     return false;

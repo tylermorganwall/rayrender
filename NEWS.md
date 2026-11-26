@@ -319,6 +319,9 @@
 
 ## Bugfixes
 
+- Protect camera motion data during interactive keyframe previews and read model
+  geometry node names directly from their R vector during scene construction.
+
 - Linux builds link the atomic runtime when available, fixing a package-load
   failure on toolchains that emit calls to `__atomic_compare_exchange`.
 

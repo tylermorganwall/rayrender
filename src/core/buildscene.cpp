@@ -998,7 +998,8 @@ build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterc
         std::string geometry_node = as<std::string>(SingleAnimation["model_geometry"]);
         if (asset.exists("geometry_nodes")) {
           CharacterVector geometry_nodes = asset["geometry_nodes"];
-          geometry_node = as<std::string>(geometry_nodes[geometry_node]);
+          const R_xlen_t node_index = geometry_nodes.findName(geometry_node);
+          geometry_node = CHAR(STRING_ELT(geometry_nodes, node_index));
         }
         size_t node = row_model->model->asset->NodeIndex(geometry_node);
         List prototypes = asset["prototypes"], prototype = prototypes[node];
