@@ -89,9 +89,15 @@ jobs:
           echo 'options(cores=1)' >> ~/.Rprofile
           echo "RAY_COLOR_DEBUG=true" >> $GITHUB_ENV
 
+      - name: Install Blosc runtime for cached openvdbr builds
+        if: runner.os == 'Linux'
+        run: bash .github/install-blosc-runtime.sh
+      - name: Select compatible dependency versions
+        id: dependency-pins
+        run: Rscript .github/dependency-pins.R
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: any::rcmdcheck ${{ steps.dependency-pins.outputs.packages }}
   
       - uses: r-lib/actions/check-r-package@v2
         with:

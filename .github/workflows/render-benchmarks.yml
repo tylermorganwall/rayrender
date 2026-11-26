@@ -88,11 +88,18 @@ jobs:
             libxt-dev \
             mesa-common-dev
 
+      - name: Install Blosc runtime for cached openvdbr builds
+        if: runner.os == 'Linux'
+        run: bash .github/install-blosc-runtime.sh
+      - name: Select compatible dependency versions
+        id: dependency-pins
+        run: Rscript .github/dependency-pins.R
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: |
             any::jsonlite
             any::remotes
+            ${{ steps.dependency-pins.outputs.packages }}
 
       - name: Benchmark regression tests
         if: matrix.build_config_name == 'o3_native_no_simd'
