@@ -1,14 +1,10 @@
 #include "../math/displacement.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../ext/stb/stb_image_write.h"
+#include <stbimageheaders/stb_image_write.h>
 #define TINYEXR_IMPLEMENTATION
 #define TINYEXR_USE_MINIZ 0
 #define TINYEXR_USE_STB_ZLIB 1
 #include "../ext/tinyobj/tinyexr.h"
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 #include "../utils/assert.h"
 #include "../hitables/trianglemesh.h"
 #include <filesystem> // C++17

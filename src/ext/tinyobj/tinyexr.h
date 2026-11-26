@@ -1099,8 +1099,7 @@ static bool ReadAttribute(std::string *name, std::string *type,
 
       *marker_size = name_len + 1 + type_len + 1 + sizeof(uint32_t);
 
-      data->resize(1);
-      (*data)[0] = '\0';
+      data->assign(1, '\0');
 
       return true;
     } else {

@@ -319,6 +319,16 @@
 
 ## Bugfixes
 
+- Linux builds link the atomic runtime when available, fixing a package-load
+  failure on toolchains that emit calls to `__atomic_compare_exchange`.
+
+- Source builds use `stbimageheaders` (>= 0.2.0) for image loading and writing.
+  The updated PNG reader and the bundled TinyEXR reader compile cleanly under
+  GCC when handling PNG transparency and empty EXR string attributes.
+
+- `animation_model_asset()` resolves `setNames()` from `stats` even in R
+  sessions where the default packages are detached.
+
 * Requires openvdbr 13.1.0-5 for source builds on Windows and Linux.
 
 - `subsurface()` Restores light transmission through rough interfaces on GCC
@@ -837,6 +847,9 @@
 
 ## Documentation
 
+- `animation_read_gltf()` The looping clip example fits within the help
+  page’s line width.
+
 - Overall: Adds a rendered model-animation vignette covering nodes, clips, shared
   assets, independently placed instances, and exact-time pose inspection.
 
@@ -852,6 +865,17 @@
   material-input and filtering limitations.
 
 ## Other
+
+- `render_animation()` The background worker resolves its frame-writing
+  function directly from the rayrender namespace.
+
+- CPU and Metal HLBVH profiling now sends timing messages to R’s error
+  stream. The builder checks explicitly select the `nee` integrator so they
+  exercise the requested builders on Metal-capable machines too.
+
+- R-hub checks use the rayverse R-universe repository for release
+  dependencies. Linux containers install CMake 3.31.10 when their installed
+  version is older than 3.24 or CMake is missing.
 
 - Overall: Uses `cgltf` (renamed from `gltfheader`) for the glTF parser headers.
 

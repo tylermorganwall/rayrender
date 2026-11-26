@@ -6,10 +6,6 @@
 
 #include "../math/rng.h"
 #include "../core/bvh.h"
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../../../ext/stb/stb_image.h"
-#endif
 #include <Rcpp.h>
 
 class TextureCache;

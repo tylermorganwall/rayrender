@@ -160,9 +160,11 @@ void BVHAggregate::build(float t_min, float t_max, BVHBuildOptions options) {
     if (!profile)
       return;
     const auto now = Clock::now();
-    std::fprintf(stderr, "HLBVHHost n=%zu method=%u workers=%u stage=%s wall=%.6f\n", primitives.size(),
-                 unsigned(build_method), options.threads, name,
-                 std::chrono::duration<double>(now - checkpoint).count());
+    char message[192];
+    std::snprintf(message, sizeof(message), "HLBVHHost n=%zu method=%u workers=%u stage=%s wall=%.6f\n",
+                  primitives.size(), unsigned(build_method), options.threads, name,
+                  std::chrono::duration<double>(now - checkpoint).count());
+    RcppThread::Rcerr << message;
     checkpoint = now;
   };
 
@@ -327,8 +329,11 @@ void BVHAggregate::packHLBVH(const HLBVHTree &tree, unsigned threads) {
     if (!profile)
       return;
     const auto now = Clock::now();
-    std::fprintf(stderr, "HLBVHPack n=%zu workers=%u stage=%s wall=%.6f\n", tree.order.size(), threads, name,
-                 std::chrono::duration<double>(now - checkpoint).count());
+    char message[192];
+    std::snprintf(message, sizeof(message), "HLBVHPack n=%zu workers=%u stage=%s wall=%.6f\n",
+                  tree.order.size(), threads, name,
+                  std::chrono::duration<double>(now - checkpoint).count());
+    RcppThread::Rcerr << message;
     checkpoint = now;
   };
   struct Counts {

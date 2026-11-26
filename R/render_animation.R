@@ -1175,8 +1175,9 @@ animation_output_writer = function(enabled, verbose) {
     # callr removes the argument/result transport files after each receipt.
     args$plot_scene = FALSE
     worker$call(
-      function(job) rayrender:::animation_output_job(job),
-      list(job = args)
+      animation_output_job,
+      list(args = args),
+      package = "rayrender"
     )
     pending <<- list(index = frame_index, filename = filename)
     structure(filename, rayrender_async_pending = TRUE)

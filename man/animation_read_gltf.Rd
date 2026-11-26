@@ -76,7 +76,9 @@ file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
 if (nzchar(file)) {
   asset = animation_read_gltf(file)
   animation_list_clips(asset)
-  bird = animation_model_instance(asset, animation = animation_clip_player("clip-0", loop = "repeat"))
+  bird = animation_model_instance(
+    asset, animation = animation_clip_player("clip-0", loop = "repeat")
+  )
   animation_model_pose(bird, c(1, 0, 1))
 }
 }

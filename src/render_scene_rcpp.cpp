@@ -4,9 +4,6 @@
 #include "core/animation_report.h"
 #include <chrono>
 #include "volumes/boundary.h"
-#ifndef STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION 
-#endif
 
 #include "math/float.h"
 #include "math/vectypes.h"

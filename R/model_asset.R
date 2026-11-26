@@ -69,7 +69,7 @@ animation_model_asset = function(nodes, clips = list(), name = NULL) {
   animation_model_clips(asset)
   prototypes = vector("list", length(nodes))
   node_ids = vapply(nodes, `[[`, character(1), "id")
-  geometry_nodes = setNames(node_ids, node_ids)
+  geometry_nodes = stats::setNames(node_ids, node_ids)
   metadata = sphere()[FALSE, ]
   for (i in seq_along(nodes)) {
     scene = nodes[[i]]$scene

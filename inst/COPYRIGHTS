@@ -16,7 +16,6 @@ URL: https://github.com/mmp/pbrt-v4
 
  Additional bundled code and installed notices:
   src/ext/tinyobj/earcut.hpp: Copyright 2015 Mapbox, ISC; licenses/earcut-ISC.txt.
-  src/ext/stb/*: Copyright Sean Barrett, MIT option; licenses/stb-MIT.txt.
   src/ext/lodepng/*: Copyright Lode Vandevenne, zlib license; licenses/LodePNG.txt.
   src/ext/tinyobj/tinyexr.h: Syoyo Fujita and contributors, with Industrial
     Light & Magic OpenEXR-derived code (2002 and 2004) and Christian Rouet
@@ -29,3 +28,4 @@ URL: https://github.com/mmp/pbrt-v4
     licenses/Apache-2.0.txt.
   tools/config.R: Kevin Ushey, MIT; licenses/configure-MIT.txt.
   tinyobjloader and miniply: licenses/tinyobj-MIT.txt and licenses/miniply-MIT.txt.
+  

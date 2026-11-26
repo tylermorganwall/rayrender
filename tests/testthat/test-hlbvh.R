@@ -7,6 +7,7 @@ test_that("BVH selectors are validated and deterministic renders agree", {
     render_scene(
       scene,
       bvh_type = method,
+      integrator_type = "nee",
       width = 32,
       height = 32,
       samples = 4,
@@ -59,6 +60,7 @@ test_that("HLBVH retains priority exclusion and interior medium initialization",
         render_scene(
           case$scene,
           bvh_type = method,
+          integrator_type = "nee",
           width = 8,
           height = 8,
           samples = 4,

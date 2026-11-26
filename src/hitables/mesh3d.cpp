@@ -4,10 +4,6 @@
 #include "../math/displacement.h"
 #include "../math/calcnormals.h"
 #include "../math/calctangents.h"
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 #include "../materials/texturecache.h"
 
 mesh3d::mesh3d(Rcpp::List mesh_info, std::shared_ptr<material> mat, 

@@ -1,10 +1,6 @@
 #ifndef TRIANGLEMESHH
 #define TRIANGLEMESHH
 
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 
 #include "../materials/texture.h"
 #include "../math/transform.h"

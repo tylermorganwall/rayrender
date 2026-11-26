@@ -908,6 +908,19 @@ if (identical(tolower(Sys.getenv("RAYRENDER_CPP_TESTS", "false")), "true")) {
 }
 
 PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
+# Clang can emit out-of-line compare/exchange calls on Linux. Supply the
+# runtime after the static archives so the linker can resolve those calls.
+if (
+  identical(sysname, "Linux") &&
+    compile_test(
+      "int main() { return 0; }",
+      extra_ldflags = "-latomic",
+      link = TRUE,
+      quiet = TRUE
+    )
+) {
+  PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-latomic")
+}
 PKG_LIBS_STR = collapse_flags(append_flags(
   LINK_LIBS,
   PKG_LIBS_ACC,

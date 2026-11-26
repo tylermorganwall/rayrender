@@ -1,6 +1,7 @@
 #include "hlbvh.h"
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
+#include <RcppThread/Rcerr.hpp>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -400,9 +401,11 @@ void BuildMetalTreelets(std::span<const HLBVHBounds> bounds, const HLBVHBounds &
     if (profile) {
       const auto copied = Clock::now();
       auto seconds = [](auto a, auto b) { return std::chrono::duration<double>(b - a).count(); };
-      std::fprintf(stderr,
-                   "MetalBVH n=%u prepare=%.6f build_wall=%.6f build_gpu=%.6f readback_retain=%.6f\n",
-                   p.n, seconds(start, ready), seconds(ready, built), build_gpu, seconds(built, copied));
+      char message[192];
+      std::snprintf(message, sizeof(message),
+                    "MetalBVH n=%u prepare=%.6f build_wall=%.6f build_gpu=%.6f readback_retain=%.6f\n",
+                    p.n, seconds(start, ready), seconds(ready, built), build_gpu, seconds(built, copied));
+      RcppThread::Rcerr << message;
     }
   }
 }

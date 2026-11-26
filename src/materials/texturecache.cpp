@@ -7,10 +7,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
+#define STB_IMAGE_IMPLEMENTATION
+#include <stbimageheaders/stb_image.h>
 
 #include <ImathBox.h>
 #include <ImfArray.h>

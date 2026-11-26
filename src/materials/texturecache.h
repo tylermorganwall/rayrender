@@ -18,10 +18,6 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 #include <filesystem>
 namespace fs = std::filesystem;
 
