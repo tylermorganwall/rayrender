@@ -1,5 +1,7 @@
-test_that("legacy integrators write a PNG without printing to stdout", {
+test_that("legacy integrators write a PNG and respect the color debug setting", {
   scene = generate_cornell()
+  debug_build = tolower(Sys.getenv("RAY_COLOR_DEBUG", "false")) == "true"
+  expected_output = if (debug_build) "Channel: 0" else NA
   integrators = c("rtiow", "nee", "basic")
   for (i in seq_along(integrators)) {
     for (denoise in c(FALSE, TRUE)) {
@@ -18,7 +20,7 @@ test_that("legacy integrators write a PNG without printing to stdout", {
           parallel = FALSE,
           integrator_type = integrators[i]
         ),
-        NA
+        expected_output
       )
       expect_equal(dim(png::readPNG(filename))[1:2], c(6, 6))
     }

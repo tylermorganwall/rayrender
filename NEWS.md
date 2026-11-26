@@ -319,6 +319,8 @@
 
 ## Bugfixes
 
+* Requires openvdbr 13.1.0-5 for source builds on Windows and Linux.
+
 - `subsurface()` Restores light transmission through rough interfaces on GCC
   builds. The same correction fixes refracted ray directions used for texture
   filtering.

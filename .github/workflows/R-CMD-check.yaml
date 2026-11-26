@@ -83,15 +83,6 @@ jobs:
           "OIDN_PATH=$oidn" >> $env:GITHUB_ENV
           "$oidn/bin" >> $env:GITHUB_PATH
 
-      - name: Select Windows 10 SDK declarations for openvdbr's bundled oneTBB
-        if: runner.os == 'Windows'
-        shell: Rscript {0}
-        run: |
-          dir.create("~/.R", showWarnings = FALSE)
-          write(c("ifeq ($(R_PACKAGE_NAME),openvdbr)",
-                  "backend: CPPFLAGS += -D_WIN32_WINNT=0x0A00 -DNTDDI_VERSION=NTDDI_WIN10_RS1",
-                  "endif"), file = "~/.R/Makevars.win", append = TRUE)
-
       - name: Set color debugging env + single core
         if: matrix.config.ray_color_debug == 'true'
         run: |
