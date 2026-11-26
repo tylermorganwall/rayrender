@@ -35,6 +35,7 @@ src/core/wavefront_openpbr_generated.inc
 *.exr
 *.pdf
 *.txt
+!/.github/rchk/Rcpp-*.txt
 tools/codex/
 inst/examples/
 inst/doc/
