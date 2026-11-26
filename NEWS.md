@@ -319,6 +319,10 @@
 
 ## Bugfixes
 
+- WebAssembly builds link the Wasm versions of OpenEXR and Imath. For offline
+  builds, set `RAYRENDER_WASM_RLIB` to an R library containing the matching
+  Wasm binaries of `libopenexr` and `libimath`.
+
 - Protect camera motion data during interactive keyframe previews and read model
   geometry node names directly from their R vector during scene construction.
 

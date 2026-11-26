@@ -1,8 +1,10 @@
+is_wasm = identical(R.version$os, "emscripten") ||
+  "--host=wasm32-unknown-emscripten" %in% commandArgs(TRUE)
 is_windows = identical(.Platform$OS.type, "windows")
 sysname = Sys.info()[["sysname"]]
 is_macos = identical(sysname, "Darwin")
 is_linux = !is_windows && !is_macos
-target_arch = Sys.info()[["machine"]]
+target_arch = if (is_wasm) "wasm32" else Sys.info()[["machine"]]
 r_home = R.home()
 
 # This script configures Makevars explicitly; disable the helper's
@@ -63,6 +65,9 @@ collapse_flags = function(flags) {
 
 add_rpath = function(flags, dir) {
   flags = append_flags(flags, flag_with_path("-L", dir))
+  if (is_wasm) {
+    return(flags)
+  }
   flags = append_flags(
     flags,
     sprintf(
@@ -250,7 +255,7 @@ if (is_windows) {
   )
 }
 
-if (!is_windows) {
+if (!is_windows && !is_wasm) {
   pkgconfig = Sys.which("pkg-config")
   x11_cppflags = character()
   x11_ldflags = character()
@@ -424,7 +429,7 @@ oidn_root = Sys.getenv("OIDN_PATH", unset = "")
 has_oidn = FALSE
 tbb_info = NULL
 
-if (nzchar(oidn_root) && dir.exists(oidn_root)) {
+if (!is_wasm && nzchar(oidn_root) && dir.exists(oidn_root)) {
   oidn_inc_dir = file.path(oidn_root, "include")
   oidn_lib_dir = file.path(oidn_root, "lib")
 
@@ -581,53 +586,45 @@ if (nzchar(oidn_root) && dir.exists(oidn_root)) {
 }
 
 
-openexr_lib_dir = tryCatch(
-  normalizePath(
-    system.file("lib", package = "libopenexr", mustWork = TRUE),
-    winslash = "/",
+if (is_wasm) {
+  source("tools/config/wasm-openexr.R", local = TRUE)
+  exr = wasm_exr_paths("libopenexr", "libOpenEXR-4_0.a")
+  imath = wasm_exr_paths("libimath", "libImath-3_2.a")
+  openexr_lib_arch = exr$lib
+  imath_lib_arch = imath$lib
+  openexr_inc_dir = file.path(exr$include, "OpenEXR")
+  imath_inc_dir = file.path(imath$include, "Imath")
+} else {
+  openexr_lib_arch = system.file(
+    "lib",
+    target_arch,
+    package = "libopenexr",
     mustWork = TRUE
-  ),
-  error = function(e) {
-    stop(
-      "OpenEXR not found; please install libopenexr or ensure it is available on the library path.",
-      call. = FALSE
-    )
-  }
-)
-openexr_inc_dir = tryCatch(
-  normalizePath(
-    system.file(
-      "include",
-      "OpenEXR",
-      package = "libopenexr",
-      mustWork = TRUE
-    ),
-    winslash = "/",
+  )
+  imath_lib_arch = system.file(
+    "lib",
+    target_arch,
+    package = "libimath",
     mustWork = TRUE
-  ),
-  error = function(e) {
-    stop(
-      "OpenEXR headers not found; please install libopenexr.",
-      call. = FALSE
-    )
-  }
-)
-openexr_lib_arch = file.path(openexr_lib_dir, target_arch)
-if (!dir.exists(openexr_lib_arch)) {
-  stop(
-    sprintf(
-      "OpenEXR library directory for architecture '%s' not found at %s",
-      target_arch,
-      openexr_lib_arch
-    ),
-    call. = FALSE
+  )
+  openexr_inc_dir = system.file(
+    "include",
+    "OpenEXR",
+    package = "libopenexr",
+    mustWork = TRUE
+  )
+  imath_inc_dir = system.file(
+    "include",
+    "Imath",
+    package = "libimath",
+    mustWork = TRUE
   )
 }
 PKG_CPPFLAGS = append_flags(
   PKG_CPPFLAGS,
-  flag_with_path("-I", (openexr_inc_dir))
+  flag_with_path("-I", openexr_inc_dir),
+  flag_with_path("-I", imath_inc_dir)
 )
-
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, openexr_lib_arch)
 PKG_LIBS_ACC = append_flags(
   PKG_LIBS_ACC,
@@ -641,45 +638,11 @@ openjph_static_lib = file.path(openexr_lib_arch, "libopenjph.a")
 if (file.exists(openjph_static_lib)) {
   PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, openjph_static_lib)
 }
-
-imath_lib_dir = tryCatch(
-  normalizePath(
-    system.file("lib", package = "libimath", mustWork = TRUE),
-    winslash = "/",
-    mustWork = TRUE
-  ),
-  error = function(e) {
-    stop("Imath not found; please install libimath.", call. = FALSE)
-  }
-)
-imath_inc_dir = tryCatch(
-  normalizePath(
-    system.file("include", "Imath", package = "libimath", mustWork = TRUE),
-    winslash = "/",
-    mustWork = TRUE
-  ),
-  error = function(e) {
-    stop("Imath headers not found; please install libimath.", call. = FALSE)
-  }
-)
-imath_lib_arch = file.path(imath_lib_dir, target_arch)
-if (!dir.exists(imath_lib_arch)) {
-  stop(
-    sprintf(
-      "Imath library directory for architecture '%s' not found at %s",
-      target_arch,
-      imath_lib_arch
-    ),
-    call. = FALSE
-  )
-}
-PKG_CPPFLAGS = append_flags(
-  PKG_CPPFLAGS,
-  flag_with_path("-I", (imath_inc_dir))
-)
 PKG_LIBS_ACC = add_rpath(PKG_LIBS_ACC, imath_lib_arch)
-PKG_LIBS_ACC = append_flags(PKG_LIBS_ACC, "-lImath-3_2")
-
+PKG_LIBS_ACC = append_flags(
+  PKG_LIBS_ACC,
+  if (is_wasm) file.path(imath_lib_arch, "libImath-3_2.a") else "-lImath-3_2"
+)
 
 arch_norm = tolower(target_arch)
 # "x86-64" -> "x86_64"
@@ -911,7 +874,8 @@ PKG_CPPFLAGS_STR = collapse_flags(append_flags(PKG_CPPFLAGS, OIDN_CPPFLAGS))
 # Clang can emit out-of-line compare/exchange calls on Linux. Supply the
 # runtime after the static archives so the linker can resolve those calls.
 if (
-  identical(sysname, "Linux") &&
+  !is_wasm &&
+    identical(sysname, "Linux") &&
     compile_test(
       "int main() { return 0; }",
       extra_ldflags = "-latomic",
