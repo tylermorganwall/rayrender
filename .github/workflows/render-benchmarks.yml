@@ -39,7 +39,8 @@ permissions:
 
 jobs:
   benchmark:
-    runs-on: ubuntu-latest
+    # The benchmark harness pins Playwright 1.56, which ships Chromium for Noble.
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
