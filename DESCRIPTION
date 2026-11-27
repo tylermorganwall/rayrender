@@ -1,8 +1,8 @@
 Package: rayrender
 Type: Package
 Title: Build and Render 3D Scenes with Path Tracing
-Version: 0.42.3
-Date: 2026-09-17
+Version: 0.43.0
+Date: 2026-11-26
 Authors@R: c(person("Tyler", "Morgan-Wall", email = "tylermw@gmail.com",
     role = c("aut", "cph", "cre"), comment = c(ORCID = "0000-0002-3131-3814")),
     person("Syoyo", "Fujita", role=c("ctb", "cph")),
