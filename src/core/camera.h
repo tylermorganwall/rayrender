@@ -22,10 +22,17 @@ struct CameraSample {
     pFilm(point2f(pFilm_.xy.x,pFilm_.xy.y)), pLens(point2f(pLens_.xy.x,pLens_.xy.y)), time(time_) {};
 };
 
+namespace animation { class CameraTrack; }
+
 class RayCamera {
   public:
     RayCamera() {};
     virtual ~RayCamera() {};
+    // Authored camera data are immutable. Only the frame clock is republished,
+    // on the owning thread between completed sampling batches.
+    std::shared_ptr<const animation::CameraTrack> scene_camera_track;
+  std::shared_ptr<SceneTimeContext> scene_camera_time;
+  Float scene_camera_aspect = 1;
     virtual Ray get_ray(Float s, Float t, point3f u3, Float u) {
       return(Ray());
     };
@@ -62,11 +69,26 @@ class RayCamera {
       shutter_speed = value;
     }
     Float get_shutter_speed() const {return(shutter_speed);}
+    std::pair<Float, Float> ShutterInterval() const;
+    // Reverse film coordinates before tracing, so preview, picking and ray
+    // differentials use the same handedness as the final image.
+    void set_camera_flip_x(bool value) { camera_flip_x = value; }
+    bool get_camera_flip_x() const { return camera_flip_x; }
+    // Navigation follows the displayed horizontal axis, including imported
+    // camera reflections. Keep get_u() unchanged for projection/export code.
+    vec3f get_navigation_u() { return camera_flip_x ? -get_u() : get_u(); }
+    void rotate_navigation_up(Float angle_degrees) {
+      rotate_up(camera_flip_x ? -angle_degrees : angle_degrees);
+    }
     
     virtual void reset()  = 0;
     virtual Float GenerateRay(const CameraSample &sample, Ray* ray2) const {
       return(0.0);
     };
+    Ray get_ray_differential(Float s, Float t, point3f lens, Float time,
+                             Float ds, Float dt, Float scale = 1);
+    Float GenerateRayDifferential(const CameraSample& sample, Ray* ray,
+                                  Float ds, Float dt, Float scale = 1) const;
     virtual vec3f get_w() = 0;
     virtual vec3f get_u() = 0;
     virtual vec3f get_v() = 0;
@@ -80,7 +102,18 @@ class RayCamera {
     virtual point2f get_ortho() {return(point2f(1.f,1.f));}
     
   protected:
+    Float film_x(Float value) const { return camera_flip_x ? 1 - value : value; }
+    bool camera_flip_x = false;
+    Float sample_ray_time(Float begin, Float end, Float motion_time) const {
+      // Full-pose samples publish a double scene epoch. Keep the ray exactly at
+      // its anchor instead of rounding epoch + shutter offset into a float.
+      if (scene_camera_time && scene_camera_time->shutter_unit >= 0)
+        return scene_camera_time->ray_anchor;
+      return begin + (end - begin) * motion_time;
+    }
     Float sample_motion_time(Float unit_time) const {
+      if (scene_camera_time && scene_camera_time->shutter_unit >= 0)
+        unit_time = scene_camera_time->shutter_unit;
       Float u = clamp(unit_time, static_cast<Float>(0), static_cast<Float>(1));
       if(std::isinf(shutter_speed)) {
         return static_cast<Float>(0);
@@ -311,7 +344,15 @@ class environment_camera : public RayCamera {
 };
 
 class RealisticCamera  : public RayCamera {
+  friend void ExportWavefrontCamera(RayCamera &, struct WFCamera &, std::vector<struct WFVector> &);
 public:
+  // Called at a completed-batch boundary when the scene-time exposure changes.
+  std::pair<Float, Float> GetShutterInterval() const { return {shutterOpen, shutterClose}; }
+  void SetShutterInterval(Float begin, Float end) { shutterOpen = begin; shutterClose = end; }
+  // Updates only the rigid pose, preserving the initialized lens and pupils.
+  void SetScenePose(point3f position, point3f target, vec3f up);
+  // Prepare exact snapshot optics before publishing a new render revision.
+  std::unique_ptr<RealisticCamera> WithSceneOptics(Float aperture, Float focus) const;
   // RealisticCamera Public Methods
   RealisticCamera(const AnimatedTransform &CameraToWorld, Float shutterOpen,
                   Float shutterClose, Float apertureDiameter, Float cam_width, Float cam_height,
@@ -351,7 +392,7 @@ public:
   vec3f get_u();
   vec3f get_v();
   Float get_fov() {return(-1);}
-  Float get_aperture() {return(0);}
+  Float get_aperture() {return(authored_aperture);}
   Float get_focal_distance() {return(focusDistance);}
   point3f get_origin();
   Float get_iso() {return(iso);}
@@ -371,6 +412,16 @@ private:
   // RealisticCamera Private Data
   std::vector<LensElementInterface> elementInterfaces;
   std::vector<Bounds2f> exitPupilBounds;
+  // Keep the unmodified descriptor: the legacy constructor adjusts its input
+  // aperture stop. Reusing that adjusted input would make reverse seeks depend
+  // on the narrowest aperture previously visited.
+  struct LensSource {
+    std::vector<Float> elements;
+    Float film_size;
+    Float camera_scale;
+  };
+  std::shared_ptr<const LensSource> lens_source;
+  bool scene_optics_prepared = true;
   
   // RealisticCamera Private Methods
   Float LensRearZ() const { 
@@ -418,6 +469,7 @@ private:
   vec3f start_camera_up;
   Transform CamTransform;
   point3f origin;
+  Float authored_aperture;
   Float focusDistance;
   Float start_focusDistance;
   point3f start_lookat;

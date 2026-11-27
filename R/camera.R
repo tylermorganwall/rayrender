@@ -29,7 +29,11 @@
 #' motion blur. A value of `1` samples the full frame-to-frame motion
 #' interval, `2` samples one-half, and `4` samples one-quarter. Higher
 #' values produce less motion blur. `Inf` disables temporal motion blur.
-#'
+#' @param camera_flip_x Default `FALSE`. Reverse horizontal film coordinates before
+#' tracing. Useful for matching camera handedness in imported scenes.
+#' @param keyframes Default `NULL`. Editable keyframes from `get_saved_keyframes()`.
+#' Restored in interactive preview without changing the initial camera or sampled
+#' `motion`. Retains exposure and environment rotation along with camera geometry.
 #' @return A `ray_camera` object.
 #' @export
 #'
@@ -144,8 +148,57 @@ camera = function(
   shutteropen = 0,
   shutterclose = 1,
   camera_motion_blur = FALSE,
-  shutter_speed = 2
+  shutter_speed = 2,
+  camera_flip_x = FALSE,
+  keyframes = NULL
 ) {
+  if (
+    !is.logical(camera_flip_x) ||
+      length(camera_flip_x) != 1L ||
+      is.na(camera_flip_x)
+  ) {
+    stop("camera_flip_x must be a single TRUE/FALSE value.")
+  }
+  if (!is.null(keyframes)) {
+    keyframes = as.data.frame(keyframes)
+    required = c(
+      "x",
+      "y",
+      "z",
+      "dx",
+      "dy",
+      "dz",
+      "aperture",
+      "fov",
+      "focal",
+      "orthox",
+      "orthoy",
+      "upx",
+      "upy",
+      "upz"
+    )
+    if (
+      !all(required %in% names(keyframes)) ||
+        anyDuplicated(names(keyframes)) ||
+        !all(vapply(
+          keyframes,
+          function(x) is.numeric(x) && all(is.finite(x)),
+          logical(1)
+        ))
+    ) {
+      stop(
+        "keyframes must contain finite numeric camera columns.",
+        call. = FALSE
+      )
+    }
+    validate_camera_motion(keyframes)
+    if (is.null(keyframes$exposure)) {
+      keyframes$exposure = rep(1, nrow(keyframes))
+    }
+    if (is.null(keyframes$env_rotation)) {
+      keyframes$env_rotation = rep(0, nrow(keyframes))
+    }
+  }
   validate_camera_name(name)
   keyframe_motion_args = normalize_keyframe_motion_args(keyframe_motion_args)
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
@@ -195,6 +248,7 @@ camera = function(
       name = name,
       motion = motion,
       keyframe_motion_args = keyframe_motion_args,
+      keyframes = keyframes,
       filename = filename,
       camera_description_file = camera_description_file,
       camera_scale = camera_scale,
@@ -203,7 +257,8 @@ camera = function(
       shutteropen = shutteropen,
       shutterclose = shutterclose,
       camera_motion_blur = isTRUE(camera_motion_blur),
-      shutter_speed = shutter_speed
+      shutter_speed = shutter_speed,
+      camera_flip_x = camera_flip_x
     ),
     class = "ray_camera"
   )
@@ -698,6 +753,35 @@ as_ray_camera_motion = function(motion) {
   motion
 }
 
+#' @param motion Complete camera motion, before selecting output frames.
+#' @return Numeric matrix of shutter endpoints in native renderer column order.
+#' @keywords internal
+camera_shutter_endpoints = function(motion) {
+  count = nrow(motion)
+  indices = pmin(seq_len(count) + 1L, count)
+  if (count > 1L && isTRUE(attr(motion, "closed"))) {
+    indices[count] = 1L
+  }
+  # Keep this order synchronized with set_animation_camera_motion_blur().
+  columns = c(
+    "x",
+    "y",
+    "z",
+    "dx",
+    "dy",
+    "dz",
+    "upx",
+    "upy",
+    "upz",
+    "focal",
+    "fov"
+  )
+  result = as.matrix(motion[indices, columns, drop = FALSE])
+  storage.mode(result) = "double"
+  rownames(result) = NULL
+  result
+}
+
 #' @keywords internal
 validate_camera_motion = function(motion) {
   missing_columns = setdiff(ray_camera_motion_columns(), colnames(motion))
@@ -904,6 +988,18 @@ preserve_ray_scene_attrs = function(newscene, scene, objects = NULL) {
   }
   lights = c(scene_lights, object_lights)
   attr(newscene, "ray_infinite_lights") = if (length(lights)) lights else NULL
+  scene_points = ray_scene_point_lights(scene)
+  object_points = ray_scene_point_lights(objects)
+  duplicate_points = intersect(names(scene_points), names(object_points))
+  if (length(duplicate_points)) {
+    stop(
+      "Duplicate point/spot light names found while combining scenes: ",
+      paste(duplicate_points, collapse = ", "),
+      call. = FALSE
+    )
+  }
+  points = c(scene_points, object_points)
+  attr(newscene, "ray_lights") = if (length(points)) points else NULL
   if (!is.null(attr(scene, "cornell")) || !is.null(attr(objects, "cornell"))) {
     attr(newscene, "cornell") = TRUE
   }
@@ -933,6 +1029,15 @@ preserve_ray_scene_attrs = function(newscene, scene, objects = NULL) {
     attr(newscene, "active_camera") = object_active
   }
 
+  # Keep the receiving scene's defaults; fill only settings it does not own.
+  settings = attr(scene, "ray_render_settings", exact = TRUE)
+  other_settings = attr(objects, "ray_render_settings", exact = TRUE)
+  if (length(settings) || length(other_settings)) {
+    attr(newscene, "ray_render_settings") = c(
+      settings,
+      other_settings[setdiff(names(other_settings), names(settings))]
+    )
+  }
   newscene
 }
 
@@ -1242,7 +1347,8 @@ render_scene_legacy_camera = function(
   shutterclose,
   camera_motion_blur = FALSE,
   shutter_speed = 2,
-  message_cornell = TRUE
+  message_cornell = TRUE,
+  camera_flip_x = FALSE
 ) {
   if (!is.null(attr(scene, "cornell"))) {
     corn_message = "Setting default values for Cornell box: "
@@ -1296,7 +1402,8 @@ render_scene_legacy_camera = function(
     shutteropen = shutteropen,
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
-    shutter_speed = shutter_speed
+    shutter_speed = shutter_speed,
+    camera_flip_x = camera_flip_x
   )
 }
 
@@ -1304,6 +1411,10 @@ render_scene_legacy_camera = function(
 camera_frame_args = function(camera, frame = 1) {
   frame = camera_frame_range(nrow(camera$motion), frame, frame)
   motion = camera$motion[frame, , drop = FALSE]
+  blur = motion[["camera_motion_blur", exact = TRUE]]
+  if (is.null(blur) || is.na(blur)) {
+    blur = camera$camera_motion_blur
+  }
   list(
     lookfrom = c(motion$x, motion$y, motion$z),
     lookat = c(motion$dx, motion$dy, motion$dz),
@@ -1318,8 +1429,9 @@ camera_frame_args = function(camera, frame = 1) {
     film_size = camera$film_size,
     shutteropen = camera$shutteropen,
     shutterclose = camera$shutterclose,
-    camera_motion_blur = isTRUE(camera$camera_motion_blur),
-    shutter_speed = ray_camera_shutter_speed(camera)
+    camera_motion_blur = isTRUE(blur),
+    shutter_speed = ray_camera_shutter_speed(camera),
+    camera_flip_x = isTRUE(camera$camera_flip_x)
   )
 }
 
@@ -1339,7 +1451,8 @@ camera_batch_metadata = function(camera) {
     film_size = as.numeric(camera$film_size),
     shutteropen = as.numeric(camera$shutteropen),
     shutterclose = as.numeric(camera$shutterclose),
-    shutter_speed = as.numeric(ray_camera_shutter_speed(camera))
+    shutter_speed = as.numeric(ray_camera_shutter_speed(camera)),
+    camera_flip_x = isTRUE(camera$camera_flip_x)
   )
 }
 
@@ -1417,6 +1530,7 @@ camera_batch_plan = function(
   }
 
   motions = vector("list", length(cameras))
+  shutter_endpoints = vector("list", length(cameras))
   filename_list = vector("list", length(cameras))
   camera_index = integer()
   frame_numbers = integer()
@@ -1436,6 +1550,13 @@ camera_batch_plan = function(
       end_frame = end_frame
     )
     motions[[i]] = as.data.frame(camera$motion)[frame_range, , drop = FALSE]
+    # Resolve neighbors before slicing: a partial loop still blurs toward its
+    # original next pose, never back to the first selected frame or another camera.
+    shutter_endpoints[[i]] = camera_shutter_endpoints(camera$motion)[
+      frame_range,
+      ,
+      drop = FALSE
+    ]
     motions[[i]]$camera_motion_blur = isTRUE(camera$camera_motion_blur)
     motions[[i]]$camera_motion_blur_group = i
     filename_list[[i]] = camera_batch_frame_filenames(
@@ -1455,6 +1576,7 @@ camera_batch_plan = function(
 
   list(
     motion = as_ray_camera_motion(motion),
+    shutter_endpoints = do.call(rbind, shutter_endpoints),
     filenames = filenames,
     write_image = any(nzchar(filenames)),
     camera_index = camera_index,

@@ -1,35 +1,10 @@
+#include "../materials/normalmap.h"
 #include "../hitables/triangle.h"
 #include "RcppThread.h"
 #include "../utils/raylog.h"
 #include "../math/vectypes.h"
+#include "../volumes/intersections.h"
 
-namespace {
-// Use double precision for deterministic boundary crossings. The legacy float
-// error-bound rejection can discard an entry just beyond a spawned ray origin.
-bool volume_triangle_intersection(const Ray& r, const point3f& a, const point3f& b,
-                                  const point3f& c, Float tmin, Float tmax,
-                                  Float& t, Float& b0, Float& b1, Float& b2) {
-  const point3f* vertices[3]={&a,&b,&c};
-  int z=MaxDimension(Abs(r.d)), x=(z+1)%3, y=(x+1)%3;
-  double p[3][3];
-  for(int i=0;i<3;++i) {
-    double dz=double((*vertices[i])[z])-r.o[z];
-    p[i][0]=double((*vertices[i])[x])-r.o[x]-double(r.d[x])/r.d[z]*dz;
-    p[i][1]=double((*vertices[i])[y])-r.o[y]-double(r.d[y])/r.d[z]*dz;
-    p[i][2]=dz/r.d[z];
-  }
-  double e[3]={p[1][0]*p[2][1]-p[1][1]*p[2][0],
-               p[2][0]*p[0][1]-p[2][1]*p[0][0],
-               p[0][0]*p[1][1]-p[0][1]*p[1][0]};
-  if((e[0]<0 || e[1]<0 || e[2]<0) && (e[0]>0 || e[1]>0 || e[2]>0)) return false;
-  double det=e[0]+e[1]+e[2];
-  if(det==0) return false;
-  double distance=(e[0]*p[0][2]+e[1]*p[1][2]+e[2]*p[2][2])/det;
-  if(!(distance>std::max(0.0,double(tmin))) || distance>tmax) return false;
-  t=Float(distance); b0=Float(e[0]/det); b1=Float(e[1]/det); b2=Float(e[2]/det);
-  return true;
-}
-}
 
 OpaqueShadowType triangle::ShadowType() const {
   const int id = mesh->face_material_id[face_number];
@@ -45,7 +20,7 @@ bool triangle::OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng
   }
   const point3f &p0 = mesh->p[v[0]], &p1 = mesh->p[v[1]], &p2 = mesh->p[v[2]];
   Float distance, b0, b1, b2;
-  if (!volume_triangle_intersection(r, p0, p1, p2, t_min, t_max, distance, b0, b1, b2))
+  if (!VolumeTriangleIntersection(r, p0, p1, p2, t_min, t_max, distance, b0, b1, b2))
     return false;
 
   // Match hit()'s degenerate-geometry rejection before omitting the shading
@@ -74,8 +49,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p2 = mesh->p[v[2]];
   
   Float t,b0,b1,b2;
+  double precise_t = INFINITY;
   if(r.segment_absorption) {
-    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+    if(!VolumeTriangleIntersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2,&precise_t)) return false;
   } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
@@ -188,6 +164,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   vec2f duv02 = uv[0] - uv[2], duv12 = uv[1] - uv[2];
   vec3f dp02 = p0 - p2, dp12 = p1 - p2;
   normal3f normal = convert_to_normal3(cross(dp02, dp12));
+  // Vertices are already transformed, so their cross product contains the
+  // transform's handedness. Remove that sign, then apply explicit reversal.
+  if (reverseOrientation ^ transformSwapsHandedness) normal = -normal;
 
   Float determinantUV = DifferenceOfProducts(duv02[0],duv12[1],duv02[1],duv12[0]);
   bool degenerateUV = ffabs(determinantUV) < 1e-8;
@@ -209,6 +188,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   //Everything after this could be delayed until later
   
   point3f pHit = b0v * p0 + b1v * p1 + b2v * p2;
+  if (r.segment_absorption)
+    for (int a = 0; a < 3; ++a)
+      if (p0[a] == p1[a] && p0[a] == p2[a]) pHit[a] = p0[a];
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
 
   point3f bSum0[3];
@@ -235,8 +217,10 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     }
   }
   rec.geometric_normal = unit_vector(normal);
+  rec.physical_shading_normal = rec.geometric_normal;
   rec.p = pHit;
   rec.t = t;
+  rec.precise_t = precise_t;
   
   // __builtin_prefetch(mesh->bump_textures[mat_id].get()); //WILL_READ_ONLY
   // __builtin_prefetch(mesh->mesh_materials[mat_id].get()); //WILL_READ_ONLY
@@ -247,17 +231,21 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     normal3f n3 = mesh->n[n[2]];
     
     vec3f np = convert_to_vec3(b0v * n1 + b1v * n2 + b2v * n3);
+    // Vertex normals were inverse-transpose transformed, without the cross
+    // product's handedness sign. Only explicit reversal remains to apply.
+    if (reverseOrientation) np = -np;
     if(np.squared_length() == 0) {
       rec.normal = normal;
     } else {
       np.make_unit_vector();
+      rec.physical_shading_normal = normal3f(np[0],np[1],np[2]);
       if(mesh->has_consistent_normals) {
         bool flip = dot(np, r.direction()) > 0;
         Float af1 = mesh->alpha_v[n[0]];
         Float af2 = mesh->alpha_v[n[1]];
         Float af3 = mesh->alpha_v[n[2]];
         Float af = b0 * af1 + b1 * af2 + b2 * af3;
-        vec3f i = (-r.direction()); //normalizing here really increases time--see if you can normalize once
+        vec3f i = -unit_vector(r.direction()); // Match the Sampler overload without changing ray t.
         i *= flip ? -1 : 1;
         Float b = dot(i,np);
         Float q = (1 - 2 * M_1_PI * af) * (1 - (2 * M_1_PI) * af)/(1 + 2 * (1 - 2 * M_1_PI) * af);
@@ -276,6 +264,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     }
   }
+  rec.base_shading_normal = rec.physical_shading_normal;
   rec.normal.make_unit_vector();
 
   rec.dpdu = dpdu;
@@ -289,18 +278,46 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
 
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
 
-  if(bump_tex) {
-    vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
-
-    point3f bvbu = bump_tex->value(uHit, vHit, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
-                            rec.dpdv - bvbu.xyz.y * norm_bump));
-    rec.bump_normal.make_unit_vector();
-    rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+  rec.dndu = rec.dndv = normal3f(0);
+  const bool smooth_normals = mesh->has_normals && n[0] != -1 && n[1] != -1 && n[2] != -1;
+  if (smooth_normals && !degenerateUV) {
+    const Float normal_det = DifferenceOfProducts(duv02[0], duv12[1], duv02[1], duv12[0]);
+    const auto dn02=mesh->n[n[0]]-mesh->n[n[2]], dn12=mesh->n[n[1]]-mesh->n[n[2]];
+    rec.dndu = (duv12[1] * dn02 - duv02[1] * dn12) / normal_det;
+    rec.dndv = (-duv12[0] * dn02 + duv02[0] * dn12) / normal_det;
+    if (reverseOrientation) {
+      rec.dndu = -rec.dndu;
+      rec.dndv = -rec.dndv;
+    }
+  }
+  rec.shape = this;
+  rec.texture_object_p = (*WorldToObject)(rec.p);
+  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
+  rec.ComputeDifferentials(r);
+  if (bump_tex) {
+    const auto ns=rec.physical_shading_normal;
+    // PBRT's triangle shading frame uses the interpolated normal and projected
+    // u tangent. UV footprints above use geometric tangents, before this frame.
+    if (smooth_normals) {
+      auto bitangent = cross(convert_to_vec3(ns), rec.dpdu);
+      if (bitangent.squared_length() > 0) {
+        rec.dpdu = cross(bitangent, convert_to_vec3(ns));
+        rec.dpdv = bitangent;
+      } else
+        CoordinateSystem(convert_to_vec3(ns), &rec.dpdu, &rec.dpdv);
+    }
+    const TextureFootprint footprint{rec.dudx, rec.dvdx, rec.dudy, rec.dvdy, rec.has_differentials};
+    TextureEvalContext context;
+    if (bump_tex->height_texture) {
+      context = TextureEvalContext::FromHit(rec);
+      context.u = uvHit[0]; context.v = uvHit[1];
+    }
+    rec.bump_normal = bump_tex->perturb(uvHit[0], uvHit[1], rec.p, ns, rec.dpdu, rec.dpdv, rec.dndu,
+                                        rec.dndv, footprint, bump_tex->height_texture ? &context : nullptr);
+    rec.physical_shading_normal=rec.bump_normal;
     rec.has_bump = true;
   }
 
-  rec.shape = this;
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   return(true);
 }
@@ -315,8 +332,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   const point3f &p2 = mesh->p[v[2]];
   
   Float t,b0,b1,b2;
+  double precise_t = INFINITY;
   if(r.segment_absorption) {
-    if(!volume_triangle_intersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2)) return false;
+    if(!VolumeTriangleIntersection(r,p0,p1,p2,t_min,t_max,t,b0,b1,b2,&precise_t)) return false;
   } else {
   vec3f p0t = p0 - r.origin();
   vec3f p1t = p1 - r.origin();
@@ -440,6 +458,9 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   // rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   
   point3f pHit = b0 * p0 + b1 * p1 + b2 * p2;
+  if (r.segment_absorption)
+    for (int a = 0; a < 3; ++a)
+      if (p0[a] == p1[a] && p0[a] == p2[a]) pHit[a] = p0[a];
   point2f uvHit = b0 * uv[0] + b1 * uv[1] + b2 * uv[2];
   
   if(mesh->has_vertex_colors) {
@@ -448,6 +469,7 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   
   bool alpha_miss = false;
   normal3f normal = convert_to_normal3(unit_vector(cross(dp02, dp12)));
+  if (reverseOrientation ^ transformSwapsHandedness) normal = -normal;
   int mat_id = mesh->face_material_id[face_number];
   
   alpha_texture* alpha_mask = mesh->alpha_textures[mat_id].get();
@@ -458,6 +480,8 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
   }
   rec.t = t;
   rec.geometric_normal = unit_vector(normal);
+  rec.physical_shading_normal = rec.geometric_normal;
+  rec.precise_t = precise_t;
   rec.p = pHit;
   rec.pError = gamma(7) * vec3f(xAbsSum, yAbsSum, zAbsSum);
   rec.has_bump = false;
@@ -468,10 +492,12 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
     normal3f n2 = mesh->n[n[1]];
     normal3f n3 = mesh->n[n[2]];
     normal3f np = (b0 * n1 + b1 * n2 + b2 * n3);
+    if (reverseOrientation) np = -np;
     if(np.squared_length() == 0) {
       rec.normal = normal;
     } else {
       np.make_unit_vector();
+      rec.physical_shading_normal = normal3f(np[0],np[1],np[2]);
       if(mesh->has_consistent_normals) {
         bool flip = dot(np, r.direction()) > 0;
         Float af1 = mesh->alpha_v[n[0]];
@@ -497,24 +523,53 @@ const bool triangle::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec
       rec.normal = normal;
     }
   }
+  rec.base_shading_normal = rec.physical_shading_normal;
   bump_texture* bump_tex = mesh->bump_textures[mat_id].get();
 
-  if(bump_tex) {
-    vec3f norm_bump = dot(r.direction(), rec.normal) < 0 ? convert_to_vec3(rec.normal) : -convert_to_vec3(rec.normal);
-    
-    point3f bvbu = bump_tex->value(uvHit[0], uvHit[1], rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * norm_bump ,
-                            rec.dpdv - bvbu.xyz.y * norm_bump));
-    rec.bump_normal.make_unit_vector();
-    rec.bump_normal = Faceforward(rec.bump_normal,rec.normal);
+  rec.dndu = rec.dndv = normal3f(0);
+  const bool smooth_normals = mesh->has_normals && n[0] != -1 && n[1] != -1 && n[2] != -1;
+  if (smooth_normals && !degenerateUV) {
+    const Float normal_det = DifferenceOfProducts(duv02[0], duv12[1], duv02[1], duv12[0]);
+    const auto dn02=mesh->n[n[0]]-mesh->n[n[2]], dn12=mesh->n[n[1]]-mesh->n[n[2]];
+    rec.dndu = (duv12[1] * dn02 - duv02[1] * dn12) / normal_det;
+    rec.dndv = (-duv12[0] * dn02 + duv02[0] * dn12) / normal_det;
+    if (reverseOrientation) {
+      rec.dndu = -rec.dndu;
+      rec.dndv = -rec.dndv;
+    }
+  }
+  rec.shape = this;
+  rec.texture_object_p = (*WorldToObject)(rec.p);
+  rec.texture_object_normal = unit_vector((*WorldToObject)(rec.geometric_normal));
+  rec.ComputeDifferentials(r);
+  if (bump_tex) {
+    const auto ns=rec.physical_shading_normal;
+    // PBRT's triangle shading frame uses the interpolated normal and projected
+    // u tangent. UV footprints above use geometric tangents, before this frame.
+    if (smooth_normals) {
+      auto bitangent = cross(convert_to_vec3(ns), rec.dpdu);
+      if (bitangent.squared_length() > 0) {
+        rec.dpdu = cross(bitangent, convert_to_vec3(ns));
+        rec.dpdv = bitangent;
+      } else
+        CoordinateSystem(convert_to_vec3(ns), &rec.dpdu, &rec.dpdv);
+    }
+    const TextureFootprint footprint{rec.dudx, rec.dvdx, rec.dudy, rec.dvdy, rec.has_differentials};
+    TextureEvalContext context;
+    if (bump_tex->height_texture) {
+      context = TextureEvalContext::FromHit(rec);
+      context.u = uvHit[0]; context.v = uvHit[1];
+    }
+    rec.bump_normal = bump_tex->perturb(uvHit[0], uvHit[1], rec.p, ns, rec.dpdu, rec.dpdv, rec.dndu,
+                                        rec.dndv, footprint, bump_tex->height_texture ? &context : nullptr);
+    rec.physical_shading_normal=rec.bump_normal;
     rec.has_bump = true;
   }
-  rec.u = uvHit[0];
-  rec.v = uvHit[1];
+  rec.u = mesh->has_vertex_colors ? b0 : uvHit[0];
+  rec.v = mesh->has_vertex_colors ? b1 : uvHit[1];
   
   rec.mat_ptr = mesh->mesh_materials[mat_id].get();
   rec.alpha_miss = alpha_miss;
-  rec.shape = this;
   
   return(true);
 }
@@ -869,3 +924,86 @@ Float triangle::Area() const {
   const point3f &p2 = mesh->p[v[2]];
   return 0.5 * cross(p1 - p0, p2 - p0).length();
 }
+
+#ifdef NOT_CRAN
+#include <testthat.h>
+#include "../volumes/lights.h"
+
+context("Triangle emission orientation") {
+  test_that("reversal and mirrored transforms agree across hit paths and shading normals") {
+    float vertices[] = {-1,-1,0, 1,-1,0, 0,1,0};
+    float normals[] = {.2,0,.98, .2,0,.98, .2,0,.98};
+    int indices[] = {0,1,2};
+    auto lamp = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1)), 2, false);
+    for (Float sx : {Float(-1), Float(1)}) {
+      for (Float sz : {Float(-1), Float(1)}) {
+        Transform transform = Scale(sx, 1, sz), inverse = Inverse(transform);
+        for (bool reversed : {false, true}) {
+          for (bool smooth : {false, true}) {
+            TriangleMesh mesh(vertices, indices, smooth ? normals : nullptr, nullptr,
+                              3, 3, nullptr, nullptr, lamp, &transform, &inverse, reversed);
+            triangle tri(&mesh, mesh.vertexIndices.data(), mesh.normalIndices.data(),
+                         mesh.texIndices.data(), 0, &transform, &inverse, reversed);
+            const Float sign = reversed ? -1 : 1;
+            const normal3f expected = unit_vector(transform(normal3f(0,0,1))) * sign;
+            const normal3f shading = smooth ? unit_vector(transform(normal3f(.2,0,.98))) * sign : expected;
+            for (bool segment : {false, true}) {
+              for (Float side : {Float(-1), Float(1)}) {
+                Ray ray(point3f(0,0,side*2), vec3f(0,0,-side));
+                ray.segment_absorption = segment;
+                random_gen rng(13); RandomSampler sampler(rng);
+                hit_record a, b;
+                expect_true(tri.hit(ray, 0, 10, a, rng));
+                expect_true(tri.hit(ray, 0, 10, b, &sampler));
+                for (const auto &hit : {a, b}) {
+                  for (int c = 0; c < 3; ++c) {
+                    expect_true(std::abs(hit.geometric_normal[c] - expected[c]) < 1e-6);
+                    expect_true(std::abs(hit.physical_shading_normal[c] - shading[c]) < 1e-6);
+                    expect_true(std::abs(hit.normal[c] - shading[c]) < 1e-6);
+                  }
+                  bool invisible = false;
+                  const Float emitted = lamp->emitted(ray, hit, hit.u, hit.v, hit.p, invisible)[0];
+                  expect_true(emitted == (dot(expected, ray.d) < 0 ? 2 : 0));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  test_that("light selection and sampled endpoints use the reversed emission side") {
+    float vertices[] = {-1,-1,0, 1,-1,0, 0,1,0};
+    int indices[] = {0,1,2};
+    auto lamp = std::make_shared<diffuse_light>(
+        std::make_shared<constant_texture>(point3f(1)), 2, false);
+    for (Float sx : {Float(-1), Float(1)}) {
+      Transform transform = Scale(sx,1,1), inverse = Inverse(transform);
+      TriangleMesh mesh(vertices, indices, nullptr, nullptr, 3, 3, nullptr, nullptr,
+                        lamp, &transform, &inverse, false);
+      hitable_list lights;
+      for (bool reversed : {false, true})
+        lights.add(std::make_shared<triangle>(&mesh, mesh.vertexIndices.data(),
+            mesh.normalIndices.data(), mesh.texIndices.data(), 0, &transform, &inverse, reversed));
+      VolumeLightSampler selection(lights);
+      for (Float side : {Float(-1), Float(1)}) {
+        VolumeLightSampler::Context context{point3f(0,0,side*3), normal3f(0), 0};
+        const size_t front = side > 0 ? 0 : 1;
+        expect_true(selection.SelectionPmf(context, front) > 5 * selection.SelectionPmf(context, 1-front));
+        random_gen rng(9); RandomSampler sampler(rng);
+        for (int i = 0; i < 16; ++i) {
+          auto sample = selection.SampleEmitter(context, &sampler, rng);
+          Ray ray(context.p, sample.wi); ray.segment_absorption = true;
+          hit_record hit;
+          expect_true(selection.Endpoint(sample, ray, hit, rng));
+          bool invisible = false;
+          const Float emitted = hit.mat_ptr->emitted(ray, hit, hit.u, hit.v, hit.p, invisible)[0];
+          expect_true(emitted == (sample.index == front ? 2 : 0));
+        }
+      }
+    }
+  }
+}
+#endif

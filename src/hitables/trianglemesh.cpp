@@ -19,7 +19,7 @@ inline Float luminance(point3f& color) {
 void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       std::vector<Rcpp::List > &shape_materials,
                       std::vector<unsigned char * > &obj_texture_data,
-                      std::vector<unsigned char * > &bump_texture_data,
+                      std::vector<std::shared_ptr<const HeightImage>> &bump_texture_data,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       std::shared_ptr<alpha_texture> alpha_default,
@@ -37,7 +37,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
   //Need to ensure textures have full paths
   mesh_materials.reserve(total_materials+1);
   obj_texture_data.reserve(total_materials+1);
-  bump_texture_data.reserve(total_materials+1);
+  bump_texture_data.resize(total_materials+1);
   bump_textures.reserve(total_materials+1);
   alpha_textures.reserve(total_materials+1);
   material_is_light.reserve(total_materials+1);
@@ -157,9 +157,9 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         int nnb = 0;
         std::replace(bump_texname.begin(),bump_texname.end(), '\\', separator());
   
-        bump_texture_data[mat_num] = texCache.LookupChar(bump_texname, nxb, nyb, nnb, 1);
+        bump_texture_data[mat_num] = texCache.LookupHeight(bump_texname, nxb, nyb, nnb);
         // nn = 4;
-        texture_size += sizeof(unsigned char) * nxb * nyb * nnb;
+        texture_size += sizeof(Float) * nxb * nyb * nnb;
         if(nxb == 0 || nyb == 0 || nnb == 0) {
           throw std::runtime_error("Could not find " + bump_texname);
         }
@@ -169,7 +169,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         bump_intensity[mat_num] = bump_intensity_single;
         has_bump[mat_num] = true;
       } else {
-        bump_texture_data.push_back(nullptr);
+        bump_texture_data[mat_num] = nullptr;
         bump_intensity[mat_num] = 1.0f;
         has_bump[mat_num] = false;
       }
@@ -207,9 +207,9 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         } else {
           if(has_diffuse[mat_num]) {
             if(has_single_diffuse[mat_num]) {
-              tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[mat_num]));
+              tex = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(diffuse_materials[mat_num]));
             } else {
-              tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[mat_num],
+              tex = std::make_shared<diffuse_material>(std::make_shared<image_texture_char>(obj_texture_data[mat_num],
                                                                                       nx_mat[mat_num], 
                                                                                       ny_mat[mat_num],
                                                                                       nn_mat[mat_num]));
@@ -257,7 +257,7 @@ void LoadRayMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
 void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       std::vector<tinyobj::material_t > &materials,
                       std::vector<unsigned char * > &obj_texture_data,
-                      std::vector<unsigned char * > &bump_texture_data,
+                      std::vector<std::shared_ptr<const HeightImage>> &bump_texture_data,
                       std::vector<std::shared_ptr<alpha_texture> > &alpha_textures,
                       std::vector<std::shared_ptr<bump_texture> > &bump_textures,
                       std::shared_ptr<alpha_texture> alpha_default,
@@ -269,7 +269,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
                       TextureCache &texCache, bool verbose, std::vector<bool>& material_is_light) {
   mesh_materials.reserve(materials.size()+1);
   obj_texture_data.reserve(materials.size()+1);
-  bump_texture_data.reserve(materials.size()+1);
+  bump_texture_data.resize(materials.size()+1);
   bump_textures.reserve(materials.size()+1);
   alpha_textures.reserve(materials.size()+1);
   material_is_light.reserve(materials.size()+1);
@@ -370,12 +370,9 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         std::replace(materials[i].bump_texname.begin(), materials[i].bump_texname.end(), '\\', separator());
         
         if(has_sep) {
-          bump_texture_data[i] = texCache.LookupChar(basedir + separator() + materials[i].bump_texname, 
-                                                     nx, ny, nn, 4);
-          nn = 4;
+          bump_texture_data[i] = texCache.LookupHeight(basedir + separator() + materials[i].bump_texname, nx, ny, nn);
         } else {
-          bump_texture_data[i] = texCache.LookupChar(materials[i].bump_texname, nx, ny, nn, 4);
-          nn = 4;
+          bump_texture_data[i] = texCache.LookupHeight(materials[i].bump_texname, nx, ny, nn);
         }
         texture_size += sizeof(unsigned char) * nx * ny * nn;
         if(nx == 0 || ny == 0 || nn == 0) {
@@ -391,7 +388,7 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         bump_intensity[i] = materials[i].bump_texopt.bump_multiplier;
         has_bump[i] = true;
       } else {
-        bump_texture_data.push_back(nullptr);
+        bump_texture_data[i] = nullptr;
         bump_intensity[i] = 1.0f;
         has_bump[i] = false;
       }
@@ -487,12 +484,12 @@ void LoadMtlMaterials(std::vector<std::shared_ptr<material> > &mesh_materials,
         }
       } else {
         if(has_diffuse_texture[material_num]) {
-          tex = std::make_shared<lambertian>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
+          tex = std::make_shared<diffuse_material>(std::make_shared<image_texture_char>(obj_texture_data[material_num],
                                                                                   nx_mat[material_num], 
                                                                                   ny_mat[material_num],
                                                                                   nn_mat[material_num]));
         } else if (has_single_diffuse[material_num]) {
-          tex = std::make_shared<lambertian>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
+          tex = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(diffuse_materials[material_num]));
         } else {
           tex = default_material;
         }
@@ -599,7 +596,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
                                              attrib.normals[i+2]));
       }
       if(has_consistent_normals) {
-        face_n.reset(new normal3f[normalIndices.size()]);
+        face_n.reset(new normal3f[normalIndices.size() / 3]);
         std::map<int, std::priority_queue<Float> > alpha_values;
         for (size_t i = 0; i < normalIndices.size(); i += 3) {
           int idx_n1 = normalIndices[i];
@@ -671,7 +668,7 @@ TriangleMesh::TriangleMesh(std::string inputfile, std::string basedir,
           new triangle_texture(vc[vertexIndices[s]],
                                vc[vertexIndices[s+1]],
                                vc[vertexIndices[s+2]]));
-        mesh_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+        mesh_materials.push_back(std::shared_ptr<material>(new diffuse_material(tex)));
         material_is_light.push_back(false);
         face_material_id.push_back(s / 3 + 1);
         alpha_textures.push_back(nullptr);
@@ -690,7 +687,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
                            Rcpp::NumericMatrix texcoords,
                            Rcpp::NumericMatrix vertexcolors,
                            unsigned char * mesh_texture_data,
-                           unsigned char * bump_texture_data_,
+                           std::shared_ptr<const HeightImage> bump_texture_data_,
                            std::shared_ptr<alpha_texture> alpha,
                            std::shared_ptr<bump_texture> bump,
                            std::shared_ptr<material> default_material, 
@@ -825,7 +822,7 @@ TriangleMesh::TriangleMesh(Rcpp::NumericMatrix vertices,
         new triangle_texture(vc[vertexIndices[s]],
                              vc[vertexIndices[s+1]],
                              vc[vertexIndices[s+2]]));
-      mesh_materials.push_back(std::shared_ptr<material>(new lambertian(tex)));
+      mesh_materials.push_back(std::shared_ptr<material>(new diffuse_material(tex)));
       face_material_id.push_back(s / 3 + 1);
       alpha_textures.push_back(nullptr);
       bump_textures.push_back(nullptr);
@@ -849,6 +846,9 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
   Rcpp::List normals_raw = raymesh["normals"];
   Rcpp::List tex_raw = raymesh["texcoords"];
   size_t number_shapes = shape_container.size();
+  const bool has_ptex_faces = std::any_of(shape_container.begin(), shape_container.end(), [](SEXP value) {
+    return Rcpp::List(value).containsElementNamed("ptex_face_indices");
+  });
   
   Rcpp::List materials_raw = Rcpp::as<Rcpp::List>(raymesh["materials"]);
   std::vector<Rcpp::List> materials;
@@ -914,6 +914,18 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
     Rcpp::IntegerVector mat_ids = Rcpp::as<Rcpp::IntegerVector>(shape["material_ids"]); 
     
     Rcpp::IntegerMatrix indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["indices"]); 
+    if (has_ptex_faces) {
+      Rcpp::IntegerVector faces;
+      if (shape.containsElementNamed("ptex_face_indices")) {
+        Rcpp::NumericVector input = Rcpp::as<Rcpp::NumericVector>(shape["ptex_face_indices"]);
+        if (input.size() != indices.nrow()) Rcpp::stop("Ptex face IDs must match the triangle count.");
+        for (double x : input)
+          if (!std::isfinite(x) || x < 0 || x > INT_MAX || x != std::floor(x))
+            Rcpp::stop("Ptex face IDs must be nonnegative integers.");
+        faces = Rcpp::as<Rcpp::IntegerVector>(input);
+      } else faces = Rcpp::IntegerVector(indices.nrow(), 0);
+      ptex_face_indices.insert(ptex_face_indices.end(), faces.begin(), faces.end());
+    }
     Rcpp::IntegerMatrix tex_indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["tex_indices"]); 
     Rcpp::IntegerMatrix norm_indices = Rcpp::as<Rcpp::IntegerMatrix>(shape["norm_indices"]); 
     Rcpp::LogicalVector has_vertex_tex = Rcpp::as<Rcpp::LogicalVector>(shape["has_vertex_tex"]); 
@@ -984,8 +996,29 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
       max_mat_id = 0;
     }
   }
-  if(has_consistent_normals && !any_normal_missing) {
+  // Mixed flat/smooth meshes have no complete consistency table. Hit routines
+  // must use their supplied normals directly instead of indexing an empty one.
+  has_consistent_normals = has_consistent_normals && !any_normal_missing;
+  CalculateConsistentNormals();
+
+  LoadRayMaterials(mesh_materials,
+                   materials,
+                   obj_texture_data,
+                   bump_texture_data,
+                   bump_textures, alpha_textures,
+                   alpha, bump,
+                   texture_size, default_material,
+                   override_material, flip_transmittance,
+                   texCache,
+                   verbose, material_is_light);
+
+}
+
+// File-backed and in-memory meshes share the same shading-normal correction.
+void TriangleMesh::CalculateConsistentNormals() {
+  if(has_consistent_normals) {
     face_n.reset(new normal3f[normalIndices.size() / 3]);
+    alpha_v.assign(nNormals, 0);
     std::map<int, std::priority_queue<Float> > alpha_values;
     for (size_t ii = 0; ii < normalIndices.size(); ii += 3) {
       int idx_n1 = normalIndices[ii];
@@ -1006,25 +1039,13 @@ TriangleMesh::TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_cons
       alpha_values[idx_n3].push(-av3);
     }
     for (auto const& x : alpha_values) {
-      alpha_v.push_back(-x.second.top());
+      alpha_v[x.first] = -x.second.top();
     }
     for(size_t ii = 0; ii < alpha_v.size(); ii++) {
       Float temp_av = clamp(alpha_v[ii],-1,1);
       alpha_v[ii] = std::acos(temp_av) * (1 + 0.03632 * (1 - temp_av) * (1 - temp_av));
     }
   }
-
-  LoadRayMaterials(mesh_materials,
-                   materials,
-                   obj_texture_data,
-                   bump_texture_data, 
-                   bump_textures, alpha_textures,
-                   alpha, bump,
-                   texture_size, default_material,
-                   override_material, flip_transmittance,
-                   texCache,
-                   verbose, material_is_light);
-  
 }
 
 TriangleMesh::TriangleMesh(float* vertices, 
@@ -1037,7 +1058,7 @@ TriangleMesh::TriangleMesh(float* vertices,
                            std::shared_ptr<material> default_material, 
                            Transform* ObjectToWorld, 
                            Transform* WorldToObject, 
-                           bool reverseOrientation) : nTriangles(0) {
+                           bool reverseOrientation, bool calculate_consistent_normals) : nTriangles(0) {
   has_vertex_colors = false;
   texture_size = 0;
   vertexIndices.clear();
@@ -1046,14 +1067,14 @@ TriangleMesh::TriangleMesh(float* vertices,
   face_material_id.clear();
   has_normals = false;
   has_tex = false;
-  has_consistent_normals = false;
+  has_consistent_normals = calculate_consistent_normals && normals != nullptr;
   
   
-  nVertices = numVerts * 3;
-  nNormals = normals ? numVerts * 3 : 0;
-  nTex = texcoords ? numVerts * 2 : 0;
+  nVertices = numVerts;
+  nNormals = normals ? numVerts : 0;
+  nTex = texcoords ? numVerts : 0;
   p.reset(new point3f[nVertices]);
-  for (size_t i = 0; i < nVertices; i += 3) {
+  for (size_t i = 0; i < nVertices * 3; i += 3) {
     p[i / 3] = (*ObjectToWorld)(point3f((Float)vertices[i+0],
                                         (Float)vertices[i+1],
                                         (Float)vertices[i+2]));
@@ -1062,7 +1083,7 @@ TriangleMesh::TriangleMesh(float* vertices,
   if(nNormals > 0) {
     has_normals = true;
     n.reset(new normal3f[nNormals]);
-    for (size_t i = 0; i < nNormals; i += 3) {
+    for (size_t i = 0; i < nNormals * 3; i += 3) {
       n[i / 3] = (*ObjectToWorld)(normal3f((Float)normals[i+0],
                                            (Float)normals[i+1],
                                            (Float)normals[i+2]));
@@ -1074,7 +1095,7 @@ TriangleMesh::TriangleMesh(float* vertices,
   if(nTex > 0) {
     has_tex = true;
     uv.reset(new point2f[nTex]);
-    for (size_t i = 0; i < nTex; i += 2) {
+    for (size_t i = 0; i < nTex * 2; i += 2) {
       uv[i / 2] = point2f((Float)texcoords[i+0],
                           (Float)texcoords[i+1]);
     }
@@ -1109,6 +1130,8 @@ TriangleMesh::TriangleMesh(float* vertices,
     face_material_id.push_back(0);
   }
   
+  CalculateConsistentNormals();
+
   //Material stuff
   mesh_materials.push_back(default_material);
   alpha_textures.push_back(alpha);
@@ -1179,13 +1202,14 @@ size_t TriangleMesh::GetSize() {
     size += mesh_materials[i]->GetSize();
   }
   size += face_material_id.size()*sizeof(int);
-  size += sizeof(unsigned char *) * bump_texture_data.size();
+  size += sizeof(std::shared_ptr<const HeightImage>) * bump_texture_data.size();
   size += sizeof(unsigned char *) * obj_texture_data.size();
   size += sizeof(std::shared_ptr<alpha_texture>) * alpha_textures.size();
   size += sizeof(std::shared_ptr<bump_texture>)  * bump_textures.size();
   size += sizeof(int) * vertexIndices.size();
   size += sizeof(int) * normalIndices.size();
   size += sizeof(int) * texIndices.size();
+  size += sizeof(int) * ptex_face_indices.size();
   size += texture_size;
   return(size);
 }

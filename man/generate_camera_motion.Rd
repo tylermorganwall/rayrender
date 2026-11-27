@@ -59,7 +59,10 @@ properly formatted to be passed to `render_animation()`.}
 
 \item{frames}{Default `30`. Total number of frames.}
 
-\item{closed}{Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.}
+\item{closed}{Default `FALSE`. Whether the camera path loops back to its start.
+Generated paths contain `frames` samples without a duplicated closing frame.
+`render_animation()` wraps the last frame's camera motion blur toward the first.
+With `type = "manual"`, the supplied rows are retained and marked as a loop.}
 
 \item{aperture_linear}{Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.}
 
@@ -99,7 +102,9 @@ less than `1`.}
 `spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
 and orientations while making angular velocity continuous through orientation keyframes. Closed
 paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
-directly with the selected `type`.}
+directly with the selected `type`. Identical lookat targets at adjacent keyframes
+stay fixed throughout that interval before damping. Damping is applied last to
+the complete motion, so transitions into and out of a fixed target remain smoothed.}
 }
 \value{
 Data frame of camera positions, orientations, apertures, focal distances, and field of views

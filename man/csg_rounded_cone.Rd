@@ -8,7 +8,8 @@ csg_rounded_cone(
   start = c(0, 0, 0),
   end = c(0, 1, 0),
   radius = 0.5,
-  upper_radius = 0.2
+  upper_radius = 0.2,
+  material = NULL
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ csg_rounded_cone(
 \item{radius}{Default `0.5`. Radius of the bottom of the cone.}
 
 \item{upper_radius}{Default `0.2`. Radius from the top of the cone.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the box in the scene.

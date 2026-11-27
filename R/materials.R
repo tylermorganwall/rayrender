@@ -1,7 +1,13 @@
 #' Diffuse Material
 #'
-#' @param color Default `white`. The color of the surface. Can be either
-#' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' A reflecting surface with optional roughness and texture. For fog or other
+#' participating volumes, attach an explicit medium with \code{\link{set_medium}()}
+#' and \code{\link{homogeneous_medium}()}, \code{\link{grid_medium}()}, or
+#' \code{\link{vdb_medium}()}.
+#'
+#' @param color Default `"#ffffff"`. Surface color as an R color name, hexadecimal
+#' code, an `rgb(r, g, b)` string with channels from `0` to `255`, or a numeric
+#' RGB vector with three intensities between `0` and `1`.
 #' @param checkercolor Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 #' Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param checkerperiod Default `3`. The period of the checker pattern. Increasing this value makes the checker
@@ -26,16 +32,16 @@
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to
 #' be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
-#' @param fog Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.
-#' @param fogdensity Default `0.01`. The density of the fog. Higher values will produce more opaque objects.
-#' @param sigma Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
-#' Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
-#' to the default lambertian behavior.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
+#' @param sigma Default `NULL`. Nonnegative finite roughness control in degrees
+#'   for energy-preserving Oren-Nayar (EON). EON roughness is `min(sigma / 90, 1)`;
+#'   values at or above 90 give maximum roughness. `NULL` or zero uses Lambertian
+#'   reflection. This control is no longer a microfacet angle standard deviation.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -44,6 +50,23 @@
 #' @return Single row of a tibble describing the diffuse material.
 #' @export
 #' @importFrom  grDevices col2rgb
+#'
+#' @details Diffuse surfaces use energy-conserving normal mapping for
+#'   bump textures relative to the unperturbed smooth surface normal. Interpolated
+#'   mesh normals define that base surface, so smooth shading does not acquire
+#'   triangle facets from the bump correction. Reflection remains on the same
+#'   side of the geometric surface; rejected samples absorb energy. Expected
+#'   reflected energy is bounded in the smooth surface frame. Positive `sigma` uses EON rough
+#'   diffuse with color-dependent multiple scattering; zero uses Lambertian
+#'   reflection. Image and procedural reflectance is bounded to [0, 1], with
+#'   nonfinite values treated as absorbing. CPU and Metal rendering include up to
+#'   16 local facet interactions to reduce energy loss from truncating the
+#'   normal-mapping model. These interactions do not consume scene-level
+#'   `max_depth`. Direct-light sampling is retained. Very steep bumps can still
+#'   lose energy through truncation or geometric clipping.
+#'   Imported diffuse face materials and vertex colors use the same model.
+#'   Fog uses volumetric scattering instead of a surface bump model.
+#'
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Generate the cornell box and add a single white sphere to the center
@@ -94,14 +117,30 @@ diffuse = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
-  fog = FALSE,
-  fogdensity = 0.01,
   sigma = NULL,
   importance_sample = FALSE
 ) {
+  if (inherits(color, "ray_texture") && color$op == "constant") {
+    color = rep(color$value, length.out = 3L)
+  }
+  color_graph = if (inherits(color, "ray_texture")) color else NULL
+  if (!is.null(color_graph)) {
+    texture_check_legacy(image_texture, checkercolor, noise, gradient_color)
+    color = c(1, 1, 1)
+  }
+  if (
+    !is.null(sigma) &&
+      (!is.numeric(sigma) ||
+        length(sigma) != 1L ||
+        !is.finite(sigma) ||
+        sigma < 0)
+  ) {
+    stop("`sigma` must be NULL or a finite nonnegative number.", call. = FALSE)
+  }
   if (all(!is.na(checkercolor))) {
     checkercolor = convert_color(checkercolor)
   } else {
@@ -135,21 +174,9 @@ diffuse = function(
   bump_texture = check_image_texture(bump_texture)
 
   type = "diffuse"
-  if (!is.null(sigma) && is.numeric(sigma)) {
-    if (sigma < 0) {
-      warning(
-        "sigma must be greater than 0 (input: ",
-        sigma,
-        ")--ignoring and using lambertian model"
-      )
-    } else {
-      if (sigma == 0) {
-        type = "diffuse"
-      } else {
-        type = "oren-nayar"
-        sigma = sigma * pi / 180
-      }
-    }
+  if (!is.null(sigma) && sigma > 0) {
+    type = "oren-nayar"
+    sigma = min(sigma, 90) * pi / 180
   } else {
     sigma = 0
   }
@@ -172,16 +199,16 @@ diffuse = function(
     noisecolor = list(noisecolor),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = fog,
-    fogdensity = fogdensity,
     implicit_sample = importance_sample,
     sigma = sigma,
     glossyinfo = list(NA),
     bump_texture = bump_texture,
     bump_intensity = bump_intensity,
-    roughness_texture = ""
+    roughness_texture = "",
+    texture_graphs = list(color = color_graph)
   ))
 }
 
@@ -219,10 +246,11 @@ diffuse = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param importance_sample Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 #' the rendering process. If the object is particularly important in contributing to the light paths
 #' in the image (e.g. light sources, refracting glass ball with caustics, metal objects concentrating light),
@@ -282,6 +310,7 @@ metal = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -350,10 +379,9 @@ metal = function(
     lightinfo = list(NA),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = 0.01,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = glossyinfo,
@@ -365,6 +393,10 @@ metal = function(
 
 #' Dielectric (glass) Material
 #'
+#' With the NEE integrator, interfaces whose priority-selected refractive indices
+#' match transmit direct illumination in a straight line, including surface tint
+#' and interior attenuation. Interfaces that bend light still block these direct
+#' light connections.
 #'
 #' @param color Default `white`. The color of the surface. Can be either
 #' a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.
@@ -373,7 +405,7 @@ metal = function(
 #' through the material. Higher numbers will result in less of that color making it through the material. If a character string
 #' is provided (either as a named R color or a hex string), this will be converted to a length-3 vector equal to one minus the RGB
 #' color vector, which should approximate the color being passed.
-#' Note: This assumes the object has a closed surface.
+#' Closed surfaces define the interior geometrically; open interfaces use surface crossings (see Details).
 #' @param attenuation_intensity Default `1`. Changes the attenuation by a multiplicative factor. Values lower than one will make the
 #' dielectric more transparent, while values greater than one will make the glass more opaque.
 #' @param priority Default `0`. When two dielectric materials overlap, the one with the lower priority value
@@ -385,10 +417,20 @@ metal = function(
 #' this will help with the convergence of the image.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #'
 #' @return Single row of a tibble describing the dielectric material.
 #' @export
+#' @details Metal supports open interfaces, such as a water surface whose sides
+#' and bottom are hidden by opaque terrain. Orient the surface normals toward
+#' the exterior. Transmitted rays retain the material's refractive index and
+#' absorption until a matching exit, including when reflecting from the terrain.
+#' Open interfaces are tracked by material crossings; they do not define a
+#' geometrically closed interior. A first back-face hit identifies the incident
+#' dielectric and applies absorption over that camera-to-surface segment. A first
+#' opaque hit cannot identify an enclosing open dielectric by itself. Use closed
+#' geometry when interior camera placement or exposed edges must be unambiguous.
+#' Subsurface and explicit volume materials still require closed boundaries.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Generate a checkered ground
@@ -436,6 +478,7 @@ metal = function(
 #'                     material = dielectric(priority=0,attenuation = c(10,3,10)))) |>
 #'   add_object(sphere(y=5,x=-5,radius=3,material=light())) |>
 #'   render_scene(parallel=TRUE, samples = 16,lookfrom=c(5,1,5))
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for the bump texture, applied before wrapping.
 dielectric = function(
   color = "white",
   refraction = 1.5,
@@ -444,7 +487,8 @@ dielectric = function(
   priority = 0,
   importance_sample = FALSE,
   bump_texture = "",
-  bump_intensity = 1
+  bump_intensity = 1,
+  image_offset = c(0, 0)
 ) {
   color = convert_color(color)
   stopifnot(
@@ -474,10 +518,9 @@ dielectric = function(
     noisecolor = list(c(0, 0, 0)),
     image = "",
     image_repeat = list(c(1, 1)),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = "",
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = list(NA),
@@ -530,10 +573,11 @@ dielectric = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
@@ -624,6 +668,7 @@ microfacet = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -632,6 +677,31 @@ microfacet = function(
   roughness_flip = FALSE,
   importance_sample = FALSE
 ) {
+  if (inherits(color, "ray_texture") && color$op == "constant") {
+    color = rep(color$value, length.out = 3L)
+  }
+  if (inherits(roughness, "ray_texture") && roughness$op == "constant") {
+    roughness = texture_scalar(roughness)$value
+  }
+  color_graph = if (inherits(color, "ray_texture")) color else NULL
+  roughness_graph = if (inherits(roughness, "ray_texture")) {
+    texture_scalar(roughness)
+  } else {
+    NULL
+  }
+  if (!is.null(color_graph)) {
+    texture_check_legacy(image_texture, checkercolor, noise, gradient_color)
+    color = c(1, 1, 1)
+  }
+  if (!is.null(roughness_graph)) {
+    if (!identical(roughness_texture, "")) {
+      stop(
+        "Choose a roughness graph or roughness_texture, not both.",
+        call. = FALSE
+      )
+    }
+    roughness = 0.3
+  }
   microtype = switch(microfacet, "tbr" = 1, "beckmann" = 2, 1)
   roughness[roughness <= 0] = 0
   roughness[roughness > 1] = 1
@@ -711,6 +781,12 @@ microfacet = function(
     roughness_range,
     roughness_flip
   ))
+  if (alphax == 0 && alphay == 0 && transmission && !is.null(color_graph)) {
+    stop(
+      "Color graphs require nonzero roughness on transmitting microfacet materials.",
+      call. = FALSE
+    )
+  }
   if (alphax == 0 && alphay == 0) {
     if (!transmission) {
       ray_material(list(
@@ -728,16 +804,16 @@ microfacet = function(
         noisecolor = list(noisecolor),
         image = image_texture,
         image_repeat = list(image_repeat),
+        image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
-        fog = FALSE,
-        fogdensity = NA_real_,
         implicit_sample = importance_sample,
         sigma = 0,
         glossyinfo = glossyinfo,
         bump_texture = bump_texture,
         bump_intensity = bump_intensity,
-        roughness_texture = ""
+        roughness_texture = "",
+        texture_graphs = list(color = color_graph, roughness = roughness_graph)
       ))
     } else {
       ray_material(list(
@@ -755,16 +831,16 @@ microfacet = function(
         noisecolor = list(noisecolor),
         image = image_texture,
         image_repeat = list(image_repeat),
+        image_offset = list(check_image_offset(image_offset)),
         alphaimage = alpha_texture,
         lightintensity = NA_real_,
-        fog = FALSE,
-        fogdensity = NA_real_,
         implicit_sample = importance_sample,
         sigma = 0,
         glossyinfo = glossyinfo,
         bump_texture = bump_texture,
         bump_intensity = bump_intensity,
-        roughness_texture = ""
+        roughness_texture = "",
+        texture_graphs = list(color = color_graph, roughness = roughness_graph)
       ))
     }
   } else {
@@ -788,16 +864,16 @@ microfacet = function(
       noisecolor = list(noisecolor),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = alpha_texture,
       lightintensity = NA_real_,
-      fog = FALSE,
-      fogdensity = NA_real_,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = glossyinfo,
       bump_texture = bump_texture,
       bump_intensity = bump_intensity,
-      roughness_texture = roughness_texture
+      roughness_texture = roughness_texture,
+      texture_graphs = list(color = color_graph, roughness = roughness_graph)
     ))
   }
 }
@@ -820,6 +896,7 @@ microfacet = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param gradient_color Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 #' between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.
 #' @param gradient_transpose Default `FALSE`. If `TRUE`, this will use the `v` coordinate texture instead
@@ -866,6 +943,7 @@ light = function(
   invisible = FALSE,
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   gradient_color = NA,
   gradient_transpose = FALSE,
   gradient_point_start = NA,
@@ -928,10 +1006,9 @@ light = function(
       noisecolor = list(c(0, 0, 0)),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
-      fog = FALSE,
-      fogdensity = 0.01,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = list(NA_real_),
@@ -956,10 +1033,9 @@ light = function(
       noisecolor = list(c(0, 0, 0)),
       image = image_texture,
       image_repeat = list(image_repeat),
+      image_offset = list(check_image_offset(image_offset)),
       alphaimage = "",
       lightintensity = intensity,
-      fog = FALSE,
-      fogdensity = 0.01,
       implicit_sample = importance_sample,
       sigma = 0,
       glossyinfo = list(NA_real_),
@@ -1002,10 +1078,11 @@ light = function(
 #' @param image_texture Default `""`. A 3-layer RGB array or filename to be used as the texture on the surface of the object.
 #' @param image_repeat Default `1`. Number of times to repeat the image across the surface.
 #' `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.
+#' @param image_offset Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.
 #' @param alpha_texture Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.
 #' @param bump_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a bump map for the surface.
-#' @param bump_intensity Default `1`. Intensity of the bump map. High values may lead to unphysical results.
+#' @param bump_intensity Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.
 #' @param roughness_texture Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 #' be used to specify a roughness map for the surface.
 #' @param roughness_range Default ` c(0.0001, 0.2)`. This is a length-2 vector that specifies the range of roughness values
@@ -1019,6 +1096,11 @@ light = function(
 #'
 #' @return Single row of a tibble describing the glossy material.
 #' @export
+#' @details Bump textures use up to 16 local facet interactions on CPU and Metal
+#'   to reduce truncation loss while preserving the material's absorption.
+#'   These interactions do not consume scene-level `max_depth`. Direct-light
+#'   sampling and multiple importance sampling remain active. Very steep bumps
+#'   can still lose energy through truncation or geometric clipping.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Generate a glossy sphere
@@ -1073,6 +1155,7 @@ glossy = function(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -1167,10 +1250,9 @@ glossy = function(
     noisecolor = list(noisecolor),
     image = image_texture,
     image_repeat = list(image_repeat),
+    image_offset = list(check_image_offset(image_offset)),
     alphaimage = alpha_texture,
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = importance_sample,
     sigma = 0,
     glossyinfo = glossyinfo,
@@ -1205,9 +1287,9 @@ SigmaAFromReflectance = function(c, beta_n) {
 #' @param red_pigment Default `0`.Concentration of the pheomelanin pigment in the hair. Pheomelanin makes red hair red.
 #' @param color Default `NA`. Approximate color. Overrides `pigment`/`redness` arguments.
 #' @param sigma_a Default `NA`. Attenuation. Overrides `color` and `pigment`/`redness` arguments.
-#' @param eta Default `1.55`. Index of refraction of the hair medium.
-#' @param beta_m Default `0.3`. Longitudinal roughness of the hair. Should be between 0 and 1. This roughness controls the size and shape of the hair highlight.
-#' @param beta_n Default `0.3`. Azimuthal roughness of the hair. Should be between 0 and 1.
+#' @param eta Default `1.55`. Index of refraction of the hair medium, greater than 1.
+#' @param beta_m Default `0.3`. Longitudinal roughness of the hair. Must be in `(0, 1]`. This roughness controls the size and shape of the hair highlight.
+#' @param beta_n Default `0.3`. Azimuthal roughness of the hair. Must be in `(0, 1]`.
 #' @param alpha Default `2`. Angle of scales on the hair surface, in degrees.
 #'
 #' @return Single row of a tibble describing the hair material.
@@ -1276,9 +1358,45 @@ hair = function(
   beta_n = 0.3,
   alpha = 2
 ) {
-  if (!is.na(sigma_a)) {
-    sigma_a = sigma_a
-  } else if (!is.na(color)) {
+  for (roughness in list(beta_m, beta_n)) {
+    if (
+      !is.numeric(roughness) ||
+        length(roughness) != 1L ||
+        !is.finite(roughness) ||
+        roughness <= 0 ||
+        roughness > 1
+    ) {
+      stop("Hair roughness beta_m and beta_n must be in (0, 1].", call. = FALSE)
+    }
+  }
+  if (
+    !is.numeric(eta) ||
+      length(eta) != 1L ||
+      !is.finite(eta) ||
+      eta <= 1 ||
+      !is.numeric(alpha) ||
+      length(alpha) != 1L ||
+      !is.finite(alpha)
+  ) {
+    stop(
+      "Hair requires a finite eta greater than 1 and a finite alpha.",
+      call. = FALSE
+    )
+  }
+  if (!all(is.na(sigma_a))) {
+    if (
+      !is.numeric(sigma_a) ||
+        !length(sigma_a) %in% c(1L, 3L) ||
+        any(!is.finite(sigma_a)) ||
+        any(sigma_a < 0)
+    ) {
+      stop(
+        "`sigma_a` must be one or three finite nonnegative values.",
+        call. = FALSE
+      )
+    }
+    sigma_a = rep(sigma_a, length.out = 3L)
+  } else if (!all(is.na(color))) {
     sigma_a = SigmaAFromReflectance(convert_color(color), beta_n)
   } else {
     stopifnot(pigment >= 0)
@@ -1304,8 +1422,6 @@ hair = function(
     image_repeat = list(NA_real_),
     alphaimage = "",
     lightintensity = NA_real_,
-    fog = FALSE,
-    fogdensity = NA_real_,
     implicit_sample = FALSE,
     sigma = NA_real_,
     glossyinfo = list(NA_real_),
@@ -1372,6 +1488,8 @@ get_material_enum = function(material) {
     "spotlight" = 8L,
     "hair" = 9L,
     "mf-t" = 10L,
+    "openpbr" = 11L,
+    "translucent" = 12L,
     stop(sprintf("Material type `%s` not found", material))
   )
 }
@@ -1389,6 +1507,26 @@ get_material_name = function(material) {
     "glossy",
     "spotlight",
     "hair",
-    "mf-t"
+    "mf-t",
+    "openpbr",
+    "translucent"
   )[material]
+}
+
+#' @param image_offset User-supplied UV translation.
+#' @return Finite numeric vector with two components.
+#' @keywords internal
+#' @noRd
+check_image_offset = function(image_offset) {
+  if (
+    !is.numeric(image_offset) ||
+      length(image_offset) != 2L ||
+      any(!is.finite(image_offset))
+  ) {
+    stop(
+      '`image_offset` must contain exactly two finite numeric values.',
+      call. = FALSE
+    )
+  }
+  as.numeric(image_offset)
 }

@@ -1,5 +1,6 @@
 #'@title Prepare the scene list
 #'
+#' @param scene_time Default `NULL`. Double scene-time epoch for relative ray times.
 #'@keywords internal
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #'#internal
@@ -47,16 +48,24 @@ prepare_scene_list = function(
   sample_dist = Inf,
   keep_colors = FALSE,
   deferred_render = FALSE,
-  integrator_type = "nee",
+  integrator_type = "auto",
   denoise = TRUE,
-  print_debug_info = FALSE
+  print_debug_info = FALSE,
+  camera_flip_x = FALSE,
+  scene_time = NULL
 ) {
+  if (scene_has_keyframes(scene) && is.null(scene_time)) {
+    stop("Keyframe animation requires an explicit scene time.", call. = FALSE)
+  }
+  bvh_type = match.arg(bvh_type, c("sah", "equal", "hlbvh", "metal"))
   if (inherits(scene, "ray_mesh")) {
     scene = raymesh_model(scene)
   }
   validate_shutter_speed(shutter_speed)
+  scene = prepare_subsurface(scene)
   #Process images, convert shapes and materials to enums, extract positions, and
   medium_features = scene_medium_features(scene)
+  point_lights = ray_scene_point_lights(scene)
   atmospheric_lights = vapply(
     ray_scene_infinite_lights(scene),
     function(light) {
@@ -70,19 +79,29 @@ prepare_scene_list = function(
       call. = FALSE
     )
   }
+  if (identical(integrator_type, "auto")) {
+    integrator_type = if (cpp_has_metal()) "metal" else "nee"
+  }
+  metal_wavefront = identical(integrator_type, "metal")
   integrator_type = switch(
     integrator_type,
     "nee" = 1L,
+    "metal" = 1L,
     "rtiow" = 2L,
     "basic" = 3L,
     stop(integrator_type, " not recognized as valid `integrator_type`")
   )
   # Resolve required transport here so stills, animations, and camera previews
   # all use NEE for atmospheres and attached media, including inside instances.
-  if (any(atmospheric_lights) || medium_features$attached) {
+  if (
+    any(atmospheric_lights) ||
+      medium_features$attached ||
+      medium_features$openpbr ||
+      length(point_lights)
+  ) {
     integrator_type = 1L
   }
-  scene_info = process_scene(scene)
+  scene_info = process_scene(scene, subsurface_prepared = TRUE)
   if (!is.numeric(debug_channel)) {
     debug_channel = unlist(lapply(
       tolower(debug_channel),
@@ -157,7 +176,8 @@ prepare_scene_list = function(
       !(integrator_type == 1L && medium_features$emissive) &&
       is.null(ambient_light) &&
       is.null(environment_light) &&
-      !length(infinite_lights)
+      !length(infinite_lights) &&
+      !length(point_lights)
   ) {
     ambient_light = TRUE
   } else {
@@ -224,6 +244,9 @@ prepare_scene_list = function(
     numbercores = 1
   }
   numbercores = as.integer(numbercores)
+  if (identical(toupper(Sys.getenv("_R_CHECK_LIMIT_CORES_")), "TRUE")) {
+    numbercores = min(numbercores, 2L)
+  }
   if (!parallel) {
     numbercores = 1
   }
@@ -272,7 +295,7 @@ prepare_scene_list = function(
     )
 
     if (file.exists(camera_description_file)) {
-      real_camera_info = as.matrix(utils::read.delim(
+      real_camera_info = as.matrix(utils::read.table(
         camera_description_file,
         header = FALSE,
         comment.char = "#"
@@ -300,9 +323,11 @@ prepare_scene_list = function(
   camera_info$aperture = aperture
   camera_info$camera_up = camera_up
   camera_info$shutteropen = shutteropen
+  camera_info$scene_time = scene_time
   camera_info$shutterclose = shutterclose
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
   camera_info$shutter_speed = shutter_speed
+  camera_info$camera_flip_x = isTRUE(camera_flip_x)
   camera_info$ortho_dimensions = ortho_dimensions
   camera_info$focal_distance = focal_distance
   camera_info$max_depth = max_depth
@@ -310,7 +335,7 @@ prepare_scene_list = function(
   camera_info$sample_method = sample_method
   camera_info$stratified_dim = strat_dim
   camera_info$light_direction = light_direction
-  camera_info$bvh = switch(bvh_type, "sah" = 1, "equal" = 2, 1)
+  camera_info$bvh = match(bvh_type, c("sah", "equal", "hlbvh", "metal"))
   camera_info$real_camera_info = real_camera_info
   camera_info$film_size = film_size
   camera_info$camera_scale = camera_scale
@@ -350,12 +375,14 @@ prepare_scene_list = function(
   render_info$rotate_env = rotate_env
   render_info$intensity_env = intensity_env
   render_info$infinite_lights = prepare_scene_infinite_lights(infinite_lights)
+  render_info$point_lights = point_lights
   render_info$verbose = verbose
   render_info$debug_channel = debug_channel
   render_info$plot_scene = plot_scene
   render_info$min_variance = min_variance
   render_info$min_adaptive_size = min_adaptive_size
   render_info$integrator_type = integrator_type
+  render_info$metal_wavefront = metal_wavefront
   render_info$denoise = denoise
   render_info$print_debug_info = print_debug_info
 

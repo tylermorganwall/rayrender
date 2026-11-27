@@ -1,5 +1,6 @@
 #include "Rcpp.h"
 #include "../core/PreviewDisplay.h"
+#include "../animation_rcpp.h"
 #include "../math/mathinline.h"
 #include "../utils/raylog.h"
 #include "../volumes/picking.h"
@@ -8,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <sstream>
 #include <stdexcept>
 
@@ -80,7 +82,8 @@ std::string PreviewDisplay::AtmosphereStatusText() const {
 
 static point3f PreviewCameraLookat(RayCamera* cam) {
   point3f origin = cam->get_origin(), pivot = cam->get_lookat();
-  vec3f forward = unit_vector(cam->get_w()), to_pivot = pivot - origin;
+  vec3f forward = unit_vector(cam->get_fov() < 0 ? -cam->get_w() : cam->get_w());
+  vec3f to_pivot = pivot - origin;
   if(to_pivot.length() > 0 && dot(unit_vector(to_pivot), forward) > .999999f) {
     return pivot;
   }
@@ -132,7 +135,26 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
   }
   Ray ray;
   Float fov = cam->get_fov();
-  if(fov < 0) {
+  if (cam->scene_camera_track && timeline_scene_time && fov < 0) {
+    auto *physical = dynamic_cast<RealisticCamera *>(cam);
+    if (!physical) return false;
+    try {
+      auto snapshot = cam->scene_camera_track->MakeCamera(
+        cam->scene_camera_track->At(timeline_scene_time->epoch),Float(width)/Float(height),
+        cam->get_iso(),timeline_scene_time->ray_anchor,timeline_scene_time->ray_anchor,
+        cam->get_camera_flip_x(),timeline_physical_camera ? timeline_physical_camera.get() : physical);
+      snapshot->scene_camera_time = timeline_scene_time;
+      CameraSample sample(point2f(1-u,1-v),point2f(.5,.5),0);
+      if (!(snapshot->GenerateRay(sample,&ray) > 0)) return false;
+    } catch (const std::exception &error) {
+      Rprintf("Unable to prepare physical-camera picking: %s\n",error.what());
+      return false;
+    }
+  } else if (cam->scene_camera_track && timeline_scene_time) {
+    ray = cam->scene_camera_track->SampleRay(timeline_scene_time->epoch,
+      timeline_scene_time->ray_anchor, u, v, point3f(0), Float(width)/Float(height),
+      cam->get_iso(), cam->get_camera_flip_x());
+  } else if(fov < 0) {
     // Match GenerateRay's film convention, using the center of the lens and
     // a fixed shutter sample rather than the current rendering sample.
     CameraSample sample(point2f(1 - u, 1 - v), point2f(.5f, .5f), .5f);
@@ -142,6 +164,7 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
   } else {
     ray = cam->get_ray(u, v, point3f(0), .5f);
   }
+  if (timeline && timeline_scene_time) ray._time = timeline_scene_time->ray_anchor;
   bool cancelled = false;
   size_t polls = 0;
   auto cancel = [&] {
@@ -174,6 +197,7 @@ bool PreviewDisplay::PickCameraTarget(Float u, Float v, bool update_focus, hitab
     // This updates both the stored orbit point and the camera frame. Updating
     // just the direction would snap back to the previous pivot on the next orbit.
     cam->update_lookat(target->p);
+    if(!target->background) navigation.SetDistance((target->p - cam->get_origin()).length());
     ApplyStaticPreviewCameraMotionRange(cam);
     return true;
   } catch(const std::exception& error) {
@@ -272,7 +296,6 @@ static std::vector<Float> rgb;
 static RayCamera* cam_w;
 static Float speed;
 static bool orbit;
-static Float base_step;
 static bool blanked;
 static bool interactive_w;
 static adaptive_sampler* aps;
@@ -300,6 +323,87 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 #endif
 
+
+void PreviewDisplay::InitializeNavigation(hitable* world) {
+  if(!preview || !interactive || !cam || navigation_initialized) return;
+  navigation.Initialize(*cam, world, volume_scene.get(), navigation_bounds, [&]() {
+    return PollCloseEvent() || RcppThread::isInterrupted();
+  });
+  navigation_initialized = true;
+  navigation_clock = std::chrono::steady_clock::now();
+}
+
+void PreviewDisplay::QueueNavigationTap(char key, bool shifted) {
+  navigation_input.Press(key, shifted);
+}
+
+void PreviewDisplay::ReleaseNavigationKey(char key) {
+  navigation_input.Release(key);
+}
+
+void PreviewDisplay::ResetNavigationInput() {
+  navigation_input.Reset();
+  navigation_clock = std::chrono::steady_clock::now();
+}
+
+bool PreviewDisplay::PollNavigation() {
+#if defined(RAY_HAS_X11) || defined(RAY_WINDOWS)
+  auto now = std::chrono::steady_clock::now();
+  double seconds = std::chrono::duration<double>(now - navigation_clock).count();
+  navigation_clock = now;
+  unsigned int held = 0;
+  bool shift = false, focused = false;
+  const char* keys = "wasdqz";
+#ifdef RAY_HAS_X11
+  focused = d && PreviewDisplayHasKeyboardFocus(d, w);
+  if(focused) {
+    char state[32];
+    XQueryKeymap(d, state);
+    auto down = [&](KeySym key) {
+      KeyCode code = XKeysymToKeycode(d, key);
+      return code && (state[code/8] & (1 << (code%8)));
+    };
+    for(int i = 0; i < 6; ++i) if(down(keys[i])) held |= 1u << i;
+    shift = down(XK_Shift_L) || down(XK_Shift_R);
+  }
+#else
+  focused = GetForegroundWindow() == hwnd && GetFocus() == hwnd;
+  if(focused) {
+    for(int i = 0; i < 6; ++i)
+      if(GetAsyncKeyState(keys[i] - 'a' + 'A') & 0x8000) held |= 1u << i;
+    shift = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+  }
+#endif
+  bool changed = false;
+  if(interactive && focused && !terminate && !IsPreviewMotionActive()) {
+    auto steps = navigation_input.Consume(held, shift, seconds);
+    for(int shifted = 0; shifted < 2; ++shifted) {
+      // Integrate concurrent keys together to preserve diagonal normalization.
+      // Split only where a key has exhausted its accumulated movement time.
+      auto& remaining = steps[shifted];
+      while(true) {
+        double dt = 0;
+        unsigned int bits = 0;
+        for(int i = 0; i < 6; ++i) {
+          if(remaining[i] <= 0) continue;
+          bits |= 1u << i;
+          if(dt == 0 || remaining[i] < dt) dt = remaining[i];
+        }
+        if(bits == 0) break;
+        auto down = [&](int i) { return (bits & (1u << i)) ? Float(1) : Float(0); };
+        changed |= navigation.Move(*cam, down(3)-down(1), down(4)-down(5), down(0)-down(2),
+                                   shifted != 0, orbit, speed, dt);
+        for(int i = 0; i < 6; ++i) if(bits & (1u << i)) remaining[i] -= dt;
+      }
+    }
+  } else {
+    navigation_input.Reset();
+  }
+  return changed;
+#else
+  return false;
+#endif
+}
 
 void PreviewDisplay::CalibratePreviewExposure(adaptive_sampler& adaptive_pixel_sampler,
                                               RayMatrix& rgb,
@@ -364,6 +468,10 @@ void PreviewDisplay::DecreasePreviewExposure() {
 }
 
 void PreviewDisplay::SetShutterSpeed(Float value) {
+  if (timeline) {
+    Rprintf("Timeline exposure is controlled by shutter_offsets in scene seconds.\n");
+    return;
+  }
   if(std::isnan(value) ||
      value < static_cast<Float>(1) ||
      (std::isinf(value) && value < static_cast<Float>(0))) {
@@ -432,6 +540,10 @@ void PreviewDisplay::SetCameraMotionBlur(bool enabled) {
 }
 
 bool PreviewDisplay::ToggleCameraMotionBlur() {
+  if (timeline) {
+    Rprintf("Timeline camera and object exposure use shutter_offsets; B controls legacy camera blur.\n");
+    return false;
+  }
   SetCameraMotionBlur(!camera_motion_blur_enabled);
   Rprintf("Camera Motion Blur: %s\n", camera_motion_blur_enabled ? "ON" : "OFF");
   return camera_motion_blur_enabled;
@@ -445,8 +557,8 @@ Rcpp::List PreviewDisplay::CreateCurrentKeyframe(Float env_rotation) const {
   vec3f cam_up = cam->get_up();
   point2f ortho = cam->get_ortho();
   point3f key_lookat = PreviewCameraLookat(cam);
-  Float key_aperture = fov > 0 ? cam_aperture : 0;
-  Float key_fov = fov > 0 ? fov : 0;
+  Float key_aperture = fov != 0 ? cam_aperture : 0;
+  Float key_fov = fov;
 
   return Rcpp::List::create(Named("x") = origin.xyz.x,
                             Named("y") = origin.xyz.y,
@@ -490,6 +602,30 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
                    Rcpp::as<Float>(state["upy"]),
                    Rcpp::as<Float>(state["upz"]));
   }
+  if (auto *physical = dynamic_cast<RealisticCamera *>(cam)) {
+    if (key_fov >= 0) {
+      Rprintf("Physical saved-camera navigation requires the same lens projection.\n");
+      return false;
+    }
+    try {
+      if (timeline_camera_owner) {
+        auto next = physical->WithSceneOptics(key_aperture,key_focal);
+        next->SetScenePose(key_pos,key_lookat,key_up);
+        *timeline_camera_owner = std::move(next);
+        SetCamera(timeline_camera_owner->get());
+      } else {
+        if (key_focal != physical->get_focal_distance() || key_aperture != physical->get_aperture()) {
+          Rprintf("Changing physical saved-camera optics requires an owned timeline camera.\n");
+          return false;
+        }
+        physical->SetScenePose(key_pos,key_lookat,key_up);
+      }
+    } catch (const std::exception &error) {
+      Rprintf("Unable to prepare saved physical camera: %s\n",error.what());
+      return false;
+    }
+  }
+  // Publish exposure/environment changes only after lens preparation succeeds.
   if(state.containsElementNamed("exposure")) {
     preview_exposure_adjustment = Rcpp::as<Float>(state["exposure"]);
   }
@@ -500,10 +636,17 @@ bool PreviewDisplay::ApplyCameraState(const Rcpp::List& state,
   }
   vec2f key_ortho = vec2f(Rcpp::as<Float>(state["orthox"]),
                           Rcpp::as<Float>(state["orthoy"]));
+  if (dynamic_cast<RealisticCamera *>(cam)) {
+    navigation.SetDistance((key_lookat-key_pos).length());
+    return true;
+  }
+  SelectCameraProjection(key_fov);
   cam->update_focal_absolute(key_focal);
   cam->update_position_absolute(key_pos);
   cam->update_lookat(key_lookat);
+  navigation.SetDistance((key_lookat - key_pos).length());
   cam->update_up(key_up);
+  cam->update_lookat(key_lookat);
   cam->update_aperture_absolute(key_aperture);
   cam->update_fov_absolute(key_fov);
   cam->update_ortho_absolute(key_ortho);
@@ -521,7 +664,7 @@ bool PreviewDisplay::ApplyKeyframe(int index, Float* env_rotation) {
   }
 
   Rcpp::List keyframe = Keyframes.at(index);
-  ApplyCameraState(keyframe, env_rotation);
+  if (!ApplyCameraState(keyframe, env_rotation)) return false;
   current_keyframe = index;
   return true;
 }
@@ -644,6 +787,7 @@ Rcpp::DataFrame PreviewDisplay::KeyframesDataFrame() const {
 }
 
 bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
+  if (timeline && timeline_saved_camera) return CancelPreviewMotion(&env_rotation);
   if(preview_motion_active) {
     return false;
   }
@@ -680,9 +824,8 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
     Rcpp::Function generate_camera_motion = pkg["generate_camera_motion"];
     Rcpp::Environment base = Rcpp::Environment::base_env();
     Rcpp::Function do_call = base["do.call"];
-    preview_motion = Rcpp::as<Rcpp::DataFrame>(
-      do_call(generate_camera_motion, call_args)
-    );
+    Rcpp::Shield<SEXP> motion(do_call(generate_camera_motion, call_args));
+    preview_motion = Rcpp::as<Rcpp::DataFrame>(motion);
   } catch(std::exception& ex) {
     Rprintf("Can't preview keyframe motion: %s\n", ex.what());
     return false;
@@ -691,6 +834,28 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
   if(preview_motion.nrows() < 1) {
     Rprintf("Can't preview keyframe motion: generate_camera_motion() returned no frames.\n");
     return false;
+  }
+
+  if (timeline) {
+    try {
+      auto track = read_camera_track(preview_motion, timeline->Fps(), timeline->Begin());
+      auto previous_track = timeline_camera;
+      auto previous_optics = timeline_physical_camera ?
+        std::make_unique<const RealisticCamera>(*timeline_physical_camera) : nullptr;
+      auto previous_state = CreateCurrentKeyframe(env_rotation);
+      ConfigureTimelineCamera(std::move(track));
+      timeline_camera_restore = std::move(previous_track);
+      timeline_physical_restore = std::move(previous_optics);
+      preview_motion_restore_state = previous_state;
+      preview_motion_restore_keyframe = current_keyframe;
+      timeline_saved_camera = true;
+      timeline->Pause(false);
+      Rprintf("Saved camera rows now follow scene seconds at %.3f fps. Press M to restore the previous track.\n", timeline->Fps());
+      return true;
+    } catch (const std::exception &error) {
+      Rprintf("Can't preview camera track: %s\n", error.what());
+      return false;
+    }
   }
 
   preview_motion_restore_state = CreateCurrentKeyframe(env_rotation);
@@ -704,6 +869,22 @@ bool PreviewDisplay::StartPreviewMotion(Float env_rotation) {
 }
 
 bool PreviewDisplay::CancelPreviewMotion(Float* env_rotation) {
+  if (timeline && timeline_saved_camera) {
+    timeline->Pause(true);
+    if (timeline_camera_restore)
+      ConfigureTimelineCamera(timeline_camera_restore,nullptr,timeline_physical_restore.get());
+    else {
+      ApplyCameraState(preview_motion_restore_state, env_rotation);
+      timeline_camera.reset();
+      cam->scene_camera_track.reset();
+      timeline->Invalidate(animation::Camera);
+    }
+    timeline_camera_restore.reset();
+    timeline_physical_restore.reset();
+    timeline_saved_camera = false;
+    current_keyframe = preview_motion_restore_keyframe;
+    return true;
+  }
   if(!preview_motion_active) {
     return false;
   }
@@ -824,6 +1005,11 @@ void PreviewDisplay::PrintCameraInfo(Float env_rotation) const {
   }
 }
 
+unsigned int PreviewDisplay::StatusBarHeight() const {
+  if (interactive && timeline) return 120;
+  return interactive && width >= PREVIEW_STATUS_MIN_WIDTH ? PREVIEW_STATUS_BAR_HEIGHT : 0;
+}
+
 std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   if(cam == nullptr) {
     return "";
@@ -859,7 +1045,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
   char flags_text[160];
   std::snprintf(flags_text,
                 sizeof(flags_text),
-                "Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                "Integrator %s | Loop %s | Env %.1f | Blur %s | Key %d/%zu",
+                integrator_name.c_str(),
                 keyframe_motion_closed ? "CLOSED" : "OPEN",
                 env_rotation,
                 camera_motion_blur_enabled ? "ON" : "OFF",
@@ -867,7 +1054,8 @@ std::string PreviewDisplay::PreviewStatusText(Float env_rotation) const {
                 Keyframes.size());
   const std::string atmosphere_status = AtmosphereStatusText();
   return std::string(camera_text) + "\n" +
-    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text);
+    (atmosphere_status.empty() ? std::string(flags_text) : atmosphere_status + " | " + flags_text) +
+    (timeline ? "\n" + TimelineStatusText() : "");
 }
 
 void PreviewDisplay::SetTextOverlays(const std::vector<PreviewTextOverlay>& overlays) {
@@ -1407,9 +1595,7 @@ void PreviewDisplay::CompositeLineOverlaysToX11Buffer(hitable* world, random_gen
 }
 
 void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
-  if(!interactive ||
-     width < PREVIEW_STATUS_MIN_WIDTH ||
-     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+  if(StatusBarHeight() == 0) {
     return;
   }
 
@@ -1424,16 +1610,30 @@ void PreviewDisplay::DrawStatusBarX11(Float env_rotation) {
                  w,
                  gc,
                  0,
-                 height - PREVIEW_STATUS_BAR_HEIGHT,
+                 height,
                  width,
-                 PREVIEW_STATUS_BAR_HEIGHT);
+                 StatusBarHeight());
   XSetForeground(d, gc, WhitePixel(d, s));
   std::istringstream rows(status_text);
   std::string row;
-  int baseline = height - PREVIEW_STATUS_BAR_HEIGHT + PREVIEW_STATUS_ROW_HEIGHT - 7;
+  int baseline = height + PREVIEW_STATUS_ROW_HEIGHT - 7;
   while(std::getline(rows, row)) {
     XDrawString(d, w, gc, 8, baseline, row.c_str(), static_cast<int>(row.size()));
     baseline += PREVIEW_STATUS_ROW_HEIGHT;
+  }
+  if (timeline) {
+    const char *labels[] = {"|<", "<", timeline->Paused() ? "Play" : "Pause", "Rev", ">", ">|", "-", "+", "Loop"};
+    for (int i = 0; i < 9; ++i) {
+      int left = i * width / 9, right = (i+1) * width / 9;
+      XDrawRectangle(d, w, gc, left+1, height+73, std::max(1,right-left-3), 21);
+      XDrawString(d, w, gc, left+5, height+89, labels[i], std::strlen(labels[i]));
+    }
+    int extent = std::max(1, int(width)-24), y = height+108;
+    XDrawLine(d,w,gc,12,y,12+extent,y);
+    double fraction = timeline->End() == timeline->Begin() ? 0 :
+      (timeline->Requested().time-timeline->Begin())/(timeline->End()-timeline->Begin());
+    int x = 12 + int(fraction * extent);
+    XFillRectangle(d,w,gc,x-3,y-6,7,13);
   }
   XFlush(d);
 }
@@ -1567,9 +1767,7 @@ void PreviewDisplay::CompositeLineOverlaysToFloatBuffer(std::vector<Float>& rgb,
 
 #ifdef RAY_WINDOWS
 void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
-  if(!interactive ||
-     width < PREVIEW_STATUS_MIN_WIDTH ||
-     height <= PREVIEW_STATUS_BAR_HEIGHT) {
+  if(StatusBarHeight() == 0) {
     return;
   }
 
@@ -1579,9 +1777,9 @@ void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
   }
 
   RECT bar_rect = {0,
-                   static_cast<LONG>(height - PREVIEW_STATUS_BAR_HEIGHT),
+                   static_cast<LONG>(height),
                    static_cast<LONG>(width),
-                   static_cast<LONG>(height)};
+                   static_cast<LONG>(height + StatusBarHeight())};
   HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
   FillRect(hdc, &bar_rect, brush);
   DeleteObject(brush);
@@ -1602,6 +1800,24 @@ void PreviewDisplay::DrawStatusBarWindows(HDC hdc, Float env_rotation) const {
               DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
     text_rect.top += PREVIEW_STATUS_ROW_HEIGHT;
     text_rect.bottom += PREVIEW_STATUS_ROW_HEIGHT;
+  }
+  if (timeline) {
+    const char *labels[] = {"|<", "<", timeline->Paused() ? "Play" : "Pause", "Rev", ">", ">|", "-", "+", "Loop"};
+    for (int i = 0; i < 9; ++i) {
+      RECT button = {LONG(i*width/9+1), LONG(height+73), LONG((i+1)*width/9-1), LONG(height+95)};
+      FrameRect(hdc, &button, (HBRUSH)GetStockObject(WHITE_BRUSH));
+      DrawTextA(hdc,labels[i],-1,&button,DT_SINGLELINE | DT_CENTER | DT_VCENTER);
+    }
+    HPEN pen = CreatePen(PS_SOLID,1,RGB(255,255,255));
+    HGDIOBJ old = SelectObject(hdc,pen);
+    int extent = std::max(1,int(width)-24), y = height+108;
+    MoveToEx(hdc,12,y,NULL); LineTo(hdc,12+extent,y);
+    double fraction = timeline->End() == timeline->Begin() ? 0 :
+      (timeline->Requested().time-timeline->Begin())/(timeline->End()-timeline->Begin());
+    int x = 12 + int(fraction*extent);
+    RECT thumb = {x-3,y-6,x+4,y+7};
+    FillRect(hdc,&thumb,(HBRUSH)GetStockObject(WHITE_BRUSH));
+    SelectObject(hdc,old); DeleteObject(pen);
   }
 }
 #endif
@@ -1628,6 +1844,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
   if(PollCloseEvent()) {
     return;
   }
+  if (timeline) timeline->Display(timeline->Published().revision);
+  Rcpp::List camera_before_input;
+  if (timeline && timeline_camera) camera_before_input = CreateCurrentKeyframe(0);
 #ifdef RAY_HAS_X11
   if (d) {
 #ifdef HAS_OIDN
@@ -1781,9 +2000,52 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     DrawStatusBarX11(env_y_angle);
     while (XPending(d)) {
       XNextEvent(d, &e);
-      if (e.type == KeyPress) {
+      if(e.type == FocusOut) {
+        ResetNavigationInput();
+        TimelineFocusLost();
+        if (timeline) XUngrabPointer(d, CurrentTime);
+      } else if (timeline && e.type == MotionNotify) {
+        TimelinePointer(e.xmotion.x, e.xmotion.y, false, false);
+      } else if (timeline && e.type == ButtonRelease) {
+        TimelinePointer(e.xbutton.x, e.xbutton.y, false, true);
+        XUngrabPointer(d, CurrentTime);
+      } else if (timeline && e.type == ConfigureNotify) {
+        if (e.xconfigure.width != int(width) || e.xconfigure.height != int(height + StatusBarHeight())) {
+          TimelineFocusLost();
+          XResizeWindow(d,w,width,height+StatusBarHeight());
+        }
+      } else if(e.type == KeyRelease) {
+        KeySym key = XLookupKeysym(&e.xkey, 0);
+        if(key > 0 && key < 128 && std::strchr("wasdqz", static_cast<char>(key))) {
+          // Servers without detectable repeat synthesize release/press pairs
+          // with identical timestamps. They do not end the physical hold.
+          if(XPending(d)) {
+            XEvent next;
+            XPeekEvent(d, &next);
+            if(next.type == KeyPress && next.xkey.keycode == e.xkey.keycode &&
+               next.xkey.time == e.xkey.time) {
+              XNextEvent(d, &next);
+              continue;
+            }
+          }
+          ReleaseNavigationKey(static_cast<char>(key));
+        }
+      } else if (e.type == KeyPress) {
         if(!PreviewDisplayHasKeyboardFocus(d, this->w)) {
           continue;
+        }
+        if (timeline) {
+          KeySym key = XLookupKeysym(&e.xkey,0);
+          bool control = (e.xkey.state & ControlMask) != 0;
+          bool shifted = (e.xkey.state & ShiftMask) != 0;
+          using animation::TimelineCommand;
+          if (key == XK_space) { TimelineAction(control ? TimelineCommand::Loop : shifted ? TimelineCommand::Reverse : TimelineCommand::PlayPause); continue; }
+          if (key == XK_Home) { TimelineAction(TimelineCommand::Begin); continue; }
+          if (key == XK_End) { TimelineAction(TimelineCommand::End); continue; }
+          if (key == XK_Page_Up) { TimelineAction(TimelineCommand::Faster); continue; }
+          if (key == XK_Page_Down) { TimelineAction(TimelineCommand::Slower); continue; }
+          if (control && key == XK_Left) { TimelineAction(TimelineCommand::StepBack); continue; }
+          if (control && key == XK_Right) { TimelineAction(TimelineCommand::StepForward); continue; }
         }
         if (e.xkey.keycode == esc ) {
           terminate = true;
@@ -1815,9 +2077,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           continue;
         }
         if(interactive) {
-          vec3f w = cam->get_w();
-          vec3f u = cam->get_u();
-          vec3f v = cam->get_v();
         
           bool blanked = false;
           bool one_orbit = false;
@@ -1842,62 +2101,44 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             write_fast_output = !write_fast_output;
             one_fast  = true;
           }
-          if (e.xkey.keycode == W_key ) {
-            if(shift_pressed) {
-              cam->rotate_forward(speed * 1.f);
-            } else {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
-                }
-              }
-              cam->update_position(step, orbit, false);
-            }
+          if (e.xkey.keycode == W_key) {
+            QueueNavigationTap('w', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == A_key ) {
-            if(shift_pressed) {
-              cam->rotate_up(speed * -1.f);
-            } else {
-              cam->update_position(speed * u * base_step, orbit);
-            }
+          if (e.xkey.keycode == A_key) {
+            QueueNavigationTap('a', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == S_key ) {
-            if(shift_pressed) {
-              cam->rotate_forward(speed * -1.f);
-            } else {
-              cam->update_position(-speed * w * base_step, orbit, false);
-            }
+          if (e.xkey.keycode == S_key) {
+            QueueNavigationTap('s', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == D_key ) {
-            if(shift_pressed) {
-              cam->rotate_up(speed * 1.f);
-            } else {
-              cam->update_position(-speed * u * base_step, orbit);
-            }
+          if (e.xkey.keycode == D_key) {
+            QueueNavigationTap('d', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == Q_key ) {
-            cam->update_position(speed * v * base_step, orbit);
+          if (e.xkey.keycode == Q_key) {
+            QueueNavigationTap('q', shift_pressed);
+            continue;
           }
-          if (e.xkey.keycode == Z_key ) {
-            cam->update_position(-speed * v * base_step, orbit);
+          if (e.xkey.keycode == Z_key) {
+            QueueNavigationTap('z', shift_pressed);
+            continue;
           }
           if (e.xkey.keycode == E_key ) {
             speed = 2 * speed;
-            speed = std::fmin(speed,128);
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = clamp(speed, Float(1.0/128), Float(128));
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == C_key ) {
-            speed = 0.5 * speed;
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = std::max(Float(1.0/128), Float(0.5) * speed);
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           if (e.xkey.keycode == Down_key ) {
-            cam->update_fov(speed*1.f);
+            AdjustCameraFov(speed*1.f);
           }
           if (e.xkey.keycode == Up_key ) {
-            cam->update_fov(speed*-1.f);
+            AdjustCameraFov(speed*-1.f);
           }
           if (e.xkey.keycode == Left_key ) {
             cam->update_aperture(speed*-0.1f);
@@ -1938,7 +2179,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
             }
           }
           if (e.xkey.keycode == R_key ) {
-            cam->reset();
+            ResetCamera();
             speed = 1;
             (*EnvWorldToObject) = Start_EnvWorldToObject;
             (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2038,10 +2279,6 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               write_fast_output = !write_fast_output;
               one_fast  = true;
             }
-            
-            w = cam->get_w();
-            u = cam->get_u();
-            v = cam->get_v();
             shift_pressed = (e.xkey.state & ShiftMask) != 0;
             if(IsX11ShiftedLeftBracket(d, e.xkey)) {
               AdjustShutterSpeedStops(static_cast<Float>(-1) / static_cast<Float>(3));
@@ -2054,65 +2291,47 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               continue;
             }
             
-            if (e.xkey.keycode == W_key ) {
-              if(shift_pressed) {
-                cam->rotate_forward(speed * 1.f);
-              } else {
-                vec3f step = speed * w * base_step;
-                if(orbit) {
-                  Float dist_to_orbit = (cam->get_origin() - cam->get_lookat()).length();
-                  if(dist_to_orbit <= base_step * speed) {
-                    Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                    step = vec3f(0);
-                  }
-                }
-                cam->update_position(step, orbit, false);
-              }
+            if (e.xkey.keycode == W_key) {
+              QueueNavigationTap('w', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == A_key ) {
-              if(shift_pressed) {
-                cam->rotate_up(speed * -1.f);
-              } else {
-                cam->update_position(speed * u * base_step, orbit);
-              }
+            if (e.xkey.keycode == A_key) {
+              QueueNavigationTap('a', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == S_key ) {
-              if(shift_pressed) {
-                cam->rotate_forward(speed * -1.f);
-              } else {
-                cam->update_position(-speed * w * base_step, orbit, false);
-              }
+            if (e.xkey.keycode == S_key) {
+              QueueNavigationTap('s', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == D_key ) {
-              if(shift_pressed) {
-                cam->rotate_up(speed * 1.f);
-              } else {
-                cam->update_position(-speed * u * base_step, orbit);
-              }
+            if (e.xkey.keycode == D_key) {
+              QueueNavigationTap('d', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == Q_key ) {
-              cam->update_position(speed * v * base_step, orbit);
+            if (e.xkey.keycode == Q_key) {
+              QueueNavigationTap('q', shift_pressed);
+              continue;
             }
-            if (e.xkey.keycode == Z_key ) {
-              cam->update_position(-speed * v * base_step, orbit);
+            if (e.xkey.keycode == Z_key) {
+              QueueNavigationTap('z', shift_pressed);
+              continue;
             }
             if (e.xkey.keycode == E_key ) {
               speed = 2 * speed;
-              Rprintf("Step Multiplier: %.3f\n", speed);
+              Rprintf("Speed Multiplier: %.3f\n", speed);
               
             }
             if (e.xkey.keycode == C_key ) {
-              speed = 0.5 * speed;
-              speed = std::fmin(speed,128);
-              Rprintf("Step Multiplier: %.3f\n", speed);
+              speed = std::max(Float(1.0/128), Float(0.5) * speed);
+              speed = clamp(speed, Float(1.0/128), Float(128));
+              Rprintf("Speed Multiplier: %.3f\n", speed);
               
             }
             if (e.xkey.keycode == Down_key ) {
-              cam->update_fov(speed*1.f);
+              AdjustCameraFov(speed*1.f);
 
             }
             if (e.xkey.keycode == Up_key ) {
-              cam->update_fov(speed*-1.f);
+              AdjustCameraFov(speed*-1.f);
             }
             if (e.xkey.keycode == Left_key ) {
               cam->update_aperture(speed*-0.1f);
@@ -2155,7 +2374,7 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
               }
             }
             if (e.xkey.keycode == R_key ) {
-              cam->reset();
+              ResetCamera();
               speed = 1;
               (*EnvWorldToObject) = Start_EnvWorldToObject;
               (*EnvObjectToWorld) = Start_EnvObjectToWorld;
@@ -2211,6 +2430,12 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
         }
       } else if (e.type == ButtonPress) {
+        if (timeline && e.xbutton.button == Button1 &&
+            TimelinePointer(e.xbutton.x,e.xbutton.y,true,false)) {
+          if (timeline->Requested().dragging)
+            XGrabPointer(d,w,False,PointerMotionMask | ButtonReleaseMask,GrabModeAsync,GrabModeAsync,0,0,CurrentTime);
+          continue;
+        }
         if(interactive && IsPreviewMotionActive()) {
           continue;
         }
@@ -2222,6 +2447,9 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
           }
           Float x = e.xbutton.x;
           Float y = e.xbutton.y;
+          if(x < 0 || y < 0 || x >= width || y >= height) {
+            continue; // Status-bar clicks must not generate camera rays.
+          }
           Float u = 1 - (x + .5f) / Float(width);
           Float v = 1 - (y + .5f) / Float(height);
           if(!PickCameraTarget(u, v, left, world)) {
@@ -2243,6 +2471,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
         terminate = true;
         break;
       } 
+    }
+    if(PollNavigation()) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+      reset_preview_render();
     }
     if(AdvancePreviewMotion(&env_y_angle)) {
       reset_preview_render();
@@ -2356,6 +2588,10 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
       TranslateMessage(&msg);
       DispatchMessage(&msg); 
     }
+    if(PollNavigation()) {
+      ApplyStaticPreviewCameraMotionRange(cam);
+      reset_preview_render();
+    }
     if(AdvancePreviewMotion(&env_y_angle)) {
       blanked = true;
       reset_preview_render();
@@ -2363,11 +2599,20 @@ void PreviewDisplay::DrawImage(adaptive_sampler& adaptive_pixel_sampler,
     terminate = term;
   }
 #endif
+  if (timeline && timeline_camera && camera_before_input.size() && !timeline->Pending()) {
+    auto after = CreateCurrentKeyframe(0);
+    bool camera_changed = false;
+    for (const char *name : {"x","y","z","dx","dy","dz","upx","upy","upz",
+                            "fov","aperture","focal","orthox","orthoy"})
+      camera_changed = camera_changed || Rcpp::as<double>(after[name]) != Rcpp::as<double>(camera_before_input[name]);
+    if (camera_changed) TimelineCameraEdited();
+  }
+  if (UpdateTimeline()) reset_preview_render();
 }
 #ifdef HAS_OIDN
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                               bool _deferred_render, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject, 
                                RayOidnDenoiser* _denoiser,
                                RayMatrix* _oidn_albedo_output,
@@ -2387,7 +2632,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 #else
 PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height, 
                                bool preview, bool _interactive,
-                               bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                               bool _deferred_render, RayCamera* _cam,
                                Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                                bool _auto_exposure) :
   preview(preview), auto_exposure(_auto_exposure), preview_exposure_calibrated(false),
@@ -2424,7 +2669,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   speed = 1.f;
   env_y_angle = 0;
   orbit = true;
-  base_step = initial_lookat_distance/20;
   cam = _cam;
   if(preview) {
     d = XOpenDisplay(NULL);
@@ -2458,9 +2702,13 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
                        ZPixmap,
                        0,data.get(),width,height,32,0);
     
-    w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height, 1,
+    // Film dimensions stay unchanged: only the window gets extra UI space.
+    w = XCreateSimpleWindow(d, RootWindow(d, s), 100, 100, width, height + StatusBarHeight(), 1,
                             BlackPixel(d, s),  BlackPixel(d, s));
-    XSelectInput(d, w, ExposureMask | KeyPressMask | ButtonPress);
+    XSelectInput(d, w, ExposureMask | KeyPressMask | KeyReleaseMask |
+                 FocusChangeMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | StructureNotifyMask);
+    Bool detectable_repeat = False;
+    XkbSetDetectableAutoRepeat(d, True, &detectable_repeat);
     XMapWindow(d, w);
     Atom WM_DELETE_WINDOW = XInternAtom(d, "WM_DELETE_WINDOW", False); 
     XSetWMProtocols(d, w, &WM_DELETE_WINDOW, 1);
@@ -2468,6 +2716,7 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   }
 #endif
 #ifdef RAY_WINDOWS
+  ::width = _width; ::height = _height;
   speed = 1.f;
   term = false;
   env_y_angle = 0;
@@ -2476,7 +2725,6 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
   if(preview) {
     width = _width;
     height = _height;
-    base_step = initial_lookat_distance/20;
     rgb.resize(width*height*3);
     cam_w = _cam;
     ApplyShutterSpeedToCameras();
@@ -2493,8 +2741,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
     RegisterClass(&wc);
   
     // Create the window.
-    RECT rect = {0, 0, (long int)width, (long int)height};
-    AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, true);
+    RECT rect = {0, 0, (long int)width, (long int)(height + StatusBarHeight())};
+    AdjustWindowRect(&rect, WS_THICKFRAME | WS_VISIBLE | WS_SYSMENU, FALSE);
     
     hwnd = CreateWindowEx(
       0,                              // Optional window styles.
@@ -2526,6 +2774,8 @@ PreviewDisplay::PreviewDisplay(unsigned int _width, unsigned int _height,
 
 void PreviewDisplay::SetCamera(RayCamera* _cam) {
   cam = _cam;
+  navigation_initialized = false;
+  ResetNavigationInput();
   if(cam != nullptr) {
     cam->set_camera_motion_blur(camera_motion_blur_enabled);
     cam->set_shutter_speed(shutter_speed);
@@ -2539,6 +2789,100 @@ void PreviewDisplay::SetCamera(RayCamera* _cam) {
     }
   }
 #endif
+}
+
+namespace {
+std::unique_ptr<RayCamera> MakeAlternatePreviewCamera(RayCamera& source,
+                                                      vec2f ortho_dimensions,
+                                                      Float aspect) {
+  auto shutter = source.ShutterInterval();
+  if (source.get_fov() == 0) {
+    return std::make_unique<camera>(source.get_origin(), source.get_lookat(), source.get_up(),
+      20, aspect, 0, std::max(Float(.001), (source.get_lookat()-source.get_origin()).length()),
+      shutter.first, shutter.second, source.get_iso());
+  }
+  return std::make_unique<ortho_camera>(source.get_origin(), source.get_lookat(), source.get_up(),
+    ortho_dimensions[0], ortho_dimensions[1], shutter.first, shutter.second, source.get_iso());
+}
+}
+
+void PreviewDisplay::ConfigureInteractiveCameras(std::unique_ptr<RayCamera>* owner,
+                                                vec2f ortho_dimensions) {
+  if (!owner || owner->get() != cam)
+    throw std::runtime_error("Interactive camera owner does not match the preview.");
+  if (!interactive || (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam))) return;
+  interactive_camera_owner = owner;
+  interactive_ortho_dimensions = ortho_dimensions;
+  initial_camera_fov = cam->get_fov();
+  alternate_camera = MakeAlternatePreviewCamera(*cam, ortho_dimensions, Float(width)/Float(height));
+}
+
+bool PreviewDisplay::SelectCameraProjection(Float fov) {
+  if (!interactive_camera_owner || fov < 0 || fov >= 180 ||
+      (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam)) ||
+      (cam->get_fov() == 0) == (fov == 0)) return false;
+
+  // Timeline playback can replace the active projection independently of the
+  // interactive pair. Recreate the missing counterpart at that handoff.
+  if ((alternate_camera->get_fov() == 0) != (fov == 0))
+    alternate_camera = MakeAlternatePreviewCamera(*cam, interactive_ortho_dimensions,
+                                                   Float(width)/Float(height));
+  RayCamera& next = *alternate_camera;
+  next.set_camera_flip_x(cam->get_camera_flip_x());
+  next.scene_camera_time = cam->scene_camera_time;
+  next.scene_camera_aspect = cam->scene_camera_aspect;
+  next.scene_camera_track.reset();
+  auto shutter = cam->ShutterInterval();
+  if (auto* perspective = dynamic_cast<camera*>(&next)) {
+    perspective->origin = cam->get_origin();
+    perspective->vup = cam->get_up();
+    perspective->time0 = shutter.first;
+    perspective->time1 = shutter.second;
+    perspective->iso = cam->get_iso();
+    perspective->camera_motion_blur_has_range = false;
+  } else if (auto* orthographic = dynamic_cast<ortho_camera*>(&next)) {
+    orthographic->origin = cam->get_origin();
+    orthographic->vup = cam->get_up();
+    orthographic->focus_dist = (cam->get_lookat()-cam->get_origin()).length();
+    orthographic->time0 = shutter.first;
+    orthographic->time1 = shutter.second;
+    orthographic->iso = cam->get_iso();
+    orthographic->camera_motion_blur_has_range = false;
+  }
+  // Set the complete pose before rebuilding the film plane: assigning position
+  // alone can temporarily coincide with the inactive camera's old target.
+  next.update_lookat(cam->get_lookat());
+  // Keep the renderer's owner, preview, and native window on the same camera.
+  // Both objects stay alive until the completed-batch render handoff.
+  std::swap(*interactive_camera_owner, alternate_camera);
+  SetCamera(interactive_camera_owner->get());
+  navigation.SetDistance((cam->get_lookat() - cam->get_origin()).length());
+  return true;
+}
+
+void PreviewDisplay::AdjustCameraFov(Float delta) {
+  if (!interactive_camera_owner ||
+      (!dynamic_cast<camera*>(cam) && !dynamic_cast<ortho_camera*>(cam))) {
+    cam->update_fov(delta);
+    return;
+  }
+  // Zero is the orthographic boundary; negative input stays at zero so the
+  // next increase immediately returns to perspective.
+  Float fov = std::max(Float(0), cam->get_fov() + delta);
+  fov = std::min(fov, Float(179.9));
+  SelectCameraProjection(fov);
+  cam->update_fov_absolute(fov);
+  TimelineCameraEdited();
+}
+
+void PreviewDisplay::ResetCamera() {
+  if (interactive_camera_owner) {
+    SelectCameraProjection(initial_camera_fov);
+    alternate_camera->reset();
+  }
+  cam->reset();
+  navigation.Reset(*cam);
+  TimelineCameraEdited();
 }
 
 void PreviewDisplay::SetSnapshotFilename(const std::string& filename) {
@@ -2824,6 +3168,31 @@ static void ResetWindowsPreviewRenderState(bool update_camera_motion_range = tru
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
   switch (uMsg) {
+    case WM_KILLFOCUS: {
+      if(preview_display_w != nullptr) {
+        preview_display_w->ResetNavigationInput();
+        preview_display_w->TimelineFocusLost();
+      }
+      ReleaseCapture();
+      break;
+    }
+    case WM_CAPTURECHANGED:
+      if(preview_display_w && preview_display_w->timeline)
+        preview_display_w->TimelinePointer(0,0,false,true);
+      break;
+    case WM_MOUSEMOVE:
+      if(preview_display_w && preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),false,false)) return 0;
+      break;
+    case WM_LBUTTONUP:
+      if(preview_display_w && preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),false,true)) {
+        ReleaseCapture(); return 0;
+      }
+      break;
+    case WM_KEYUP: {
+      if(preview_display_w != nullptr && wParam >= 'A' && wParam <= 'Z')
+        preview_display_w->ReleaseNavigationKey(static_cast<char>(wParam + ('a' - 'A')));
+      break;
+    }
     case WM_DESTROY: {
       PostQuitMessage(0);
       term = true;
@@ -2834,6 +3203,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         return 0;
       }
       bool shift_pressed = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+      if(preview_display_w && preview_display_w->timeline) {
+        bool control = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
+        using animation::TimelineCommand;
+        auto action = [&](TimelineCommand command) { preview_display_w->TimelineAction(command); };
+        if(wParam == VK_SPACE) { action(control ? TimelineCommand::Loop : shift_pressed ? TimelineCommand::Reverse : TimelineCommand::PlayPause); return 0; }
+        if(wParam == VK_HOME) { action(TimelineCommand::Begin); return 0; }
+        if(wParam == VK_END) { action(TimelineCommand::End); return 0; }
+        if(wParam == VK_PRIOR) { action(TimelineCommand::Faster); return 0; }
+        if(wParam == VK_NEXT) { action(TimelineCommand::Slower); return 0; }
+        if(control && wParam == VK_LEFT) { action(TimelineCommand::StepBack); return 0; }
+        if(control && wParam == VK_RIGHT) { action(TimelineCommand::StepForward); return 0; }
+      }
       if(interactive_w && preview_display_w != nullptr &&
          (wParam == VK_KEY_H || wParam == VK_KEY_Y)) {
         if((lParam & (LPARAM(1) << 30)) == 0) {
@@ -2866,14 +3247,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
-      vec3f w(1,0,0);
-      vec3f u(0,1,0);
-      vec3f v(0,0,1);
       
       if(interactive_w) {
-        w = cam_w->get_w();
-        u = cam_w->get_u();
-        v = cam_w->get_v();
       }
       if(interactive_w &&
          preview_display_w != nullptr &&
@@ -2915,91 +3290,38 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
           }
           break;
         }
-        case VK_KEY_W: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_forward(speed * 1.f);
-            } else {
-              vec3f step = speed * w * base_step;
-              if(orbit) {
-                Float dist_to_orbit = (cam_w->get_origin() - cam_w->get_lookat()).length();
-                if(dist_to_orbit <= base_step * speed) {
-                  Rprintf("Moving forward will overstep orbit point, stopping (decrease step size to move closer).\n");
-                  step = vec3f(0);
-                }
-              }
-              cam_w->update_position(step, orbit, false);
-            }
+        case VK_KEY_W: case VK_KEY_A: case VK_KEY_S:
+        case VK_KEY_D: case VK_KEY_Q: case VK_KEY_Z: {
+          if(interactive_w && preview_display_w != nullptr &&
+             (lParam & (LPARAM(1) << 30)) == 0) {
+            preview_display_w->QueueNavigationTap(static_cast<char>(wParam + ('a' - 'A')), shift_pressed);
           }
-          break;
+          return 0;
         }
-
-        case VK_KEY_A: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_up(speed * -1.f);
-            } else {
-              cam_w->update_position(-speed * u * base_step, orbit);
-            }
-          }
-          break;
-        }
-        case VK_KEY_S: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_forward(speed * -1.f);
-            } else {
-              cam_w->update_position(-speed * w * base_step, orbit, false);
-            }
-          }
-          break;
-        }
-        case VK_KEY_D: {
-          if(interactive_w) {
-            if(shift_pressed) {
-              cam_w->rotate_up(speed * 1.f);
-            } else {
-              cam_w->update_position(speed * u * base_step, orbit);
-            }
-          }
-          break;
-        }
-        case VK_KEY_Q: { 
-          if(interactive_w) {
-            cam_w->update_position(speed * v * base_step, orbit);
-        }
-          break;
-          }
-        case VK_KEY_Z: { 
-          if(interactive_w) {
-            cam_w->update_position(-speed * v * base_step, orbit);
-        }
-          break;
-          }
         case VK_KEY_E: { 
           if(interactive_w) {
             speed = 2 * speed;
-            speed = std::fmin(speed,128);
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = clamp(speed, Float(1.0/128), Float(128));
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           break;
           }
         case VK_KEY_C: { 
           if(interactive_w) {
-            speed = 0.5 * speed;
-            Rprintf("Step Multiplier: %.3f\n", speed);
+            speed = std::max(Float(1.0/128), Float(0.5) * speed);
+            Rprintf("Speed Multiplier: %.3f\n", speed);
           }
           break;
           }
         case VK_DOWN: {
           if(interactive_w) {
-            cam_w->update_fov(speed*1.f);
+            preview_display_w->AdjustCameraFov(speed*1.f);
         }
           break;
           }
         case VK_UP: {
           if(interactive_w) {
-            cam_w->update_fov(speed*-1.f);
+            preview_display_w->AdjustCameraFov(speed*-1.f);
         }
           break;
           }
@@ -3072,7 +3394,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         }
         case VK_KEY_R: {
           if(interactive_w) {
-            cam_w->reset();
+            preview_display_w->ResetCamera();
             speed = 1;
             (*EnvWorldToObject_w) = Start_EnvWorldToObject_w;
             (*EnvObjectToWorld_w) = Start_EnvObjectToWorld_w;
@@ -3147,10 +3469,18 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
   case WM_LBUTTONDOWN:
   case WM_RBUTTONDOWN: {
+    if(uMsg == WM_LBUTTONDOWN && preview_display_w &&
+       preview_display_w->TimelinePointer(GET_X_LPARAM(lParam),GET_Y_LPARAM(lParam),true,false)) {
+      if(preview_display_w->timeline->Requested().dragging) SetCapture(hwnd);
+      return 0;
+    }
     if(interactive_w && preview_display_w != nullptr &&
        !preview_display_w->IsPreviewMotionActive()) {
-      Float u = 1 - (Float(GET_X_LPARAM(lParam)) + .5f) / Float(width);
-      Float v = 1 - (Float(GET_Y_LPARAM(lParam)) + .5f) / Float(height);
+      const int x = GET_X_LPARAM(lParam), y = GET_Y_LPARAM(lParam);
+      if(x < 0 || y < 0 || static_cast<unsigned int>(x) >= width ||
+         static_cast<unsigned int>(y) >= height) break;
+      Float u = 1 - (Float(x) + .5f) / Float(width);
+      Float v = 1 - (Float(y) + .5f) / Float(height);
       if(preview_display_w->PickCameraTarget(u, v, uMsg == WM_LBUTTONDOWN, world_w)) {
         ResetWindowsPreviewRenderState();
       }
@@ -3207,18 +3537,441 @@ std::unique_ptr<PreviewDisplay> MakeTestPreviewDisplay(RayCamera& cam,
                                                        Transform& env_transform) {
 #ifdef HAS_OIDN
   return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-    4, 4, false, true, false, 10.f, &cam,
+    4, 4, false, true, false, &cam,
     &env_transform, &env_transform,
     nullptr, nullptr, nullptr, false, false));
 #else
   return std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-    4, 4, false, true, false, 10.f, &cam,
+    4, 4, false, true, false, &cam,
     &env_transform, &env_transform, false));
 #endif
 }
 }
 
+context("Preview camera projection switching") {
+  test_that("FOV crosses zero in either direction from either initial projection") {
+    for (bool start_orthographic : {false, true}) {
+      Transform identity;
+      const point3f origin(0, 0, -10), target(0, 0, 0);
+      std::unique_ptr<RayCamera> cam;
+      if (start_orthographic)
+        cam = std::make_unique<ortho_camera>(origin, target, vec3f(0,1,0), 8, 4, .2, .8, 2);
+      else
+        cam = std::make_unique<camera>(origin, target, vec3f(0,1,0), .5, 1, .4, 7, .2, .8, 2);
+      cam->set_camera_flip_x(true);
+      auto* initial = cam.get();
+      auto display = MakeTestPreviewDisplay(*cam, identity);
+      display->ConfigureInteractiveCameras(&cam, vec2f(8,4));
+      display->SetShutterSpeed(8);
+      display->SetCameraMotionBlur(true);
+      display->AdjustCameraFov(-1);
+      expect_true(cam->get_fov() == 0);
+      expect_true(display->cam == cam.get());
+      auto* orthographic = cam.get();
+      expect_true(cam->get_ortho()[0] == 8);
+      expect_true(cam->get_ortho()[1] == 4);
+      display->AdjustCameraFov(-128);
+      expect_true(cam.get() == orthographic);
+      expect_true(cam->get_ortho()[1] == 4);
+
+      // An origin at the inactive camera's old target must not reset the pose.
+      cam->update_position_absolute(point3f(0,0,0));
+      cam->update_lookat(point3f(3,2,8));
+      cam->rotate_up(20);
+      const point3f moved_origin = cam->get_origin(), moved_target = cam->get_lookat();
+      const vec3f moved_up = cam->get_up();
+      display->AdjustCameraFov(.5);
+      auto* perspective = cam.get();
+      expect_true(dynamic_cast<camera*>(cam.get()) != nullptr);
+      expect_true(cam->get_fov() == .5);
+      expect_true(cam->get_focal_distance() > 0);
+      if (!start_orthographic) {
+        expect_true(cam->get_aperture() == Approx(.4));
+        expect_true(cam->get_focal_distance() == 7);
+      }
+      expect_true((cam->get_origin()-moved_origin).length() == 0);
+      expect_true((cam->get_lookat()-moved_target).length() == 0);
+      expect_true((cam->get_up()-moved_up).length() == 0);
+      expect_true(cam->get_camera_flip_x());
+      expect_true(cam->get_iso() == 2);
+      expect_true(cam->get_shutter_speed() == 8);
+      expect_true(cam->get_camera_motion_blur());
+      expect_true(cam->ShutterInterval().first == Float(.2));
+      expect_true(cam->ShutterInterval().second == Float(.8));
+      display->SetCameraMotionBlur(false);
+      Ray left = cam->get_ray(.2,.5,point3f(0),.5);
+      Ray right = cam->get_ray(.8,.5,point3f(0),.5);
+      expect_true((left.origin()-right.origin()).length() == 0);
+      expect_true((left.direction()-right.direction()).length() > 0);
+
+      display->AdjustCameraFov(-.5);
+      expect_true(cam.get() == orthographic);
+      left = cam->get_ray(.2,.5,point3f(0),.5);
+      right = cam->get_ray(.8,.5,point3f(0),.5);
+      expect_true((left.origin()-right.origin()).length() > 0);
+      expect_true((left.direction()-right.direction()).length() == 0);
+      display->AdjustCameraFov(.25);
+      expect_true(cam.get() == perspective);
+      expect_true(cam->get_fov() == .25);
+      display->AdjustCameraFov(200);
+      expect_true(cam->get_fov() == Float(179.9));
+      display->ResetCamera();
+      expect_true(cam.get() == initial);
+      expect_true(cam->get_fov() == (start_orthographic ? 0 : .5));
+      expect_true((cam->get_origin()-origin).length() == 0);
+    }
+  }
+  test_that("saved views restore their projection and pose") {
+    Transform identity;
+    std::unique_ptr<RayCamera> cam = std::make_unique<camera>(
+      point3f(0,0,-10), point3f(0), vec3f(0,1,0), 20, 1, .3, 4, 0, 1, 1);
+    auto display = MakeTestPreviewDisplay(*cam, identity);
+    display->ConfigureInteractiveCameras(&cam, vec2f(8,4));
+    display->SaveCurrentKeyframe(0);
+    display->AdjustCameraFov(-30);
+    cam->update_position_absolute(point3f(2,3,-8));
+    cam->update_lookat(point3f(1,2,1));
+    cam->update_ortho_absolute(vec2f(6,3));
+    display->SaveCurrentKeyframe(0);
+    for (int index : {0,1,0,1}) {
+      expect_true(display->ApplyKeyframe(index, nullptr));
+      expect_true(display->cam == cam.get());
+      expect_true(cam->get_fov() == (index == 0 ? 20 : 0));
+      auto saved = display->GetKeyframes()[index];
+      expect_true(cam->get_lookat()[0] == Rcpp::as<Float>(saved["dx"]));
+      expect_true(cam->get_lookat()[2] == Rcpp::as<Float>(saved["dz"]));
+      if (index == 1) expect_true(cam->get_ortho()[1] == 3);
+    }
+  }
+}
+
 context("Preview atmosphere controls") {
+  test_that("physical timeline seeks reuse optics and restore authored focus after navigation") {
+    Transform pose=Inverse(LookAt(point3f(0,0,-10),point3f(0),vec3f(0,1,0)));
+    AnimatedTransform transform(&pose,0,&pose,0);
+    std::vector<Float> lens={29.475,3.76,1.67,25.2,84.83,.12,1,25.2,
+      19.275,4.025,1.67,23,40.77,3.275,1.699,23,12.75,5.705,1,18,
+      0,4.5,0,17.1,-14.495,1.18,1.603,17,40.77,6.065,1.658,20,
+      -20.385,.19,1,20,437.065,3.22,1.717,20,-39.73,0,1,20};
+    std::unique_ptr<RayCamera> cam=std::make_unique<RealisticCamera>(
+      transform,-.1,.2,10,4,4,10,false,lens,.022,1,1,vec3f(0,1,0),pose,point3f(0));
+    cam->set_shutter_speed(1);
+    auto reference=*static_cast<RealisticCamera *>(cam.get());
+    auto display=MakeTestPreviewDisplay(*cam,pose);
+    auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
+    display->ConfigureTimeline(2,9,2,30,clock,-.1,.2);
+    animation::CameraKey a{2,{0,0,-10, 0,0,0, 10,-1,10, 4,4, 0,1,0}};
+    auto b=a,c=a; b.time=5; b.values[0]=3; b.values[3]=3; c.time=9;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c});
+    display->ConfigureTimelineCamera(track,&cam);
+    reference.scene_camera_time=clock;
+    for (double time : {9.,2.,5.,6.,9.,5.}) {
+      display->timeline->Seek(time);
+      expect_true(display->UpdateTimeline());
+      expect_true(display->cam==cam.get());
+      const auto key=track->At(time);
+      expect_true(std::abs(cam->get_origin()[0]-key.values[0])<1e-6);
+      Ray actual, expected;
+      Float weight=cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),.5),&actual);
+      double ray_scene=time+(double(actual.time())-double(clock->ray_anchor));
+      auto ray_key=track->At(ray_scene);
+      reference.SetScenePose(point3f(ray_key.values[0],0,-10),point3f(ray_key.values[3],0,0),vec3f(0,1,0));
+      reference.SetShutterInterval(actual.time(),actual.time());
+      Float expected_weight=reference.GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&expected);
+      expect_true(weight>0);
+      expect_true(weight==expected_weight);
+      expect_true((actual.o-expected.o).length()<1e-5);
+      expect_true((actual.d-expected.d).length()<1e-6);
+      // Each seek retains the requested .3-second exposure, not the seek gap.
+      Ray first,last;
+      cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&first);
+      cam->GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),1),&last);
+      expect_true(std::abs(last.time()-first.time()-.3)<1e-5);
+    }
+    cam->update_focal_distance(1);
+    display->TimelineCameraEdited();
+    expect_true(cam->get_focal_distance()!=10);
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_focal_distance()==10);
+    expect_true(cam->get_origin()[0]==0);
+    display->SaveCurrentKeyframe(0);
+    static_cast<RealisticCamera *>(cam.get())->SetScenePose(point3f(3,0,-10),point3f(3,0,0),vec3f(0,1,0));
+    display->TimelineCameraEdited();
+    display->SaveCurrentKeyframe(0);
+    display->SetKeyframeMotionArgs(Rcpp::List::create(Rcpp::Named("frames")=31,
+      Rcpp::Named("type")="linear",Rcpp::Named("damp_motion")=false));
+    expect_true(display->StartPreviewMotion(0));
+    display->timeline->Pause(true);
+    display->timeline->Seek(3);
+    expect_true(display->UpdateTimeline());
+    expect_true(std::abs(cam->get_origin()[0]-3)<1e-5);
+    expect_true(cam->get_aperture()==10);
+    cam->update_focal_distance(1);
+    display->TimelineCameraEdited();
+    Float environment=0;
+    expect_true(display->CancelPreviewMotion(&environment));
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_focal_distance()==10);
+    expect_true(cam->get_origin()[0]==1);
+    expect_true(cam->get_fov()==-1);
+    // Pick at the displayed pose, not the exposure midpoint or a queued seek.
+    display->timeline->Seek(2);
+    display->UpdateTimeline();
+    display->timeline->Seek(5);
+    Transform identity;
+    auto mat=std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
+    hitable_list world;
+    world.add(std::make_shared<sphere>(2,mat,nullptr,nullptr,&identity,&identity,false));
+    reference.SetScenePose(point3f(0,0,-10),point3f(0),vec3f(0,1,0));
+    reference.SetShutterInterval(clock->ray_anchor,clock->ray_anchor);
+    Ray pick_ray;
+    reference.GenerateRay(CameraSample(point2f(.5,.5),point2f(.5,.5),0),&pick_ray);
+    auto expected_pick=PickRay(pick_ray,&world,nullptr);
+    expect_true(bool(expected_pick));
+    expect_true(display->PickCameraTarget(.5,.5,false,&world));
+    expect_true((cam->get_lookat()-expected_pick->p).length()<1e-5);
+    expect_true(cam->get_focal_distance()==10);
+    Float env=0;
+    expect_true(display->ApplyKeyframe(1,&env));
+    expect_true(cam->get_origin()[0]==3);
+    expect_true(cam->get_lookat()[2]==0);
+  }
+  test_that("variable physical optics publish exact snapshots and reject failed preparation atomically") {
+    Transform pose=Inverse(LookAt(point3f(0,0,-6),point3f(0),vec3f(0,1,0)));
+    AnimatedTransform transform(&pose,0,&pose,0);
+    const std::vector<Float> source={29.475,3.76,1.67,25.2,84.83,.12,1,25.2,
+      19.275,4.025,1.67,23,40.77,3.275,1.699,23,12.75,5.705,1,18,
+      0,4.5,0,17.1,-14.495,1.18,1.603,17,40.77,6.065,1.658,20,
+      -20.385,.19,1,20,437.065,3.22,1.717,20,-39.73,0,1,20};
+    auto lens=source;
+    std::unique_ptr<RayCamera> cam=std::make_unique<RealisticCamera>(
+      transform,0,0,4,4,4,6,false,lens,.022,1,1,vec3f(0,1,0),pose,point3f(0));
+    auto display=MakeTestPreviewDisplay(*cam,pose);
+    auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
+    display->ConfigureTimeline(2,9,2,1,clock,0,0);
+    animation::CameraKey a{2,{0,0,-6, 0,0,0, 4,-1,6, 4,4, 0,1,0}};
+    auto b=a; b.time=9; b.values[6]=10; b.values[8]=12;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b});
+    display->ConfigureTimelineCamera(track,&cam);
+    // Independent constructor at an interior time verifies complete lens and
+    // pupil reconstruction, including reopening a previously narrowed stop.
+    auto reference_lens=source;
+    RealisticCamera reference(transform,0,0,7,4,4,9,false,reference_lens,.022,1,1,
+      vec3f(0,1,0),pose,point3f(0));
+    reference.scene_camera_time=clock;
+    reference.set_shutter_speed(1);
+    // A saved manual focus must not reuse the legacy navigation pupil bounds.
+    // Return to the same numeric focus to exercise the cache eligibility flag.
+    auto navigated=reference;
+    navigated.update_focal_distance(1);
+    navigated.update_focal_distance(-1);
+    auto prepared=navigated.WithSceneOptics(7,9);
+    for (point2f film : {point2f(.5,.5),point2f(.6,.4)}) {
+      CameraSample sample(film,point2f(.5,.5),0);
+      Ray actual,expected;
+      expect_true(prepared->GenerateRay(sample,&actual)==reference.GenerateRay(sample,&expected));
+      expect_true((actual.o-expected.o).length()==0);
+      expect_true((actual.d-expected.d).length()==0);
+    }
+    Ray repeated;
+    Float repeated_weight=0;
+    for (double time : {5.5,9.,2.,5.5}) {
+      display->timeline->Seek(time);
+      expect_true(display->UpdateTimeline());
+      const auto key=track->At(time);
+      expect_true(cam->get_aperture()==Float(key.values[6]));
+      expect_true(cam->get_focal_distance()==Float(key.values[8]));
+      expect_true(clock->epoch==time);
+      display->timeline->Display(display->timeline->Published().revision);
+      if (time==5.5) {
+        reference.SetShutterInterval(clock->ray_anchor,clock->ray_anchor);
+        for (point2f film : {point2f(.5,.5),point2f(.6,.4)}) {
+          CameraSample sample(film,point2f(.5,.5),.75);
+          Ray actual,expected;
+          Float weight=cam->GenerateRay(sample,&actual);
+          Float expected_weight=reference.GenerateRay(sample,&expected);
+          expect_true(weight>0);
+          expect_true(weight==expected_weight);
+          expect_true((actual.o-expected.o).length()==0);
+          expect_true((actual.d-expected.d).length()==0);
+        }
+        Ray actual;
+        Float weight=cam->GenerateRay(CameraSample(point2f(.6,.4),point2f(.5,.5),0),&actual);
+        if (repeated_weight>0) {
+          expect_true(weight==repeated_weight);
+          expect_true((actual.o-repeated.o).length()==0);
+          expect_true((actual.d-repeated.d).length()==0);
+        }
+        repeated=actual; repeated_weight=weight;
+      }
+      if (time==2 || time==9) display->SaveCurrentKeyframe(0);
+    }
+    Float env=0;
+    // Saved navigation can also change optics, with no partial environment edit.
+    expect_true(display->ApplyKeyframe(0,&env));
+    expect_true(cam->get_aperture()==10);
+    expect_true(display->ApplyKeyframe(1,&env));
+    expect_true(cam->get_aperture()==4);
+    display->SetKeyframeMotionArgs(Rcpp::List::create(Rcpp::Named("frames")=8,
+      Rcpp::Named("type")="linear",Rcpp::Named("damp_motion")=false));
+    expect_true(display->StartPreviewMotion(0));
+    display->timeline->Pause(true);
+    display->timeline->Seek(9);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_aperture()==4);
+    expect_true(display->CancelPreviewMotion(&env));
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_aperture()==10);
+
+    // An offset snapshot keeps scene time separate from lens sample time;
+    // dragging temporarily restores the exact scene-time snapshot.
+    display->ConfigureTimeline(2,9,2,1,clock,.25,.25);
+    display->ConfigureTimelineCamera(track,&cam);
+    display->timeline->Seek(5.25);
+    expect_true(display->UpdateTimeline());
+    expect_true(clock->epoch==5.25);
+    expect_true(cam->get_aperture()==7);
+    display->timeline->Drag(5.5);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_aperture()==7);
+    display->timeline->EndDrag();
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_aperture()==Float(track->At(5.75).values[6]));
+
+    display->ConfigureTimeline(2,9,2,1,clock,0,0);
+    auto invalid=b; invalid.values[8]=.00001;
+    auto failing=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,invalid});
+    display->ConfigureTimelineCamera(failing,&cam);
+    expect_true(display->UpdateTimeline());
+    auto *before=cam.get();
+    const auto published=display->timeline->Published();
+    const double epoch=clock->epoch;
+    display->timeline->Seek(9);
+    expect_false(display->UpdateTimeline());
+    expect_true(cam.get()==before);
+    expect_true(clock->epoch==epoch);
+    expect_true(display->timeline->Published().revision==published.revision);
+    expect_true(cam->get_aperture()==4);
+    display->timeline->Seek(2);
+    expect_true(display->UpdateTimeline());
+  }
+  test_that("timeline projection cuts replace the owned camera without seek history") {
+    Transform identity;
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto middle=first,last=first;
+    middle.time=5; middle.values[7]=0; middle.values[0]=3;
+    last.time=9; last.values[7]=360;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{first,middle,last});
+    auto cam=track->MakeCamera(first,1,1,-.1,.2,false);
+    auto display=MakeTestPreviewDisplay(*cam,identity);
+    display->ConfigureInteractiveCameras(&cam, vec2f(4,4));
+    auto clock=std::make_shared<SceneTimeContext>(); clock->epoch=2;
+    display->ConfigureTimeline(2,9,2,30,clock,-.1,.2);
+    display->ConfigureTimelineCamera(track,&cam);
+    for (double time : {9.,2.,5.,4.9,9.,5.}) {
+      display->timeline->Seek(time);
+      expect_true(display->UpdateTimeline());
+      expect_true(display->cam == cam.get());
+      expect_true(cam->get_fov() == track->At(time).values[7]);
+      auto actual=cam->get_ray(.3,.6,point3f(0),.5);
+      auto expected=track->SampleRay(time+(double(actual.time())-double(clock->ray_anchor)),
+                                    actual.time(),.3,.6,point3f(0),1,1,false);
+      expect_true((actual.o-expected.o).length()<1e-6);
+      expect_true((actual.d-expected.d).length()<1e-6);
+    }
+    display->AdjustCameraFov(1);
+    expect_true(cam->get_fov() == 1);
+    expect_true(!cam->scene_camera_track);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 1);
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 60);
+    display->AdjustCameraFov(-128);
+    expect_true(cam->get_fov() == 0);
+    expect_true(!cam->scene_camera_track);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam->get_fov() == 0);
+  }
+  test_that("camera tracks seek, allow a manual override, and restore saved playback") {
+    Transform identity;
+    camera cam(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60,1,0,10,0,0,1);
+    auto display = MakeTestPreviewDisplay(cam,identity);
+    auto scene_time = std::make_shared<SceneTimeContext>();
+    display->ConfigureTimeline(2,9,2,30,scene_time,0,0);
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto last = first; last.time = 9; last.values[0] = 7;
+    display->ConfigureTimelineCamera(std::make_shared<const animation::CameraTrack>(
+      std::vector<animation::CameraKey>{first,last}));
+    display->TimelineAction(animation::TimelineCommand::End);
+    expect_true(display->UpdateTimeline());
+    expect_true(cam.get_origin()[0] == 7);
+    expect_true(cam.time0 == cam.time1);
+    cam.update_position_absolute(point3f(15,0,-10));
+    display->TimelineCameraEdited();
+    display->UpdateTimeline();
+    expect_true(cam.get_origin()[0] == 15);
+    expect_true(display->timeline->Paused());
+    display->TimelineAction(animation::TimelineCommand::Begin);
+    display->UpdateTimeline();
+    expect_true(cam.get_origin()[0] == 0);
+    display->SaveCurrentKeyframe(0);
+    cam.update_position_absolute(point3f(3,0,-10));
+    display->SaveCurrentKeyframe(0);
+    display->SetKeyframeMotionArgs(Rcpp::List::create(Rcpp::Named("frames")=31,
+      Rcpp::Named("type")="linear", Rcpp::Named("damp_motion")=false));
+    expect_true(display->StartPreviewMotion(0));
+    display->timeline->Pause(true);
+    display->timeline->Seek(3);
+    display->UpdateTimeline();
+    expect_true(std::abs(cam.get_origin()[0]-3) < 1e-5);
+    Float environment = 0;
+    expect_true(display->CancelPreviewMotion(&environment));
+    display->UpdateTimeline();
+    expect_true(std::abs(cam.get_origin()[0]-1) < 1e-5);
+    expect_true(display->Keyframes.size() == 2);
+  }
+
+  test_that("timeline seeks publish exact time and restore exposure after dragging") {
+    Transform identity;
+    camera cam(point3f(0,0,-10),point3f(0),vec3f(0,1,0),60.f,1.f,0.f,5.f,-.1f,.2f,1.f);
+    auto display = MakeTestPreviewDisplay(cam,identity);
+    auto scene_time = std::make_shared<SceneTimeContext>();
+    scene_time->epoch = 2;
+    display->ConfigureTimeline(2,9,2,30,scene_time,-.1f,.2f);
+    animation::CameraKey first{2,{0,0,-10, 0,0,0, 0,60,10, 4,4, 0,1,0}};
+    auto last = first; last.time = 9; last.values[0] = 7;
+    display->ConfigureTimelineCamera(std::make_shared<const animation::CameraTrack>(
+      std::vector<animation::CameraKey>{first,last}));
+    display->TimelineAction(animation::TimelineCommand::End);
+    expect_true(display->UpdateTimeline());
+    expect_true(scene_time->epoch == 9);
+    expect_true(scene_time->ray_anchor == 7);
+    expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    // Seeking seven seconds changes the epoch, not the exposure duration.
+    // The first ray is at 8.9 seconds and the last holds the authored endpoint.
+    auto before = cam.get_ray(.5,.5,point3f(0),0);
+    auto after = cam.get_ray(.5,.5,point3f(0),1);
+    expect_true(std::abs(before.o[0]-6.9) < 1e-5);
+    expect_true(after.o[0] == 7);
+    expect_false(cam.get_camera_motion_blur());
+    expect_true(display->ConsumeTimelineChange());
+    expect_false(display->ConsumeTimelineChange());
+    expect_true(display->TimelinePointer(12,112,true,false));
+    expect_true(display->UpdateTimeline());
+    expect_true(scene_time->epoch == 2);
+    expect_true(cam.time0 == cam.time1);
+    expect_true(cam.get_ray(.5,.5,point3f(0),.5).o[0] == 0);
+    expect_true(display->TimelinePointer(-100,-100,false,true));
+    expect_true(display->UpdateTimeline());
+    expect_true(std::abs((cam.time1-cam.time0)-.3) < 1e-6);
+    expect_true(std::abs(cam.get_ray(.5,.5,point3f(0),1).o[0]-.2) < 1e-5);
+    expect_true(display->timeline->Paused());
+    display->TimelineFocusLost();
+    expect_false(display->timeline->Requested().dragging);
+  }
+
   test_that("replacing an environment updates emission as well as sampling") {
     Transform identity;
     auto original = std::make_shared<ImageInfiniteLight>(
@@ -3320,7 +4073,7 @@ context("Preview picking and orbit targets") {
     auto scene = std::make_shared<VolumeScene>();
     Rcpp::Function describe = Rcpp::Environment::namespace_env("rayrender")["homogeneous_medium"];
     auto medium = LoadMedium(describe());
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     auto sphere_geometry = std::make_shared<sphere>(2, mat, nullptr, nullptr,
                                                   &identity, &identity, false);
     auto boundary = std::make_shared<MediumBoundary>(sphere_geometry, medium, identity, false,
@@ -3348,7 +4101,7 @@ context("Preview picking and orbit targets") {
   }
   test_that("right clicks preserve focus while orbiting about the selected surface") {
     Transform identity;
-    auto mat = std::make_shared<lambertian>(std::make_shared<constant_texture>(point3f(1)));
+    auto mat = std::make_shared<diffuse_material>(std::make_shared<constant_texture>(point3f(1)));
     hitable_list world;
     world.add(std::make_shared<sphere>(2, mat, nullptr, nullptr, &identity, &identity, false));
     camera cam(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),

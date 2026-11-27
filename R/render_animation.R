@@ -104,8 +104,9 @@ animation_default_plot_scene = function(
 #' @param parallel Default `FALSE`. If `TRUE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-#' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-#' of equal size.
+#' hierarchy. Options are `"sah"`, `"equal"`, `"hlbvh"` (parallel CPU construction)
+#' and `"metal"` (Metal GPU construction, CPU traversal). See [render_scene()] for
+#' availability, construction/traversal tradeoffs, and core-limit behavior.
 #' @param progress Default `TRUE` if interactive session, `FALSE` otherwise.
 #' @param preview_light_direction Default `c(0,-1,0)`. Vector specifying the orientation for the global light using for phong shading.
 #' @param preview_exponent Default `6`. Phong exponent.
@@ -115,15 +116,90 @@ animation_default_plot_scene = function(
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
-#' @param integrator_type Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-#' form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+#' @param integrator_type Default `"auto"`, selecting Metal when the package was built
+#' with Metal support and a ray-tracing-capable device is available, otherwise CPU
+#' `"nee"` (Next Event Estimation, with direct light sampling). Explicit choices
+#' override automatic selection. Other options include `"rtiow"` (the algorithm
+#' specified in the book "Raytracing in One Weekend", a basic form of path guiding)
 #' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' `"metal"` uses the experimental GPU wavefront integrator where supported; see
+#' \code{\link{render_scene}()} for its feature coverage and CPU fallback behavior.
 #' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
 #' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
 #' @param camera Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.
+#' @param times Default `NULL`. Finite output scene times in seconds, including
+#'   nonmonotonic or repeated times. NULL preserves legacy timing. start_frame and
+#'   end_frame select positions in this sequence; filenames use output indices.
+#' @param fps Default `30`. Frame rate used to timestamp camera-motion rows as
+#'   (index - 1) / fps when no explicit time column is present.
+#' @param animation_motion_blur Default `c("full", "placement")`. With explicit
+#'   time and animated models, "full" evaluates the complete scene, including
+#'   skin and morph deformation, at one shared shutter time per image sample.
+#'   Existing geometry and BVH topology are reused with tight bounds refits.
+#'   The total ray budget remains `samples`; increase it for smoother blur.
+#'   Adaptive stopping is disabled for these exposures, and denoising uses
+#'   accumulated temporal features. "placement" freezes internal model poses at
+#'   frame time while retaining outer placement and other scene motion blur.
+#'   Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+#'   channels retain frame-frozen internal poses and report this when requested.
+#' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   Nonzero intervals integrate motion using `animation_motion_blur`.
+#'   Zero-width intervals sample time plus the given offset.
+#'   With times, NULL freezes each requested scene time. Explicit legacy shutter
+#'   controls conflict with times. Moving perspective, orthographic, and panoramic
+#'   cameras sample authored keys within the exposure; projection changes are
+#'   cuts at the next key. Moving physical cameras support exact rigid exposure with
+#'   constant aperture and focus. Varying physical optics require zero-width
+#'   snapshots. Equal nonzero offsets sample optics at time plus that offset.
+#'   Geometry is compiled once for the output sequence.
+#'   Physical lens cameras use unit exposure weighting with explicit times;
+#'   offsets select poses and ISO controls brightness. Legacy weighting is unchanged.
+#' @param return_frames Default `NULL`. Whether to retain rendered image arrays
+#'   in the returned list. `NULL` retains frames only when they are not written
+#'   to files. `TRUE` retains every image, including saved frames; memory then
+#'   grows with frame count. `FALSE` releases every image after output.
+#' @param async_write Default `TRUE`. Process and save file-output frames in one
+#'   persistent background R worker while the next frame renders. At most one
+#'   image is pending; all pending output finishes before this function returns.
+#'   Worker errors and warnings are reported in the main R session. In-memory
+#'   outputs and `return_frames = TRUE` use synchronous processing. Set `FALSE`
+#'   to process all frames synchronously.
+#' @param screen_text Default `NULL`. Screen-space labels created with `screen_text()`,
+#'   or a list of label specifications. World anchors are projected for each frame;
+#'   text size stays fixed in pixels and the specified occlusion mode is preserved.
+#' @param screen_line Default `NULL`. Screen-space lines created with `screen_line()`,
+#'   or a list of line specifications. Endpoints are projected for each frame;
+#'   line width stays fixed in pixels and the specified occlusion mode is preserved.
+#' @return Invisibly, a list of frame results. Retained frames are image arrays;
+#'   otherwise each result is its filename, or `NA_character_` if no file was
+#'   written. Per-frame diagnostic attributes are preserved on either result.
+#'   Multiple cameras return a named list of camera results.
 #' @export
 #' @importFrom  grDevices col2rgb
-#' @return Raytraced plot to current device, or an image saved to a file.
+#'
+#' @details
+#' With \code{integrator_type = "metal"}, frames in the same native animation batch
+#' reuse the uploaded scene, acceleration structures, and GPU work buffers.
+#' Skin and morph pose changes update the affected mesh buffers and refit
+#' existing acceleration structures without rebuilding their topology.
+#' Camera parameters update for each frame while image accumulation and sampling
+#' restart independently. Resources are released when the batch finishes or is
+#' interrupted. Changes that require new camera storage or replace a sky model
+#' rebuild the Metal session. Separate \code{render_scene()} calls and camera batches
+#' with incompatible metadata do not share a session.
+#'
+#' Returned Metal frames carry a \code{wavefront} attribute with \code{scene_reused},
+#' \code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
+#' Reused frames with unchanged geometry report zero scene-upload time. Pose
+#' changes report their update/refit time in \code{upload_seconds}; sampling time
+#' remains per frame. \code{acceleration_builds} and \code{acceleration_refits}
+#' count device acceleration operations in that frame's preparation, and
+#' \code{geometry_bytes_updated} counts updated packed triangle bytes, excluding
+#' auxiliary bounds and shading metadata. Repeated identical poses need no refit.
+#'
+#' Motion generated with \code{generate_camera_motion(closed = TRUE)} wraps its
+#' last shutter interval toward the first frame when camera motion blur is enabled.
+#' Open paths keep a stationary shutter endpoint at their final frame.
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' #Create and animate flying through a scene on a simulated roller coaster
@@ -232,9 +308,61 @@ render_animation = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
-  camera = NULL
+  integrator_type = "auto",
+  camera = NULL,
+  times = NULL,
+  fps = 30,
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement"),
+  return_frames = NULL,
+  async_write = TRUE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
+  saved_call = saved_scene_render_call(
+    scene,
+    names(as.list(match.call())[-1L]),
+    environment(),
+    render_animation
+  )
+  if (!is.null(saved_call)) {
+    return(do.call(render_animation, saved_call))
+  }
+  animation_motion_blur = match.arg(animation_motion_blur)
+  if (
+    !is.logical(async_write) || length(async_write) != 1L || is.na(async_write)
+  ) {
+    stop("async_write must be a single TRUE/FALSE value.", call. = FALSE)
+  }
+  if (
+    !is.null(return_frames) &&
+      (!is.logical(return_frames) ||
+        length(return_frames) != 1L ||
+        is.na(return_frames))
+  ) {
+    stop(
+      "return_frames must be NULL or a single TRUE/FALSE value.",
+      call. = FALSE
+    )
+  }
+  if (
+    !is.null(times) &&
+      (!is.numeric(times) || !length(times) || any(!is.finite(times)))
+  ) {
+    stop(
+      "times must be a nonempty finite numeric vector of scene seconds.",
+      call. = FALSE
+    )
+  }
+  timing = resolve_scene_timing(
+    if (is.null(times)) NULL else times[1],
+    NULL,
+    fps,
+    shutter_offsets,
+    !missing(shutteropen) ||
+      !missing(shutterclose) ||
+      !missing(camera_motion_blur)
+  )
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
@@ -334,6 +462,15 @@ render_animation = function(
     )
   }
 
+  if (!is.null(times)) {
+    cameras = lapply(
+      cameras,
+      camera_at_scene_times,
+      times = times,
+      fps = fps,
+      shutter_offsets = timing$offsets
+    )
+  }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
       cameras,
@@ -345,6 +482,11 @@ render_animation = function(
     )
     if (camera_batch_metadata_compatible(cameras)) {
       return(render_camera_batch(
+        animation_motion_blur = animation_motion_blur,
+        return_frames = return_frames,
+        async_write = async_write,
+        screen_text = screen_text,
+        screen_line = screen_line,
         scene = scene,
         cameras = cameras,
         mode = "animation",
@@ -390,6 +532,11 @@ render_animation = function(
     )
     output = lapply(cameras, function(cam) {
       render_animation_camera(
+        animation_motion_blur = animation_motion_blur,
+        return_frames = return_frames,
+        async_write = async_write,
+        screen_text = screen_text,
+        screen_line = screen_line,
         scene = scene,
         camera = cam,
         start_frame = start_frame,
@@ -434,6 +581,11 @@ render_animation = function(
   }
 
   render_animation_camera(
+    animation_motion_blur = animation_motion_blur,
+    return_frames = return_frames,
+    async_write = async_write,
+    screen_text = screen_text,
+    screen_line = screen_line,
     scene = scene,
     camera = cameras[[1]],
     start_frame = start_frame,
@@ -512,8 +664,13 @@ render_animation_camera = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
-  force_no_write = FALSE
+  integrator_type = "auto",
+  force_no_write = FALSE,
+  animation_motion_blur = "full",
+  return_frames = TRUE,
+  async_write = FALSE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   if (!inherits(camera, "ray_camera")) {
     stop("camera must inherit from class 'ray_camera'")
@@ -561,6 +718,7 @@ render_animation_camera = function(
     shutterclose = camera$shutterclose,
     camera_motion_blur = camera$camera_motion_blur,
     shutter_speed = ray_camera_shutter_speed(camera),
+    camera_flip_x = isTRUE(camera$camera_flip_x),
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -578,12 +736,25 @@ render_animation_camera = function(
     keep_colors = keep_colors,
     deferred_render = FALSE,
     integrator_type = integrator_type,
-    denoise = denoise
+    denoise = denoise,
+    scene_time = camera$scene_time
   )
 
   camera_info = scene_list$camera_info
+  camera_info$shutter_offsets = camera$shutter_offsets
+  camera_info$authored_cameras = list(camera$authored_motion)
+  camera_motion$track_index = rep(1L, nrow(camera_motion))
   scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
+  render_info = prepare_animation_screen_overlays(
+    scene_list$render_info,
+    screen_text,
+    screen_line
+  )
+  render_info$animation_motion_blur = animation_motion_blur
+  render_info["return_frames"] = list(return_frames)
+  render_info$benchmark_timing = isTRUE(getOption(
+    "rayrender.benchmark_timing"
+  ))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
@@ -621,6 +792,14 @@ render_animation_camera = function(
   }
 
   #Animate Scene
+  attr(camera_motion, "shutter_endpoints") = camera_shutter_endpoints(
+    camera_motion
+  )
+  writer = animation_output_writer(
+    async_write && write_file && !isTRUE(return_frames),
+    verbose
+  )
+  on.exit(writer$close(), add = TRUE)
   rgb_mat = render_animation_rcpp(
     scene = processed_scene,
     camera_info = camera_info,
@@ -630,13 +809,13 @@ render_animation_camera = function(
     start_frame = frame_range[1] - 1,
     end_frame = frame_range[length(frame_range)],
     filenames = filename_str,
-    post_process_frame = post_process_frame,
+    post_process_frame = writer$process,
     tonemap = tonemap,
     bloom = bloom,
     write_image = write_file,
     transparent_background = transparent_background
   )
-  invisible(rgb_mat)
+  invisible(writer$finish(rgb_mat))
 }
 
 #' @keywords internal
@@ -678,8 +857,13 @@ render_camera_batch = function(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
-  force_no_write = FALSE
+  integrator_type = "auto",
+  force_no_write = FALSE,
+  animation_motion_blur = "full",
+  return_frames = TRUE,
+  async_write = FALSE,
+  screen_text = NULL,
+  screen_line = NULL
 ) {
   if (!camera_batch_metadata_compatible(cameras)) {
     stop(
@@ -734,6 +918,7 @@ render_camera_batch = function(
     shutterclose = camera$shutterclose,
     camera_motion_blur = camera$camera_motion_blur,
     shutter_speed = ray_camera_shutter_speed(camera),
+    camera_flip_x = isTRUE(camera$camera_flip_x),
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -751,12 +936,27 @@ render_camera_batch = function(
     keep_colors = keep_colors,
     deferred_render = FALSE,
     integrator_type = integrator_type,
-    denoise = denoise
+    denoise = denoise,
+    scene_time = camera$scene_time
   )
 
   camera_info = scene_list$camera_info
+  camera_info$shutter_offsets = camera$shutter_offsets
+  camera_info$authored_cameras = lapply(cameras, function(cam) {
+    cam$authored_motion
+  })
+  camera_motion$track_index = plan$camera_index
   scene_info = scene_list$scene_info
-  render_info = scene_list$render_info
+  render_info = prepare_animation_screen_overlays(
+    scene_list$render_info,
+    screen_text,
+    screen_line
+  )
+  render_info$animation_motion_blur = animation_motion_blur
+  render_info["return_frames"] = list(return_frames)
+  render_info$benchmark_timing = isTRUE(getOption(
+    "rayrender.benchmark_timing"
+  ))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
   render_info$frame_seed = sample.int(.Machine$integer.max, 1)
@@ -797,6 +997,15 @@ render_camera_batch = function(
     }
   }
 
+  if (!is.na(camera$camera_description_file) && all(camera_motion$fov == -1)) {
+    plan$shutter_endpoints[, "fov"] = -1
+  }
+  attr(camera_motion, "shutter_endpoints") = plan$shutter_endpoints
+  writer = animation_output_writer(
+    async_write && write_file && !isTRUE(return_frames),
+    verbose
+  )
+  on.exit(writer$close(), add = TRUE)
   frame_outputs = render_animation_rcpp(
     scene = processed_scene,
     camera_info = camera_info,
@@ -806,13 +1015,14 @@ render_camera_batch = function(
     start_frame = 0,
     end_frame = nrow(camera_motion),
     filenames = filename_str,
-    post_process_frame = post_process_frame,
+    post_process_frame = writer$process,
     tonemap = tonemap,
     bloom = bloom,
     write_image = write_file,
     transparent_background = transparent_background
   )
 
+  frame_outputs = writer$finish(frame_outputs)
   output = stats::setNames(vector("list", length(cameras)), plan$camera_names)
   for (i in seq_along(cameras)) {
     frame_indices = which(plan$camera_index == i)
@@ -827,4 +1037,203 @@ render_camera_batch = function(
   }
 
   invisible(output)
+}
+
+#' @param render_info Prepared renderer settings.
+#' @param screen_text Screen-space label specifications, or NULL.
+#' @param screen_line Screen-space line specifications, or NULL.
+#' @return Renderer settings with reusable text rasters and line specifications.
+#' @keywords internal
+#' @noRd
+prepare_animation_screen_overlays = function(
+  render_info,
+  screen_text,
+  screen_line
+) {
+  # Native composition handles every occlusion mode, including unoccluded
+  # overlays. This also keeps projection independent of output workers.
+  render_info$screen_text_preview = prepare_screen_text_preview(screen_text)
+  render_info$screen_line_preview = prepare_screen_line_preview(screen_line)
+  render_info
+}
+
+#' @param enabled Whether file output should run in a background R session.
+#' @param verbose Whether to report completion of outstanding image output.
+#' @return Callbacks for processing frames, collecting results, and closing the worker.
+#' @keywords internal
+#' @noRd
+animation_output_writer = function(enabled, verbose) {
+  if (!enabled) {
+    return(list(
+      process = post_process_frame,
+      finish = identity,
+      close = function() invisible(NULL)
+    ))
+  }
+
+  worker = NULL
+  pending = NULL
+  receipts = list()
+  frame_index = 0L
+
+  # Only one frame may be outstanding. Wait for its receipt before accepting
+  # another image, so neither pixel arrays nor transport files can accumulate.
+  # Conditions are replayed on the main R thread, including warn = 2 behavior.
+  collect = function() {
+    if (is.null(pending)) {
+      return(invisible(NULL))
+    }
+    repeat {
+      worker$poll_process(100)
+      reply = worker$read()
+      if (is.null(reply)) {
+        next
+      }
+      if (!is.null(reply$error)) {
+        stop(
+          "Image output failed for '",
+          pending$filename,
+          "': ",
+          conditionMessage(reply$error),
+          call. = FALSE
+        )
+      }
+      if (reply$code == 200L) {
+        break
+      }
+      if (reply$code >= 500L) {
+        stop(
+          "Image output worker stopped while writing '",
+          pending$filename,
+          "': ",
+          reply$message,
+          call. = FALSE
+        )
+      }
+    }
+    receipt = reply$result
+    receipts[[pending$index]] <<- receipt$output
+    pending <<- NULL
+    for (condition in receipt$conditions) {
+      if (inherits(condition, "warning")) {
+        warning(condition)
+      } else {
+        message(condition)
+      }
+    }
+    invisible(NULL)
+  }
+
+  process = function(
+    rgb_mat,
+    debug_channel,
+    filename,
+    tonemap,
+    bloom = TRUE,
+    transparent_background = FALSE,
+    write_file = TRUE,
+    plot_scene = TRUE
+  ) {
+    collect()
+    frame_index <<- frame_index + 1L
+    args = list(
+      rgb_mat = rgb_mat,
+      debug_channel = debug_channel,
+      filename = filename,
+      tonemap = tonemap,
+      bloom = bloom,
+      transparent_background = transparent_background,
+      write_file = write_file,
+      plot_scene = plot_scene
+    )
+    # Mixed camera batches can contain in-memory outputs. These stay on the
+    # main thread and preserve the ordinary array and graphics-device behavior.
+    if (!write_file) {
+      return(do.call(post_process_frame, args))
+    }
+
+    if (is.null(worker)) {
+      worker <<- callr::r_session$new(
+        options = callr::r_session_options(
+          libpath = .libPaths(),
+          user_profile = FALSE,
+          system_profile = FALSE,
+          supervise = TRUE
+        )
+      )
+      worker$run(
+        function(directory) {
+          setwd(directory)
+          options(cores = 1L, warn = 0)
+          loadNamespace("rayrender")
+          NULL
+        },
+        list(directory = getwd())
+      )
+    }
+    # Pass pixels and output settings only, never the scene or a renderer closure.
+    # callr removes the argument/result transport files after each receipt.
+    args$plot_scene = FALSE
+    worker$call(
+      animation_output_job,
+      list(args = args),
+      package = "rayrender"
+    )
+    pending <<- list(index = frame_index, filename = filename)
+    structure(filename, rayrender_async_pending = TRUE)
+  }
+
+  finish = function(frames) {
+    collect()
+    # Native timing/backend attributes belong to the renderer. Merge only the
+    # completed output's diagnostics into its existing lightweight result.
+    for (index in seq_along(receipts)) {
+      if (is.null(receipts[[index]])) {
+        next
+      }
+      for (name in names(attributes(receipts[[index]]))) {
+        attr(frames[[index]], name) = attr(receipts[[index]], name)
+      }
+    }
+    if (!is.null(worker)) {
+      print_time(verbose, "Finished image output")
+    }
+    frames
+  }
+
+  close = function() {
+    if (!is.null(worker)) {
+      # Also runs during errors and interrupts. No background process should
+      # survive an abandoned render; do not mask the original error on cleanup.
+      try(worker$close(grace = 0), silent = TRUE)
+      try(worker$cleanup(), silent = TRUE)
+      worker <<- NULL
+    }
+    invisible(NULL)
+  }
+  list(process = process, finish = finish, close = close)
+}
+
+#' @param args Named arguments for post_process_frame().
+#' @return A filename with output diagnostics and captured warning/message conditions.
+#' @keywords internal
+#' @noRd
+animation_output_job = function(args) {
+  conditions = list()
+  image = withCallingHandlers(
+    do.call(post_process_frame, args),
+    warning = function(condition) {
+      conditions[[length(conditions) + 1L]] <<- condition
+      invokeRestart("muffleWarning")
+    },
+    message = function(condition) {
+      conditions[[length(conditions) + 1L]] <<- condition
+      invokeRestart("muffleMessage")
+    }
+  )
+  output = args$filename
+  for (name in c("path_warnings", "path_warning_log", "volume_statistics")) {
+    if (!is.null(attr(image, name))) attr(output, name) = attr(image, name)
+  }
+  list(output = output, conditions = conditions)
 }

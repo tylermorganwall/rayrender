@@ -8,7 +8,7 @@
 #include <optional>
 #include <vector>
 
-class texture;
+struct WFMedium;
 struct PhaseFunctionSample {
   vec3f wi;
   Float p, pdf;
@@ -88,15 +88,22 @@ public:
   Float g, emission_scale, temperature_scale, temperature_offset;
   bool has_temperature = false, has_rgb_emission = false;
   bool haze = true;
+  bool subsurface = false, subsurface_guided = false;
+  bool subsurface_accelerated = false;
+  bool subsurface_diffusion = false;
+  std::array<double, 3> diffusion_color{}, diffusion_radius{};
+  bool subsurface_guide_eligible = false;
+  double subsurface_ior = 1, subsurface_roughness = 0;
+  std::array<double, 3> subsurface_pole{};
   double density_scale = 1, haze_density_threshold = 0;
   Float temperature = 0;
   Transform medium_to_object;
-  std::shared_ptr<texture> legacy_albedo;
 
 protected:
-  MediumProperties Properties(Float density, const point3f &le, const point3f &p) const;
+  MediumProperties Properties(Float density, const point3f &le) const;
 };
 class GridMedium final : public Medium {
+  friend class WavefrontSceneCompiler;
 public:
   explicit GridMedium(const Rcpp::List &description);
   size_t MemoryBytes() const override;
@@ -109,7 +116,7 @@ public:
   point3f Emission(const point3f &p) const override;
 
 private:
-  SampledField density, temperatures, emissions;
+  SampledField density, temperatures, emissions, emission_scales;
   MajorantGrid majorants;
   point3f Normalize(const point3f &p) const;
 };
@@ -125,6 +132,8 @@ public:
   DensityIndexRay DensityRay(const Ray &r) const override;
   std::array<double, 8> DensityCorners(const std::array<double, 3> &) const override;
   point3f Emission(const point3f &p) const override;
+  // Export sparse scalar lattices without expanding their bounding boxes.
+  void ExportWavefront(WFMedium &, std::vector<float> &) const;
 
 private:
   struct Data;

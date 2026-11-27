@@ -21,6 +21,41 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// animation_evaluate_track
+Rcpp::NumericMatrix animation_evaluate_track(Rcpp::List track, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_animation_evaluate_track(SEXP trackSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type track(trackSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_evaluate_track(track, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_evaluate_transform
+Rcpp::List animation_evaluate_transform(Rcpp::List track, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_animation_evaluate_transform(SEXP trackSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::List >::type track(trackSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_evaluate_transform(track, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_euler_quaternions
+Rcpp::NumericMatrix animation_euler_quaternions(Rcpp::NumericMatrix angles);
+RcppExport SEXP _rayrender_animation_euler_quaternions(SEXP anglesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type angles(anglesSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_euler_quaternions(angles));
+    return rcpp_result_gen;
+END_RCPP
+}
 // query_prague_atmosphere
 Rcpp::List query_prague_atmosphere(Rcpp::List description, Rcpp::NumericMatrix positions, Rcpp::NumericMatrix directions, Rcpp::NumericVector distances, bool sample, bool build_sampler);
 RcppExport SEXP _rayrender_query_prague_atmosphere(SEXP descriptionSEXP, SEXP positionsSEXP, SEXP directionsSEXP, SEXP distancesSEXP, SEXP sampleSEXP, SEXP build_samplerSEXP) {
@@ -34,6 +69,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type sample(sampleSEXP);
     Rcpp::traits::input_parameter< bool >::type build_sampler(build_samplerSEXP);
     rcpp_result_gen = Rcpp::wrap(query_prague_atmosphere(description, positions, directions, distances, sample, build_sampler));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cpp_has_metal
+bool cpp_has_metal();
+RcppExport SEXP _rayrender_cpp_has_metal() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(cpp_has_metal());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -107,6 +152,67 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// read_gltf_native
+Rcpp::List read_gltf_native(std::string filename);
+RcppExport SEXP _rayrender_read_gltf_native(SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    rcpp_result_gen = Rcpp::wrap(read_gltf_native(filename));
+    return rcpp_result_gen;
+END_RCPP
+}
+// model_pose_native
+Rcpp::List model_pose_native(SEXP asset, Rcpp::List player, Rcpp::List placement, Rcpp::NumericVector times);
+RcppExport SEXP _rayrender_model_pose_native(SEXP assetSEXP, SEXP playerSEXP, SEXP placementSEXP, SEXP timesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type asset(assetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type player(playerSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type placement(placementSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type times(timesSEXP);
+    rcpp_result_gen = Rcpp::wrap(model_pose_native(asset, player, placement, times));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_model_surface
+Rcpp::List animation_model_surface(SEXP asset, Rcpp::List player, double time);
+RcppExport SEXP _rayrender_animation_model_surface(SEXP assetSEXP, SEXP playerSEXP, SEXP timeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type asset(assetSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type player(playerSEXP);
+    Rcpp::traits::input_parameter< double >::type time(timeSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_model_surface(asset, player, time));
+    return rcpp_result_gen;
+END_RCPP
+}
+// animation_model_clips
+Rcpp::DataFrame animation_model_clips(SEXP input);
+RcppExport SEXP _rayrender_animation_model_clips(SEXP inputSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type input(inputSEXP);
+    rcpp_result_gen = Rcpp::wrap(animation_model_clips(input));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pbrt_lex_cpp
+Rcpp::List pbrt_lex_cpp(std::string filename, std::string source);
+RcppExport SEXP _rayrender_pbrt_lex_cpp(SEXP filenameSEXP, SEXP sourceSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< std::string >::type source(sourceSEXP);
+    rcpp_result_gen = Rcpp::wrap(pbrt_lex_cpp(filename, source));
+    return rcpp_result_gen;
+END_RCPP
+}
 // render_animation_rcpp
 List render_animation_rcpp(List scene, List camera_info, List scene_info, List render_info, List camera_movement, int start_frame, int end_frame, CharacterVector filenames, Function post_process_frame, CharacterVector tonemap, bool bloom, bool write_image, bool transparent_background);
 RcppExport SEXP _rayrender_render_animation_rcpp(SEXP sceneSEXP, SEXP camera_infoSEXP, SEXP scene_infoSEXP, SEXP render_infoSEXP, SEXP camera_movementSEXP, SEXP start_frameSEXP, SEXP end_frameSEXP, SEXP filenamesSEXP, SEXP post_process_frameSEXP, SEXP tonemapSEXP, SEXP bloomSEXP, SEXP write_imageSEXP, SEXP transparent_backgroundSEXP) {
@@ -144,12 +250,49 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// usd_inspect_native
+SEXP usd_inspect_native(SEXP filename, SEXP selectors, SEXP properties);
+RcppExport SEXP _rayrender_usd_inspect_native(SEXP filenameSEXP, SEXP selectorsSEXP, SEXP propertiesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< SEXP >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type selectors(selectorsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type properties(propertiesSEXP);
+    rcpp_result_gen = Rcpp::wrap(usd_inspect_native(filename, selectors, properties));
+    return rcpp_result_gen;
+END_RCPP
+}
+// usd_author_native
+void usd_author_native(SEXP document, SEXP filename);
+RcppExport SEXP _rayrender_usd_author_native(SEXP documentSEXP, SEXP filenameSEXP) {
+BEGIN_RCPP
+    Rcpp::traits::input_parameter< SEXP >::type document(documentSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type filename(filenameSEXP);
+    usd_author_native(document, filename);
+    return R_NilValue;
+END_RCPP
+}
+// usd_instance_quaternions_native
+Rcpp::NumericMatrix usd_instance_quaternions_native(Rcpp::NumericMatrix angles, Rcpp::IntegerVector order);
+RcppExport SEXP _rayrender_usd_instance_quaternions_native(SEXP anglesSEXP, SEXP orderSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type angles(anglesSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type order(orderSEXP);
+    rcpp_result_gen = Rcpp::wrap(usd_instance_quaternions_native(angles, order));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 RcppExport SEXP run_testthat_tests(SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_PrintClassSizes", (DL_FUNC) &_rayrender_PrintClassSizes, 0},
+    {"_rayrender_animation_evaluate_track", (DL_FUNC) &_rayrender_animation_evaluate_track, 2},
+    {"_rayrender_animation_evaluate_transform", (DL_FUNC) &_rayrender_animation_evaluate_transform, 2},
+    {"_rayrender_animation_euler_quaternions", (DL_FUNC) &_rayrender_animation_euler_quaternions, 1},
     {"_rayrender_query_prague_atmosphere", (DL_FUNC) &_rayrender_query_prague_atmosphere, 6},
+    {"_rayrender_cpp_has_metal", (DL_FUNC) &_rayrender_cpp_has_metal, 0},
     {"_rayrender_has_gui_capability", (DL_FUNC) &_rayrender_has_gui_capability, 0},
     {"_rayrender_cppdef_HAS_OIDN", (DL_FUNC) &_rayrender_cppdef_HAS_OIDN, 0},
     {"_rayrender_cppdef_HAS_NEON", (DL_FUNC) &_rayrender_cppdef_HAS_NEON, 0},
@@ -157,8 +300,16 @@ static const R_CallMethodDef CallEntries[] = {
     {"_rayrender_cppdef_HAS_SSE2", (DL_FUNC) &_rayrender_cppdef_HAS_SSE2, 0},
     {"_rayrender_cppdef_HAS_SSE3", (DL_FUNC) &_rayrender_cppdef_HAS_SSE3, 0},
     {"_rayrender_cppdef_HAS_SSE41", (DL_FUNC) &_rayrender_cppdef_HAS_SSE41, 0},
+    {"_rayrender_read_gltf_native", (DL_FUNC) &_rayrender_read_gltf_native, 1},
+    {"_rayrender_model_pose_native", (DL_FUNC) &_rayrender_model_pose_native, 4},
+    {"_rayrender_animation_model_surface", (DL_FUNC) &_rayrender_animation_model_surface, 3},
+    {"_rayrender_animation_model_clips", (DL_FUNC) &_rayrender_animation_model_clips, 1},
+    {"_rayrender_pbrt_lex_cpp", (DL_FUNC) &_rayrender_pbrt_lex_cpp, 2},
     {"_rayrender_render_animation_rcpp", (DL_FUNC) &_rayrender_render_animation_rcpp, 13},
     {"_rayrender_render_scene_rcpp", (DL_FUNC) &_rayrender_render_scene_rcpp, 4},
+    {"_rayrender_usd_inspect_native", (DL_FUNC) &_rayrender_usd_inspect_native, 3},
+    {"_rayrender_usd_author_native", (DL_FUNC) &_rayrender_usd_author_native, 2},
+    {"_rayrender_usd_instance_quaternions_native", (DL_FUNC) &_rayrender_usd_instance_quaternions_native, 2},
     {"run_testthat_tests", (DL_FUNC) &run_testthat_tests, 1},
     {NULL, NULL, 0}
 };

@@ -7,10 +7,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
+#define STB_IMAGE_IMPLEMENTATION
+#include <stbimageheaders/stb_image.h>
 
 #include <ImathBox.h>
 #include <ImfArray.h>
@@ -40,6 +38,48 @@ TextureCache::~TextureCache() {
   }
 }
 
+std::shared_ptr<const DecodedTextureImage> TextureCache::LookupGraphImage(
+    const std::string& file, const std::string& encoding) {
+  // Pixel storage is shared independently of UV mapping and graph ownership.
+  // Include encoding in the key: the same PNG can be color or linear data.
+  if (encoding != "linear" && encoding != "srgb") Rcpp::stop("Invalid texture encoding.");
+  const std::string key = fs::weakly_canonical(file).string() + "|" + encoding;
+  auto found = graphImages.find(key);
+  if (found != graphImages.end()) return found->second;
+  auto image = std::make_shared<DecodedTextureImage>();
+  std::string extension = fs::path(file).extension().string();
+  std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+  int channels;
+  const bool hdr = extension == ".exr" || extension == ".hdr";
+  const Float* floats = hdr ? LookupFloat(file, image->width, image->height, channels, 3) : nullptr;
+  const unsigned char* bytes = hdr ? nullptr : LookupChar(file, image->width, image->height, channels, 3, "texture_graph");
+  int stride = hdr ? channels : 3;
+  image->pixels.resize(size_t(image->width) * image->height);
+  for (size_t i = 0; i < image->pixels.size(); ++i) for (int c = 0; c < 3; ++c) {
+    Float v = hdr ? floats[i * stride + c] : bytes[i * stride + c] / 255.f;
+    if (!std::isfinite(v)) Rcpp::stop("Nonfinite image texture value.");
+    image->pixels[i][c] = encoding == "srgb" ?
+      (v <= .04045f ? v / 12.92f : std::pow((v + .055f) / 1.055f, 2.4f)) : v;
+  }
+  graphImages.emplace(key, image);
+  return image;
+}
+
+std::shared_ptr<const HeightImage> TextureCache::LookupHeight(const std::string& filename, int& nx, int& ny, int& nn) {
+  // Height is data, not display color. PBRT imports have already decoded the
+  // source encoding to linear EXR. Keep floating-point precision and signed
+  // heights; ordinary byte bump images retain their linear-data interpretation.
+  const auto image = LookupGraphImage(filename, "linear");
+  nx = image->width; ny = image->height; nn = 1;
+  const std::string key = fs::weakly_canonical(filename).string();
+  auto found = heightImages.find(key);
+  if (found != heightImages.end()) return found->second;
+  std::vector<Float> values(image->pixels.size());
+  for (size_t i = 0; i < values.size(); ++i)
+    values[i] = (image->pixels[i][0] + image->pixels[i][1] + image->pixels[i][2]) / 3;
+  return heightImages.emplace(key, std::make_shared<HeightImage>(nx,ny,std::move(values))).first->second;
+}
+
 Float* TextureCache::LookupFloat(const std::string& filename,
                                  int& nx, int& ny, int& nn, int desired_channels) {
   std::string standardizedFilename = StandardizeFilename(filename);
@@ -64,8 +104,12 @@ Float* TextureCache::LookupFloat(const std::string& filename,
 }
 
 unsigned char * TextureCache::LookupChar(const std::string& filename,
-                                         int& nx, int& ny, int& nn, int desired_channels) {
-  std::string standardizedFilename = StandardizeFilename(filename);
+                                         int& nx, int& ny, int& nn, int desired_channels,
+                                         const std::string& variant) {
+  // Channel layouts cannot share a buffer. Keep OpenPBR's raw data separate
+  // from legacy roughness buffers, which are remapped in place by the loader.
+  std::string standardizedFilename = StandardizeFilename(filename) + "|char:" +
+                                    std::to_string(desired_channels) + "|" + variant;
   auto it = hashTableChar.find(standardizedFilename);
   if (it != hashTableChar.end()) {
     auto itDim = hashTableDims.find(standardizedFilename);

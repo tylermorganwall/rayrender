@@ -1,7 +1,62 @@
 #include "../core/camera.h"
+#include "camera_track.h"
 #include "low_discrepancy.h"
 #include "../math/quaternion.h"
 #include <cmath>
+
+Ray RayCamera::get_ray_differential(Float s, Float t, point3f lens, Float time, Float ds, Float dt,
+                                    Float scale) {
+  Ray ray = get_ray(s, t, lens, time);
+  const Ray x = get_ray(s + ds, t, lens, time), y = get_ray(s, t + dt, lens, time);
+  ray.rx_origin = x.o;
+  ray.ry_origin = y.o;
+  ray.rx_direction = x.d;
+  ray.ry_direction = y.d;
+  ray.has_differentials = true;
+  ray.ScaleDifferentials(scale);
+  for (int i = 0; i < 3; ++i) {
+    if (!std::isfinite(ray.rx_origin[i]) || !std::isfinite(ray.ry_origin[i]) ||
+        !std::isfinite(ray.rx_direction[i]) || !std::isfinite(ray.ry_direction[i]))
+      ray.has_differentials = false;
+  }
+  return ray;
+}
+
+Float RayCamera::GenerateRayDifferential(const CameraSample &sample, Ray *ray, Float ds, Float dt,
+                                         Float scale) const {
+  const Float weight = GenerateRay(sample, ray);
+  ray->has_differentials = false;
+  if (!(weight > 0))
+    return weight;
+  // Use the same lens/time samples so derivatives describe the pixel footprint,
+  // not changes in aperture or shutter position. Retry the opposite offset if
+  // an adjacent realistic-camera ray is blocked by the lens system.
+  Ray adjacent[2];
+  for (int axis = 0; axis < 2; ++axis) {
+    bool valid = false;
+    for (Float sign : {Float(1), Float(-1)}) {
+      auto shifted = sample;
+      shifted.pFilm.e[axis] += sign * (axis == 0 ? ds : dt);
+      if (!(GenerateRay(shifted, &adjacent[axis]) > 0))
+        continue;
+      if (sign < 0) {
+        adjacent[axis].o = ray->o + (ray->o - adjacent[axis].o);
+        adjacent[axis].d = ray->d + (ray->d - adjacent[axis].d);
+      }
+      valid = true;
+      break;
+    }
+    if (!valid)
+      return weight;
+  }
+  ray->rx_origin = adjacent[0].o;
+  ray->ry_origin = adjacent[1].o;
+  ray->rx_direction = adjacent[0].d;
+  ray->ry_direction = adjacent[1].d;
+  ray->has_differentials = true;
+  ray->ScaleDifferentials(scale);
+  return weight;
+}
 
 #ifdef NOT_CRAN
 #include <testthat.h>
@@ -115,6 +170,7 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
   time0 = t0;
   time1 = t1;
   aspect = _aspect;
+  scene_camera_aspect = _aspect;
   fov = vfov;
   start_fov = fov;
   lens_radius = aperture / 2;
@@ -138,7 +194,14 @@ camera::camera(point3f lookfrom, point3f _lookat, vec3f _vup, Float vfov,
 }
 
 Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  if (scene_camera_track) {
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u1));
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, aspect, iso, camera_flip_x);
+  }
+  s = film_x(s);
   Float motion_time = sample_motion_time(u1);
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -162,11 +225,11 @@ Ray camera::get_ray(Float s, Float t, point3f u3, Float u1) {
     return(Ray(frame.origin + offset,
                motion_lower_left + s * motion_horizontal +
                  t * motion_vertical - frame.origin - offset,
-               motion_time));
+               ray_time));
   }
   point3f rd = lens_radius * u3;
   vec3f offset = u * rd.xyz.x + v * rd.xyz.y;
-  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, motion_time));
+  return(Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset, ray_time));
 }
 
 void camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -352,7 +415,14 @@ ortho_camera::ortho_camera(point3f lookfrom, point3f _lookat, vec3f _vup,
 }
 
 Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
+  if (scene_camera_track) {
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u));
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
+  }
+  s = film_x(s);
   Float motion_time = sample_motion_time(u);
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
@@ -372,9 +442,9 @@ Ray ortho_camera::get_ray(Float s, Float t, point3f u3, Float u) {
     return(Ray(motion_lower_left + s * motion_horizontal +
                  t * motion_vertical,
                frame.forward,
-               motion_time));
+               ray_time));
   }
-  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, motion_time));
+  return(Ray(lower_left_corner + s * horizontal + t * vertical, w, ray_time));
 }
 
 void ortho_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -539,7 +609,14 @@ environment_camera::environment_camera(point3f lookfrom, point3f lookat, vec3f _
 
 
 Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
+  if (scene_camera_track) {
+    Float ray_time = sample_ray_time(time0, time1, sample_motion_time(u1));
+    double scene_time = scene_camera_time->epoch + (double(ray_time)-double(scene_camera_time->ray_anchor));
+    return scene_camera_track->SampleRay(scene_time, ray_time, s, t, u3, scene_camera_aspect, iso, camera_flip_x);
+  }
+  s = film_x(s);
   Float motion_time = sample_motion_time(u1);
+  const Float ray_time = sample_ray_time(time0, time1, motion_time);
   point3f ray_origin = origin;
   onb ray_uvw = uvw;
   if(camera_motion_blur && camera_motion_blur_has_range) {
@@ -563,7 +640,7 @@ Ray environment_camera::get_ray(Float s, Float t, point3f u3, Float u1) {
             std::cos(theta),
             std::sin(theta) * std::cos(phi));
   dir = ray_uvw.local_to_world(dir);
-  return(Ray(ray_origin, dir, motion_time));
+  return(Ray(ray_origin, dir, ray_time));
 }
 
 void environment_camera::update_position(vec3f delta, bool update_uvw, bool update_focal) {
@@ -747,8 +824,9 @@ RealisticCamera::RealisticCamera(const AnimatedTransform &CameraToWorld,
     simpleWeighting(simpleWeighting), cam_width(cam_width), cam_height(cam_height),
     diag(film_size * camera_scale), iso(_iso), camera_up(_camera_up),
     start_camera_up(_camera_up), CamTransform(_CamTransform),
-    focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
+    authored_aperture(apertureDiameter), focusDistance(_focusDistance), start_focusDistance(_focusDistance), start_lookat(_lookat),
     lookat(_lookat) {
+  lens_source = std::make_shared<const LensSource>(LensSource{lensData, film_size, camera_scale});
   CameraMovement = Transform(Matrix4x4(1,0,0,0,
                                        0,1,0,0,
                                        0,0,1,0,
@@ -1189,8 +1267,9 @@ Bounds2f  RealisticCamera::GetPhysicalExtent() const {
 
 Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const {
   Float motion_time = sample_motion_time(sample.time);
+  const Float ray_time = sample_ray_time(shutterOpen, shutterClose, motion_time);
   // Find point on film, _pFilm_, corresponding to _sample.pFilm_
-  point2f pFilm2 = GetPhysicalExtent().Lerp(sample.pFilm);
+  point2f pFilm2 = GetPhysicalExtent().Lerp(point2f(film_x(sample.pFilm.xy.x), sample.pFilm.xy.y));
   point3f pFilm(-pFilm2.xy.x, pFilm2.xy.y, 0);
 
   // Trace ray from _pFilm_ through lens system
@@ -1198,12 +1277,20 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   point3f pRear = SampleExitPupil(point2f(pFilm.xyz.x, pFilm.xyz.y), sample.pLens,
                                   &exitPupilBoundsArea);
 
-  Ray rFilm(pFilm, unit_vector(pRear - pFilm), motion_time);
+  Ray rFilm(pFilm, unit_vector(pRear - pFilm), ray_time);
   if (!TraceLensesFromFilm(rFilm, ray2)) {
     return 0;
   }
-  // Finish initialization of _RealisticCamera_ ray
-  if(camera_motion_blur && camera_motion_blur_has_range) {
+  // Exact authored pose at this ray's scene time; lens data stay immutable.
+  if (scene_camera_track && scene_camera_time) {
+    const double scene_time = scene_camera_time->epoch +
+      (double(ray_time)-double(scene_camera_time->ray_anchor));
+    const auto key = scene_camera_track->At(scene_time);
+    const auto &v = key.values;
+    Transform pose = Inverse(LookAt(point3f(v[0],v[1],v[2]),
+                                    point3f(v[3],v[4],v[5]),vec3f(v[11],v[12],v[13])));
+    *ray2 = pose(*ray2);
+  } else if(camera_motion_blur && camera_motion_blur_has_range) {
     CameraMotionFrame frame = InterpolateCameraMotionFrame(
       motion_time,
       camera_motion_start_origin,
@@ -1230,10 +1317,50 @@ Float RealisticCamera::GenerateRay(const CameraSample &sample, Ray *ray2) const 
   if (simpleWeighting) {
     return cos4Theta * exitPupilBoundsArea / exitPupilBounds[0].Area();
   } else {
-    return (shutterClose - shutterOpen) *
+    // Explicit scene-time offsets choose poses, not photographic brightness.
+    // Keep legacy exposure weighting, while a frozen explicit snapshot retains
+    // the unit exposure used by other projections (with ISO still applied).
+    Float exposure = scene_camera_time ? Float(1) : shutterClose-shutterOpen;
+    return exposure *
       (cos4Theta * exitPupilBoundsArea) / (LensRearZ() * LensRearZ());
   }
   return(0);
+}
+
+std::unique_ptr<RealisticCamera> RealisticCamera::WithSceneOptics(Float aperture, Float focus) const {
+  if (!std::isfinite(aperture) || aperture < 0 || !std::isfinite(focus) || focus <= 0)
+    throw std::runtime_error("Physical-camera aperture must be finite and nonnegative, and focus positive.");
+  if (scene_optics_prepared && aperture == authored_aperture && focus == focusDistance)
+    return std::make_unique<RealisticCamera>(*this);
+  if (!lens_source || lens_source->elements.empty())
+    throw std::runtime_error("Physical-camera snapshot requires an initialized lens descriptor.");
+  // Reuse the established focusing and pupil-bound algorithms. Preparing all
+  // 64 pupil bins is expensive, but no interpolated optics or stale bounds are
+  // substituted. This runs only at a completed-batch handoff, never per ray.
+  auto elements = lens_source->elements;
+  auto next = std::make_unique<RealisticCamera>(CameraToWorld, shutterOpen, shutterClose,
+    aperture, cam_width, cam_height, focus, simpleWeighting, elements,
+    lens_source->film_size, lens_source->camera_scale, iso, camera_up, CamTransform, lookat);
+  next->lens_source = lens_source;
+  next->scene_camera_time = scene_camera_time;
+  next->scene_camera_aspect = scene_camera_aspect;
+  next->set_camera_flip_x(get_camera_flip_x());
+  next->set_shutter_speed(1);
+  return next;
+}
+
+void RealisticCamera::SetScenePose(point3f position, point3f target, vec3f up) {
+  // Compute and validate before publishing any mutable navigation state.
+  Transform pose = Inverse(LookAt(position,target,up));
+  for (int row = 0; row < 4; ++row)
+    for (int col = 0; col < 4; ++col)
+      if (!std::isfinite(pose.GetMatrix().m[row][col]) ||
+          !std::isfinite(pose.GetInverseMatrix().m[row][col]))
+        throw std::runtime_error("Physical-camera pose exceeds renderer precision.");
+  CamTransform = pose;
+  lookat = target;
+  camera_up = up;
+  camera_motion_blur = false;
 }
 
 point3f RealisticCamera::get_origin() {
@@ -1267,6 +1394,9 @@ void RealisticCamera::update_focal_distance(Float delta_focus) {
   if(new_fd > 0) {
     focusDistance = focusDistance + delta_focus;
     elementInterfaces.back().thickness = new_fd;
+    // Legacy navigation changes lens spacing without rebuilding pupil bounds.
+    // Authored playback must prepare exact optics even if this focus is saved.
+    scene_optics_prepared = false;
   } else {
     Rprintf("Cannot focus to distance %.2f; Maintaining focal distance of %.2f\n",focusDistance + delta_focus,focusDistance);
   }
@@ -1364,6 +1494,7 @@ void RealisticCamera::reset() {
   camera_up = start_camera_up;
   camera_motion_blur_has_range = false;
   elementInterfaces.back().thickness =  FocusThickLens(focusDistance);
+  scene_optics_prepared = false;
 }
 
 
@@ -1398,6 +1529,22 @@ void ConfigureQuarterMotion(RayCamera& cam) {
 }
 
 context("Camera shutter speed temporal mapping") {
+  test_that("absolute ray times preserve normalized camera motion fractions") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                       60.f, 1.f, 0.f, 10.f, 2.f, 6.f, 1.f);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                              2.f, 2.f, 2.f, 6.f, 1.f);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0),
+                                   2.f, 6.f, 1.f);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      Ray ray = cam->get_ray(.5f, .5f, point3f(0), 1.f);
+      expect_true(ray.time() == Approx(3.f));
+      expect_true(ray.origin()[0] == Approx(2.5f));
+    }
+  }
   test_that("shutter speed maps unit samples to motion time") {
     ExpectRayTimeForShutterSpeed(1.f, 1.f, 1.f);
     ExpectRayTimeForShutterSpeed(2.f, 1.f, 0.5f);
@@ -1459,7 +1606,7 @@ context("Camera shutter speed temporal mapping") {
       437.065f, 3.22f, 1.717f, 20.f,
       -39.73f, 0.f, 1.f, 20.f
     };
-    RealisticCamera cam(cam_tr, 0.f, 1.f, 10.f, 10.f, 10.f, 10.f,
+    RealisticCamera cam(cam_tr, 2.f, 6.f, 10.f, 10.f, 10.f, 10.f,
                         false, lens_data, 0.022f, 1.f, 1.f,
                         vec3f(0, 1, 0), cam_transform, point3f(0, 0, 0));
     ConfigureQuarterMotion(cam);
@@ -1477,9 +1624,289 @@ context("Camera shutter speed temporal mapping") {
                                                  &full_ray);
 
     expect_true(full_weight > 0.f);
-    expect_true(ray.time() == Approx(0.25f));
+    expect_true(ray.time() == Approx(3.f));
     expect_true(ray.origin().xyz.x == Approx(2.5f).epsilon(0.01));
     expect_true(same_exposure_weight == Approx(full_weight));
+    Ray footprint;
+    const CameraSample sample(point2f(.5,.5),point2f(.5,.5),1);
+    const Float differential_weight=cam.GenerateRayDifferential(sample,&footprint,.001,.001);
+    expect_true(differential_weight==Approx(same_exposure_weight));
+    expect_true(footprint.has_differentials);
+    Ray adjacent;
+    cam.GenerateRay(CameraSample(point2f(.501, .5), sample.pLens, sample.time), &adjacent);
+    expect_true((footprint.rx_direction - adjacent.d).squared_length() < 1e-10);
+    expect_true((footprint.rx_origin - adjacent.o).squared_length() < 1e-10);
+    Ray expected, flipped;
+    Float expected_weight = cam.GenerateRay(
+      CameraSample(point2f(.6, .5), sample.pLens, sample.time), &expected);
+    cam.set_camera_flip_x(true);
+    Float flipped_weight = cam.GenerateRayDifferential(
+      CameraSample(point2f(.4, .5), sample.pLens, sample.time), &flipped, .001, .001);
+    expect_true(expected_weight > 0);
+    expect_true(flipped_weight == Approx(expected_weight));
+    expect_true((flipped.o - expected.o).squared_length() < 1e-10);
+    expect_true((flipped.d - expected.d).squared_length() < 1e-10);
+    expect_true(flipped.has_differentials);
+
+    cam.set_camera_motion_blur(false);
+    cam.set_camera_flip_x(false);
+    auto clock = std::make_shared<SceneTimeContext>();
+    clock->epoch=2; clock->ray_anchor=7;
+    cam.scene_camera_time=clock;
+    cam.SetShutterInterval(7,7.4);
+    animation::CameraKey a{2,{0,0,-10, 0,0,0, 10,-1,10, 4,4, 0,1,0}};
+    auto b=a,c=a;
+    b.time=2.2; b.values[0]=4; b.values[3]=4;
+    c.time=2.4;
+    auto track=std::make_shared<const animation::CameraTrack>(std::vector<animation::CameraKey>{a,b,c});
+    auto reference=cam;
+    cam.scene_camera_track=track;
+    for (Float fraction : {1.f,0.f,.5f,.25f,.75f,.5f}) {
+      Ray actual, expected;
+      CameraSample sample(point2f(.5,.5),point2f(.5,.5),fraction);
+      Float weight=cam.GenerateRay(sample,&actual);
+      double time=2+(double(actual.time())-7);
+      double x=time<=2.2 ? 20*(time-2) : 20*(2.4-time);
+      reference.SetScenePose(point3f(x,0,-10),point3f(x,0,0),vec3f(0,1,0));
+      Float expected_weight=reference.GenerateRay(sample,&expected);
+      expect_true(weight > 0);
+      expect_true(weight == expected_weight);
+      expect_true((actual.o-expected.o).length()<1e-5);
+      expect_true((actual.d-expected.d).length()<1e-6);
+      expect_true(actual.time()==expected.time());
+      auto replacement=track->MakeCamera(track->At(time),1,1,7,7.4,false,&reference);
+      expect_true(std::abs(replacement->get_origin()[0]-x)<1e-5);
+    }
+    // Invalid replacement never modifies the initialized lens or live pose.
+    auto invalid=a; invalid.values[3]=invalid.values[0]; invalid.values[5]=invalid.values[2];
+    point3f before=cam.get_origin();
+    expect_error(track->Apply(invalid,cam));
+    expect_true((cam.get_origin()-before).length()==0);
   }
 }
 #endif
+
+#ifdef NOT_CRAN
+context("Camera ray differentials") {
+  test_that("navigation follows reflected film while preserving the camera frame") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, 0, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      const vec3f original_u = cam->get_u();
+      const vec3f original_w = cam->get_w();
+      const vec3f original_v = cam->get_v();
+      for (bool reflected : {false, true}) {
+        cam->reset();
+        cam->set_camera_flip_x(reflected);
+        expect_true((cam->get_u() - original_u).squared_length() < 1e-10);
+        expect_true((cam->get_w() - original_w).squared_length() < 1e-10);
+        expect_true((cam->get_v() - original_v).squared_length() < 1e-10);
+        // The displayed raster reverses film x. Moving left must point along
+        // the differential from screen center toward its left neighbor.
+        Ray center = cam->get_ray(.5, .5, point3f(0), .5);
+        Ray left = cam->get_ray(.501, .5, point3f(0), .5);
+        vec3f screen_left = (left.o + left.d) - (center.o + center.d);
+        expect_true(dot(screen_left, cam->get_navigation_u()) > 0);
+        for (bool orbit : {false, true}) {
+          cam->reset();
+          point3f origin = cam->get_origin();
+          cam->update_position(cam->get_navigation_u(), orbit);
+          expect_true(dot(cam->get_origin() - origin, screen_left) > 0);
+        }
+        cam->reset();
+        cam->rotate_navigation_up(5);
+        // The same roll key tilts up toward the same displayed side under
+        // either handedness. Forward movement and pitch need no reflection.
+        expect_true(dot(cam->get_v(), screen_left) < 0);
+      }
+    }
+  }
+  test_that("film reflection preserves camera pose and reverses the x differential") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam : {static_cast<RayCamera *>(&perspective),
+                          static_cast<RayCamera *>(&orthographic),
+                          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      const point3f lens(.2, .3, 0);
+      Ray expected = cam->get_ray_differential(.6, .5, lens, .7, -.001, .002);
+      cam->set_camera_flip_x(true);
+      Ray flipped = cam->get_ray_differential(.4, .5, lens, .7, .001, .002);
+      expect_true((flipped.o - expected.o).squared_length() < 1e-10);
+      expect_true((flipped.d - expected.d).squared_length() < 1e-10);
+      expect_true((flipped.rx_origin - expected.rx_origin).squared_length() < 1e-10);
+      expect_true((flipped.rx_direction - expected.rx_direction).squared_length() < 1e-10);
+      expect_true((flipped.ry_direction - expected.ry_direction).squared_length() < 1e-10);
+      expect_true(flipped.time() == expected.time());
+    }
+  }
+  test_that("[all pinhole camera projections use shared lens and time samples]") {
+    camera perspective(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 60, 1, .1, 10, 0, 1, 1);
+    ortho_camera orthographic(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 2, 2, 0, 1, 1);
+    environment_camera environment(point3f(0, 0, -10), point3f(0), vec3f(0, 1, 0), 0, 1, 1);
+    for (RayCamera *cam :
+         {static_cast<RayCamera *>(&perspective), static_cast<RayCamera *>(&orthographic),
+          static_cast<RayCamera *>(&environment)}) {
+      ConfigureQuarterMotion(*cam);
+      const point3f lens(.2, .3, 0);
+      Ray ray = cam->get_ray_differential(.4, .6, lens, .7, .001, .002, .5);
+      Ray center = cam->get_ray(.4, .6, lens, .7);
+      Ray x = cam->get_ray(.401, .6, lens, .7), y = cam->get_ray(.4, .602, lens, .7);
+      expect_true(ray.has_differentials);
+      expect_true(ray.time() == center.time());
+      expect_true((ray.o - center.o).squared_length() == 0);
+      expect_true((ray.d - center.d).squared_length() == 0);
+      expect_true((ray.rx_direction - (center.d + (x.d - center.d) * Float(.5))).squared_length() <
+                  1e-10);
+      expect_true((ray.ry_origin - (center.o + (y.o - center.o) * Float(.5))).squared_length() <
+                  1e-10);
+    }
+  }
+}
+#endif
+
+#include "wavefront.h"
+
+// Export current camera state at a sample boundary, including interactive focus
+// changes. Lens coefficients and pupil bounds stay in a small separate buffer;
+// static cameras retain the original compact primary-ray calculation on device.
+std::pair<Float, Float> RayCamera::ShutterInterval() const {
+  if (auto c = dynamic_cast<const camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const ortho_camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const environment_camera *>(this)) return {c->time0, c->time1};
+  if (auto c = dynamic_cast<const RealisticCamera *>(this)) return c->GetShutterInterval();
+  return {0, 0};
+}
+
+void ExportWavefrontCamera(RayCamera &source, WFCamera &out, std::vector<WFVector> &data) {
+  auto pack = [](const auto &v) { return WFVector{float(v[0]), float(v[1]), float(v[2]), 0}; };
+  out.flip_x = source.get_camera_flip_x();
+  out.shutter_unit = source.scene_camera_time ? source.scene_camera_time->shutter_unit : -1;
+  out.shutter.z = std::isinf(source.get_shutter_speed()) ? 0 : 1 / source.get_shutter_speed();
+  auto motion = [&](const auto &cam) {
+    out.moving = cam.camera_motion_blur && cam.camera_motion_blur_has_range;
+    if (!out.moving)
+      return;
+    for (int i = 0; i < 2; ++i) {
+      auto frame = InterpolateCameraMotionFrame(
+          Float(i), cam.camera_motion_start_origin, cam.camera_motion_start_lookat,
+          cam.camera_motion_start_up, cam.camera_motion_start_focal, cam.camera_motion_end_origin,
+          cam.camera_motion_end_lookat, cam.camera_motion_end_up, cam.camera_motion_end_focal);
+      out.motion_origin[i] = pack(frame.origin);
+      out.motion_origin[i].w = frame.focal;
+      Quaternion q(CameraBasisMatrix(frame.right, frame.up, frame.forward));
+      out.motion_rotation[i] = pack(q.v);
+      out.motion_rotation[i].w = q.w;
+    }
+  };
+  data.clear();
+  if (auto *cam = dynamic_cast<camera *>(&source)) {
+    out.orthographic = 0;
+    out.origin = pack(cam->origin);
+    out.lower_left = pack(cam->lower_left_corner);
+    out.horizontal = pack(cam->horizontal);
+    out.vertical = pack(cam->vertical);
+    out.right = pack(cam->u);
+    out.right.w = cam->lens_radius;
+    out.up = pack(cam->v);
+    out.forward = pack(cam->w);
+    out.lens = {float(cam->half_width), float(cam->half_height), 0, 0};
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<ortho_camera *>(&source)) {
+    out.orthographic = 1;
+    out.origin = pack(cam->origin);
+    out.lower_left = pack(cam->lower_left_corner);
+    out.horizontal = pack(cam->horizontal);
+    out.vertical = pack(cam->vertical);
+    out.right = pack(cam->u);
+    out.up = pack(cam->v);
+    out.forward = pack(cam->w);
+    out.lens = {float(cam->cam_width / 2), float(cam->cam_height / 2), 0, 0};
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<environment_camera *>(&source)) {
+    out.orthographic = 2;
+    out.origin = pack(cam->origin);
+    out.right = pack(cam->get_u());
+    out.up = pack(cam->get_v());
+    out.forward = pack(cam->get_w());
+    out.shutter.x = cam->time0;
+    out.shutter.y = cam->time1;
+    motion(*cam);
+  } else if (auto *cam = dynamic_cast<RealisticCamera *>(&source)) {
+    out.orthographic = 3;
+    out.origin = pack(cam->get_origin());
+    out.right = pack(cam->CamTransform(vec3f(1, 0, 0)));
+    out.up = pack(cam->CamTransform(vec3f(0, 1, 0)));
+    out.forward = pack(cam->CamTransform(vec3f(0, 0, 1)));
+    auto extent = cam->GetPhysicalExtent();
+    out.lens = {float(extent.pMax[0]), float(extent.pMax[1]), float(cam->diag),
+                float(cam->LensRearZ())};
+    out.shutter.x = cam->shutterOpen;
+    out.shutter.y = cam->shutterClose;
+    out.elements = cam->elementInterfaces.size();
+    out.pupils = cam->exitPupilBounds.size();
+    out.simple_weighting = cam->simpleWeighting;
+    out.exposure_weight = cam->scene_camera_time ? 1 : cam->shutterClose-cam->shutterOpen;
+    for (const auto &e : cam->elementInterfaces)
+      data.push_back(
+          {float(e.curvatureRadius), float(e.thickness), float(e.eta), float(e.apertureRadius)});
+    for (const auto &b : cam->exitPupilBounds)
+      data.push_back({float(b.pMin[0]), float(b.pMin[1]), float(b.pMax[0]), float(b.pMax[1])});
+    motion(*cam);
+  } else
+    throw std::runtime_error("Unsupported Metal camera class");
+  out.track_count = out.track_offset = 0;
+  if (source.scene_camera_time && source.scene_camera_time->shutter_unit >= 0)
+    out.shutter.x = out.shutter.y = source.scene_camera_time->ray_anchor;
+  if (source.scene_camera_track) {
+    source.scene_camera_track->ValidateExposure(out.shutter.x,out.shutter.y);
+    // Five aligned vectors per camera row. Key times are relative to the exact
+    // double frame epoch; the ray keeps its existing scene-relative time.
+    const auto &clock = *source.scene_camera_time;
+    const auto &keys = source.scene_camera_track->Keys();
+    if (keys.size() > UINT32_MAX / 5 || data.size() > UINT32_MAX - keys.size()*5)
+      throw std::runtime_error("Camera track exceeds Metal buffer indexing limits.");
+    out.track_count = uint32_t(keys.size());
+    out.track_offset = uint32_t(data.size());
+    out.shutter.w = clock.ray_anchor;
+    out.moving = 2;
+    if (out.orthographic != 3) out.lens.z = source.scene_camera_aspect;
+    Float previous = -std::numeric_limits<Float>::infinity();
+    for (size_t index = 0; index < keys.size(); ++index) {
+      const auto &key = keys[index];
+      const double relative = key.time-clock.epoch;
+      const Float packed = Float(relative);
+      if (!std::isfinite(packed) || std::abs(double(packed)-relative) > 1e-5 || packed <= previous)
+        throw std::runtime_error("Camera key times exceed Metal float precision.");
+      auto kind = [](double fov) { return fov == 0 ? 0 : fov == 360 ? 2 : 1; };
+      if (index && kind(key.values[7]) != kind(keys[index-1].values[7])) {
+        double open = double(out.shutter.x)-double(clock.ray_anchor);
+        double close = double(out.shutter.y)-double(clock.ray_anchor);
+        Float device_open = out.shutter.x-out.shutter.w, device_close = out.shutter.y-out.shutter.w;
+        // Outside this exposure, rounding a cut is harmless only if both
+        // backends still select the same side. Inside it, require exact time.
+        bool interior = (relative >= open && relative <= close) ||
+                        (packed >= device_open && packed <= device_close);
+        if ((interior && double(packed) != relative) ||
+            ((open >= relative) != (device_open >= packed)) ||
+            ((close >= relative) != (device_close >= packed)))
+          throw std::runtime_error("Projection cut exceeds exact Metal time precision.");
+      }
+      previous = packed;
+      const auto &v = key.values;
+      data.push_back({float(packed),0,0,0});
+      data.push_back({float(v[0]),float(v[1]),float(v[2]),float(v[6])});
+      data.push_back({float(v[3]),float(v[4]),float(v[5]),float(v[8])});
+      data.push_back({float(v[11]),float(v[12]),float(v[13]),float(v[7])});
+      data.push_back({float(v[9]),float(v[10]),0,0});
+    }
+  }
+}

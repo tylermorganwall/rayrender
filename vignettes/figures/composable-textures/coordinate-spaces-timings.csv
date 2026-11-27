@@ -1,0 +1,3 @@
+"group","example","samples","cores","elapsed"
+"coordinate-spaces","Object: gradient repeats in each instance",64,6,6.593
+"coordinate-spaces","World: one gradient spans both instances",64,6,6.628

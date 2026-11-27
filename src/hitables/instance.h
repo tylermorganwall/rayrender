@@ -11,7 +11,6 @@ public:
   instance() {}
   instance(hitable* scene, 
            Transform* ObjectToWorld, 
-           Transform* WorldToObject,
            hitable_list* imp_list, uint64_t boundary_id_offset = 0);
   
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
@@ -27,7 +26,7 @@ public:
     return original_scene->ShadowType();
   }
   bool OpaqueHit(const Ray& r, Float t_min, Float t_max, random_gen& rng) const {
-    return original_scene->OpaqueHit((*WorldToObject)(r), t_min, t_max, rng);
+    return original_scene->OpaqueHit(Inverse(*ObjectToWorld)(r), t_min, t_max, rng);
   }
   virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
   
@@ -47,6 +46,10 @@ public:
   LightPlacementMap light_placements;
 
 private:
+  // ObjectToWorld already stores its inverse matrix. Instances leave the
+  // inherited WorldToObject pointer null and use that stored inverse instead
+  // of allocating another cached Transform for every placement. Inverse()
+  // swaps the stored matrices; it does not perform another matrix inversion.
   // Remap child boundary IDs into this placement's reserved range in its
   // parent scene. Zero means the first range, or an instance without boundaries.
   const uint64_t boundary_id_offset = 0;

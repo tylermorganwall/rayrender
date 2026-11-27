@@ -9,6 +9,11 @@
 #include "RProgress.h"
 #include "../core/adaptivesampler.h"
 #include "../core/camera.h"
+#include "preview_navigation.h"
+#include "preview_navigation_input.h"
+#include "timeline.h"
+#include "camera_track.h"
+#include <chrono>
 #include "../hitables/hitable.h"
 
 class VolumeScene;
@@ -49,6 +54,7 @@ struct PreviewLineOverlay {
 
 #ifdef RAY_HAS_X11
 #include <X11/Xlib.h>
+#include <X11/XKBlib.h>
 // X11 macros also collide with RcppThread and Catch in builds without OIDN.
 #undef Status
 #undef None
@@ -76,7 +82,7 @@ class PreviewDisplay {
 public: 
 #ifdef HAS_OIDN
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                 bool _deferred_render, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                  RayOidnDenoiser* _denoiser,
                  RayMatrix* _oidn_albedo_output,
@@ -84,14 +90,38 @@ public:
                  bool denoise, bool _auto_exposure);
 #else
   PreviewDisplay(unsigned int _width, unsigned int _height, bool preview, bool _interactive,
-                 bool _deferred_render, Float initial_lookat_distance, RayCamera* _cam,
+                 bool _deferred_render, RayCamera* _cam,
                  Transform* _EnvObjectToWorld, Transform* _EnvWorldToObject,
                  bool _auto_exposure);
 #endif
   ~PreviewDisplay();
   void SetCamera(RayCamera* _cam);
+  void ConfigureInteractiveCameras(std::unique_ptr<RayCamera>* owner, vec2f ortho_dimensions);
+  void AdjustCameraFov(Float delta);
+  void ResetCamera();
+  void ConfigureTimeline(double begin, double end, double initial, double fps,
+                         std::shared_ptr<SceneTimeContext> scene_time,
+                         Float shutter_open, Float shutter_close);
+  void TimelineAction(animation::TimelineCommand command) noexcept;
+  bool TimelinePointer(int x, int y, bool press, bool release) noexcept;
+  void TimelineFocusLost() noexcept;
+  bool UpdateTimeline() noexcept;
+  bool ConsumeTimelineChange();
+  void ConfigureTimelineCamera(std::shared_ptr<const animation::CameraTrack> track,
+                               std::unique_ptr<RayCamera>* owner = nullptr,
+                               const RealisticCamera *optics = nullptr);
+  void TimelineCameraEdited();
+  std::string TimelineStatusText() const;
+  std::unique_ptr<animation::TimelineController> timeline;
   // Coordinates match the renderer's film samples, independent of window API.
   bool PickCameraTarget(Float u, Float v, bool update_focus, hitable* world);
+  void InitializeNavigation(hitable* world);
+  void QueueNavigationTap(char key, bool shifted);
+  void ReleaseNavigationKey(char key);
+  void ResetNavigationInput();
+  bool PollNavigation();
+  PreviewNavigation navigation;
+  aabb navigation_bounds; // Finite scene bounds, before adding environment proxies.
   std::shared_ptr<VolumeScene> volume_scene;
   void SetSnapshotFilename(const std::string& filename);
   void SavePreviewSnapshot() const;
@@ -137,6 +167,7 @@ public:
   bool DeleteCurrentKeyframe(Float* env_rotation);
   void PrintCameraInfo(Float env_rotation) const;
   std::string PreviewStatusText(Float env_rotation) const;
+  unsigned int StatusBarHeight() const;
   void SetKeyframeMotionArgs(const Rcpp::List& args);
   bool ToggleKeyframeMotionClosed();
   bool KeyframeMotionClosed() const { return keyframe_motion_closed; }
@@ -201,18 +232,12 @@ public:
   std::unique_ptr<char[]> data;
   Window w;
   XEvent e;
-  unsigned int width;
-  unsigned int height;
   Float speed;
   bool orbit;
-  Float base_step;
   int s;
 #endif
-#if !defined(RAY_HAS_X11) && !defined(RAY_WINDOWS)
-  // Shared buffer/snapshot code also needs dimensions without a window.
   unsigned int width;
   unsigned int height;
-#endif
 #ifdef RAY_WINDOWS
   HWND hwnd;
   HINSTANCE hInstance;
@@ -225,6 +250,7 @@ public:
   Float preview_exposure_scale;
   Float preview_exposure_adjustment;
   bool write_fast_output;
+  std::string integrator_name = "CPU (NEE)";
   bool interactive;
   bool deferred_render;
   bool render_requested;
@@ -263,6 +289,26 @@ public:
   std::vector<PreviewLineOverlay> line_overlays;
 
 private:
+  bool SelectCameraProjection(Float fov);
+  std::unique_ptr<RayCamera>* interactive_camera_owner = nullptr;
+  std::unique_ptr<RayCamera> alternate_camera;
+  vec2f interactive_ortho_dimensions;
+  Float initial_camera_fov = 0;
+  std::shared_ptr<SceneTimeContext> timeline_scene_time;
+  double timeline_epoch = 0;
+  Float timeline_open = 0, timeline_close = 0;
+  bool timeline_changed = false, timeline_fast = false, timeline_restore_fast = false;
+  std::string timeline_error;
+  std::shared_ptr<const animation::CameraTrack> timeline_camera, timeline_camera_restore;
+  // Optional owner permits a projection cut to replace the renderer's camera
+  // at the completed-batch handoff. It outlives this display.
+  std::unique_ptr<RayCamera>* timeline_camera_owner = nullptr;
+  // Retain authored optics when manual navigation temporarily changes focus.
+  std::unique_ptr<const RealisticCamera> timeline_physical_camera, timeline_physical_restore;
+  bool timeline_camera_override = false, timeline_saved_camera = false;
+  bool navigation_initialized = false;
+  PreviewNavigationInput navigation_input;
+  std::chrono::steady_clock::time_point navigation_clock = std::chrono::steady_clock::now();
   bool UpdateAtmosphere(bool haze, bool query_altitude);
   std::function<void(bool, bool)> update_atmosphere;
   bool atmosphere_haze = false, atmosphere_query_altitude = false;

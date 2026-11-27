@@ -1,3 +1,8 @@
+#include "core/wavefront.h"
+#include "animation_rcpp.h"
+#include "core/wavefront_report.h"
+#include "core/animation_report.h"
+#include <chrono>
 #include "volumes/boundary.h"
 #define RCPP_USE_UNWIND_PROTECT
 
@@ -36,6 +41,8 @@ using namespace Rcpp;
 
 
 using namespace std;
+#include "screen_overlays.h"
+using namespace rayrender_screen;
 
 namespace {
 
@@ -80,6 +87,7 @@ std::unique_ptr<RayCamera> make_animation_camera(
     Float camera_scale,
     Float iso,
     Float shutter_speed,
+    bool camera_flip_x,
     TransformCache& transformCache) {
   std::unique_ptr<RayCamera> cam;
   if(fov < 0) {
@@ -117,6 +125,7 @@ std::unique_ptr<RayCamera> make_animation_camera(
                                                 shutteropen, shutterclose, iso));
   }
   cam->set_shutter_speed(shutter_speed);
+  cam->set_camera_flip_x(camera_flip_x);
   return cam;
 }
 
@@ -194,19 +203,42 @@ void set_animation_camera_motion_blur(
     const NumericVector& cam_upx,
     const NumericVector& cam_upy,
     const NumericVector& cam_upz,
-    const NumericVector& cam_focal) {
+    const NumericVector& cam_focal,
+    const NumericMatrix& shutter_endpoints) {
   point3f start_origin(cam_x(frame), cam_y(frame), cam_z(frame));
   point3f start_lookat(cam_dx(frame), cam_dy(frame), cam_dz(frame));
   vec3f start_up(cam_upx(frame), cam_upy(frame), cam_upz(frame));
   point3f end_origin(cam_x(end_frame), cam_y(end_frame), cam_z(end_frame));
   point3f end_lookat(cam_dx(end_frame), cam_dy(end_frame), cam_dz(end_frame));
   vec3f end_up(cam_upx(end_frame), cam_upy(end_frame), cam_upz(end_frame));
+  Float end_focal = cam_focal(end_frame);
+  if(shutter_endpoints.nrow() > 0) {
+    // R resolves neighbors on each complete camera path before frame selection.
+    // This includes loop wraparound, without a duplicate output frame or a
+    // transition into another camera in a batch. Columns match camera_shutter_endpoints().
+    if(animation_camera_type(cam->get_fov()) ==
+       animation_camera_type(shutter_endpoints(frame, 10))) {
+      end_origin = point3f(shutter_endpoints(frame, 0), shutter_endpoints(frame, 1),
+                          shutter_endpoints(frame, 2));
+      end_lookat = point3f(shutter_endpoints(frame, 3), shutter_endpoints(frame, 4),
+                          shutter_endpoints(frame, 5));
+      end_up = vec3f(shutter_endpoints(frame, 6), shutter_endpoints(frame, 7),
+                     shutter_endpoints(frame, 8));
+      end_focal = shutter_endpoints(frame, 9);
+    } else {
+      // Projection cuts cannot interpolate one camera model into another.
+      end_origin = start_origin;
+      end_lookat = start_lookat;
+      end_up = start_up;
+      end_focal = cam_focal(frame);
+    }
+  }
 
   cam->set_camera_motion_blur(enabled);
   cam->set_camera_motion_blur_range(start_origin, start_lookat, start_up,
                                     cam_focal(frame),
                                     end_origin, end_lookat, end_up,
-                                    cam_focal(end_frame));
+                                    end_focal);
 }
 
 } // namespace
@@ -236,6 +268,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   Float min_variance = as<Float>(render_info["min_variance"]);
   int min_adaptive_size = as<int>(render_info["min_adaptive_size"]);
   IntegratorType integrator_type = static_cast<IntegratorType>(as<int>(render_info["integrator_type"]));
+  WavefrontReport wavefront_report;
+  wavefront_report.requested = render_info.containsElementNamed("metal_wavefront") &&
+      as<bool>(render_info["metal_wavefront"]);
 #ifdef HAS_OIDN
   bool denoise = as<bool>(render_info["denoise"]);
 #endif
@@ -255,6 +290,51 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int ns = as<int>(camera_info["ns"]);
   Float shutteropen = as<Float>(camera_info["shutteropen"]);
   Float shutterclose = as<Float>(camera_info["shutterclose"]);
+  const bool explicit_time = camera_info.containsElementNamed("scene_time") && !Rf_isNull(camera_info["scene_time"]);
+  const double time_origin = explicit_time ? as<double>(camera_info["scene_time"]) : 0;
+  NumericVector frame_times = explicit_time ? as<NumericVector>(camera_movement["scene_offset"]) : NumericVector();
+  NumericVector absolute_frame_times = explicit_time ? as<NumericVector>(camera_movement["time"]) : NumericVector();
+  const bool benchmark_timing = render_info.containsElementNamed("benchmark_timing") &&
+    as<bool>(render_info["benchmark_timing"]);
+  auto scene_time = explicit_time ? std::make_shared<SceneTimeContext>() : nullptr;
+  if (scene_time) {
+    scene_time->epoch = time_origin;
+    scene_time->benchmark_timing = benchmark_timing;
+    scene_time->full_pose_blur = render_info.containsElementNamed("animation_motion_blur") &&
+      as<std::string>(render_info["animation_motion_blur"]) == "full";
+    scene_time->frozen_pose_notice = [] {
+      Rcpp::message(Rcpp::CharacterVector(
+        "Internal model poses are sampled at frame time; placement and other scene motion retain motion blur."));
+    };
+  }
+  NumericVector shutter_offsets = explicit_time ? as<NumericVector>(camera_info["shutter_offsets"]) : NumericVector();
+  if (explicit_time && (shutter_offsets.size() != 2 || absolute_frame_times.size() != frame_times.size() ||
+      frame_times.size() != as<NumericVector>(camera_movement["x"]).size()))
+    stop("Explicit animation timing does not match the requested camera frames.");
+  std::vector<std::shared_ptr<const animation::CameraTrack>> camera_tracks;
+  IntegerVector track_indices;
+  if (explicit_time && (shutter_offsets[0] != 0 || shutter_offsets[1] != 0) &&
+      camera_info.containsElementNamed("authored_cameras")) {
+    List authored = camera_info["authored_cameras"];
+    track_indices = as<IntegerVector>(camera_movement["track_index"]);
+    if (track_indices.size() != frame_times.size()) stop("Camera track indices do not match output frames.");
+    for (int i = 0; i < authored.size(); ++i) {
+      std::shared_ptr<const animation::CameraTrack> track;
+      if (!Rf_isNull(authored[i])) {
+        DataFrame motion = as<DataFrame>(authored[i]);
+        if (motion.nrows() > 1) {
+          track = read_camera_track(motion, 1, 0);
+          track->ValidateExposure(shutter_offsets[0],shutter_offsets[1]);
+        }
+      }
+      camera_tracks.push_back(std::move(track));
+    }
+    for (int index : track_indices)
+      if (index < 1 || index > int(camera_tracks.size())) stop("Invalid authored camera track index.");
+  }
+  auto track_for_frame = [&](int frame) -> std::shared_ptr<const animation::CameraTrack> {
+    return camera_tracks.empty() ? nullptr : camera_tracks[track_indices[frame]-1];
+  };
   Float shutter_speed = camera_info.containsElementNamed("shutter_speed") ?
     as<Float>(camera_info["shutter_speed"]) :
     static_cast<Float>(2);
@@ -267,13 +347,16 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   int stratified_y = static_cast<int>(stratified_dim(1));
   vec3f preview_light_direction(light_direction(0), light_direction(1), light_direction(2));
   Float preview_exponent = light_direction.size() > 3 ? static_cast<Float>(light_direction(3)) : 0;
-  int bvh_type = as<int>(camera_info["bvh"]);
+  BVHBuildOptions bvh_type{static_cast<BVHBuildMethod>(as<int>(camera_info["bvh"])),
+                           static_cast<unsigned>(std::max(1, numbercores))};
   NumericMatrix realCameraInfo = as<NumericMatrix>(camera_info["real_camera_info"]);
   Float film_size = as<Float>(camera_info["film_size"]);
   Float camera_scale = as<Float>(camera_info["camera_scale"]);
   Float sample_dist = as<Float>(camera_info["sample_dist"]);
   bool keep_colors = as<bool>(camera_info["keep_colors"]);
   bool preview = as<bool>(camera_info["preview"]);
+  bool camera_flip_x = camera_info.containsElementNamed("camera_flip_x") &&
+    as<bool>(camera_info["camera_flip_x"]);
   bool camera_motion_blur = camera_info.containsElementNamed("camera_motion_blur") ?
     as<bool>(camera_info["camera_motion_blur"]) :
     false;
@@ -307,9 +390,53 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     as<IntegerVector>(camera_movement["camera_motion_blur_group"]) :
     IntegerVector();
   int motion_frame_count = cam_x.size();
+  NumericMatrix shutter_endpoints(0, 11);
+  if(camera_movement.hasAttribute("shutter_endpoints")) {
+    shutter_endpoints = as<NumericMatrix>(camera_movement.attr("shutter_endpoints"));
+    if(shutter_endpoints.nrow() != motion_frame_count || shutter_endpoints.ncol() != 11)
+      stop("Camera shutter endpoints must have one row per camera frame and 11 columns.");
+  }
   int n_frames = end_frame;
   List output_frames(n_frames - start_frame);
   int output_frame_index = 0;
+
+  // File output streams by default: keep only the filename and diagnostics,
+  // not the full image array. A NULL policy is resolved per frame because a
+  // camera batch can mix cameras that write files with cameras that do not.
+  int return_frames_policy = 1;
+  if (render_info.containsElementNamed("return_frames")) {
+    SEXP requested = render_info["return_frames"];
+    return_frames_policy = Rf_isNull(requested) ? -1 : (as<bool>(requested) ? 1 : 0);
+  }
+  auto store_frame_output = [&](RObject frame_output,
+                                const std::string& frame_filename,
+                                bool wrote_image) {
+    // Image output may finish here or be queued on the background worker. Report
+    // the complete frame here instead of timing between sampler setup messages.
+    std::string completion = frame_output.hasAttribute("rayrender_async_pending") ?
+      "Rendered frame (save queued) " : "Completed frame ";
+    print_time(verbose, completion +
+               std::to_string(start_frame + output_frame_index + 1) + "/" +
+               std::to_string(n_frames));
+    bool retain_image = return_frames_policy == 1 ||
+      (return_frames_policy == -1 && !wrote_image);
+    if (retain_image) {
+      output_frames[output_frame_index++] = frame_output;
+      return;
+    }
+
+    CharacterVector result(1);
+    if (wrote_image) result[0] = frame_filename;
+    else result[0] = NA_STRING;
+    // Image dimensions and color-space metadata do not belong on filenames.
+    // Keep the small diagnostics independently of the released pixel storage.
+    for (const char* name : {"path_warnings", "path_warning_log", "volume_statistics",
+                             "wavefront", "animation_timing"}) {
+      if (frame_output.hasAttribute(name)) result.attr(name) = frame_output.attr(name);
+    }
+    output_frames[output_frame_index++] = result;
+  };
+
 
   point3f backgroundhigh(bghigh[0],bghigh[1],bghigh[2]);
   point3f backgroundlow(bglow[0],bglow[1],bglow[2]);
@@ -321,7 +448,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
 
   std::vector<Float* > textures;
   std::vector<unsigned char * > alpha_textures;
-  std::vector<unsigned char * > bump_textures;
+  std::vector<std::shared_ptr<const HeightImage>> bump_textures;
   std::vector<unsigned char * > roughness_textures;
   //Shared material vector
   std::vector<std::shared_ptr<material> >* shared_materials = new std::vector<std::shared_ptr<material> >;
@@ -337,6 +464,8 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   hitable_list imp_sample_objects;
   if(integrator_type == IntegratorType::ShadowRays) {
     imp_sample_objects.volume_scene = std::make_shared<VolumeScene>();
+    if (render_info.containsElementNamed("point_lights"))
+      imp_sample_objects.volume_scene->point_lights = PointLightSet(as<List>(render_info["point_lights"]));
     imp_sample_objects.volume_scene->transparent_background = render_info.containsElementNamed("transparent_background") && as<bool>(render_info["transparent_background"]);
   }
   std::vector<std::shared_ptr<hitable> > instanced_objects;
@@ -346,8 +475,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   std::vector<std::shared_ptr<roughness_texture> > roughness;
   std::vector<int> texture_idx;
 
+  const auto compile_started = benchmark_timing ? std::chrono::steady_clock::now() :
+    std::chrono::steady_clock::time_point{};
   std::shared_ptr<hitable> worldbvh = build_scene(scene, shape, 
-                                                  static_cast<Float>(0), static_cast<Float>(1),
+                                                  shutteropen, shutterclose,
                                                   textures, 
                                                   alpha_textures,
                                                   bump_textures,
@@ -361,7 +492,9 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                                   instanced_objects,
                                                   instance_importance_sampled,
                                                   texture_idx,
-                                                  verbose, rng);
+                                                  verbose, rng, nullptr, time_origin, scene_time);
+  if (scene_time && benchmark_timing) scene_time->compile_seconds =
+    std::chrono::duration<double>(std::chrono::steady_clock::now()-compile_started).count();
   bool has_atmosphere = render_info.containsElementNamed("has_atmosphere") &&
                         Rcpp::as<bool>(render_info["has_atmosphere"]);
   if (has_atmosphere && imp_sample_objects.volume_scene)
@@ -458,8 +591,62 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     pb_frames.set_total(n_frames - start_frame);
   }
 
+  // Rasterize label glyphs once, then project and occlude their immutable
+  // world anchors against each frame's camera and current geometry. Keep the
+  // display-space layers separate from HDR pixels until after tonemapping.
+  const auto text_overlays = parse_preview_text_overlays(render_info);
+  const auto line_overlays = parse_preview_line_overlays(render_info);
+  auto attach_frame_overlays = [&](List image, RayCamera* frame_camera) {
+    // Overlay visibility must not change the renderer's sampling sequence.
+    random_gen overlay_rng(0);
+    if (!text_overlays.empty()) {
+      image.attr("screen_text_overlay") = composite_screen_text_overlay(
+        text_overlays, nx, ny, frame_camera, worldbvh.get(), overlay_rng);
+    }
+    if (!line_overlays.empty()) {
+      image.attr("screen_line_overlay") = composite_screen_line_overlay(
+        line_overlays, nx, ny, frame_camera, worldbvh.get(), overlay_rng);
+    }
+  };
+
+  // All frames in this native batch share the lens descriptor and film setup.
+  // Reuse the most recently initialized optics when only rigid pose/time changes.
+  // Variable-optics snapshots still construct their exact lens configuration.
+  std::unique_ptr<RealisticCamera> physical_optics;
+  auto make_frame_camera = [&](int frame) -> std::unique_ptr<RayCamera> {
+    point3f position(cam_x(frame),cam_y(frame),cam_z(frame));
+    point3f target(cam_dx(frame),cam_dy(frame),cam_dz(frame));
+    vec3f up(cam_upx(frame),cam_upy(frame),cam_upz(frame));
+    if (explicit_time && cam_fov(frame) < 0 && physical_optics &&
+        Float(cam_aperture(frame)) == physical_optics->get_aperture() &&
+        Float(cam_focal(frame)) == physical_optics->get_focal_distance()) {
+      auto result=std::make_unique<RealisticCamera>(*physical_optics);
+      result->SetScenePose(position,target,up);
+      result->SetShutterInterval(shutteropen,shutterclose);
+      return result;
+    }
+    auto result=make_animation_camera(position,target,up,cam_fov(frame),cam_aperture(frame),
+      cam_focal(frame),cam_orthox(frame),cam_orthoy(frame),nx,ny,shutteropen,shutterclose,
+      realCameraInfo,film_size,camera_scale,iso,shutter_speed,camera_flip_x,transformCache);
+    if (explicit_time)
+      if (auto *physical=dynamic_cast<RealisticCamera *>(result.get()))
+        physical_optics=std::make_unique<RealisticCamera>(*physical);
+    return result;
+  };
+
   if(debug_channel != 0) {
+    if (scene_time && scene_time->full_pose_blur && scene_time->has_model_poses &&
+        shutteropen != shutterclose)
+      Rcpp::message(Rcpp::CharacterVector(
+        "Debug channels retain frame-frozen model poses; full-pose shutter integration is available for color renders."));
     for(int i = start_frame; i < n_frames; i++ ) {
+      if (explicit_time) {
+        scene_time->epoch = absolute_frame_times[i];
+        scene_time->ray_anchor = Float(frame_times[i]);
+        shutteropen = Float(frame_times[i] + shutter_offsets[0]);
+        shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+        scene_time->UpdateGeometry(absolute_frame_times[i], Float(frame_times[i]), shutteropen, shutterclose);
+      }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : &rng;
       if(progress_bar) {
@@ -468,18 +655,15 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       point3f lookfrom(cam_x(i),cam_y(i),cam_z(i));
       point3f lookat(cam_dx(i),cam_dy(i),cam_dz(i));
       Float fov = cam_fov(i);
-      Float aperture = cam_aperture(i);
-      Float focus_distance = cam_focal(i);
       Float orthox = cam_orthox(i);
       Float orthoy = cam_orthoy(i);
       vec3f camera_up = vec3f(cam_upx(i),cam_upy(i),cam_upz(i));
 
 
-      cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                  focus_distance, orthox, orthoy, nx, ny,
-                                  shutteropen, shutterclose, realCameraInfo,
-                                  film_size, camera_scale, iso, shutter_speed,
-                                  transformCache);
+      cam = make_frame_camera(i);
+      cam->scene_camera_track = track_for_frame(i);
+      cam->scene_camera_time = scene_time;
+      cam->scene_camera_aspect = Float(nx)/Float(ny);
       bool blur_enabled = frame_camera_motion_blur_enabled(
         i,
         camera_motion_blur,
@@ -497,7 +681,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        cam_x, cam_y, cam_z,
                                        cam_dx, cam_dy, cam_dz,
                                        cam_upx, cam_upy, cam_upz,
-                                       cam_focal);
+                                       cam_focal, shutter_endpoints);
 
       // world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -515,7 +699,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                   min_variance, min_adaptive_size,
                   rgb_output, normalOutput, albedoOutput,
                   progress_bar, sample_method, stratified_x, stratified_y,
-                  verbose, cam.get(), fov,
+                  false, cam.get(), fov,
                   world, imp_sample_objects, 
                   clampval, max_depth, roulette_active,
                   preview_light_direction, preview_exponent, *rng_for_frame, sample_dist, keep_colors, backgroundhigh);
@@ -524,14 +708,21 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["b"] = rgb_output.ConvertRcpp(2));
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, 
                          as<std::string>(tonemap(0)), bloom,
                          transparent_background, write_current_image, plot_scene);
-      output_frames[output_frame_index++] = frame_output;
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
+      store_frame_output(frame_output, frame_filename, write_current_image);
     }
   } else {
+    // The native world above is immutable for this batch. Retain its Metal
+    // resources until all frames finish (or cancellation unwinds this scope).
+    WavefrontContext animation_wavefront;
     bool persistent_preview = preview;
     std::unique_ptr<RayCamera> preview_cam;
     bool preview_cam_initialized = false;
@@ -540,6 +731,13 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
     std::unique_ptr<PreviewDisplay> preview_display;
 
     for(int i = start_frame; i < n_frames; i++ ) {
+      if (explicit_time) {
+        scene_time->epoch = absolute_frame_times[i];
+        scene_time->ray_anchor = Float(frame_times[i]);
+        shutteropen = Float(frame_times[i] + shutter_offsets[0]);
+        shutterclose = Float(frame_times[i] + shutter_offsets[1]);
+        scene_time->UpdateGeometry(absolute_frame_times[i], Float(frame_times[i]), shutteropen, shutterclose);
+      }
       random_gen frame_rng(frame_seed);
       random_gen* rng_for_frame = has_frame_seed ? &frame_rng : nullptr;
       if(progress_bar) {
@@ -559,7 +757,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       RayCamera* frame_cam = nullptr;
       std::unique_ptr<RayCamera> frame_cam_storage;
       if(persistent_preview) {
-        if(preview_cam_initialized &&
+        if(preview_cam_initialized && !explicit_time &&
            current_camera_type == preview_camera_type &&
            can_update_animation_camera(current_camera_type) &&
            same_animation_up(camera_up, preview_camera_up)) {
@@ -567,22 +765,14 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                   lookfrom, lookat, aperture, fov,
                                   focus_distance, orthox, orthoy);
         } else {
-          preview_cam = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                              focus_distance, orthox, orthoy, nx, ny,
-                                              shutteropen, shutterclose, realCameraInfo,
-                                              film_size, camera_scale, iso, shutter_speed,
-                                              transformCache);
+          preview_cam = make_frame_camera(i);
           preview_cam_initialized = true;
           preview_camera_type = current_camera_type;
           preview_camera_up = camera_up;
         }
         frame_cam = preview_cam.get();
       } else {
-        frame_cam_storage = make_animation_camera(lookfrom, lookat, camera_up, fov, aperture,
-                                                 focus_distance, orthox, orthoy, nx, ny,
-                                                 shutteropen, shutterclose, realCameraInfo,
-                                                 film_size, camera_scale, iso, shutter_speed,
-                                                 transformCache);
+        frame_cam_storage = make_frame_camera(i);
         frame_cam = frame_cam_storage.get();
       }
       bool blur_enabled = frame_camera_motion_blur_enabled(
@@ -602,7 +792,10 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        cam_x, cam_y, cam_z,
                                        cam_dx, cam_dy, cam_dz,
                                        cam_upx, cam_upy, cam_upz,
-                                       cam_focal);
+                                       cam_focal, shutter_endpoints);
+      frame_cam->scene_camera_track = track_for_frame(i);
+      frame_cam->scene_camera_time = scene_time;
+      frame_cam->scene_camera_aspect = Float(nx)/Float(ny);
 
       world_radius = world_radius > (lookfrom - world_center).length() ? world_radius : (lookfrom - world_center).length()*2;
 
@@ -632,7 +825,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                             ny,
                             RayOidnQuality::Balanced,
                             false,
-                            false, !has_media);
+                            false, true);
       }
 #endif
 
@@ -641,7 +834,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
       if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-            nx, ny, preview, false, false, 20.0f, frame_cam,
+            nx, ny, preview, false, false, frame_cam,
             background_sphere->ObjectToWorld,
             background_sphere->WorldToObject,
             &oidn_denoiser,
@@ -655,72 +848,80 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                        &oidn_normal_output,
                                        denoise_frame);
         }
+        preview_display->SetTextOverlays(text_overlays);
+        preview_display->SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame);
+                   integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx, ny, preview, false, 
                      false,
-                     20.0f, frame_cam, 
+                     frame_cam,
                      background_sphere->ObjectToWorld,
                      background_sphere->WorldToObject,
                      &oidn_denoiser,
                      &oidn_albedo_output,
                      &oidn_normal_output,
                      denoise_frame, false);
+        d.SetTextOverlays(text_overlays);
+        d.SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
       }
 #else
       if(persistent_preview) {
         if(!preview_display) {
           preview_display = std::unique_ptr<PreviewDisplay>(new PreviewDisplay(
-            nx, ny, preview, false, false, 20.0f, frame_cam,
+            nx, ny, preview, false, false, frame_cam,
             background_sphere->ObjectToWorld,
             background_sphere->WorldToObject,
             false));
         } else {
           preview_display->SetCamera(frame_cam);
         }
+        preview_display->SetTextOverlays(text_overlays);
+        preview_display->SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam, fov,
+                   false, frame_cam, fov,
                    world, imp_sample_objects,
                    clampval, max_depth, roulette_active, *preview_display,
-                   integrator_type, rng_for_frame);
+                   integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = preview_display->terminate;
       } else {
         PreviewDisplay d(nx,ny, preview, false, 
                          false,
-                         20.0f, frame_cam,
+                         frame_cam,
                          background_sphere->ObjectToWorld,
                          background_sphere->WorldToObject,
                          false);
+        d.SetTextOverlays(text_overlays);
+        d.SetLineOverlays(line_overlays);
         pathtracer(numbercores, nx, ny, ns, debug_channel,
                    min_variance, min_adaptive_size,
                    rgb_output, normalOutput, albedoOutput,
                    alpha_output, draw_rgb_output,
                    progress_bar, sample_method, stratified_x, stratified_y,
-                   verbose, frame_cam,  fov,
+                   false, frame_cam,  fov,
                    world, imp_sample_objects,
-                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame);
+                   clampval, max_depth, roulette_active, d, integrator_type, rng_for_frame, &wavefront_report, &animation_wavefront);
         terminated = d.terminate;
       }
 #endif
@@ -736,7 +937,11 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
         oidn_aux_options.sample_method = sample_method;
         oidn_aux_options.stratified_x = stratified_x;
         oidn_aux_options.stratified_y = stratified_y;
-        if(!has_media) render_oidn_aux_features(numbercores,
+        if (has_media || wavefront_report.used || (scene_time && scene_time->shutter_samples > 0)) {
+          std::copy(normalOutput.begin(), normalOutput.end(), oidn_normal_output.begin());
+          std::copy(albedoOutput.begin(), albedoOutput.end(), oidn_albedo_output.begin());
+        }
+        if(!has_media && !wavefront_report.used && !(scene_time && scene_time->shutter_samples > 0)) render_oidn_aux_features(numbercores,
                                  nx,
                                  ny,
                                  frame_cam,
@@ -753,7 +958,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                             ny,
                             RayOidnQuality::High,
                             true,
-                            true, !has_media);
+                            true, true);
         oidn_denoiser.Execute();
         oidn_denoiser.ReportError();
       }
@@ -765,11 +970,18 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
+      attach_frame_overlays(temp, frame_cam);
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
-      output_frames[output_frame_index++] = frame_output;
+      if (wavefront_report.requested)
+        frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
+      store_frame_output(frame_output, frame_filename, write_current_image);
 #else
       List temp = List::create(_["r"] = rgb_output.ConvertRcpp(0), 
                                _["g"] = rgb_output.ConvertRcpp(1), 
@@ -778,11 +990,18 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
                                _["premultiplied"] = integrator_type == IntegratorType::ShadowRays);
       if(imp_sample_objects.volume_scene && imp_sample_objects.volume_scene->collect_statistics)
         temp.attr("volume_statistics")=imp_sample_objects.volume_scene->Statistics();
+      if (imp_sample_objects.volume_scene)
+        temp.attr("path_warnings") = imp_sample_objects.volume_scene->path_diagnostics.Take();
       std::string frame_filename = as<std::string>(filenames(i));
       bool write_current_image = write_image && !frame_filename.empty();
+      attach_frame_overlays(temp, frame_cam);
       RObject frame_output = post_process_frame(temp, debug_channel, frame_filename, as<std::string>(tonemap(0)), bloom,
                        transparent_background, write_current_image, plot_scene);
-      output_frames[output_frame_index++] = frame_output;
+      if (wavefront_report.requested)
+        frame_output.attr("wavefront") = WavefrontReportToR(wavefront_report);
+      if (scene_time && benchmark_timing)
+        frame_output.attr("animation_timing") = AnimationTimingToR(*scene_time);
+      store_frame_output(frame_output, frame_filename, write_current_image);
 #endif
     }
   }
@@ -790,6 +1009,7 @@ List render_animation_rcpp(List scene, List camera_info, List scene_info, List r
   delete shared_materials;
   PutRNGstate();
   print_time(verbose, "Finished rendering" );
+  texCache.ReportPtex(verbose);
   if(output_frame_index < output_frames.size()) {
     List trimmed_output_frames(output_frame_index);
     for(int i = 0; i < output_frame_index; i++) {

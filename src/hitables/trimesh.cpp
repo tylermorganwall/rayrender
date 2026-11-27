@@ -17,7 +17,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                  int subdivision_levels, std::string displacement_texture, Float displacement,
                  bool displacement_vector, TextureCache& texCache, bool recalculate_normals,
                  hitable_list& imp_sample_objects, 
-                 Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, bool verbose,
+                 Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng, bool verbose,
                  Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation) : 
   hitable(ObjectToWorld, WorldToObject, default_material, reverseOrientation) {
   mesh = std::unique_ptr<TriangleMesh>(new TriangleMesh(inputfile, basedir, default_material, 
@@ -26,7 +26,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
                                                         scale, calculate_consistent_normals, texCache,
                                                         ObjectToWorld, WorldToObject, reverseOrientation));
   //Loop subdivision automatically calculates new normals
-  if(subdivision_levels > 1) {
+  if(subdivision_levels > 0) {
     LoopSubdivide(mesh.get(),
                   subdivision_levels,
                   verbose);
@@ -61,6 +61,7 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
 
   // mesh->ValidateMesh();
   size_t n = mesh->nTriangles * 3;
+  triangles.objects.reserve(mesh->nTriangles);
   for(size_t i = 0; i < n; i += 3) {
     triangles.add(std::make_shared<triangle>(mesh.get(), 
                                              &mesh->vertexIndices[i], 
@@ -72,8 +73,12 @@ trimesh::trimesh(std::string inputfile, std::string basedir, Float scale, Float 
     }
   }
   if(n > 0) {
-    tri_mesh_bvh = std::make_shared<BVHAggregate>(triangles.objects, shutteropen, shutterclose, bvh_type, true);
-    triangles.objects.clear();
+    // All triangle geometry/material tables are loaded; these queries only read them.
+    auto mesh_build = bvh_type;
+    mesh_build.parallel_primitive_queries = true;
+    tri_mesh_bvh = std::make_shared<BVHAggregate>(std::move(triangles.objects), shutteropen, shutterclose, 1, true, mesh_build);
+    // Transfer ownership to the BVH; retain no empty construction buffer.
+    std::vector<std::shared_ptr<hitable>>().swap(triangles.objects);
   } else {
     throw std::runtime_error(inputfile + ": No triangles loaded.");
   }

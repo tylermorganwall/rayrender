@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"roughness-finishes","Constant roughness",128,6,12.092
+"roughness-finishes","Polished and rough bands",128,6,11.803
+"roughness-finishes","Legacy microfacet roughness",128,6,11.653

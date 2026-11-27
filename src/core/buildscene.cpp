@@ -1,103 +1,140 @@
 #include "../core/buildscene.h"
-#include "../hitables/hitable.h"
-#include "../hitables/sphere.h"
-#include "../hitables/hitablelist.h"
-#include "../math/perlin.h"
-#include "../materials/texture.h"
-#include "../hitables/rectangle.h"
+#include "../animation_rcpp.h"
+#include "../model_animation_rcpp.h"
+#include "../core/bvh.h"
 #include "../hitables/box.h"
-#include "../materials/constant.h"
-#include "../hitables/triangle.h"
-#include "../math/pdf.h"
-#include "../hitables/trimesh.h"
-#include "../hitables/disk.h"
-#include "../hitables/cylinder.h"
-#include "../hitables/ellipsoid.h"
-#include "../hitables/curve.h"
 #include "../hitables/csg.h"
-#include "../hitables/plymesh.h"
-#include "../hitables/mesh3d.h"
-#include "../hitables/raymesh.h"
+#include "../hitables/curve.h"
+#include "../hitables/cylinder.h"
+#include "../hitables/disk.h"
+#include "../hitables/ellipsoid.h"
+#include "../hitables/hitable.h"
+#include "../hitables/hitablelist.h"
 #include "../hitables/instance.h"
+#include "../hitables/mesh3d.h"
+#include "../hitables/plymesh.h"
+#include "../hitables/raymesh.h"
+#include "../hitables/rectangle.h"
+#include "../hitables/sphere.h"
+#include "../hitables/triangle.h"
+#include "../hitables/trimesh.h"
+#include "../materials/openpbr.h"
+#include "../materials/texture.h"
+#include "../materials/texturecache.h"
+#include "../math/pdf.h"
+#include "../math/perlin.h"
 #include "../math/transform.h"
 #include "../math/transformcache.h"
-#include "../materials/texturecache.h"
 #include "../utils/raylog.h"
-#include "../core/bvh.h"
 #include "../volumes/boundary.h"
+#include <unordered_map>
+
+// Scoped to one build, so geometry never escapes the renderer resources that
+// own its textures, materials and transforms. R keeps the input scene alive
+// throughout construction; shared original_scene SEXPs identify prototypes.
+struct InstanceBuildCache {
+  struct Prototype {
+    std::shared_ptr<hitable> geometry;
+    std::shared_ptr<hitable_list> lights;
+  };
+  // A copied hierarchy may retain its R list identity while its outer player
+  // changes. Such wrappers belong to the compiled instance, not just the list.
+  std::unordered_map<const animation::ModelInstance*, std::unordered_map<SEXP, Prototype>> prototypes;
+  std::unordered_map<SEXP, std::shared_ptr<const animation::ModelAsset>> model_assets;
+  std::unordered_map<SEXP, std::shared_ptr<const animation::ModelInstance>> model_instances;
+};
+
+// Stack-scoped during scene construction only. Render workers retain native
+// tracks, never this R reference. The outer binding is the sole clock owner.
+struct ModelBuildScope {
+  std::string id;
+  SEXP authored = R_NilValue;
+  std::shared_ptr<const animation::ModelInstance> model;
+};
+
+namespace {
+// Public materials share one offset across maps. Imported PBRT textures may
+// override individual slots, since their mapping belongs to each texture.
+point2f material_texture_offset(const List& material, const char* slot) {
+  NumericVector offset = NumericVector::create(0., 0.);
+  if (material.containsElementNamed("image_offset"))
+    offset = as<NumericVector>(as<List>(material["image_offset"])[0]);
+  if (material.containsElementNamed("texture_offsets")) {
+    List overrides = material["texture_offsets"];
+    if (overrides.containsElementNamed(slot)) offset = as<NumericVector>(overrides[slot]);
+  }
+  if (offset.size() != 2 || !std::isfinite(offset[0]) || !std::isfinite(offset[1]))
+    Rcpp::stop("Texture offsets must contain two finite values.");
+  // Reduce in double precision before conversion to the renderer's Float.
+  return point2f(std::fmod(offset[0], 1.), std::fmod(offset[1], 1.));
+}
+}
 
 Transform rotation_order_matrix(NumericVector temprotvec, NumericVector order_rotation) {
   Transform M;
-  for(int i = 0; i < 3; i++) {
-    if(order_rotation(i) == 1) {
-      if(temprotvec(0) != 0) {
-        M = RotateX(temprotvec(0)) * M ;
+  for (int i = 0; i < 3; i++) {
+    if (order_rotation(i) == 1) {
+      if (temprotvec(0) != 0) {
+        M = RotateX(temprotvec(0)) * M;
       }
     }
-    if(order_rotation(i) == 2) {
-      if(temprotvec(1) != 0) {
+    if (order_rotation(i) == 2) {
+      if (temprotvec(1) != 0) {
         M = RotateY(temprotvec(1)) * M;
       }
     }
-    if(order_rotation(i) == 3) {
-      if(temprotvec(2) != 0) {
+    if (order_rotation(i) == 3) {
+      if (temprotvec(2) != 0) {
         M = RotateZ(temprotvec(2)) * M;
       }
     }
   }
-  return(M);
+  return (M);
 }
 
-enum ShapeEnum {   
+enum ShapeEnum {
   SPHERE = 1,
-  XY_RECT = 2, 
+  XY_RECT = 2,
   XZ_RECT = 3,
   YZ_RECT = 4,
-  BOX = 5, 
-  OBJ = 6, 
+  BOX = 5,
+  OBJ = 6,
   DISK = 7,
-  CYLINDER = 8, 
-  ELLIPSOID = 9, 
-  CURVE = 10, 
-  CSG_OBJECT = 11, 
+  CYLINDER = 8,
+  ELLIPSOID = 9,
+  CURVE = 10,
+  CSG_OBJECT = 11,
   PLY = 12,
   MESH3D = 13,
   RAYMESH = 14,
   INSTANCE = 15
 };
 
-enum MaterialEnum {   
+enum MaterialEnum {
   DIFFUSE = 1,
   METAL = 2,
   DIELECTRIC = 3,
-  ORENNAYER = 4, 
-  LIGHT = 5, 
+  ORENNAYER = 4,
+  LIGHT = 5,
   MICROFACET = 6,
-  GLOSSY = 7, 
-  SPOTLIGHT = 8, 
-  HAIR = 9, 
-  MICROFACET_TRANSMISSION = 10
+  GLOSSY = 7,
+  SPOTLIGHT = 8,
+  HAIR = 9,
+  MICROFACET_TRANSMISSION = 10,
+  OPENPBR = 11,
+  TRANSLUCENT = 12
 };
 
-void LoadTexture(std::string image_file,
-                 std::string alpha_file,
-                 std::string bump_file,
-                 std::string roughness_file,
-                 std::vector<Float* >& textures,
-                 std::vector<unsigned char * >& alpha_textures,
-                 std::vector<unsigned char * >& bump_textures,
-                 std::vector<unsigned char * >& roughness_textures,
-                 int* nvec,
-                 int* nveca,
-                 int* nvecb,
-                 int* nvecr,
-                 NumericVector glossy_info,
-                 bool has_image, bool has_alpha, bool has_bump, bool has_roughness,
-                 TextureCache& texCache) {
-  
-  if(has_image) {
+void LoadTexture(std::string image_file, std::string alpha_file, std::string bump_file, std::string roughness_file,
+                 std::vector<Float *> &textures, std::vector<unsigned char *> &alpha_textures,
+                 std::vector<std::shared_ptr<const HeightImage>> &bump_textures, std::vector<unsigned char *> &roughness_textures,
+                 int *nvec, int *nveca, int *nvecb, int *nvecr, NumericVector glossy_info, bool has_image,
+                 bool has_alpha, bool has_bump, bool has_roughness, TextureCache &texCache,
+                 bool raw_roughness = false) {
+
+  if (has_image) {
     int nx, ny, nn;
-    Float* texture_data = texCache.LookupFloat(image_file, nx, ny, nn, 4);
+    Float *texture_data = texCache.LookupFloat(image_file, nx, ny, nn, 4);
     nn = 4;
     // texture_bytes += nx * ny * nn;
     textures.push_back(texture_data);
@@ -107,9 +144,9 @@ void LoadTexture(std::string image_file,
   } else {
     textures.push_back(nullptr);
   }
-  if(has_alpha) {
+  if (has_alpha) {
     int nxa, nya, nna;
-    unsigned char* alpha_data = texCache.LookupChar(alpha_file, nxa, nya, nna, 4);
+    unsigned char *alpha_data = texCache.LookupChar(alpha_file, nxa, nya, nna, 4);
     // texture_bytes += nxa * nya * nna;
     nna = 4;
     alpha_textures.push_back(alpha_data);
@@ -119,9 +156,9 @@ void LoadTexture(std::string image_file,
   } else {
     alpha_textures.push_back(nullptr);
   }
-  if(has_bump) {
+  if (has_bump) {
     int nxb, nyb, nnb;
-    unsigned char* bump_data = texCache.LookupChar(bump_file, nxb, nyb, nnb, 1);
+    std::shared_ptr<const HeightImage> bump_data = texCache.LookupHeight(bump_file, nxb, nyb, nnb);
 
     nnb = 1;
     bump_textures.push_back(bump_data);
@@ -131,43 +168,46 @@ void LoadTexture(std::string image_file,
   } else {
     bump_textures.push_back(nullptr);
   }
-  if(has_roughness) {
+  if (has_roughness) {
     int nxr, nyr, nnr;
-    unsigned char* roughness_data = texCache.LookupChar(roughness_file, nxr, nyr, nnr, 3);
+    unsigned char *roughness_data =
+        texCache.LookupChar(roughness_file, nxr, nyr, nnr, 3, raw_roughness ? "openpbr_roughness" : "");
     nnr = 3;
     // texture_bytes += nxr * nyr * nnr;
-    
-    Float min = glossy_info(9), max = glossy_info(10);
-    Float rough_range = max-min;
-    Float maxr = 0, minr = 1;
-    for(int ii = 0; ii < nxr; ii++) {
-      for(int jj = 0; jj < nyr; jj++) {
-        Float temp_rough = roughness_data[nnr*ii + nnr*nxr*jj];
-        maxr = maxr < temp_rough ? temp_rough : maxr;
-        minr = minr > temp_rough ? temp_rough : minr;
-        if(nnr > 1) {
-          temp_rough = roughness_data[nnr*ii + nnr*nxr*jj+1];
+
+    if (!raw_roughness) {
+      Float min = glossy_info(9), max = glossy_info(10);
+      Float rough_range = max - min;
+      Float maxr = 0, minr = 1;
+      for (int ii = 0; ii < nxr; ii++) {
+        for (int jj = 0; jj < nyr; jj++) {
+          Float temp_rough = roughness_data[nnr * ii + nnr * nxr * jj];
           maxr = maxr < temp_rough ? temp_rough : maxr;
           minr = minr > temp_rough ? temp_rough : minr;
+          if (nnr > 1) {
+            temp_rough = roughness_data[nnr * ii + nnr * nxr * jj + 1];
+            maxr = maxr < temp_rough ? temp_rough : maxr;
+            minr = minr > temp_rough ? temp_rough : minr;
+          }
         }
       }
-    }
-    Float data_range = maxr-minr;
-    for(int ii = 0; ii < nxr; ii++) {
-      for(int jj = 0; jj < nyr; jj++) {
-        if(!glossy_info(11)) {
-          roughness_data[nnr*ii + nnr*nxr*jj] =
-            (roughness_data[nnr*ii + nnr*nxr*jj]-minr)/data_range * rough_range + min;
-          if(nnr > 1) {
-            roughness_data[nnr*ii + nnr*nxr*jj+1] =
-              (roughness_data[nnr*ii + nnr*nxr*jj+1]-minr)/data_range * rough_range + min;
-          }
-        } else {
-          roughness_data[nnr*ii + nnr*nxr*jj] =
-            (1.0-(roughness_data[nnr*ii + nnr*nxr*jj]-minr)/data_range) * rough_range + min;
-          if(nnr > 1) {
-            roughness_data[nnr*ii + nnr*nxr*jj+1] =
-              (1.0-(roughness_data[nnr*ii + nnr*nxr*jj+1]-minr)/data_range) * rough_range + min;
+      Float data_range = maxr - minr;
+      for (int ii = 0; ii < nxr; ii++) {
+        for (int jj = 0; jj < nyr; jj++) {
+          if (!glossy_info(11)) {
+            roughness_data[nnr * ii + nnr * nxr * jj] =
+                (roughness_data[nnr * ii + nnr * nxr * jj] - minr) / data_range * rough_range + min;
+            if (nnr > 1) {
+              roughness_data[nnr * ii + nnr * nxr * jj + 1] =
+                  (roughness_data[nnr * ii + nnr * nxr * jj + 1] - minr) / data_range * rough_range + min;
+            }
+          } else {
+            roughness_data[nnr * ii + nnr * nxr * jj] =
+                (1.0 - (roughness_data[nnr * ii + nnr * nxr * jj] - minr) / data_range) * rough_range + min;
+            if (nnr > 1) {
+              roughness_data[nnr * ii + nnr * nxr * jj + 1] =
+                  (1.0 - (roughness_data[nnr * ii + nnr * nxr * jj + 1] - minr) / data_range) * rough_range + min;
+            }
           }
         }
       }
@@ -179,51 +219,41 @@ void LoadTexture(std::string image_file,
   } else {
     roughness_textures.push_back(nullptr);
   }
-} 
+}
 
-
-std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
-                                             TextureCache& texCache,
-                                             std::vector<Float* >& textures,
-                                             std::vector<unsigned char * >& alpha_textures,
-                                             std::vector<unsigned char * >& bump_textures,
-                                             std::vector<unsigned char * >& roughness_textures,
-                                             int* nvec,
-                                             int* nveca,
-                                             int* nvecb,
-                                             int* nvecr,
-                                             bool& has_image,
-                                             bool& has_alpha,
-                                             bool& has_bump,
-                                             bool& has_roughness,
-                                             NumericVector tricolorinfo) {
+std::shared_ptr<material>
+LoadSingleMaterial(List SingleMaterial, TextureCache &texCache, std::vector<Float *> &textures,
+                   std::vector<unsigned char *> &alpha_textures, std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
+                   std::vector<unsigned char *> &roughness_textures, int *nvec, int *nveca, int *nvecb, int *nvecr,
+                   bool &has_image, bool &has_alpha, bool &has_bump, bool &has_roughness, NumericVector tricolorinfo) {
   MaterialEnum type = static_cast<MaterialEnum>(as<int>(SingleMaterial["type"]));
   NumericVector properties = as<NumericVector>(as<List>(SingleMaterial["properties"])(0));
   NumericVector checkercolor = as<NumericVector>(as<List>(SingleMaterial["checkercolor"])(0));
   bool ischeckered = checkercolor.size() == 4;
-  
+
   NumericVector gradient_color = as<NumericVector>(as<List>(SingleMaterial["gradient_color"])(0));
   bool isgradient = gradient_color.size() == 3;
-  
+
   bool gradient_transpose = as<bool>(SingleMaterial["gradient_transpose"]);
   bool is_world_gradient = as<bool>(SingleMaterial["world_gradient"]);
   NumericVector gradient_point_info = as<NumericVector>(as<List>(SingleMaterial["gradient_point_info"])(0));
 
   bool is_hsv_gradient = as<CharacterVector>(SingleMaterial["gradient_type"])(0) == "hsv";
-  
+
   Float noise = as<Float>(SingleMaterial["noise"]);
   bool isnoise = noise != 0;
   Float noisephase = as<Float>(SingleMaterial["noisephase"]);
   Float noiseintensity = as<Float>(SingleMaterial["noiseintensity"]);
   NumericVector noisecolor = as<NumericVector>(as<List>(SingleMaterial["noisecolor"])(0));
-  
 
   NumericVector image_repeat = as<NumericVector>(as<List>(SingleMaterial["image_repeat"])(0));
 
   Float lightintensity = as<Float>(SingleMaterial["lightintensity"]);
   Float sigma = as<Float>(SingleMaterial["sigma"]);
+  if (type == ORENNAYER && (!std::isfinite(sigma) || sigma < 0))
+    Rcpp::stop("EON sigma must be finite and nonnegative.");
   NumericVector glossyinfo = as<NumericVector>(as<List>(SingleMaterial["glossyinfo"])(0));
-  
+
   std::string image_file = as<std::string>(SingleMaterial["image"]);
   std::string alpha_file = as<std::string>(SingleMaterial["alphaimage"]);
   std::string bump_file = as<std::string>(SingleMaterial["bump_texture"]);
@@ -232,218 +262,249 @@ std::shared_ptr<material> LoadSingleMaterial(List SingleMaterial,
   has_alpha = !alpha_file.empty();
   has_bump = !bump_file.empty();
   has_roughness = !roughness_file.empty();
-  
-  LoadTexture(image_file, 
-              alpha_file, 
-              bump_file, 
-              roughness_file,
-              textures,
-              alpha_textures,
-              bump_textures,
-              roughness_textures,
-              nvec,
-              nveca,
-              nvecb,
-              nvecr,
-              glossyinfo,
-              has_image,
-              has_alpha,
-              has_bump,
-              has_roughness,
-              texCache);
-  
+
+  LoadTexture(image_file, alpha_file, bump_file, roughness_file, textures, alpha_textures, bump_textures,
+              roughness_textures, nvec, nveca, nvecb, nvecr, glossyinfo, has_image, has_alpha, has_bump, has_roughness,
+              texCache, type == OPENPBR);
+
   std::shared_ptr<material> mat = nullptr;
   std::shared_ptr<texture> material_texture;
-  
+  TextureGraphBuilder graph_builder(texCache);
+  std::shared_ptr<const TextureNode> color_graph, roughness_graph, roughness_graph_v, transmission_graph;
+  bool graph_is_alpha = false;
+  if (SingleMaterial.containsElementNamed("texture_graphs")) {
+    List graphs = SingleMaterial["texture_graphs"];
+    if (graphs.containsElementNamed("color") && !Rf_isNull(graphs["color"]))
+      color_graph = graph_builder.Build(as<List>(graphs["color"]));
+    if (graphs.containsElementNamed("transmission") && !Rf_isNull(graphs["transmission"]))
+      transmission_graph = graph_builder.Build(as<List>(graphs["transmission"]));
+    if (graphs.containsElementNamed("roughness") && !Rf_isNull(graphs["roughness"])) {
+      roughness_graph = graph_builder.Build(as<List>(graphs["roughness"]));
+      if (!roughness_graph->scalar) Rcpp::stop("Roughness requires a scalar texture.");
+    }
+    if (graphs.containsElementNamed("roughness_is_alpha"))
+      graph_is_alpha = as<bool>(graphs["roughness_is_alpha"]);
+    if (graphs.containsElementNamed("roughness_v") && !Rf_isNull(graphs["roughness_v"])) {
+      roughness_graph_v = graph_builder.Build(as<List>(graphs["roughness_v"]));
+      if (!roughness_graph_v->scalar) Rcpp::stop("Roughness requires a scalar texture.");
+    }
+  }
+
   bool is_tri_color = tricolorinfo.size() == 9;
-  
+
   std::shared_ptr<roughness_texture> roughness;
-  if(has_roughness) {
-    roughness = std::make_shared<roughness_texture>(roughness_textures.back(), 
-                                                    nvecr[0], nvecr[1], nvecr[2]);
+  if (has_roughness) {
+    const auto offset = material_texture_offset(SingleMaterial, "roughness");
+    roughness = std::make_shared<roughness_texture>(roughness_textures.back(), nvecr[0], nvecr[1], nvecr[2], offset[0], offset[1]);
   }
-  
-  if(has_image) {
-    material_texture = std::make_shared<image_texture_float>(textures.back(), nvec[0], nvec[1], nvec[2], 
-                                                             image_repeat[0], image_repeat[1], 1.0);
+
+  if (color_graph) {
+    material_texture = std::make_shared<graph_texture>(color_graph);
+  } else if (has_image) {
+    const auto offset = material_texture_offset(SingleMaterial, "image");
+    material_texture = std::make_shared<image_texture_float>(textures.back(), nvec[0], nvec[1], nvec[2],
+                                                             image_repeat[0], image_repeat[1], 1.0, offset[0], offset[1]);
   } else if (isnoise) {
-    material_texture = std::make_shared<noise_texture>(noise,point3f(properties(0),properties(1),properties(2)),
-                                                       point3f(noisecolor(0),noisecolor(1),noisecolor(2)),
-                                                       noisephase, noiseintensity);
+    material_texture = std::make_shared<noise_texture>(noise, point3f(properties(0), properties(1), properties(2)),
+                                                       point3f(noisecolor(0), noisecolor(1), noisecolor(2)), noisephase,
+                                                       noiseintensity);
   } else if (ischeckered) {
-    material_texture = std::make_shared<checker_texture>(std::make_shared<constant_texture>(point3f(checkercolor(0),checkercolor(1),checkercolor(2))),
-                                                         std::make_shared<constant_texture>(point3f(properties(0),properties(1),properties(2))),
-                                                         checkercolor(3));
+    material_texture = std::make_shared<checker_texture>(
+        std::make_shared<constant_texture>(point3f(checkercolor(0), checkercolor(1), checkercolor(2))),
+        std::make_shared<constant_texture>(point3f(properties(0), properties(1), properties(2))), checkercolor(3));
   } else if (isgradient && !is_world_gradient) {
-    material_texture = std::make_shared<gradient_texture>(point3f(properties(0),properties(1),properties(2)),
-                                                          point3f(gradient_color(0),gradient_color(1),gradient_color(2)),
-                                                          gradient_transpose, is_hsv_gradient);
+    material_texture = std::make_shared<gradient_texture>(
+        point3f(properties(0), properties(1), properties(2)),
+        point3f(gradient_color(0), gradient_color(1), gradient_color(2)), gradient_transpose, is_hsv_gradient);
   } else if (is_tri_color) {
-    material_texture = std::make_shared<triangle_texture>(point3f(tricolorinfo(0),tricolorinfo(1),tricolorinfo(2)),
-                                                          point3f(tricolorinfo(3),tricolorinfo(4),tricolorinfo(5)),
-                                                          point3f(tricolorinfo(6),tricolorinfo(7),tricolorinfo(8)));
+    material_texture = std::make_shared<triangle_texture>(point3f(tricolorinfo(0), tricolorinfo(1), tricolorinfo(2)),
+                                                          point3f(tricolorinfo(3), tricolorinfo(4), tricolorinfo(5)),
+                                                          point3f(tricolorinfo(6), tricolorinfo(7), tricolorinfo(8)));
   } else if (is_world_gradient) {
-    material_texture = std::make_shared<world_gradient_texture>(point3f(gradient_point_info(0),gradient_point_info(1),gradient_point_info(2)),
-                                                                point3f(gradient_point_info(3),gradient_point_info(4),gradient_point_info(5)),
-                                                                point3f(properties(0),properties(1),properties(2)),
-                                                                point3f(gradient_color(0),gradient_color(1),gradient_color(2)),
-                                                                is_hsv_gradient);
+    material_texture = std::make_shared<world_gradient_texture>(
+        point3f(gradient_point_info(0), gradient_point_info(1), gradient_point_info(2)),
+        point3f(gradient_point_info(3), gradient_point_info(4), gradient_point_info(5)),
+        point3f(properties(0), properties(1), properties(2)),
+        point3f(gradient_color(0), gradient_color(1), gradient_color(2)), is_hsv_gradient);
   } else {
-    material_texture = std::make_shared<constant_texture>(point3f(properties(0),properties(1),properties(2)));
+    material_texture = std::make_shared<constant_texture>(point3f(properties(0), properties(1), properties(2)));
   }
-  
+
   bool is_invisible;
   switch (type) {
-    case DIFFUSE: {
-      mat = std::make_shared<lambertian>(material_texture);
-      break;
+  case TRANSLUCENT: {
+    NumericVector color = SingleMaterial["transmittance"];
+    std::shared_ptr<texture> transmission = std::make_shared<constant_texture>(point3f(color[0], color[1], color[2]));
+    std::string file = as<std::string>(SingleMaterial["transmission_texture"]);
+    if (!file.empty()) {
+      int nx, ny, nn;
+      Float *data = texCache.LookupFloat(file, nx, ny, nn, 4);
+      NumericVector repeat = SingleMaterial["transmission_repeat"];
+      NumericVector offset = SingleMaterial["transmission_offset"];
+      transmission = std::make_shared<image_texture_float>(data, nx, ny, 4,
+          repeat[0], repeat[1], 1, offset[0], offset[1]);
     }
-    case METAL: {
-      Float fuzz = properties(3);
-      point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
-      point3f kappa(glossyinfo(6),glossyinfo(7),glossyinfo(8));
-      mat = std::make_shared<metal>(material_texture, fuzz, eta, kappa);
-      break;
-    }
-    case DIELECTRIC: {
-      point3f tint(properties(0),properties(1),properties(2));
-      Float ior = properties(3);
-      point3f atten(properties(4),properties(5),properties(6));
-      int priority = static_cast<int>(properties(7));
-      mat = std::make_shared<dielectric>(tint, ior, atten, priority);
-      break;
-    }
-    case ORENNAYER: {
-      mat = std::make_shared<orennayar>(material_texture, sigma);
-      break;
-    }
-    case LIGHT: {
-      is_invisible = properties(3) == 1;
-      mat = std::make_shared<diffuse_light>(material_texture, lightintensity, is_invisible);
-      break;
-    }
-    case MICROFACET: {
-      MicrofacetDistribution *dist;
-      if(glossyinfo(0) == 1) {
-        dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness,  true);
-      } else {
-        dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness, true);
-      }
-      point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
-      point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
-      mat = std::make_shared<MicrofacetReflection>(material_texture, dist, eta, kappa);
-      break;
-    }
-    case GLOSSY: {
-      MicrofacetDistribution *dist;
-      if(glossyinfo(0) == 1) {
-        dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness,  true);
-      } else {
-        dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness, true);
-      }
-      point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
-      point3f kappa(glossyinfo(6),glossyinfo(7),glossyinfo(8));
-      mat = std::make_shared<glossy>(material_texture, dist, eta, kappa);
-      break;
-    }
-    case SPOTLIGHT: {
-      is_invisible = properties(8) == 1;
-      vec3f spotlight_direction(properties(3), properties(4), properties(5));
-      Float spotlight_width = properties(6);
-      Float spotlight_falloff = properties(7);
-      mat = std::make_shared<spot_light>(material_texture, spotlight_direction, 
-                                         spotlight_width, spotlight_falloff, lightintensity, is_invisible);
-      break;
-    }
-    case HAIR: {
-      point3f sigma_a(properties(0),properties(1),properties(2));
-      Float eta = properties(3);
-      Float beta_m = properties(4);
-      Float beta_n = properties(5);
-      Float alpha = properties(6);
-      mat = std::make_shared<hair>(sigma_a, eta, beta_m, beta_n, alpha);
-      break;
-    }
-    case MICROFACET_TRANSMISSION: {
-      MicrofacetDistribution *dist;
-      if(glossyinfo(0) == 1) {
-        dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness,  true);
-      } else {
-        dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2),roughness, has_roughness, true);
-      }
-      point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
-      point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
-      mat = std::make_shared<MicrofacetTransmission>(material_texture, dist, eta, kappa);
-      break;
-    }
-    default: {
-      mat = std::make_shared<lambertian>(material_texture);
-      break;
-    }
+    if (transmission_graph) transmission = std::make_shared<graph_texture>(transmission_graph);
+    mat = std::make_shared<translucent_material>(material_texture, transmission);
+    break;
   }
-  return(mat);
+  case OPENPBR: {
+    mat = std::make_shared<OpenPBRMaterial>(as<List>(SingleMaterial["openpbr"]), material_texture, roughness,
+                                            has_roughness, point2f(image_repeat(0), image_repeat(1)), roughness_graph);
+    break;
+  }
+  case DIFFUSE: {
+    mat = std::make_shared<diffuse_material>(material_texture);
+    break;
+  }
+  case METAL: {
+    Float fuzz = properties(3);
+    point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
+    point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    mat = std::make_shared<metal>(material_texture, fuzz, eta, kappa);
+    break;
+  }
+  case DIELECTRIC: {
+    point3f tint(properties(0), properties(1), properties(2));
+    Float ior = properties(3);
+    point3f atten(properties(4), properties(5), properties(6));
+    int priority = static_cast<int>(properties(7));
+    mat = std::make_shared<dielectric>(tint, ior, atten, priority);
+    break;
+  }
+  case ORENNAYER: {
+    mat = std::make_shared<diffuse_material>(material_texture, sigma);
+    break;
+  }
+  case LIGHT: {
+    is_invisible = properties(3) == 1;
+    mat = std::make_shared<diffuse_light>(material_texture, lightintensity, is_invisible);
+    break;
+  }
+  case MICROFACET: {
+    MicrofacetDistribution *dist;
+    if (glossyinfo(0) == 1) {
+      dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    } else {
+      dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    }
+    point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
+    point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
+    mat = std::make_shared<MicrofacetReflection>(material_texture, dist, eta, kappa);
+    break;
+  }
+  case GLOSSY: {
+    MicrofacetDistribution *dist;
+    if (glossyinfo(0) == 1) {
+      dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    } else {
+      dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    }
+    point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
+    point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
+    mat = std::make_shared<glossy>(material_texture, dist, eta, kappa);
+    break;
+  }
+  case SPOTLIGHT: {
+    is_invisible = properties(8) == 1;
+    vec3f spotlight_direction(properties(3), properties(4), properties(5));
+    Float spotlight_width = properties(6);
+    Float spotlight_falloff = properties(7);
+    mat = std::make_shared<spot_light>(material_texture, spotlight_direction, spotlight_width, spotlight_falloff,
+                                       lightintensity, is_invisible);
+    break;
+  }
+  case HAIR: {
+    point3f sigma_a(properties(0), properties(1), properties(2));
+    Float eta = properties(3);
+    Float beta_m = properties(4);
+    Float beta_n = properties(5);
+    Float alpha = properties(6);
+    mat = std::make_shared<hair>(sigma_a, eta, beta_m, beta_n, alpha);
+    break;
+  }
+  case MICROFACET_TRANSMISSION: {
+    MicrofacetDistribution *dist;
+    if (glossyinfo(0) == 1) {
+      dist = new TrowbridgeReitzDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    } else {
+      dist = new BeckmannDistribution(glossyinfo(1), glossyinfo(2), roughness, has_roughness, true);
+    }
+    point3f eta(glossyinfo(3), glossyinfo(4), glossyinfo(5));
+    point3f kappa(glossyinfo(6), glossyinfo(7), glossyinfo(8));
+    dist->roughness_graph = roughness_graph;
+    dist->roughness_graph_v = roughness_graph_v;
+    dist->graph_is_alpha = graph_is_alpha;
+    mat = std::make_shared<MicrofacetTransmission>(material_texture, dist, eta, kappa);
+    break;
+  }
+  default: {
+    mat = std::make_shared<diffuse_material>(material_texture);
+    break;
+  }
+  }
+  return (mat);
 }
 
-
-std::shared_ptr<hitable> build_scene(List& scene,
-                                     IntegerVector& shape,
-                                     Float shutteropen, 
-                                     Float shutterclose,
-                                     std::vector<Float* >& textures, 
-                                     std::vector<unsigned char * >& alpha_textures, 
-                                     std::vector<unsigned char * >& bump_textures, 
-                                     std::vector<unsigned char * >& roughness_textures,  
-                                     std::vector<std::shared_ptr<material> >* shared_materials, 
-                                     std::vector<std::shared_ptr<alpha_texture> >& alpha,
-                                     std::vector<std::shared_ptr<bump_texture> >& bump,
-                                     std::vector<std::shared_ptr<roughness_texture> >& roughness,
-                                     int bvh_type,
-                                     TransformCache& transformCache, 
-                                     TextureCache& texCache,
-                                     hitable_list& imp_sample_objects,
-                                     std::vector<std::shared_ptr<hitable> >& instanced_objects,
-                                     std::vector<std::shared_ptr<hitable_list> >& instance_importance_sampled,
-                                     std::vector<int>& texture_idx,
-                                     bool verbose, 
-                                     random_gen& rng) {
-  auto nvec  = std::make_unique<int[]>(3);
+std::shared_ptr<hitable>
+build_scene(List &scene, IntegerVector &shape, Float shutteropen, Float shutterclose, std::vector<Float *> &textures,
+            std::vector<unsigned char *> &alpha_textures, std::vector<std::shared_ptr<const HeightImage>> &bump_textures,
+            std::vector<unsigned char *> &roughness_textures, std::vector<std::shared_ptr<material>> *shared_materials,
+            std::vector<std::shared_ptr<alpha_texture>> &alpha, std::vector<std::shared_ptr<bump_texture>> &bump,
+            std::vector<std::shared_ptr<roughness_texture>> &roughness, const BVHBuildOptions& bvh_type, TransformCache &transformCache,
+            TextureCache &texCache, hitable_list &imp_sample_objects,
+            std::vector<std::shared_ptr<hitable>> &instanced_objects,
+            std::vector<std::shared_ptr<hitable_list>> &instance_importance_sampled, std::vector<int> &texture_idx,
+            bool verbose, random_gen &rng, InstanceBuildCache *instance_cache, double time_origin,
+            std::shared_ptr<SceneTimeContext> scene_time, const ModelBuildScope *model_scope) {
+  InstanceBuildCache local_instance_cache;
+  if (!instance_cache)
+    instance_cache = &local_instance_cache;
+  auto nvec = std::make_unique<int[]>(3);
   auto nveca = std::make_unique<int[]>(3);
   auto nvecb = std::make_unique<int[]>(3);
   auto nvecr = std::make_unique<int[]>(3);
-  int init_texture_size = texture_idx.size();
-  
+
   hitable_list list;
-  NumericMatrix IdentityMat(4,4);
+  NumericMatrix IdentityMat(4, 4);
   IdentityMat.fill_diag(1);
   Transform IdentityTransform(IdentityMat);
-  Transform* Iden = transformCache.Lookup(IdentityTransform);
-  
+  Transform *Iden = transformCache.Lookup(IdentityTransform);
+
   List RayMaterials = as<List>(scene["material"]);
   List ShapeInfo = as<List>(scene["shape_info"]);
   List Transforms = as<List>(scene["transforms"]);
   List AnimationInfo = as<List>(scene["animation_info"]);
+  std::unordered_map<SEXP, std::shared_ptr<const animation::TransformTrack>> authored_tracks;
   size_t n = ShapeInfo.length();
 
   NumericVector x = scene["x"];
   NumericVector y = scene["y"];
   NumericVector z = scene["z"];
-  
-  for(size_t i = 0; i < n; i++) {
+
+  for (size_t i = 0; i < n; i++) {
     List SingleShape = ShapeInfo(i);
     List SingleMaterial = RayMaterials(i);
+    if (SingleMaterial.containsElementNamed("fog") && as<bool>(SingleMaterial["fog"]))
+      Rcpp::stop("Material fog is no longer supported. Use set_medium() with an explicit medium.");
     List SingleTransform = Transforms(i);
     List SingleAnimation = AnimationInfo(i);
     MaterialEnum material_type = static_cast<MaterialEnum>(as<int>(SingleMaterial["type"]));
-    
+
     /// Load material for shape
     NumericVector tricolorinfo = as<NumericVector>(as<List>(SingleShape["tricolorinfo"])(0));
-    bool isvolume = as<bool>(SingleMaterial["fog"]);
     auto volume_scene = imp_sample_objects.volume_scene;
     bool has_medium = SingleShape.containsElementNamed("medium") && !Rf_isNull(SingleShape["medium"]);
-    if(has_medium && !volume_scene) Rcpp::stop("Medium descriptions require integrator_type = \"nee\".");
-    Float fog_density = as<Float>(SingleMaterial["fogdensity"]);
+    if (has_medium && !volume_scene)
+      Rcpp::stop("Medium descriptions require integrator_type = \"nee\".");
     Float importance_sample = as<bool>(SingleMaterial["implicit_sample"]);
-    
+
     IntegerVector material_id_vec = as<IntegerVector>(SingleShape["material_id"]);
     bool is_shared_mat = !Rcpp::IntegerVector::is_na(material_id_vec(0));
     int material_id = material_id_vec(0);
@@ -452,34 +513,24 @@ std::shared_ptr<hitable> build_scene(List& scene,
     bool has_alpha = false;
     bool has_bump = false;
     bool has_roughness = false;
-    
-    if(is_shared_mat && shared_materials->size() > static_cast<size_t>(material_id - 1)) {
-      shape_material = shared_materials->at(material_id-1);
-      texture_idx.push_back(material_id-1);
+
+    if (is_shared_mat && shared_materials->size() > static_cast<size_t>(material_id - 1)) {
+      shape_material = shared_materials->at(material_id - 1);
+      texture_idx.push_back(material_id - 1);
     } else {
-      shape_material = LoadSingleMaterial(SingleMaterial,
-                                          texCache,
-                                          textures,
-                                          alpha_textures,
-                                          bump_textures,
-                                          roughness_textures,
-                                          nvec.get(),
-                                          nveca.get(),
-                                          nvecb.get(),
-                                          nvecr.get(),
-                                          has_image,
-                                          has_alpha,
-                                          has_bump,
-                                          has_roughness,
-                                          tricolorinfo);
-      texture_idx.push_back(init_texture_size + i);
+      shape_material = LoadSingleMaterial(SingleMaterial, texCache, textures, alpha_textures, bump_textures,
+                                          roughness_textures, nvec.get(), nveca.get(), nvecb.get(), nvecr.get(),
+                                          has_image, has_alpha, has_bump, has_roughness, tricolorinfo);
+      // Recursive instance construction appends to these same texture buffers.
+      // A parent row offset no longer identifies its newly loaded material.
+      texture_idx.push_back(static_cast<int>(textures.size()) - 1);
     }
-    if(is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
+    if (is_shared_mat && shared_materials->size() < static_cast<size_t>(material_id)) {
       shared_materials->push_back(shape_material);
     }
-    
-    /// Done loading material 
-  
+
+    /// Done loading material
+
     /// Load group/animation transforms
     // List GroupTransformContainer = as<List>(SingleTransform["group_transform"])(0);
 
@@ -488,487 +539,598 @@ std::shared_ptr<hitable> build_scene(List& scene,
     NumericVector order_rotation = as<NumericVector>(as<List>(SingleTransform["order_rotation"])(0));
     NumericVector angle = as<NumericVector>(as<List>(SingleTransform["angle"])(0));
     bool is_grouped = GroupTransformMat.nrow() == 4;
-                                              
-    NumericMatrix StartTransformAnimationMat = as<NumericMatrix>(as<List>(SingleAnimation["start_transform_animation"])(0));
-    NumericMatrix EndTransformAnimationMat   = as<NumericMatrix>(as<List>(SingleAnimation["end_transform_animation"])(0));
+
+    NumericMatrix StartTransformAnimationMat =
+        as<NumericMatrix>(as<List>(SingleAnimation["start_transform_animation"])(0));
+    NumericMatrix EndTransformAnimationMat = as<NumericMatrix>(as<List>(SingleAnimation["end_transform_animation"])(0));
     Float start_time = as<Float>(SingleAnimation["start_time"]);
     Float end_time = as<Float>(SingleAnimation["end_time"]);
     bool is_animated = StartTransformAnimationMat.nrow() == 4 && EndTransformAnimationMat.nrow() == 4;
-    
+
     // Get default values if not transformed/animated
-    if(!is_grouped) {
+    if (!is_grouped) {
       GroupTransformMat = IdentityMat;
     }
-    if(!is_animated) {
+    if (!is_animated) {
       StartTransformAnimationMat = IdentityMat;
       EndTransformAnimationMat = IdentityMat;
     }
-    
-    //Generate texture
+
+    // Generate texture
     std::shared_ptr<material> tex = nullptr;
     Float bump_intensity = as<Float>(SingleMaterial["bump_intensity"]);
     NumericVector image_repeat = as<NumericVector>(as<List>(SingleMaterial["image_repeat"])(0));
-    
-    
+
     //`mat_idx` selects the index of the texture, in case there's a shared material.
     int mat_idx = texture_idx.back();
-    if(has_alpha) {
-      alpha.push_back(std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1], nveca[2]));
+    Float opacity = material_type == OPENPBR ?
+      as<Float>(as<List>(SingleMaterial["openpbr"])["geometry_opacity"]) : Float(1);
+    if (SingleMaterial.containsElementNamed("alpha_value")) {
+      Float shape_opacity = as<Float>(SingleMaterial["alpha_value"]);
+      if (!std::isfinite(shape_opacity) || shape_opacity < 0 || shape_opacity > 1)
+        Rcpp::stop("Shape alpha must be a finite value from zero to one.");
+      opacity *= shape_opacity;
+    }
+    if (has_alpha) {
+      const auto offset = material_texture_offset(SingleMaterial, "alpha");
+      NumericVector repeat = SingleMaterial.containsElementNamed("alpha_repeat") ?
+        as<NumericVector>(SingleMaterial["alpha_repeat"]) : NumericVector::create(1., 1.);
+      if (repeat.size() != 2 || !std::isfinite(repeat[0]) || !std::isfinite(repeat[1]) ||
+          repeat[0] <= 0 || repeat[1] <= 0)
+        Rcpp::stop("Alpha repeat must contain two positive finite values.");
+      auto mask = std::make_shared<alpha_texture>(alpha_textures[mat_idx], nveca[0], nveca[1],
+                                                nveca[2], offset[0], offset[1], repeat[0], repeat[1]);
+      mask->opacity = opacity;
+      alpha.push_back(mask);
+    } else if (opacity < 1) {
+      alpha.push_back(std::make_shared<alpha_texture>(opacity));
+      has_alpha = true;
     } else {
       alpha.push_back(nullptr);
     }
-    if(has_bump) {
-      bump.push_back(std::make_shared<bump_texture>(bump_textures[mat_idx], nvecb[0], nvecb[1], nvecb[2], 
-                                                    bump_intensity, image_repeat[0], image_repeat[1]));
+    List material_graphs = SingleMaterial.containsElementNamed("texture_graphs") ?
+      as<List>(SingleMaterial["texture_graphs"]) : List();
+    if (material_graphs.containsElementNamed("bump") && !Rf_isNull(material_graphs["bump"])) {
+      TextureGraphBuilder builder(texCache);
+      auto height = builder.Build(as<List>(material_graphs["bump"]));
+      if (!height->scalar) Rcpp::stop("Bump mapping requires a scalar texture.");
+      bump.push_back(std::make_shared<bump_texture>(std::make_shared<graph_texture>(height), bump_intensity));
+      has_bump = true;
+    } else if (has_bump) {
+      const auto offset = material_texture_offset(SingleMaterial, "bump");
+      // Imported height maps may use a different UV scale from base color.
+      NumericVector bump_repeat = SingleMaterial.containsElementNamed("bump_repeat") ?
+        as<NumericVector>(SingleMaterial["bump_repeat"]) : image_repeat;
+      bump.push_back(std::make_shared<bump_texture>(bump_textures[mat_idx], nvecb[0], nvecb[1], nvecb[2],
+                                                    bump_intensity, bump_repeat[0], bump_repeat[1], offset[0], offset[1]));
     } else {
       bump.push_back(nullptr);
     }
-    //Generate center vector
+    // Generate center vector
     ShapeEnum shape_type = static_cast<ShapeEnum>(shape(i));
     vec3f center = vec3f(x(i), y(i), z(i));
-    
+
     Transform GroupTransform(GroupTransformMat);
-    Transform TempM = GroupTransform * Translate(center) *
-      rotation_order_matrix(angle, order_rotation) * 
-      Scale(scales[0], scales[1], scales[2]);
-    Transform* ObjToWorld = transformCache.Lookup(TempM);
-    Transform* WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
-    
-    
+    Transform TempM = GroupTransform * Translate(center) * rotation_order_matrix(angle, order_rotation) *
+                      Scale(scales[0], scales[1], scales[2]);
+    Transform *ObjToWorld = transformCache.Lookup(TempM);
+    Transform *WorldToObj = transformCache.Lookup(TempM.GetInverseMatrix());
+
     Transform AnimationStartTransform(StartTransformAnimationMat);
     Transform AnimationEndTransform(EndTransformAnimationMat);
-    Transform* StartAnim = transformCache.Lookup(AnimationStartTransform);
-    Transform* EndAnim = transformCache.Lookup(AnimationEndTransform);
-    
-    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time);
-    
+    Transform *StartAnim = transformCache.Lookup(AnimationStartTransform);
+    Transform *EndAnim = transformCache.Lookup(AnimationEndTransform);
+
+    std::shared_ptr<const animation::TransformTrack> keyframes;
+    if (SingleAnimation.containsElementNamed("keyframes") && !Rf_isNull(SingleAnimation["keyframes"])) {
+      if (is_animated) Rcpp::stop("Legacy and keyframe attachments cannot target the same object.");
+      SEXP authored = SingleAnimation["keyframes"];
+      auto found = authored_tracks.find(authored);
+      if (found == authored_tracks.end())
+        found = authored_tracks.emplace(authored, read_transform_track(as<List>(authored))).first;
+      keyframes = found->second;
+      is_animated = true;
+    }
+    ModelBuildScope owned_model;
+    const ModelBuildScope *row_model = model_scope;
+    if (SingleAnimation.containsElementNamed("model_instance") && !Rf_isNull(SingleAnimation["model_instance"])) {
+      List binding = SingleAnimation["model_instance"];
+      SEXP authored = binding["asset"], instance_key = binding;
+      auto asset = instance_cache->model_assets.find(authored);
+      if (asset == instance_cache->model_assets.end())
+        asset = instance_cache->model_assets.emplace(authored, read_model_asset(authored)).first;
+      auto model = instance_cache->model_instances.find(instance_key);
+      if (model == instance_cache->model_instances.end())
+        model = instance_cache->model_instances.emplace(instance_key,
+          read_model_instance(as<List>(binding["player"]), asset->second)).first;
+      owned_model = {as<std::string>(binding["id"]), authored, model->second};
+      row_model = &owned_model;
+    }
+    bool frame_pose = false;
+    if (SingleAnimation.containsElementNamed("model_node") && !Rf_isNull(SingleAnimation["model_node"])) {
+      if (is_animated) Rcpp::stop("A model node cannot also have an outer animation attachment.");
+      List node = SingleAnimation["model_node"], binding = node["instance"];
+      if (!row_model || as<std::string>(binding["id"]) != row_model->id)
+        Rcpp::stop("A model node must belong to its enclosing model instance.");
+      keyframes = row_model->model->nodes[row_model->model->asset->NodeIndex(as<std::string>(node["id"]))];
+      frame_pose = bool(scene_time);
+      if (scene_time) scene_time->has_model_poses = true;
+      is_animated = true;
+    }
+    AnimatedTransform Animate(StartAnim, start_time, EndAnim, end_time, keyframes, time_origin, scene_time, frame_pose);
+
     List shape_properties = as<List>(SingleShape["shape_properties"]);
     bool is_flipped = as<bool>(SingleShape["flipped"]);
-    NumericVector fog_color = as<NumericVector>(as<List>(SingleMaterial["properties"])(0));
-    NumericVector noise_color = as<NumericVector>(as<List>(SingleMaterial["noisecolor"])(0));
-    
-    
-    // New code
     std::shared_ptr<hitable> entry;
     const size_t lights_before_shape = imp_sample_objects.objects.size();
     auto finish_entry = [&](std::shared_ptr<hitable> object) {
       bool register_boundary = false;
-      if(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))
+      if (volume_scene && has_medium && !as<bool>(SingleShape["medium_keep_surface"]))
         imp_sample_objects.objects.resize(lights_before_shape);
-      if(volume_scene) {
-        bool bare_glass = !has_medium && !isvolume && shape_material->is_dielectric();
-        bool supported = (has_medium || isvolume || bare_glass) &&
-          ValidateMediumBoundary(object.get(), has_medium || isvolume);
-        if(supported) {
-          if((has_medium || isvolume) && has_alpha)
+      if (volume_scene) {
+        bool bare_glass = !has_medium && shape_material->is_dielectric();
+        bool supported =
+            (has_medium || bare_glass) && ValidateMediumBoundary(object.get(), has_medium);
+        if (supported) {
+          if (has_medium && has_alpha)
             Rcpp::stop("Medium boundaries cannot have alpha cutouts.");
           ValidateMediumTransform(*ObjToWorld);
-          if(is_animated) { ValidateMediumTransform(*StartAnim); ValidateMediumTransform(*EndAnim); }
+          if (is_animated) {
+            ValidateMediumTransform(*StartAnim);
+            ValidateMediumTransform(*EndAnim);
+          }
           std::shared_ptr<const Medium> medium;
           bool keep_surface = true;
-          if(has_medium) {
+          if (has_medium) {
             medium = volume_scene->GetMedium(as<List>(SingleShape["medium"]));
             keep_surface = as<bool>(SingleShape["medium_keep_surface"]);
-          } else if(isvolume) {
-            NumericMatrix legacy_transform(4,4);
-            const auto& inv = ObjToWorld->GetInverseMatrix();
-            for(int row=0; row<4; ++row) for(int col=0; col<4; ++col) legacy_transform(row,col)=inv.m[row][col];
-            List desc = List::create(_["sigma_a"]=NumericVector::create(0,0,0),
-              _["sigma_s"]=NumericVector::create(fog_density,fog_density,fog_density),
-              _["density_scale"]=1, _["g"]=0, _["emission"]=NumericVector::create(0,0,0),
-              _["temperature"]=R_NilValue, _["emission_scale"]=1,
-              _["temperature_scale"]=1, _["temperature_offset"]=0,
-              _["medium_transform"]=legacy_transform);
-            if(!std::isfinite(fog_density) || fog_density < 0) Rcpp::stop("Fog density must be finite and nonnegative.");
-            auto legacy = std::make_shared<Medium>(desc);
-            if(shape_type == BOX && as<Float>(SingleMaterial["noise"]) != 0)
-              legacy->legacy_albedo = std::make_shared<noise_texture>(as<Float>(SingleMaterial["noise"]),
-                point3f(fog_color[0],fog_color[1],fog_color[2]), point3f(noise_color[0],noise_color[1],noise_color[2]),
-                as<Float>(SingleMaterial["noisephase"]), as<Float>(SingleMaterial["noiseintensity"]));
-            else legacy->legacy_albedo = std::make_shared<constant_texture>(point3f(fog_color[0],fog_color[1],fog_color[2]));
-            medium = legacy; keep_surface = false;
           }
-          object = std::make_shared<MediumBoundary>(object,medium,*ObjToWorld,keep_surface,
+          object = std::make_shared<MediumBoundary>(object, medium, *ObjToWorld, keep_surface,
                                                     volume_scene->NextBoundaryId());
           volume_scene->has_media |= bool(medium);
           volume_scene->has_emission |= medium && medium->IsEmissive();
           register_boundary = true;
         }
       }
-      if(is_animated) object = std::make_shared<AnimatedHitable>(object, Animate);
-      if(register_boundary) volume_scene->boundaries.add(object);
+      if (is_animated)
+        object = std::make_shared<AnimatedHitable>(object, Animate);
+      if (register_boundary)
+        volume_scene->boundaries.add(object);
       return object;
     };
-    switch(shape_type) {
-      case SPHERE: {
-        Float radius = as<Float>(shape_properties["radius"]);
-        entry = std::make_shared<sphere>(radius, shape_material, alpha[mat_idx], bump[mat_idx],
-                                         ObjToWorld, WorldToObj, is_flipped);
-        if(isvolume && !volume_scene) {
-          entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                    std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
-        }
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case XY_RECT: {
-        NumericVector widths =  as<NumericVector>(shape_properties["rectinfo"]);
-        entry = std::make_shared<xy_rect>(-widths(0)/2, widths(0)/2,
-                                          -widths(1)/2, widths(1)/2,
-                                          0, shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case XZ_RECT: {
-        NumericVector widths =  as<NumericVector>(shape_properties["rectinfo"]);
-        entry = std::make_shared<xz_rect>(-widths(0)/2, widths(0)/2,
-                                          -widths(1)/2, widths(1)/2,
-                                          0, shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case YZ_RECT: {
-        NumericVector widths =  as<NumericVector>(shape_properties["rectinfo"]);
-        entry = std::make_shared<yz_rect>(-widths(0)/2, widths(0)/2,
-                                          -widths(1)/2, widths(1)/2,
-                                          0, shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case BOX: {
-        NumericVector widths =  as<NumericVector>(shape_properties["boxinfo"]);
-        
-        entry = std::make_shared<box>(-vec3f(widths(0),widths(1),widths(2))/2, 
-                                       vec3f(widths(0),widths(1),widths(2))/2, 
-                                       shape_material, alpha[mat_idx], bump[mat_idx],
-                                       ObjToWorld,WorldToObj, is_flipped);
-        
-        if(isvolume && !volume_scene) {
-          Float noise = as<Float>(SingleMaterial["noise"]);
-          bool isnoise = noise != 0;
-          if(!isnoise) {
-            entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                      std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
-          } else {
-            Float noisephase = as<Float>(SingleMaterial["noisephase"]);
-            Float noiseintensity = as<Float>(SingleMaterial["noiseintensity"]);
-            
-            entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                      std::make_shared<noise_texture>(noise,
-                                                                                      point3f(fog_color(0),fog_color(1),fog_color(2)),
-                                                                                      point3f(noise_color(0),noise_color(1),noise_color(2)),
-                                                                                      noisephase, noiseintensity));
-          }
-        } 
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case OBJ: {
-        std::string objfilename = Rcpp::as<std::string>(SingleShape["fileinfo"]);
-        std::string objbasename =  Rcpp::as<std::string>(shape_properties["basename"]);
-        Float scale_obj = as<Float>(shape_properties["scale_obj"]);
-        bool load_textures = as<bool>(shape_properties["load_textures"]);
-        bool load_material = as<bool>(shape_properties["load_material"]);
-        bool load_vertex_colors = as<bool>(shape_properties["vertex_colors"]);
-        bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
-        bool load_normals = as<bool>(shape_properties["load_normals"]);
-        bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
-        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
-        std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
-        Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
-        bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
-        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
-        
-        
-        Float sigma_obj = as<Float>(SingleMaterial["sigma"]);
+    switch (shape_type) {
+    case SPHERE: {
+      Float radius = as<Float>(shape_properties["radius"]);
+      entry = std::make_shared<sphere>(radius, shape_material, alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj,
+                                       is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case XY_RECT: {
+      NumericVector widths = as<NumericVector>(shape_properties["rectinfo"]);
+      entry = std::make_shared<xy_rect>(-widths(0) / 2, widths(0) / 2, -widths(1) / 2, widths(1) / 2, 0, shape_material,
+                                        alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case XZ_RECT: {
+      NumericVector widths = as<NumericVector>(shape_properties["rectinfo"]);
+      entry = std::make_shared<xz_rect>(-widths(0) / 2, widths(0) / 2, -widths(1) / 2, widths(1) / 2, 0, shape_material,
+                                        alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case YZ_RECT: {
+      NumericVector widths = as<NumericVector>(shape_properties["rectinfo"]);
+      entry = std::make_shared<yz_rect>(-widths(0) / 2, widths(0) / 2, -widths(1) / 2, widths(1) / 2, 0, shape_material,
+                                        alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case BOX: {
+      NumericVector widths = as<NumericVector>(shape_properties["boxinfo"]);
 
-        
-        entry = std::make_shared<trimesh>(objfilename, objbasename, 
-                                          scale_obj, sigma_obj, shape_material, 
-                                          alpha[mat_idx], bump[mat_idx], 
-                                          load_material, load_textures, load_vertex_colors,
-                                          importance_sample_lights, load_normals, calculate_consistent_normals,
-                                          subdivision_levels, 
-                                          displacement_texture,
-                                          displacement_intensity,
-                                          is_vector_displacement,
-                                          texCache,
-                                          recalculate_normals,
-                                          imp_sample_objects,
-                                          shutteropen, shutterclose, bvh_type, rng, verbose,
-                                          ObjToWorld,WorldToObj, is_flipped);
-        if(isvolume && !volume_scene) {
-          entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                    std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
-        }
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case DISK: {
-        Float radius = as<Float>(shape_properties["radius"]);
-        Float inner_radius = as<Float>(shape_properties["inner_radius"]);
-        
-        entry = std::make_shared<disk>(vec3f(0,0,0), radius, inner_radius, shape_material, alpha[mat_idx], bump[mat_idx],
-                                       ObjToWorld, WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case CYLINDER: {
-        Float radius =  Rcpp::as<Float>(shape_properties["radius"]);
-        Float length =  Rcpp::as<Float>(shape_properties["length"]);
-        Float phi_min =  Rcpp::as<Float>(shape_properties["phi_min"]);
-        Float phi_max =  Rcpp::as<Float>(shape_properties["phi_max"]);
-        bool has_cap =  Rcpp::as<bool>(shape_properties["has_cap"]);
-        
-        bool has_caps_not_light = material_type != LIGHT && material_type != SPOTLIGHT;
-        bool has_cap_option = has_cap && has_caps_not_light;
-        entry = std::make_shared<cylinder>(radius, length, 
-                                           phi_min, phi_max, has_cap_option,
-                                           shape_material, alpha[mat_idx], bump[mat_idx],
-                                           ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case ELLIPSOID: {
-        Float a =  Rcpp::as<Float>(shape_properties["a"]);
-        Float b =  Rcpp::as<Float>(shape_properties["b"]);
-        Float c =  Rcpp::as<Float>(shape_properties["c"]);
-        entry = std::make_shared<ellipsoid>(point3f(0), 1, 
-                                            vec3f(a,b,c),
-                                            shape_material, alpha[mat_idx], bump[mat_idx],
-                                            ObjToWorld,WorldToObj, is_flipped);
-        if(isvolume && !volume_scene) {
-          entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                    std::make_shared<constant_texture>(point3f(fog_color(0),fog_color(1),fog_color(2))));
-        }
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case CURVE: {
-        NumericVector p1 = as<NumericVector>(shape_properties["p1"]);
-        NumericVector p2 = as<NumericVector>(shape_properties["p2"]);
-        NumericVector p3 = as<NumericVector>(shape_properties["p3"]);
-        NumericVector p4 = as<NumericVector>(shape_properties["p4"]);
-        Float width      = as<Float>(shape_properties["width"]);
-        Float width_end  = as<Float>(shape_properties["width_end"]);
-        Float u_min      = as<Float>(shape_properties["u_min"]);
-        Float u_max      = as<Float>(shape_properties["u_max"]);
-        CurveType curvetype    = static_cast<CurveType>(Rcpp::as<int>(shape_properties["curvetype"]));
-        NumericVector normal     = as<NumericVector>(shape_properties["normal"]);
-        NumericVector normal_end = as<NumericVector>(shape_properties["normal_end"]);
-        
-        point3f p[4];
-        vec3f n[2];
-        p[0] = point3f(p1(0),p1(1),p1(2));
-        p[1] = point3f(p2(0),p2(1),p2(2));
-        p[2] = point3f(p3(0),p3(1),p3(2));
-        p[3] = point3f(p4(0),p4(1),p4(2));
-        
-        n[0] = vec3f(normal(0),normal(1),normal(2));
-        n[1] = vec3f(normal_end(0),normal_end(1),normal_end(2));
-        
-        std::shared_ptr<CurveCommon> curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, n);
-        entry = std::make_shared<curve>(u_min, u_max, curve_data, shape_material,
-                                        ObjToWorld, WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        
-        list.add(entry);
-        break;
-      }
-      case CSG_OBJECT: {
-        List csg_object = as<List>(SingleShape["csg_object"])(0);
-        std::shared_ptr<ImplicitShape> shapes = parse_csg(csg_object);
-        entry = std::make_shared<csg>(shape_material, shapes,
-                                      ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case PLY: {
-        std::string plyfilename = Rcpp::as<std::string>(SingleShape["fileinfo"]);
-        std::string plybasename =  Rcpp::as<std::string>(shape_properties["basename"]);
-        Float scale_ply = as<Float>(shape_properties["scale_ply"]);
-        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
-        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
-        
-        entry = std::make_shared<plymesh>(plyfilename, plybasename, 
-                                          shape_material, alpha[mat_idx], bump[mat_idx], 
-                                          scale_ply, subdivision_levels, recalculate_normals,
-                                          verbose,
-                                          shutteropen, shutterclose, bvh_type, rng,
-                                          ObjToWorld,WorldToObj, is_flipped);
-        if(entry == nullptr) {
-          continue;
-        }
-        if(isvolume && !volume_scene) {
-          entry = std::make_shared<constant_medium>(entry, fog_density, 
-                                                    std::make_shared<constant_texture>(point3f(fog_color(0),
-                                                                                               fog_color(1),
-                                                                                               fog_color(2))));
-        }
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case MESH3D: {
-        List mesh_entry = as<List>(SingleShape["mesh_info"])(0);
-        std::string displacement_texture = as<std::string>(mesh_entry["displacement_texture"]);
-        Float displacement_intensity = as<Float>(mesh_entry["displacement_intensity"]);
-        bool is_vector_displacement = as<bool>(mesh_entry["displacement_vector"]);
-        bool recalculate_normals = as<bool>(mesh_entry["recalculate_normals"]);
-        
-        entry = std::make_shared<mesh3d>(mesh_entry, shape_material,
-                                         displacement_texture,
-                                         displacement_intensity,
-                                         is_vector_displacement,
-                                         texCache, recalculate_normals,
-                                         verbose,
-                                         shutteropen, shutterclose, bvh_type, rng,
-                                         ObjToWorld,WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
-        break;
-      }
-      case RAYMESH: {
-        List raymesh_object = as<List>(SingleShape["mesh_info"])(0);
-        bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
-        bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
-        bool override_material = as<bool>(shape_properties["override_material"]);
-        bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
-        int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
-        std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
-        Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
-        bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
-        bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
-        
-        //importance sample lights--need to change
-        ////calculate consistent normals--need to change
-        entry = std::make_shared<raymesh>(raymesh_object,
-                                          shape_material,
-                                          alpha[mat_idx], bump[mat_idx], 
-                                          importance_sample_lights, 
-                                          calculate_consistent_normals, 
-                                          override_material,
-                                          flip_transmittance,
-                                          subdivision_levels,
-                                          displacement_texture,
-                                          displacement_intensity,
-                                          is_vector_displacement,
-                                          texCache, recalculate_normals,
-                                          imp_sample_objects, 
-                                          verbose, 
-                                          shutteropen, shutterclose, bvh_type, rng, 
+      entry =
+          std::make_shared<box>(-vec3f(widths(0), widths(1), widths(2)) / 2, vec3f(widths(0), widths(1), widths(2)) / 2,
+                                shape_material, alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case OBJ: {
+      std::string objfilename = Rcpp::as<std::string>(SingleShape["fileinfo"]);
+      std::string objbasename = Rcpp::as<std::string>(shape_properties["basename"]);
+      Float scale_obj = as<Float>(shape_properties["scale_obj"]);
+      bool load_textures = as<bool>(shape_properties["load_textures"]);
+      bool load_material = as<bool>(shape_properties["load_material"]);
+      bool load_vertex_colors = as<bool>(shape_properties["vertex_colors"]);
+      bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
+      bool load_normals = as<bool>(shape_properties["load_normals"]);
+      bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
+      int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+      std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
+      Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
+      bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
+      bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
+
+      Float sigma_obj = as<Float>(SingleMaterial["sigma"]);
+
+      entry = std::make_shared<trimesh>(
+          objfilename, objbasename, scale_obj, sigma_obj, shape_material, alpha[mat_idx], bump[mat_idx], load_material,
+          load_textures, load_vertex_colors, importance_sample_lights, load_normals, calculate_consistent_normals,
+          subdivision_levels, displacement_texture, displacement_intensity, is_vector_displacement, texCache,
+          recalculate_normals, imp_sample_objects, shutteropen, shutterclose, bvh_type, rng, verbose, ObjToWorld,
+          WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case DISK: {
+      Float radius = as<Float>(shape_properties["radius"]);
+      Float inner_radius = as<Float>(shape_properties["inner_radius"]);
+
+      entry = std::make_shared<disk>(vec3f(0, 0, 0), radius, inner_radius, shape_material, alpha[mat_idx],
+                                     bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case CYLINDER: {
+      Float radius = Rcpp::as<Float>(shape_properties["radius"]);
+      Float length = Rcpp::as<Float>(shape_properties["length"]);
+      Float phi_min = Rcpp::as<Float>(shape_properties["phi_min"]);
+      Float phi_max = Rcpp::as<Float>(shape_properties["phi_max"]);
+      bool has_cap = Rcpp::as<bool>(shape_properties["has_cap"]);
+
+      bool has_caps_not_light = material_type != LIGHT && material_type != SPOTLIGHT;
+      bool has_cap_option = has_cap && has_caps_not_light;
+      entry = std::make_shared<cylinder>(radius, length, phi_min, phi_max, has_cap_option, shape_material,
+                                         alpha[mat_idx], bump[mat_idx], ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case ELLIPSOID: {
+      Float a = Rcpp::as<Float>(shape_properties["a"]);
+      Float b = Rcpp::as<Float>(shape_properties["b"]);
+      Float c = Rcpp::as<Float>(shape_properties["c"]);
+      entry = std::make_shared<ellipsoid>(point3f(0), 1, vec3f(a, b, c), shape_material, alpha[mat_idx], bump[mat_idx],
                                           ObjToWorld, WorldToObj, is_flipped);
-        entry = finish_entry(entry);
-        list.add(entry);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case CURVE: {
+      // Packed PBRT curves share row-level state, but keep their own geometry
+      // and the same insertion/subdivision order as individual scene rows.
+      auto append_curve = [&](const point3f p[4], const vec3f normals[2], Float width,
+                              Float width_end, Float u_min, Float u_max,
+                              CurveType curvetype, int split_depth) {
+        if (split_depth < 0 || split_depth > 10)
+          Rcpp::stop("Curve split_depth must be an integer from 0 to 10.");
+        auto curve_data = std::make_shared<CurveCommon>(p, width, width_end, curvetype, normals);
+        // PBRT CPU CreateCurve subdivides parameter intervals, retaining the
+        // original control points, tapered widths and ribbon normals.
+        const int segments = 1 << split_depth;
+        for (int segment = 0; segment < segments; ++segment) {
+          Float start = lerp(Float(segment) / segments, u_min, u_max);
+          Float end = lerp(Float(segment + 1) / segments, u_min, u_max);
+          entry = std::make_shared<curve>(start, end, curve_data, shape_material,
+                                         ObjToWorld, WorldToObj, is_flipped);
+          entry = finish_entry(entry);
+          list.add(entry);
+        }
+      };
+      if (shape_properties.containsElementNamed("curve_data")) {
+        if (importance_sample || has_medium)
+          Rcpp::stop("Packed curves cannot be importance-sampled emitters or medium boundaries.");
+        NumericMatrix curves = as<NumericMatrix>(shape_properties["curve_data"]);
+        if (curves.nrow() != 24 || curves.ncol() == 0)
+          Rcpp::stop("Packed curve data must be a nonempty matrix with 24 rows.");
+        for (int column = 0; column < curves.ncol(); ++column) {
+          if ((column & 1023) == 0) Rcpp::checkUserInterrupt();
+          const double *v = &curves(0, column);
+          for (int component = 0; component < 24; ++component)
+            if (!std::isfinite(v[component]) || !std::isfinite(static_cast<Float>(v[component])))
+              Rcpp::stop("Packed curve data must contain finite, representable values.");
+          if (v[12] < 0 || v[13] < 0 || std::max(v[12], v[13]) <= 0 ||
+              v[14] < 0 || v[15] > 1 || v[14] >= v[15] ||
+              v[16] != std::floor(v[16]) || v[16] < 0 || v[16] > 10 ||
+              v[17] != std::floor(v[17]) || v[17] < 1 || v[17] > 3)
+            Rcpp::stop("Invalid packed curve widths, parameter interval, subdivision depth or type.");
+          point3f p[4] = {point3f(v[0], v[1], v[2]), point3f(v[3], v[4], v[5]),
+                          point3f(v[6], v[7], v[8]), point3f(v[9], v[10], v[11])};
+          vec3f normals[2] = {vec3f(v[18], v[19], v[20]), vec3f(v[21], v[22], v[23])};
+          if (v[17] == 3 && (normals[0].squared_length() == 0 || normals[1].squared_length() == 0))
+            Rcpp::stop("Packed ribbon curves require nonzero endpoint normals.");
+          append_curve(p, normals, v[12], v[13], v[14], v[15],
+                       static_cast<CurveType>(static_cast<int>(v[17])), static_cast<int>(v[16]));
+        }
         break;
       }
-      case INSTANCE: {
-        List original_scene = as<List>(shape_properties["original_scene"])(0);
-        NumericVector x_values = as<NumericVector>(shape_properties["x_values"]);
-        NumericVector y_values = as<NumericVector>(shape_properties["y_values"]);
-        NumericVector z_values = as<NumericVector>(shape_properties["z_values"]);
-        NumericVector angle_x = as<NumericVector>(shape_properties["angle_x"]);
-        NumericVector angle_y = as<NumericVector>(shape_properties["angle_y"]);
-        NumericVector angle_z = as<NumericVector>(shape_properties["angle_z"]);
-        NumericVector scale_x = as<NumericVector>(shape_properties["scale_x"]);
-        NumericVector scale_y = as<NumericVector>(shape_properties["scale_y"]);
-        NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
-        IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
-        auto instance_importance_sample_list = std::make_shared<hitable_list>();
-        if(volume_scene) {
+      NumericVector p1 = as<NumericVector>(shape_properties["p1"]);
+      NumericVector p2 = as<NumericVector>(shape_properties["p2"]);
+      NumericVector p3 = as<NumericVector>(shape_properties["p3"]);
+      NumericVector p4 = as<NumericVector>(shape_properties["p4"]);
+      Float width = as<Float>(shape_properties["width"]);
+      Float width_end = as<Float>(shape_properties["width_end"]);
+      Float u_min = as<Float>(shape_properties["u_min"]);
+      Float u_max = as<Float>(shape_properties["u_max"]);
+      CurveType curvetype = static_cast<CurveType>(Rcpp::as<int>(shape_properties["curvetype"]));
+      NumericVector normal = as<NumericVector>(shape_properties["normal"]);
+      NumericVector normal_end = as<NumericVector>(shape_properties["normal_end"]);
+
+      point3f p[4];
+      vec3f n[2];
+      p[0] = point3f(p1(0), p1(1), p1(2));
+      p[1] = point3f(p2(0), p2(1), p2(2));
+      p[2] = point3f(p3(0), p3(1), p3(2));
+      p[3] = point3f(p4(0), p4(1), p4(2));
+
+      n[0] = vec3f(normal(0), normal(1), normal(2));
+      n[1] = vec3f(normal_end(0), normal_end(1), normal_end(2));
+
+      int split_depth = shape_properties.containsElementNamed("split_depth") ?
+        as<int>(shape_properties["split_depth"]) : 3;
+      append_curve(p, n, width, width_end, u_min, u_max, curvetype, split_depth);
+      break;
+    }
+    case CSG_OBJECT: {
+      List csg_object = as<List>(SingleShape["csg_object"])(0);
+      std::shared_ptr<ImplicitShape> shapes = parse_csg(csg_object);
+      auto solid = std::make_shared<csg>(shape_material, shapes, ObjToWorld, WorldToObj, is_flipped);
+      if (SingleShape.containsElementNamed("csg_materials")) {
+        List palette = SingleShape["csg_materials"];
+        solid->component_materials.push_back(shape_material);
+        for (SEXP item : palette) {
+          List component(item);
+          bool image = false, mask = false, height = false, roughness = false;
+          auto surface = LoadSingleMaterial(component, texCache, textures, alpha_textures,
+              bump_textures, roughness_textures, nvec.get(), nveca.get(), nvecb.get(), nvecr.get(),
+              image, mask, height, roughness, tricolorinfo);
+          if (surface->is_dielectric() || mask || height)
+            Rcpp::stop("CSG component materials require opaque surfaces without alpha or bump maps.");
+          solid->component_materials.push_back(surface);
+          importance_sample = importance_sample || as<bool>(component["implicit_sample"]);
+          // Keep the per-material texture and surface-map buffers aligned.
+          alpha.push_back(nullptr);
+          bump.push_back(nullptr);
+        }
+      }
+      entry = solid;
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case PLY: {
+      std::string plyfilename = Rcpp::as<std::string>(SingleShape["fileinfo"]);
+      std::string plybasename = Rcpp::as<std::string>(shape_properties["basename"]);
+      Float scale_ply = as<Float>(shape_properties["scale_ply"]);
+      int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+      bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
+
+      bool consistent_normals = shape_properties.containsElementNamed("calculate_consistent_normals") &&
+        as<bool>(shape_properties["calculate_consistent_normals"]);
+
+      entry = std::make_shared<plymesh>(plyfilename, plybasename, shape_material, alpha[mat_idx], bump[mat_idx],
+                                        scale_ply, subdivision_levels, recalculate_normals, verbose, shutteropen,
+                                        shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped, consistent_normals);
+      if (entry == nullptr) {
+        continue;
+      }
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case MESH3D: {
+      List mesh_entry = as<List>(SingleShape["mesh_info"])(0);
+      std::string displacement_texture = as<std::string>(mesh_entry["displacement_texture"]);
+      Float displacement_intensity = as<Float>(mesh_entry["displacement_intensity"]);
+      bool is_vector_displacement = as<bool>(mesh_entry["displacement_vector"]);
+      bool recalculate_normals = as<bool>(mesh_entry["recalculate_normals"]);
+
+      entry = std::make_shared<mesh3d>(mesh_entry, shape_material, displacement_texture, displacement_intensity,
+                                       is_vector_displacement, texCache, recalculate_normals, verbose, shutteropen,
+                                       shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped);
+      if (SingleAnimation.containsElementNamed("model_deformation") && !Rf_isNull(SingleAnimation["model_deformation"])) {
+        if (!row_model || !scene_time)
+          Rcpp::stop("Deforming model instances require explicit time or times.");
+        if (!displacement_texture.empty() || as<int>(mesh_entry["subdivision_levels"]) != 0)
+          Rcpp::stop("Deforming meshes do not support subdivision or displacement.");
+        List binding = SingleAnimation["model_deformation"];
+        size_t node = row_model->model->asset->NodeIndex(as<std::string>(binding["node"]));
+        int primitive = as<int>(binding["primitive"]);
+        if (primitive < 1) Rcpp::stop("Invalid deformation primitive index.");
+        if (recalculate_normals != row_model->model->asset->nodes.at(node).meshes.at(size_t(primitive-1))->recalculate_normals)
+          Rcpp::stop("Set replacement normals through read_gltf(recalculate_normals = TRUE).");
+        auto dynamic_mesh = std::static_pointer_cast<mesh3d>(entry);
+        dynamic_mesh->BindDeformation(row_model->model,node,size_t(primitive-1));
+        auto initial = dynamic_mesh->PrepareDeformation(scene_time->epoch);
+        if (initial) initial();
+        dynamic_mesh->mesh_bvh->Refit(shutteropen,shutterclose);
+        std::weak_ptr<mesh3d> weak = dynamic_mesh;
+        scene_time->deformation_updates.push_back([weak](double time) -> std::function<void()> {
+          auto mesh = weak.lock();
+          return mesh ? mesh->PrepareDeformation(time) : std::function<void()>{};
+        });
+        scene_time->deformation_bounds.push_back([weak](Float open, Float close) {
+          if (auto mesh = weak.lock()) mesh->mesh_bvh->Refit(open,close);
+        });
+      }
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case RAYMESH: {
+      List raymesh_object = as<List>(SingleShape["mesh_info"])(0);
+      bool importance_sample_lights = as<bool>(shape_properties["importance_sample_lights"]);
+      bool calculate_consistent_normals = as<bool>(shape_properties["calculate_consistent_normals"]);
+      bool override_material = as<bool>(shape_properties["override_material"]);
+      bool flip_transmittance = as<bool>(shape_properties["flip_transmittance"]);
+      int subdivision_levels = as<int>(shape_properties["subdivision_levels"]);
+      std::string displacement_texture = as<std::string>(shape_properties["displacement_texture"]);
+      Float displacement_intensity = as<Float>(shape_properties["displacement_intensity"]);
+      bool is_vector_displacement = as<bool>(shape_properties["displacement_vector"]);
+      bool recalculate_normals = as<bool>(shape_properties["recalculate_normals"]);
+
+      // importance sample lights--need to change
+      ////calculate consistent normals--need to change
+      entry = std::make_shared<raymesh>(
+          raymesh_object, shape_material, alpha[mat_idx], bump[mat_idx], importance_sample_lights,
+          calculate_consistent_normals, override_material, flip_transmittance, subdivision_levels, displacement_texture,
+          displacement_intensity, is_vector_displacement, texCache, recalculate_normals, imp_sample_objects, verbose,
+          shutteropen, shutterclose, bvh_type, rng, ObjToWorld, WorldToObj, is_flipped);
+      entry = finish_entry(entry);
+      list.add(entry);
+      break;
+    }
+    case INSTANCE: {
+      List original_scene = as<List>(shape_properties["original_scene"])(0);
+      const ModelBuildScope *child_model = row_model;
+      if (SingleAnimation.containsElementNamed("model_geometry") && !Rf_isNull(SingleAnimation["model_geometry"])) {
+        if (!row_model) Rcpp::stop("Model geometry requires an enclosing model instance.");
+        Environment asset(row_model->authored);
+        std::string geometry_node = as<std::string>(SingleAnimation["model_geometry"]);
+        if (asset.exists("geometry_nodes")) {
+          CharacterVector geometry_nodes = asset["geometry_nodes"];
+          const R_xlen_t node_index = geometry_nodes.findName(geometry_node);
+          geometry_node = CHAR(STRING_ELT(geometry_nodes, node_index));
+        }
+        size_t node = row_model->model->asset->NodeIndex(geometry_node);
+        List prototypes = asset["prototypes"], prototype = prototypes[node];
+        List shapes = prototype["shape_info"], shape = shapes[0], properties = shape["shape_properties"];
+        List canonical = as<List>(properties["original_scene"])(0);
+        // Serialization can duplicate lists without changing their values.
+        // Explicit per-instance edits (for example set_scene_material()) must
+        // retain their private source instead of silently restoring the asset.
+        if (R_compute_identical(original_scene, canonical, 0)) original_scene = canonical;
+        // Canonical immutable geometry has no instance clock. Reset the scope
+        // so every placement, including reloaded scenes, shares this prototype.
+        child_model = row_model->model->asset->nodes[node].meshes.empty() ? nullptr : row_model;
+      }
+      NumericVector x_values = as<NumericVector>(shape_properties["x_values"]);
+      NumericVector y_values = as<NumericVector>(shape_properties["y_values"]);
+      NumericVector z_values = as<NumericVector>(shape_properties["z_values"]);
+      NumericVector angle_x = as<NumericVector>(shape_properties["angle_x"]);
+      NumericVector angle_y = as<NumericVector>(shape_properties["angle_y"]);
+      NumericVector angle_z = as<NumericVector>(shape_properties["angle_z"]);
+      NumericVector scale_x = as<NumericVector>(shape_properties["scale_x"]);
+      NumericVector scale_y = as<NumericVector>(shape_properties["scale_y"]);
+      NumericVector scale_z = as<NumericVector>(shape_properties["scale_z"]);
+      IntegerVector shape_vec = as<IntegerVector>(original_scene["shape"]);
+      const SEXP prototype_key = original_scene;
+      auto &prototypes = instance_cache->prototypes[child_model ? child_model->model.get() : nullptr];
+      auto cached = prototypes.find(prototype_key);
+      std::shared_ptr<hitable_list> instance_importance_sample_list;
+      std::shared_ptr<hitable> instance_scene;
+      if (cached == prototypes.end()) {
+        instance_importance_sample_list = std::make_shared<hitable_list>();
+        if (volume_scene) {
           instance_importance_sample_list->volume_scene = std::make_shared<VolumeScene>();
           instance_importance_sample_list->volume_scene->medium_cache = volume_scene->medium_cache;
-          volume_scene->children.push_back(instance_importance_sample_list->volume_scene);
         }
-        std::shared_ptr<hitable> instance_scene = build_scene(original_scene,
-                                                              shape_vec,
-                                                              shutteropen,
-                                                              shutterclose,
-                                                              textures, 
-                                                              alpha_textures, 
-                                                              bump_textures, 
-                                                              roughness_textures,  
-                                                              shared_materials,
-                                                              alpha, bump, roughness,
-                                                              bvh_type,
-                                                              transformCache,
-                                                              texCache,
-                                                              (*instance_importance_sample_list),
-                                                              instanced_objects,
-                                                              instance_importance_sampled,
-                                                              texture_idx,
-                                                              false,
-                                                              rng);
+        instance_scene = build_scene(
+          original_scene, shape_vec, shutteropen, shutterclose, textures, alpha_textures, bump_textures,
+          roughness_textures, shared_materials, alpha, bump, roughness, bvh_type, transformCache, texCache,
+          (*instance_importance_sample_list), instanced_objects, instance_importance_sampled, texture_idx, false, rng,
+          instance_cache, time_origin, scene_time, child_model);
+        prototypes.emplace(prototype_key,
+            InstanceBuildCache::Prototype{instance_scene, instance_importance_sample_list});
         instanced_objects.push_back(instance_scene);
-        auto child_volumes = instance_importance_sample_list->volume_scene;
-        if(volume_scene && child_volumes) {
-          volume_scene->has_media |= child_volumes->has_media;
-          volume_scene->has_emission |= child_volumes->has_emission;
-        }
-        bool any_importance_sampled = instance_importance_sample_list->size() > 0;
-        if(any_importance_sampled) {
-          instance_importance_sampled.push_back(instance_importance_sample_list);
-        }
-        
-        for(size_t ii = 0; ii < (size_t)x_values.size(); ii++) {
+        // Instances hold raw light-list pointers, even for empty light lists.
+        instance_importance_sampled.push_back(instance_importance_sample_list);
+      } else {
+        instance_scene = cached->second.geometry;
+        instance_importance_sample_list = cached->second.lights;
+      }
+      auto child_volumes = instance_importance_sample_list->volume_scene;
+      if (volume_scene && child_volumes) {
+        volume_scene->children.push_back(child_volumes);
+        volume_scene->has_media |= child_volumes->has_media;
+        volume_scene->has_emission |= child_volumes->has_emission;
+      }
+      bool any_importance_sampled = instance_importance_sample_list->size() > 0;
+
+      const bool packed = shape_properties.containsElementNamed("instance_transforms");
+      NumericMatrix placements = packed ? as<NumericMatrix>(shape_properties["instance_transforms"])
+                                        : NumericMatrix(16, 0);
+      if (placements.nrow() != 16)
+        Rcpp::stop("Instance transforms must have 16 rows (column-major 4x4 matrices).");
+      const size_t placement_count = packed ? placements.ncol() : x_values.size();
+      for (size_t ii = 0; ii < placement_count; ii++) {
+        if ((ii & 4095) == 0) Rcpp::checkUserInterrupt();
+        Transform InstanceTransform;
+        if (packed) {
+          Float matrix[4][4];
+          for (int column = 0; column < 4; ++column)
+            for (int row = 0; row < 4; ++row) {
+              const double value = placements(row + 4 * column, ii);
+              if (!std::isfinite(value)) Rcpp::stop("Instance transforms must be finite.");
+              matrix[row][column] = value;
+            }
+          InstanceTransform = GroupTransform * Transform(matrix);
+        } else {
           vec3f center_instance = vec3f(x_values(ii), y_values(ii), z_values(ii));
           NumericVector angle_instance = {angle_x(ii), angle_y(ii), angle_z(ii)};
-
-          Transform InstanceTransform = GroupTransform * 
-            Translate(center_instance) * 
-            rotation_order_matrix(angle_instance, order_rotation) * 
-            Scale(scale_x(ii), scale_y(ii), scale_z(ii));
-          Transform* ObjToWorldInst = transformCache.Lookup(InstanceTransform);
-          Transform* WorldToObjInst = transformCache.Lookup(InstanceTransform.GetInverseMatrix());
-          const uint64_t boundary_offset = volume_scene
-            ? volume_scene->ReserveBoundaryIds(child_volumes->BoundaryCount()) : 0;
-          auto world_instance=std::make_shared<instance>(instance_scene.get(),ObjToWorldInst,
-              WorldToObjInst,instance_importance_sample_list.get(),boundary_offset);
-          std::shared_ptr<hitable> placed=world_instance;
-          if(is_animated) placed=std::make_shared<AnimatedHitable>(placed,Animate);
-          list.add(placed);
-          if(volume_scene && child_volumes->boundary_bvh) {
-            ValidateMediumTransform(*ObjToWorldInst);
-            if(is_animated) { ValidateMediumTransform(*StartAnim); ValidateMediumTransform(*EndAnim); }
-            auto boundary_instance = std::make_shared<instance>(child_volumes->boundary_bvh.get(),
-              ObjToWorldInst, WorldToObjInst, instance_importance_sample_list.get(), boundary_offset);
-            std::shared_ptr<hitable> boundary_placement=boundary_instance;
-            if(is_animated) boundary_placement=std::make_shared<AnimatedHitable>(boundary_placement,Animate);
-            volume_scene->boundaries.add(boundary_placement);
-          }
-          if(any_importance_sampled) {
-            imp_sample_objects.add(list.back());
-          }
+          InstanceTransform = GroupTransform * Translate(center_instance) *
+                              rotation_order_matrix(angle_instance, order_rotation) *
+                              Scale(scale_x(ii), scale_y(ii), scale_z(ii));
         }
-        break;
+        Transform *ObjToWorldInst = transformCache.Lookup(InstanceTransform);
+        const uint64_t boundary_offset =
+            volume_scene ? volume_scene->ReserveBoundaryIds(child_volumes->BoundaryCount()) : 0;
+        auto world_instance = std::make_shared<instance>(instance_scene.get(), ObjToWorldInst,
+                                                         instance_importance_sample_list.get(), boundary_offset);
+        std::shared_ptr<hitable> placed = world_instance;
+        if (is_animated)
+          placed = std::make_shared<AnimatedHitable>(placed, Animate);
+        list.add(placed);
+        if (volume_scene && child_volumes->boundary_bvh) {
+          ValidateMediumTransform(*ObjToWorldInst);
+          if (is_animated) {
+            ValidateMediumTransform(*StartAnim);
+            ValidateMediumTransform(*EndAnim);
+          }
+          auto boundary_instance =
+              std::make_shared<instance>(child_volumes->boundary_bvh.get(), ObjToWorldInst,
+                                         instance_importance_sample_list.get(), boundary_offset);
+          std::shared_ptr<hitable> boundary_placement = boundary_instance;
+          if (is_animated)
+            boundary_placement = std::make_shared<AnimatedHitable>(boundary_placement, Animate);
+          volume_scene->boundaries.add(boundary_placement);
+        }
+        if (any_importance_sampled) {
+          imp_sample_objects.add(list.back());
+        }
       }
+      break;
     }
-    if(importance_sample && shape_type != INSTANCE && !(volume_scene && (isvolume || (has_medium && !as<bool>(SingleShape["medium_keep_surface"]))))) {
+    }
+    if (importance_sample && shape_type != INSTANCE &&
+        !(volume_scene && has_medium && !as<bool>(SingleShape["medium_keep_surface"]))) {
       imp_sample_objects.add(entry);
     }
   }
-  std::shared_ptr<BVHAggregate> world_bvh = std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true,
-                                                   Iden,Iden,false );
-  
-  #ifdef FULL_DEBUG
+  std::shared_ptr<BVHAggregate> world_bvh =
+      std::make_shared<BVHAggregate>(list.objects, shutteropen, shutterclose, 1, true, Iden, Iden, false, bvh_type);
+  if (scene_time) {
+    std::weak_ptr<BVHAggregate> weak = world_bvh;
+    scene_time->deformation_bounds.push_back([weak](Float open, Float close) {
+      if (auto bvh = weak.lock()) bvh->Refit(open,close);
+    });
+  }
+
+#ifdef FULL_DEBUG
   world_bvh->validate_bvh();
 #endif
   // auto nodeleaf = world_bvh->CountNodeLeaf();
   // Rcpp::Rcout << "Node/Leaf: " << nodeleaf.first << " " << nodeleaf.second << " " << world_bvh->GetSize() << "\n";
-  if(imp_sample_objects.volume_scene) imp_sample_objects.volume_scene->Finish(shutteropen,shutterclose);
-  return(world_bvh);
+  if (imp_sample_objects.volume_scene)
+    imp_sample_objects.volume_scene->Finish(shutteropen, shutterclose);
+  return (world_bvh);
 }
-

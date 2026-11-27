@@ -180,6 +180,11 @@ tween = function(vals, n, ease = "cubic", closed = FALSE) {
   if (length(vals) == 1) {
     return(rep(vals, n))
   }
+  # A constant authored property must remain bitwise constant. Weighted sums
+  # can otherwise introduce roundoff that appears to animate fixed lens optics.
+  if (length(vals) > 1 && n >= length(vals) && isTRUE(all(vals == vals[1]))) {
+    return(rep(vals[1], n))
+  }
   if (ease == "spline") {
     return(tween_spline(vals, n, closed))
   }
@@ -401,7 +406,8 @@ tween_spline_path = function(points, n, closed = FALSE) {
 #' @param camera_ups Keyframe camera up vectors.
 #' @param output_positions Interpolated camera positions.
 #' @param closed Default `FALSE`. Whether to use periodic orientation tangents.
-#' @return List containing interpolated lookat positions and camera up vectors.
+#' @return List containing interpolated lookat positions, camera up vectors, and
+#' a logical mask identifying frames constrained to an unchanged target.
 #'
 #' @keywords internal
 tween_camera_orientation = function(
@@ -683,7 +689,29 @@ tween_camera_orientation = function(
   # Keep exact lookat targets; the interpolated up basis stays continuous
   # through keyframes so subsequent motion damping does not introduce roll.
   output_lookats[keyframe_frames, ] = lookats
-  list(lookats = output_lookats, camera_ups = output_camera_ups)
+
+  # Independent position, orientation and distance splines do not generally
+  # reconstruct a stationary orbit pivot. Identical adjacent targets are an
+  # explicit hold, not a direction to smooth. Use exact equality so even small
+  # intentional target movements remain animated.
+  fixed_lookat_rows = rep(FALSE, number_frames)
+  for (i in seq_len(number_segments)) {
+    if (all(lookats[i, ] == lookats[i + 1, ])) {
+      rows = seq.int(keyframe_frames[i], keyframe_frames[i + 1])
+      fixed_lookat_rows[rows] = TRUE
+      output_lookats[rows, ] = matrix(
+        lookats[i, ],
+        length(rows),
+        3,
+        byrow = TRUE
+      )
+    }
+  }
+  list(
+    lookats = output_lookats,
+    camera_ups = output_camera_ups,
+    fixed_lookat_rows = fixed_lookat_rows
+  )
 }
 
 #' Generate Translation Matrix
@@ -871,95 +899,6 @@ RotateAxis = function(theta, axis) {
   m[3, 3] = a[3] * a[3] + (1 - a[3] * a[3]) * cosTheta
   m[3, 4] = 0
   return(m)
-}
-
-#' Calculate Final Angle
-#'
-#' @keywords internal
-calculate_final_twist = function(
-  full_control_points,
-  breaks,
-  t_vals,
-  t_vec,
-  s_vec,
-  r_vec
-) {
-  r_vec0 = r_vec
-  s_vec0 = s_vec
-  t_vec0 = t_vec
-  for (i in seq_len(breaks - 1)) {
-    t_val0 = t_vals[i]
-    if (t_val0 < 0) {
-      t_val0 = 0
-    }
-    t_val1 = t_vals[i + 1]
-    if (t_val1 < 0) {
-      t_val1 = 0
-    }
-
-    rot_mat = matrix(c(s_vec, r_vec, t_vec), 3, 3)
-    t_temp0 = t_val0 - floor(t_val0)
-    if (i != breaks - 1) {
-      t_temp1 = t_val1 - floor(t_val1)
-    } else {
-      t_temp1 = 1
-    }
-
-    i0 = floor(t_val0) + 1
-    if (i != breaks - 1) {
-      i1 = floor(t_val1) + 1
-    } else {
-      i1 = max(c(1, floor(t_val1 + 1e-8)))
-    }
-
-    cp0 = full_control_points[[i0]]
-    if (i1 <= length(full_control_points)) {
-      cp1 = full_control_points[[i1]]
-    } else {
-      cp1 = cp0
-    }
-
-    x0 = eval_bezier(cp0, t_temp0)
-    x1 = eval_bezier(cp1, t_temp1)
-
-    #Evaluate next set of vectors
-    v1 = x1 - x0
-    c1 = sum(v1 * v1)
-    rl = r_vec - (2 / c1) * sum(v1 * r_vec) * v1
-    tl = t_vec - (2 / c1) * sum(v1 * t_vec) * v1
-
-    next_deriv = eval_bezier_deriv(cp1, t_temp1)
-    t_vec_prev = next_deriv / sqrt(sum(next_deriv * next_deriv))
-
-    v2 = t_vec_prev - tl
-    c2 = sum(v2 * v2)
-    if (c2 != 0) {
-      t_vec = t_vec_prev
-      r_vec = rl - (2 / c2) * sum(v2 * rl) * v2
-      s_vec = cross_prod(t_vec, r_vec)
-    }
-  }
-  angle_r = acos(sum(r_vec0 * r_vec))
-  angle_s = acos(sum(s_vec0 * s_vec))
-  angle_t = acos(sum(t_vec0 * t_vec))
-
-  return(c(angle_r, angle_s, angle_t))
-}
-
-#' Add Points to Polygon
-#'
-#' @param polygon Polygon
-#' @param added_points Default `0`
-#' @return matrix
-#'
-#' @keywords internal
-add_points_polygon = function(polygon, added_points = 0L) {
-  existing_verts = nrow(polygon)
-  total_verts = existing_verts + (existing_verts - 1L) * added_points
-  return_polygon = matrix(0, ncol = 3, nrow = total_verts)
-  return_polygon[, 1] = tween(polygon[, 1], n = total_verts, ease = "linear")
-  return_polygon[, 2] = tween(polygon[, 2], n = total_verts, ease = "linear")
-  return(return_polygon)
 }
 
 #' Print time

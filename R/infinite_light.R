@@ -273,6 +273,18 @@ remove_infinite_light = function(scene, name) {
 
 #' @export
 print.ray_infinite_light = function(x, ...) {
+  if (x$type == "uniform_disk") {
+    cat(sprintf(
+      "Infinite light '%s' (disk)\n  color: %s\n  direction: %s\n  angular diameter: %g degrees\n  intensity: %g\n  rotation: %g degrees\n",
+      x$name,
+      paste(x$color, collapse = ", "),
+      paste(signif(x$direction, 4), collapse = ", "),
+      x$angular_diameter,
+      x$intensity,
+      x$rotation
+    ))
+    return(invisible(x))
+  }
   if (!is.null(x$elevation)) {
     cat(sprintf(
       "Infinite light '%s' (%s)\n  elevation: %g degrees\n  azimuth: %g degrees\n  intensity: %g\n  rotation: %g degrees\n",
@@ -314,10 +326,11 @@ validate_infinite_light = function(light) {
     !inherits(light, "ray_infinite_light") ||
       !is.character(light$type) ||
       length(light$type) != 1 ||
-      !light$type %in% c("image", "sky", "sky_image", "sun", "moon", "disk")
+      !light$type %in%
+        c("image", "sky", "sky_image", "sun", "moon", "disk", "uniform_disk")
   ) {
     stop(
-      "Expected an image, atmospheric sky, image sky, sun, or moon ray_infinite_light.",
+      "Expected an image, atmospheric sky, image sky, sun, moon, or disk ray_infinite_light.",
       call. = FALSE
     )
   }
@@ -332,6 +345,19 @@ validate_infinite_light = function(light) {
   if (light$type %in% c("sky", "sky_image", "sun", "moon")) {
     validate_sky_light(light)
     if (light$type %in% c("sun", "moon")) validate_celestial_light(light)
+  } else if (light$type == "uniform_disk") {
+    color = light$color
+    if (
+      !is.numeric(color) ||
+        length(color) != 3 ||
+        any(!is.finite(color)) ||
+        any(color < 0 | color > 1)
+    ) {
+      stop(
+        "Disk light color must contain three finite RGB values between 0 and 1.",
+        call. = FALSE
+      )
+    }
   } else {
     if (
       !is.character(light$filename) ||
@@ -350,7 +376,7 @@ validate_infinite_light = function(light) {
       )
     }
   }
-  if (light$type == "disk") {
+  if (light$type %in% c("disk", "uniform_disk")) {
     validate_celestial_disk(light)
   }
   for (field in c("intensity", "rotation")) {
@@ -435,7 +461,7 @@ prepare_infinite_light = function(light) {
   if (isTRUE(light$atmosphere)) {
     return(prepare_prague_sky_light(light))
   }
-  if (light$type %in% c("image", "disk")) {
+  if (light$type %in% c("image", "disk", "uniform_disk")) {
     return(light)
   }
   if (light$type %in% c("sun", "moon")) {

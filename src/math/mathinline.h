@@ -458,7 +458,7 @@ inline bool refract(const vec3f& v, const vec3f& n, Float ni_over_nt, vec3f& ref
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
-    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    refracted = ni_over_nt * (uv - n * dt) - n * std::sqrt(discriminant);
     return(true);
   } else {
     return(false);
@@ -471,7 +471,7 @@ inline bool refract(const vec3f& v, const normal3f& n2, Float ni_over_nt, vec3f&
   Float dt = dot(uv, n);
   Float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
   if(discriminant > 0) {
-    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    refracted = ni_over_nt * (uv - n * dt) - n * std::sqrt(discriminant);
     return(true);
   } else {
     return(false);
@@ -836,7 +836,9 @@ inline std::array<point3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   // Compute $p=0$ attenuation at initial cylinder intersection
   Float cosGammaO = SafeSqrt(1 - h * h);
   Float cosTheta = cosThetaO * cosGammaO;
-  Float f = FrDielectric(cosTheta, 1.f, eta);
+  // At exact grazing the air-to-hair Fresnel limit is one. Avoid the legacy
+  // signed-cosine helper's 0/0 when its zero input flips the interface.
+  Float f = cosTheta == 0 ? Float(1) : FrDielectric(cosTheta, 1.f, eta);
   ap[0] = f;
   
   // Compute $p=1$ attenuation term
@@ -848,7 +850,12 @@ inline std::array<point3f, pMax + 1> Ap(Float cosThetaO, Float eta, Float h,
   }
   
   // Compute attenuation term accounting for remaining orders of scattering
-  ap[pMax] = ap[pMax - 1] * f * T / (point3f(1.0f,1.0f,1.0f) + -T * f);
+  // At exact grazing incidence F=T=1 for white hair. No energy enters the
+  // cylinder, so the internal remainder is zero rather than the formal 0/0.
+  for (int channel = 0; channel < 3; ++channel) {
+    Float ratio = f * T[channel];
+    ap[pMax][channel] = ratio < 1 ? ap[pMax - 1][channel] * ratio / (1 - ratio) : 0;
+  }
   return(ap);
 }
 

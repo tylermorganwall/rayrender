@@ -6,8 +6,8 @@
 #' altitude-dependent Sun and sky lighting, finite-distance haze, and
 #' in-scattering. Supply location and time, or direct Sun elevation and azimuth.
 #' Location/time skies include Sun and Moon disk lights automatically.
-#' Add the light with [add_infinite_light()]. Rendering automatically selects
-#' `integrator_type = "nee"`. Use [sky_light_image()] for a cached sky image.
+#' Add the light with [add_infinite_light()]. The default integrator uses Metal
+#' when available, otherwise CPU NEE. Use [sky_light_image()] for a cached sky image.
 #'
 #' @param lat Default `NULL`. Latitude in degrees, between -90 and 90. Supply
 #' `lat`, `long`, and `datetime` together, or use `elevation` and `azimuth`.

@@ -1,0 +1,37 @@
+body {
+  max-width: 1100px;
+  margin: 36px auto;
+  padding: 0 24px 48px;
+  color: #26323b;
+  line-height: 1.65;
+}
+
+h1, h2, h3 {
+  color: #173f50;
+  line-height: 1.25;
+}
+
+h1 {
+  margin-top: 2em;
+}
+
+pre {
+  background: #f5f3ef;
+  border: 1px solid #e4e0d8;
+  padding: 16px;
+  overflow-x: auto;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+table {
+  width: 100%;
+}
+
+th, td {
+  padding: 8px 12px;
+  text-align: left;
+}

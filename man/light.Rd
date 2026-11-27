@@ -14,6 +14,7 @@ light(
   invisible = FALSE,
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   gradient_color = NA,
   gradient_transpose = FALSE,
   gradient_point_start = NA,
@@ -46,6 +47,8 @@ the x/y/z coordinates that the spotlight should be focused on. Only works for sp
 
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
+
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.}
 
 \item{gradient_color}{Default `NA`. If not `NA`, creates a secondary color for a linear gradient
 between the this color and color specified in `color`. Direction is determined by `gradient_transpose`.}

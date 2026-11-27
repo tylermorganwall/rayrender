@@ -1,6 +1,8 @@
 #include "boundary.h"
 #include "../core/bvh.h"
 #include "../hitables/box.h"
+#include "../hitables/csg.h"
+#include "../hitables/cylinder.h"
 #include "../hitables/ellipsoid.h"
 #include "../hitables/mesh3d.h"
 #include "../hitables/plymesh.h"
@@ -9,6 +11,7 @@
 #include "../hitables/trimesh.h"
 #include "../materials/material.h"
 #include <map>
+#include <iomanip>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -151,6 +154,12 @@ point3f OffsetMediumOrigin(const hit_record &h, const vec3f &direction) {
   for (int a = 0; a < 3; ++a)
     if (origin[a] == h.p[a] && n[a] != 0) {
       Float side = (dot(direction, n) < 0 ? -1 : 1) * n[a];
+      // A face on a coordinate-zero plane has zero normal error. One subnormal
+      // ULP is lost in subsequent intersection arithmetic, particularly at a
+      // concave edge. Use the point's scale, without a fixed world-unit epsilon.
+      Float scale = std::max({std::abs(h.p[0]), std::abs(h.p[1]), std::abs(h.p[2]),
+                              h.pError.length()});
+      origin[a] += side * (8 * std::numeric_limits<Float>::epsilon() * scale);
       origin[a] = std::nextafter(origin[a], side > 0 ? Float(INFINITY) : Float(-INFINITY));
     }
   return origin;
@@ -166,7 +175,8 @@ MediumBoundary::MediumBoundary(std::shared_ptr<hitable> geom, std::shared_ptr<co
   ValidateMediumTransform(medium_to_world);
   if (auto *mesh = boundary_mesh(geometry.get()))
     orientation_sign = signed_mesh_volume(*mesh) < 0 ? -1 : 1;
-  else if ((dynamic_cast<sphere *>(geometry.get()) || dynamic_cast<ellipsoid *>(geometry.get())) &&
+  else if ((dynamic_cast<sphere *>(geometry.get()) || dynamic_cast<ellipsoid *>(geometry.get()) ||
+            dynamic_cast<cylinder *>(geometry.get()) || dynamic_cast<csg *>(geometry.get())) &&
            geometry->reverseOrientation)
     orientation_sign = -1;
 }
@@ -188,6 +198,14 @@ const bool MediumBoundary::hit(const Ray &r, Float lo, Float hi, hit_record &h,
       return false;
   } else if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, rng))
     return false;
+  if (h.OrderedDistance() < r.medium_t_min) {
+    // Analytic primitives report Float distances. Round their next query up;
+    // triangles apply the precise limit within their intersection predicate.
+    Float next = Float(r.medium_t_min);
+    if (double(next) < r.medium_t_min) next = std::nextafter(next, Float(INFINITY));
+    if (next <= lo || next > hi) return false;
+    return hit(r, next, hi, h, rng);
+  }
   Annotate(h);
   return true;
 }
@@ -201,8 +219,85 @@ const bool MediumBoundary::hit(const Ray &r, Float lo, Float hi, hit_record &h,
       return false;
   } else if (!has_interior_interval(geometry.get(), r) || !geometry->hit(r, lo, hi, h, sampler))
     return false;
+  if (h.OrderedDistance() < r.medium_t_min) {
+    Float next = Float(r.medium_t_min);
+    if (double(next) < r.medium_t_min) next = std::nextafter(next, Float(INFINITY));
+    if (next <= lo || next > hi) return false;
+    return hit(r, next, hi, h, sampler);
+  }
   Annotate(h);
   return true;
+}
+double PriorityInterface::Eta() const {
+  return (after ? double(after->ref_idx) : 1) / (before ? double(before->ref_idx) : 1);
+}
+const dielectric *VolumePathState::ActiveDielectric() const {
+  const dielectric *active = nullptr;
+  for (const auto *d : glass)
+    if (!active || d->priority <= active->priority) active = d;
+  return active;
+}
+bool VolumePathState::ContainsSubsurface() const {
+  for (const auto &entry : media)
+    if (entry.boundary->medium->subsurface) return true;
+  return false;
+}
+const MediumEntry *VolumePathState::Active() const {
+  if (media.empty()) return nullptr;
+  // Explicit media retain their nesting semantics. SSS instead follows the
+  // same winning dielectric as refraction and Beer-Lambert attenuation.
+  if (!media.back().boundary->medium->subsurface) return &media.back();
+  const dielectric *winner = ActiveDielectric();
+  for (auto i = media.rbegin(); i != media.rend(); ++i) {
+    if (!i->boundary->medium->subsurface) return &*i;
+    if (i->surface == winner) return &*i;
+  }
+  return nullptr;
+}
+PriorityInterface VolumePathState::Interface(const hit_record &h, const vec3f &direction) const {
+  const auto *d = static_cast<const dielectric *>(h.mat_ptr);
+  PriorityInterface result;
+  result.entering = dot(direction, h.geometric_normal) < 0;
+  result.before = ActiveDielectric();
+  // Remove only the last placement of this material on exit. Instances may
+  // share a material pointer, so removing every occurrence loses containment.
+  size_t removed = glass.size();
+  if (!result.entering)
+    for (size_t i = glass.size(); i > 0; --i)
+      if (glass[i - 1] == d) { removed = i - 1; break; }
+  for (size_t i = 0; i < glass.size(); ++i)
+    if (i != removed && (!result.after || glass[i]->priority <= result.after->priority))
+      result.after = glass[i];
+  if (result.entering && (!result.after || d->priority <= result.after->priority)) result.after = d;
+  return result;
+}
+void VolumePathState::CrossDielectric(const hit_record &h, const vec3f &direction) {
+  auto *d = static_cast<dielectric *>(h.mat_ptr);
+  auto interface = Interface(h, direction);
+  if (h.medium_boundary && h.medium_boundary->medium &&
+      h.medium_boundary->medium->subsurface && interface.Hidden() &&
+      interface.before && interface.before != d) {
+    bool contained = std::any_of(media.begin(), media.end(), [&](const MediumEntry &entry) {
+      return entry.boundary == h.medium_boundary && entry.boundary_id == h.boundary_id;
+    });
+    // A grazing origin offset can cross a tiny wedge of a losing solid without
+    // an intervening resolved hit. Its membership is a set, not a nesting count:
+    // assign the known outgoing side idempotently. This is safe only while a
+    // different dielectric wins on BOTH sides, so no active segment, IOR, or
+    // extinction is changed. Real SSS interfaces retain strict crossing checks.
+    if (contained == interface.entering) return;
+  }
+  const auto *previous = Active();
+  uint64_t previous_id = previous ? previous->boundary_id : 0;
+  if (dot(direction, h.geometric_normal) < 0) glass.push_back(d);
+  else {
+    auto i = std::find(glass.rbegin(), glass.rend(), d);
+    if (i != glass.rend()) glass.erase(std::next(i).base());
+  }
+  Cross(h, direction);
+  auto *next = Active();
+  if (next && next->boundary_id != previous_id &&
+      (!h.medium_boundary || next->boundary_id != h.boundary_id)) next->guide_valid = false;
 }
 void VolumePathState::Cross(const hit_record &h, const vec3f &direction) {
   if (!h.medium_boundary || !h.medium_boundary->medium)
@@ -212,24 +307,41 @@ void VolumePathState::Cross(const hit_record &h, const vec3f &direction) {
     for (const auto &entry : media)
       if (entry.boundary == h.medium_boundary && entry.boundary_id == h.boundary_id) {
         std::ostringstream message;
-        message << "Repeated entry into " << h.medium_boundary->geometry->GetName() << " at ("
+        message << std::setprecision(17) << "Repeated entry into " << h.medium_boundary->geometry->GetName() << " at ("
                 << h.p[0] << ", " << h.p[1] << ", " << h.p[2] << "), t=" << h.t
-                << ". Check mesh orientation, self intersections, and nesting.";
-        throw std::runtime_error(message.str());
+                << ", boundary=" << h.boundary_id << ", direction=("
+                << direction[0] << ", " << direction[1] << ", " << direction[2]
+                << "). Check mesh orientation, self intersections, and nesting.";
+        throw PathFailure(PathFailureKind::RepeatedEntry, message.str());
       }
-    media.push_back({h.medium_boundary, h.boundary_id, h.MediumToWorld()});
+    if (!media.empty()) media.back().guide_valid = false;
+    const auto *surface = h.mat_ptr && h.mat_ptr->is_dielectric()
+                              ? static_cast<const dielectric *>(h.mat_ptr) : nullptr;
+    media.push_back({h.medium_boundary, h.boundary_id, h.MediumToWorld(),
+                     convert_to_vec3(h.geometric_normal), true, surface});
   } else {
-    if (media.empty() || media.back().boundary != h.medium_boundary ||
-        media.back().boundary_id != h.boundary_id) {
+    auto found = std::find_if(media.begin(), media.end(), [&](const MediumEntry &entry) {
+      return entry.boundary == h.medium_boundary && entry.boundary_id == h.boundary_id;
+    });
+    bool valid = found != media.end();
+    if (valid && std::next(found) != media.end()) {
+      valid = h.medium_boundary->medium->subsurface;
+      for (auto i = std::next(found); valid && i != media.end(); ++i)
+        valid = i->boundary->medium->subsurface;
+    }
+    if (!valid) {
       std::ostringstream message;
-      message << "Non-nested or inconsistently oriented medium boundaries encountered at ("
+      message << std::setprecision(17) << "Non-nested or inconsistently oriented medium boundaries encountered at ("
               << h.p[0] << ", " << h.p[1] << ", " << h.p[2] << ") exiting "
               << h.medium_boundary->geometry->GetName() << ". Active boundary: "
               << (media.empty() ? "vacuum" : media.back().boundary->geometry->GetName())
-              << ". Use disjoint or nested closed volumes.";
-      throw std::runtime_error(message.str());
+              << ", boundary=" << h.boundary_id << ", direction=("
+              << direction[0] << ", " << direction[1] << ", " << direction[2]
+              << "). Use disjoint or nested closed volumes.";
+      throw PathFailure(PathFailureKind::InvalidExit, message.str());
     }
-    media.pop_back();
+    media.erase(found);
+    if (!media.empty()) media.back().guide_valid = false;
   }
 }
 uint64_t VolumeScene::ReserveBoundaryIds(uint64_t count) {
@@ -240,6 +352,11 @@ uint64_t VolumeScene::ReserveBoundaryIds(uint64_t count) {
   return offset;
 }
 void VolumeScene::Finish(Float t0, Float t1) {
+  has_diffusion = std::any_of(medium_cache->begin(), medium_cache->end(),
+      [](const auto &entry) { return entry.second && entry.second->subsurface_diffusion; });
+  for (const auto &child : children) has_diffusion |= child->has_diffusion;
+  individual_boundaries = std::all_of(boundaries.objects.begin(), boundaries.objects.end(),
+      [](const auto &object) { return dynamic_cast<const MediumBoundary *>(object.get()) != nullptr; });
   if (!boundaries.objects.empty())
     boundary_bvh = std::make_shared<BVHAggregate>(boundaries.objects, t0, t1, 1, true);
 }
@@ -248,9 +365,14 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   VolumePathState state;
   if (!boundary_bvh)
     return state;
+  // Finish() builds this aggregate from whole boundary placements. Distant
+  // objects contribute cancelling entry/exit pairs, so exclude them before
+  // traversing their meshes. Do not apply this filter inside a boundary mesh.
+  const auto *containment_bvh = static_cast<const BVHAggregate *>(boundary_bvh.get());
   vec3f direction = unit_vector(vec3f(1, 0.317f, 0.129f));
   Ray probe(ray.o, direction, ray.time());
   probe.segment_absorption = true;
+  Float lower = 0;
   random_gen rng(0);
   std::vector<hit_record> crossings;
   bool first_crossing = true;
@@ -260,10 +382,42 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
   auto cancelled = [&] {
     return (cancel && cancel->load(std::memory_order_relaxed)) || (poll && poll());
   };
-  while (!cancelled()) {
+  bool classify_first_crossings = individual_boundaries;
+  if (classify_first_crossings) {
+    // For a single closed, consistently oriented boundary, the first crossing
+    // is an exit iff the origin is inside. Ignore its later entry/exit pairs.
+    // Query complete objects in distance order, then replay only these exits
+    // in reverse to retain nesting and equal-priority dielectric ordering.
+    // An instance may contain several boundaries, so it uses the full walk.
+    std::vector<const hitable *> classified;
+    while (!cancelled()) {
+      hit_record h;
+      if (!containment_bvh->HitContainingObjects(probe, 0, MaxT, h, rng, &classified))
+        break;
+      double orientation = dot(direction, h.geometric_normal);
+      if (!std::isfinite(h.OrderedDistance()) || !std::isfinite(orientation))
+        throw PathFailure(PathFailureKind::PositionPrecision,
+                          "Non-finite boundary intersection in initial membership.");
+      if (h.t == 0 || orientation == 0) {
+        // Origins on a face need the original direction-sensitive crossing
+        // rules. Positive-distance ties between different complete objects are
+        // safe: each object's first crossing independently determines containment.
+        // Restarting closest-hit replay at a tie loses one coincident boundary.
+        classify_first_crossings = false;
+        crossings.clear();
+        break;
+      }
+      classified.push_back(h.medium_boundary);
+      if (orientation > 0) crossings.push_back(h);
+    }
+  }
+  while (!classify_first_crossings && !cancelled()) {
     hit_record h;
-    if (!boundary_bvh->hit(probe, 0, MaxT, h, rng))
+    if (!containment_bvh->HitContainingObjects(probe, lower, MaxT, h, rng))
       break;
+    if (!std::isfinite(h.OrderedDistance()) || h.OrderedDistance() < probe.medium_t_min)
+      throw PathFailure(PathFailureKind::PositionPrecision,
+                        "Non-finite or non-advancing boundary intersection in initial membership.");
     // A ray starting exactly on a boundary still processes its t=0 hit.
     // Initialize the side immediately before that crossing, using the actual
     // ray direction rather than the arbitrary containment probe direction.
@@ -274,33 +428,37 @@ VolumePathState VolumeScene::InitialState(const Ray &ray, const std::atomic<bool
     if (!at_origin || ray_outgoing == probe_outgoing)
       crossings.push_back(h);
     first_crossing = false;
-    point3f origin = OffsetMediumOrigin(h, direction);
-    probe = Ray(origin, direction, ray.time());
-    probe.segment_absorption = true;
+    // Normal offsets change the probe's line and can jump over the exit of
+    // a thin wedge at a pointed mesh corner. Advance only the query limit.
+    probe.medium_t_min = std::nextafter(h.OrderedDistance(), INFINITY);
+    lower = Float(probe.medium_t_min);
+    if (double(lower) > probe.medium_t_min)
+      lower = std::nextafter(lower, Float(-INFINITY));
   }
   for (auto i = crossings.rbegin(); i != crossings.rend(); ++i) {
     if (cancelled())
       break;
     const hit_record &h = *i;
-    state.Cross(h, -direction);
     if (h.medium_boundary && h.medium_boundary->keep_surface && h.mat_ptr &&
         h.mat_ptr->is_dielectric()) {
-      auto *d = static_cast<dielectric *>(h.mat_ptr);
-      if (dot(-direction, h.geometric_normal) < 0)
-        state.glass.push_back(d);
-      else {
-        auto j = std::find(state.glass.rbegin(), state.glass.rend(), d);
-        if (j != state.glass.rend())
-          state.glass.erase(std::next(j).base());
-      }
-    }
+      state.CrossDielectric(h, -direction);
+    } else state.Cross(h, -direction);
   }
+  // Containment probes are not physical entries and cannot supply a guide plane.
+  for (auto &entry : state.media) entry.guide_valid = false;
   return state;
 }
 bool ValidateMediumBoundary(hitable *geometry, bool required) {
+  if (auto *shape = dynamic_cast<csg *>(geometry)) {
+    if (shape->shapes->isClosed())
+      return true;
+  }
   if (dynamic_cast<sphere *>(geometry) || dynamic_cast<box *>(geometry) ||
       dynamic_cast<ellipsoid *>(geometry))
     return true;
+  if (const auto *c = dynamic_cast<cylinder *>(geometry))
+    if (c->has_caps && c->phi_min <= 0 && c->phi_max >= Float(2 * M_PI))
+      return true;
   TriangleMesh *mesh = boundary_mesh(geometry);
   auto invalid = [&] {
     if (required)
@@ -359,11 +517,34 @@ Rcpp::List VolumeScene::Statistics() const {
   for (const auto &entry : *medium_cache)
     if (entry.second)
       bytes += entry.second->MemoryBytes();
+  auto event_quantile_upper = [&](double fraction) {
+    uint64_t paths = statistics.subsurface_event_paths.load(), cumulative = 0;
+    if (!paths) return 0.0;
+    for (size_t i = 0; i < statistics.subsurface_event_histogram.size(); ++i) {
+      cumulative += statistics.subsurface_event_histogram[i].load();
+      if (double(cumulative) >= fraction * double(paths)) return std::ldexp(1.0, i);
+    }
+    return double(statistics.max_subsurface_events.load());
+  };
   return Rcpp::List::create(
       Rcpp::Named("paths") = double(statistics.paths.load()),
       Rcpp::Named("majorant_segments") = double(statistics.segments.load()),
       Rcpp::Named("camera_null_events") = double(statistics.null_events.load()),
       Rcpp::Named("scattering_events") = double(statistics.scattering_events.load()),
       Rcpp::Named("shadow_candidates") = double(statistics.shadow_candidates.load()),
+      Rcpp::Named("diffusion_samples") = double(statistics.diffusion_samples.load()),
+      Rcpp::Named("subsurface_events") = double(statistics.subsurface_events.load()),
+      Rcpp::Named("subsurface_boundaries") = double(statistics.subsurface_boundaries.load()),
+      Rcpp::Named("guide_eligible") = double(statistics.guide_eligible.load()),
+      Rcpp::Named("guide_fallback") = double(statistics.guide_fallback.load()),
+      Rcpp::Named("subsurface_intersections") = double(statistics.subsurface_intersections.load()),
+      Rcpp::Named("subsurface_bounded_queries") = double(statistics.subsurface_bounded_queries.load()),
+      Rcpp::Named("subsurface_bounded_misses") = double(statistics.subsurface_bounded_misses.load()),
+      Rcpp::Named("max_subsurface_events") = double(statistics.max_subsurface_events.load()),
+      Rcpp::Named("subsurface_event_paths") = double(statistics.subsurface_event_paths.load()),
+      Rcpp::Named("total_subsurface_events") = double(statistics.total_subsurface_events.load()),
+      Rcpp::Named("subsurface_events_p95_upper") = event_quantile_upper(.95),
+      Rcpp::Named("subsurface_events_p99_upper") = event_quantile_upper(.99),
+      Rcpp::Named("rounded_subsurface_flights") = double(statistics.rounded_subsurface_flights.load()),
       Rcpp::Named("medium_bytes") = double(bytes));
 }

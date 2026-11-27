@@ -48,7 +48,8 @@ print.ray_scene = function(x, ...) {
   # Count total objects and lights
   total_objects = nrow(x)
   total_lights = sum(unlist(lapply(x$material, \(x) x$type == "light"))) +
-    length(attr(x, "ray_infinite_lights", exact = TRUE))
+    length(attr(x, "ray_infinite_lights", exact = TRUE)) +
+    length(attr(x, "ray_lights", exact = TRUE))
 
   # Count each type of object
   shape_counts = table(x$shape)

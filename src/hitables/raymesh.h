@@ -23,7 +23,7 @@ public:
           std::string displacement_texture, Float displacement, bool displacement_vector,
           TextureCache &texCache, bool recalculate_normals,
           hitable_list& imp_sample_objects, bool verbose,
-          Float shutteropen, Float shutterclose, int bvh_type, random_gen rng, 
+          Float shutteropen, Float shutterclose, const BVHBuildOptions& bvh_type, random_gen rng,
           Transform* ObjectToWorld, Transform* WorldToObject, bool reverseOrientation);
   
   virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
@@ -64,4 +64,3 @@ public:
 };
 
 #endif
-

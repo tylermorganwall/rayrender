@@ -1,0 +1,6 @@
+pbrt version 4 (built Jan  5 2026 at 23:44:17)
+Copyright (c)1998-2021 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+The source code to pbrt (but *not* the book contents) is covered by the Apache 2.0 License.
+See the file LICENSE.txt for the conditions of the license.
+[1m[31mWarning[0m: aerial_explosion.pbrt:2:0: Output filename supplied on command line, "/Users/tyler/Desktop/R/rayrender/pbrt-v4-tests/aerial_explosion/aerial_explosion.pbrt-v4.tmp.exr" will override filename provided in scene description file, "aerial_explosion_aces.exr".
+[1m[31mError[0m: aerial_explosion.pbrt:45:12: "LeScale": unused parameter.

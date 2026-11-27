@@ -9,6 +9,7 @@
 #include "../math/mathinline.h"
 #include "../materials/microfacetdist.h"
 #include <array>
+#include "normalmap.h"
 
 // #define DEBUG2
 
@@ -57,6 +58,7 @@ struct scatter_record {
   Float eta = 1; // transmitted IOR / incident IOR; NEE uses radiance transport
   point3f attenuation;
   pdf *pdf_ptr = nullptr;
+  const ScatteringDistribution *distribution = nullptr; // Non-owning alias of pdf_ptr.
   ~scatter_record() { if(pdf_ptr) delete pdf_ptr; }
 };
 
@@ -93,24 +95,53 @@ class material {
     virtual bool is_dielectric() const {
       return(false);
     }
+    virtual bool physical_normal_mapping() const { return false; }
     virtual ~material() {};
     virtual const std::string GetName() = 0;
     virtual size_t GetSize() = 0;
 };
 
 
-class lambertian : public material {
-  public: 
-    lambertian(std::shared_ptr<texture> a) : albedo(a) {}
-    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-    point3f get_albedo(const hit_record& rec) const;
-    size_t GetSize();
-    const std::string GetName() {
-      return(std::string("diffuse"));
-    };
-    std::shared_ptr<texture> albedo;
+// Opaque reflective adapter with a validated diffuse child. Texture ownership
+// follows the other materials; per-interaction state belongs only to its PDF.
+class diffuse_material final : public material {
+  friend class WavefrontSceneCompiler;
+public:
+  diffuse_material(std::shared_ptr<texture> albedo, double sigma = 0)
+    : albedo(std::move(albedo)), child(sigma) {}
+  bool scatter(const Ray&, const hit_record&, scatter_record&, random_gen&) override;
+  bool scatter(const Ray&, const hit_record&, scatter_record&, Sampler*) override;
+  point3f f(const Ray&, const hit_record&, const vec3f&) const override;
+  point3f get_albedo(const hit_record&) const override;
+  bool physical_normal_mapping() const override { return true; }
+  const std::string GetName() override { return "diffuse"; }
+  size_t GetSize() override { return sizeof(*this); }
+private:
+  std::shared_ptr<texture> albedo;
+  normalmap::DiffuseChild child;
+};
+// Metric bump input for analytic primitives, with a physical frame for materials
+// that use projected-area normal mapping.
+void SetPhysicalBump(hit_record& h, const material* mat, const bump_texture* bump, const Ray& ray);
+normalmap::Model NormalMapInteraction(const Ray& ray, const hit_record& hit);
+
+// A thin sheet with independent Lambertian reflection and transmission lobes.
+// It has no refractive interior and uses geometric normals on both sides.
+class translucent_material final : public material {
+  friend class WavefrontSceneCompiler;
+public:
+  translucent_material(std::shared_ptr<texture> reflection, std::shared_ptr<texture> transmission)
+    : reflection(std::move(reflection)), transmission(std::move(transmission)) {}
+  bool scatter(const Ray&, const hit_record&, scatter_record&, random_gen&) override;
+  bool scatter(const Ray&, const hit_record&, scatter_record&, Sampler*) override;
+  point3f f(const Ray&, const hit_record&, const vec3f&) const override;
+  point3f get_albedo(const hit_record&) const override;
+  const std::string GetName() override { return "translucent"; }
+  size_t GetSize() override { return sizeof(*this); }
+private:
+  std::array<point3f, 2> colors(const hit_record&) const;
+  bool prepare(const Ray&, const hit_record&, scatter_record&) const;
+  std::shared_ptr<texture> reflection, transmission;
 };
 
 class metal : public material {
@@ -208,42 +239,8 @@ class spot_light : public material {
     bool invisible;
 };
 
-class isotropic : public material {
-public:
-  isotropic(std::shared_ptr<texture> a) : albedo(a) {}
-  ~isotropic() {}
-  virtual bool scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, random_gen& rng);
-  virtual bool scatter(const Ray& r_in, const hit_record& rec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
-    return(std::string("isotropic"));
-  };
-  std::shared_ptr<texture> albedo;
-};
-
-class orennayar : public material {
-public:
-  orennayar(std::shared_ptr<texture>  a, Float sigma) : albedo(a)  {
-    Float sigma2 = sigma*sigma;
-    A = 1.0f - (sigma2 / (2.0f * (sigma2 + 0.33f)));
-    B = 0.45f * sigma2 / (sigma2 + 0.09f);
-  }
-  ~orennayar() {}
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
-    return(std::string("orennayer"));
-  };
-  Float A, B;
-  std::shared_ptr<texture> albedo;
-};
-
 class MicrofacetReflection : public material {
+  friend class WavefrontSceneCompiler;
 public:
   MicrofacetReflection(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                        point3f eta, point3f k)
@@ -268,6 +265,7 @@ private:
 };
 
 class MicrofacetTransmission : public material {
+  friend class WavefrontSceneCompiler;
 public:
   MicrofacetTransmission(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
                          point3f eta2, point3f k) : 
@@ -287,6 +285,7 @@ public:
   };
   
 private:
+  bool Scatter(const Ray& ray, const hit_record& hit, scatter_record& result);
   std::shared_ptr<texture> albedo;
   MicrofacetDistribution *distribution;
   Float eta;
@@ -294,23 +293,28 @@ private:
 };
 
 class glossy : public material {
+  friend class WavefrontSceneCompiler;
 public:
   glossy(std::shared_ptr<texture> a, MicrofacetDistribution *distribution, 
          point3f Rs, point3f Rd2)
     : albedo(a), distribution(distribution), Rs(Rs), Rd(Rd2) {}
-  ~glossy() {
+  ~glossy() override {
     if(distribution) delete distribution;
   }
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
-  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
+  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) override;
+  bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) override;
+  point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const override;
   point3f SchlickFresnel(Float cosTheta) const;
-  point3f get_albedo(const hit_record& rec) const;
-  size_t GetSize();
-  const std::string GetName() {
+  point3f get_albedo(const hit_record& rec) const override;
+  bool physical_normal_mapping() const override { return true; }
+  size_t GetSize() override;
+  const std::string GetName() override {
     return(std::string("glossy"));
   };
   
+  // Raw primary-facet BRDF, shared with the per-hit normal-map closure.
+  point3f Evaluate(const normalmap::Vector& view, const normalmap::Vector& incoming,
+                  const normalmap::Vector& normal, point3f color, point2f alphas) const;
 private:
   std::shared_ptr<texture>  albedo;
   MicrofacetDistribution *distribution;
@@ -335,24 +339,31 @@ class hair : public material {
       for (int p = 3; p <= pMax; ++p) {
         v[p] = v[2];
       }
+      // Invert PBRT's empirical reflectance-to-absorption fit once. This is
+      // a view-independent denoising guide, not an extra transport multiplier.
+      Float fit = 5.969f - .215f * beta_n + 2.532f * Sqr(beta_n) -
+        10.73f * Pow<3>(beta_n) + 5.574f * Pow<4>(beta_n) + .245f * Pow<5>(beta_n);
+      for (int channel = 0; channel < 3; ++channel)
+        albedo[channel] = std::exp(-std::sqrt(sigma_a[channel]) * fit);
       // Compute azimuthal logistic scale factor from $\beta_n$
       s = SqrtPiOver8 *(0.265f * beta_n + 1.194f * Sqr(beta_n) + 5.372f * Pow<22>(beta_n));
 
       // Compute $\alpha$ terms for hair scales
       sin2kAlpha[0] = std::sin(mpi_over_180 * alpha);
-      cos2kAlpha[0] = SafeSqrt(1 - Sqr(sin2kAlpha[0]));
+      cos2kAlpha[0] = std::cos(mpi_over_180 * alpha);
       for (int i = 1; i < 3; ++i) {
         sin2kAlpha[i] = 2 * cos2kAlpha[i - 1] * sin2kAlpha[i - 1];
         cos2kAlpha[i] = Sqr(cos2kAlpha[i - 1]) - Sqr(sin2kAlpha[i - 1]);
       }
     }
     ~hair() {}
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng);
-    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler);
+    point3f get_albedo(const hit_record&) const override;
+    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, random_gen& rng) override;
+    bool scatter(const Ray& r_in, const hit_record& hrec, scatter_record& srec, Sampler* sampler) override;
     
-    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const;
-    size_t GetSize();
-    const std::string GetName() {
+    point3f f(const Ray& r_in, const hit_record& rec, const vec3f& scattered) const override;
+    size_t GetSize() override;
+    const std::string GetName() override {
       return(std::string("hair"));
     };
     
@@ -361,7 +372,8 @@ class hair : public material {
     Float beta_m, beta_n;
     Float alpha;
   private:
-    std::array<Float, pMax + 1> ComputeApPdf(Float cosThetaO, Float h) const;
+    bool Scatter(const Ray&, const hit_record&, scatter_record&);
+    point3f albedo;
     Float v[pMax + 1];
     Float s;
     Float sin2kAlpha[3], cos2kAlpha[3];
@@ -372,9 +384,8 @@ class hair : public material {
 inline OpaqueShadowType opaque_shadow_material(const material* m) {
   if (!m) return OpaqueShadowType::Unsupported;
   const auto& type = typeid(*m);
-  if (type == typeid(lambertian) || type == typeid(orennayar) ||
-      type == typeid(metal) || type == typeid(MicrofacetReflection) ||
-      type == typeid(glossy)) return OpaqueShadowType::Opaque;
+  if (type == typeid(metal) || type == typeid(MicrofacetReflection) ||
+      type == typeid(glossy) || type == typeid(diffuse_material)) return OpaqueShadowType::Opaque;
   if (type == typeid(diffuse_light) && !static_cast<const diffuse_light*>(m)->invisible)
     return OpaqueShadowType::Light;
   if (type == typeid(spot_light) && !static_cast<const spot_light*>(m)->invisible)

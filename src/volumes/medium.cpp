@@ -1,5 +1,6 @@
 #include "medium.h"
-#include "../materials/texture.h"
+#include "subsurface.h"
+#include "../materials/openpbr.h"
 #include "boundary.h"
 #include <algorithm>
 #include <stdexcept>
@@ -171,6 +172,60 @@ Medium::Medium(const Rcpp::List &d)
       temperature_offset(Rcpp::as<Float>(d["temperature_offset"])),
       medium_to_object(Rcpp::as<Rcpp::NumericMatrix>(d["medium_transform"])) {
   ValidateMediumTransform(medium_to_object);
+  if (d.containsElementNamed("openpbr") && !Rf_isNull(d["openpbr"])) {
+    const auto volume = OpenPBRInterior(Rcpp::as<Rcpp::List>(d["openpbr"]));
+    sigma_a = volume.absorption;
+    sigma_s = volume.scattering;
+    g = volume.anisotropy;
+    // Use the homogeneous free-flight engine and dielectric-priority ownership.
+    // Surface scattering remains the complete OpenPBR BSDF in volpath.cpp.
+    subsurface = true;
+    subsurface_accelerated = true;
+    subsurface_ior = volume.ior;
+  }
+  if (d.containsElementNamed("subsurface") && !Rf_isNull(d["subsurface"])) {
+    Rcpp::List s = d["subsurface"];
+    subsurface = true;
+    std::string method = Rcpp::as<std::string>(s["method"]);
+    if (method != "guided" && method != "random_walk" && method != "diffusion")
+      throw std::runtime_error("Unknown subsurface sampling method.");
+    subsurface_diffusion = method == "diffusion";
+    if (subsurface_diffusion) {
+      Rcpp::NumericVector color = s["color"], radius = s["radius"];
+      if (color.size() != 3 || radius.size() != 3)
+        throw std::runtime_error("Diffusion color and radius require three channels.");
+      for (int c = 0; c < 3; ++c) {
+        if (!std::isfinite(color[c]) || color[c] < 0 || color[c] > 1 ||
+            !(radius[c] > 0) || !std::isfinite(radius[c]) || !std::isfinite(1 / radius[c]))
+          throw std::runtime_error("Invalid diffusion color or radius.");
+        diffusion_color[c] = color[c];
+        diffusion_radius[c] = radius[c];
+      }
+    }
+    subsurface_guided = method == "guided";
+    if (s.containsElementNamed("accelerate")) {
+      SEXP value = s["accelerate"];
+      if (TYPEOF(value) != LGLSXP || Rf_xlength(value) != 1 || LOGICAL(value)[0] == NA_LOGICAL)
+        throw std::runtime_error("Subsurface accelerate must be TRUE or FALSE.");
+      subsurface_accelerated = LOGICAL(value)[0];
+    }
+    subsurface_ior = Rcpp::as<double>(s["refraction"]);
+    subsurface_roughness = Rcpp::as<double>(s["roughness"]);
+    if (!(Float(subsurface_ior) > 0) || !std::isfinite(Float(subsurface_ior)) ||
+        !std::isfinite(subsurface_roughness) || subsurface_roughness < 0 || subsurface_roughness > 1 ||
+        (subsurface_roughness > 0 && subsurface_roughness < .0001))
+      throw std::runtime_error("Invalid subsurface boundary parameters.");
+    for (int c = 0; c < 3; ++c) {
+      double st = double(sigma_a[c]) + sigma_s[c];
+      subsurface_pole[c] = SubsurfaceProposal::Pole(st > 0 ? sigma_s[c] / st : 0);
+      subsurface_guide_eligible |= subsurface_pole[c] > 1e-7;
+    }
+    // This pole guide is calibrated for isotropic scattering. In the g=.8
+    // benchmark its joint weights had severe tails and failed regional mean
+    // validation. Until an anisotropic guide is validated, choose the ordinary
+    // proposal before drawing any strategy. The physical HG g stays unchanged.
+    subsurface_guide_eligible &= g == 0;
+  }
   // Missing fields retain haze for older serialized medium descriptions.
   if (d.containsElementNamed("haze")) {
     SEXP value = d["haze"];
@@ -218,21 +273,16 @@ Medium::Medium(const Rcpp::List &d)
     temperature = values[0];
   }
 }
-MediumProperties Medium::Properties(Float density, const point3f &le, const point3f &p) const {
+MediumProperties Medium::Properties(Float density, const point3f &le) const {
   MediumProperties out;
   out.sigma_a = sigma_a * density;
   out.sigma_s = sigma_s * density;
-  if (legacy_albedo) {
-    point3f a = legacy_albedo->value(0, 0, p);
-    out.sigma_s = sigma_s * a;
-    out.sigma_a = sigma_s * (point3f(1) - a);
-  }
   out.Le = le;
   out.phase = HGPhaseFunction(g);
   return out;
 }
 MediumProperties Medium::SamplePoint(const point3f &p) const {
-  return Properties(Density(p), Emission(p), p);
+  return Properties(Density(p), Emission(p));
 }
 RayMajorantIterator Medium::SampleRay(const Ray &r, double t_max) const {
   return RayMajorantIterator(r, t_max, sigma_a + sigma_s, nullptr);
@@ -250,6 +300,18 @@ GridMedium::GridMedium(const Rcpp::List &d) : Medium(d) {
   density = field(d["density"]);
   temperatures = field(d["temperature"]);
   emissions = field(d["emission"], 3);
+  if (d.containsElementNamed("emission_scale_grid")) {
+    emission_scales = field(d["emission_scale_grid"]);
+    if (emission_scales.dims != density.dims || emission_scales.values.empty())
+      throw std::runtime_error("Emission scale array dimensions must match density.");
+    if (has_rgb_emission) {
+      Float max_scale = *std::max_element(emission_scales.values.begin(), emission_scales.values.end());
+      Float max_emission = *std::max_element(emissions.values.begin(), emissions.values.end());
+      if (!std::isfinite(max_scale * double(max_emission) * emission_scale) ||
+          !std::isfinite(Float(max_scale * double(max_emission) * emission_scale)))
+        throw std::runtime_error("Scaled grid emission must be finite and representable as float values.");
+    }
+  }
   Rcpp::NumericMatrix bounds(d["bounds"]);
   for (int a = 0; a < 3; ++a) {
     majorants.lo[a] = bounds(0, a);
@@ -326,18 +388,22 @@ point3f GridMedium::Emission(const point3f &p) const {
   if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
     return point3f(0);
   point3f uvw = Normalize(p);
+  // PBRT's scalar Lescale grid is interpolated separately from Le. Keeping it
+  // scalar also avoids expanding large volume grids into three RGB arrays.
+  Float scale = emission_scale *
+                (emission_scales.values.empty() ? 1 : emission_scales.Lookup(uvw));
   if (has_temperature)
-    return emission_scale *
+    return scale *
            BlackbodyRGB((temperatures.Lookup(uvw) - temperature_offset) * temperature_scale);
-  return emission_scale *
+  return scale *
          point3f(emissions.Lookup(uvw, 0), emissions.Lookup(uvw, 1), emissions.Lookup(uvw, 2));
 }
 MediumProperties GridMedium::SamplePoint(const point3f &p) const {
   // Avoid even entering the emission lookup in the common non-emissive case.
   // Do not use IsEmissive(): zero absorption does not make the stored Le zero.
   if (emission_scale == 0 || (!has_temperature && !has_rgb_emission))
-    return Properties(Density(p), point3f(0), p);
-  return Properties(Density(p), Emission(p), p);
+    return Properties(Density(p), point3f(0));
+  return Properties(Density(p), Emission(p));
 }
 RayMajorantIterator GridMedium::SampleRay(const Ray &r, double t_max) const {
   return RayMajorantIterator(r, t_max, sigma_a + sigma_s, &majorants);
@@ -345,6 +411,8 @@ RayMajorantIterator GridMedium::SampleRay(const Ray &r, double t_max) const {
 
 std::shared_ptr<const Medium> LoadMedium(const Rcpp::List &d) {
   std::string type = Rcpp::as<std::string>(d["type"]);
+  if (type != "homogeneous" && d.containsElementNamed("subsurface"))
+    throw std::runtime_error("Subsurface interiors must be homogeneous.");
   if (type == "homogeneous")
     return std::make_shared<Medium>(d);
   if (type == "grid")
@@ -357,5 +425,6 @@ std::shared_ptr<const Medium> LoadMedium(const Rcpp::List &d) {
 size_t GridMedium::MemoryBytes() const {
   return sizeof(*this) +
          sizeof(Float) * (density.values.capacity() + temperatures.values.capacity() +
-                          emissions.values.capacity() + majorants.density.capacity());
+                          emissions.values.capacity() + emission_scales.values.capacity() +
+                          majorants.density.capacity());
 }

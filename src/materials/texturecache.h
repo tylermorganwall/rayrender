@@ -18,25 +18,38 @@
 #include <string>
 #include <algorithm>
 #include <cctype>
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 #include <filesystem>
 namespace fs = std::filesystem;
 
+struct DecodedTextureImage {
+  int width = 0, height = 0;
+  std::vector<point3f> pixels;
+};
+
+class PtexRuntime;
+class PtexTextureResource;
 
 class TextureCache {
 public:
   TextureCache() = default;
   ~TextureCache();
+  std::shared_ptr<const PtexTextureResource> LookupPtex(const std::string& filename);
+  void ReportPtex(bool verbose);
+  std::shared_ptr<const DecodedTextureImage> LookupGraphImage(const std::string& filename,
+                                                            const std::string& encoding);
+  std::shared_ptr<const HeightImage> LookupHeight(const std::string& filename, int& nx, int& ny, int& nn);
   
   Float* LookupFloat(const std::string& filename,
                      int& nx, int& ny, int& nn, int desired_channels = 3);
   unsigned char * LookupChar(const std::string& filename,
-                             int& nx, int& ny, int& nn, int desired_channels = 3);
+                             int& nx, int& ny, int& nn, int desired_channels = 3,
+                             const std::string& variant = "");
 
 private:
+  std::shared_ptr<PtexRuntime> ptexRuntime;
+  std::unordered_map<std::string, std::shared_ptr<const PtexTextureResource>> ptexTextures;
+  std::unordered_map<std::string, std::shared_ptr<const DecodedTextureImage>> graphImages;
+  std::unordered_map<std::string, std::shared_ptr<const HeightImage>> heightImages;
   std::vector<float*> rawDataFloat;
   std::vector<unsigned char *> rawDataChar;
   

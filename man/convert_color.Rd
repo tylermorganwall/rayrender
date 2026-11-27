@@ -7,18 +7,16 @@
 convert_color(color, as_hex = FALSE)
 }
 \arguments{
-\item{color}{The color to convert. Can be either a hexadecimal code, or a numeric rgb
+\item{color}{The color to convert. Can be an R color name, a hexadecimal code, an `rgb(r, g, b)` string
+with channels between `0` and `255`, or a numeric rgb
 vector listing three intensities between `0` and `1`.}
+
+\item{as_hex}{Default `FALSE`. Return a hexadecimal color instead of numeric channels.}
 }
 \value{
 Color vector
 }
 \description{
 Convert Color
-}
-\examples{
-\dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}
-#none
-\dontshow{\}) # examplesIf}
 }
 \keyword{internal}

@@ -1,12 +1,32 @@
 #ifndef RAYRENDER_RENDER_JOBS_H
 #define RAYRENDER_RENDER_JOBS_H
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <exception>
 #include <future>
 #include <vector>
 #include "RcppThread.h"
+
+// Work tiles are independent of adaptive convergence blocks. A small expensive
+// region (for example glass containing SSS) must not monopolize one large block
+// while the other workers spin. Half-open rectangles retain pixel-owned RNGs.
+struct RenderTile {
+  int x_begin, y_begin, x_end, y_end;
+};
+
+template <typename Blocks>
+std::vector<RenderTile> make_render_tiles(const Blocks& blocks) {
+  constexpr int tile_size = 16;
+  std::vector<RenderTile> tiles;
+  for (const auto& block : blocks)
+    for (int x = block.startx; x < block.endx; x += tile_size)
+      for (int y = block.starty; y < block.endy; y += tile_size)
+        tiles.push_back({x, y, std::min(x + tile_size, int(block.endx)),
+                             std::min(y + tile_size, int(block.endy))});
+  return tiles;
+}
 
 // Wait on completion rather than sleeping between readiness checks. Short
 // sample passes wake immediately; long tiles still allow the main R thread to

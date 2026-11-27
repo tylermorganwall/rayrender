@@ -4,7 +4,14 @@
 \alias{csg_box}
 \title{CSG Box}
 \usage{
-csg_box(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0)
+csg_box(
+  x = 0,
+  y = 0,
+  z = 0,
+  width = c(1, 1, 1),
+  corner_radius = 0,
+  material = NULL
+)
 }
 \arguments{
 \item{x}{Default `0`. An x-coordinate on the box.}
@@ -16,6 +23,8 @@ csg_box(x = 0, y = 0, z = 0, width = c(1, 1, 1), corner_radius = 0)
 \item{width}{Default `c(1,1,1)`. Length-3 vector describing the x/y/z widths of the box}
 
 \item{corner_radius}{Default `0`. Radius if rounded box.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the box in the scene.

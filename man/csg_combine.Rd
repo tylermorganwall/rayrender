@@ -4,7 +4,13 @@
 \alias{csg_combine}
 \title{CSG Combine}
 \usage{
-csg_combine(object1, object2, operation = "union", radius = 0.5)
+csg_combine(
+  object1,
+  object2,
+  operation = "union",
+  radius = 0.5,
+  blend_materials = TRUE
+)
 }
 \arguments{
 \item{object1}{First CSG object}
@@ -14,12 +20,30 @@ csg_combine(object1, object2, operation = "union", radius = 0.5)
 \item{operation}{Default `union`. Can be `union`, `subtract`, `intersection`, `blend`, `subtractblend`, or `mix`.}
 
 \item{radius}{Default `0.5`. Blending radius.}
+
+\item{blend_materials}{Default `TRUE`. Blend component surface materials at
+smooth joins (`blend`, `subtractblend`, or `mix`). `FALSE` keeps a sharp
+material transition while retaining the blended geometry.}
 }
 \value{
 List describing the combined csg object in the scene.
 }
 \description{
 Note: Subtract operations aren't commutative: the second object is subtracted from the first.
+}
+\details{
+Hard Boolean operations use the material of the component defining the
+surface. Subtraction uses the cutter's material on the cut; equal distances
+choose the first component. `NULL` component materials inherit [csg_object()]'s
+material. Smooth joins use the derivatives of the smooth distance operation
+as weights; `mix` uses `1 - radius` and `radius`. Complete surface BSDFs are
+mixed, rather than interpolating unrelated shader parameters. Dielectric and
+subsurface transport cannot participate in this mixture.
+
+Material blending is sampled at each hit, so low sample counts can show
+noise at joins. Increase samples or denoise for a smoother result. With
+`blend_materials = FALSE`, `mix` selects the first material through `radius = .5`
+and the second above it.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

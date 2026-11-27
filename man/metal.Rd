@@ -22,6 +22,7 @@ metal(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -78,12 +79,14 @@ begins with value `gradient_color`.}
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.}
+
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
 \item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+\item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths

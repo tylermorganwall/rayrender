@@ -18,6 +18,8 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
                  const std::atomic<bool>* cancel) {
   point3f final_color(0, 0, 0);
   point3f emit_color(0, 0, 0);
+  normal = normal3f(0);
+  albedo = point3f(0);
   bool wrote_normal = false;
   bool wrote_albedo = false;
   point3f throughput(1, 1, 1);
@@ -71,15 +73,17 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
       // generates scatter record and sends out new ray, otherwise exits out
       // with accumulated color
       if (hrec.mat_ptr->scatter(r2, hrec, srec, sampler)) {
-        if(!wrote_normal) {
-          normal = hrec.normal;
+        if(!wrote_normal && !hrec.mat_ptr->is_delta_specular() && !srec.is_passthrough) {
+          normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
           wrote_normal = true;
         }        
-        if(!wrote_albedo) {
-          albedo = throughput;
+        if(!wrote_albedo && !hrec.mat_ptr->is_delta_specular() && !srec.is_passthrough) {
+          albedo = hrec.mat_ptr->get_albedo(hrec);
           wrote_albedo = true;
         }
         if (srec.is_specular) { // returns specular ray
+          if (hrec.mat_ptr->is_delta_specular() || srec.is_passthrough)
+            PropagateRayDifferentials(r2,hrec,srec.specular_ray,srec.is_transmission,srec.eta,srec.is_passthrough);
           r2 = srec.specular_ray;
           throughput *= srec.attenuation;
           continue;
@@ -102,7 +106,8 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError,
+                 hrec.mat_ptr->physical_normal_mapping() ? hrec.geometric_normal : hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = srec.pdf_ptr->value(
             dir, rng, r2.time()); // generates a pdf value based the
@@ -116,7 +121,7 @@ void color_basic(const Ray &r, hitable *world, size_t max_depth,
           break;
         }
 
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
+        throughput *= (srec.distribution ? srec.distribution->Evaluate(r2.direction()) : hrec.mat_ptr->f(r1, hrec, r2.direction())) / pdf_val;
 
       } else {
         color = final_color;
@@ -142,6 +147,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
   SCOPED_TIMER_COUNTER("Color");
   point3f final_color(0, 0, 0);
   point3f emit_color(0, 0, 0);
+  normal = normal3f(0);
+  albedo = point3f(0);
   bool wrote_normal = false;
   bool wrote_albedo = false;
 
@@ -189,10 +196,6 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
       }
       final_color += emit_color;
       if (throughput.xyz.x == 0 && throughput.xyz.y == 0 && throughput.xyz.z == 0) {
-        if(!wrote_normal) [[unlikely]] {
-          normal = hrec.normal;
-          wrote_normal = true;
-        }
         color = point3f(0, 0, 0);
         return;
       }
@@ -200,15 +203,17 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
       // generates scatter record and sends out new ray, otherwise exits out
       // with accumulated color
       if (hrec.mat_ptr->scatter(r2, hrec, srec, sampler)) {
-        if(!wrote_normal) {
-          normal = hrec.normal;
+        if(!wrote_normal && !hrec.mat_ptr->is_delta_specular() && !srec.is_passthrough) {
+          normal = hrec.has_bump ? hrec.bump_normal : hrec.normal;
           wrote_normal = true;
         }        
-        if(!wrote_albedo) {
+        if(!wrote_albedo && !hrec.mat_ptr->is_delta_specular() && !srec.is_passthrough) {
           albedo = hrec.mat_ptr->get_albedo(hrec);
           wrote_albedo = true;
         }
         if (srec.is_specular) { // returns specular ray
+          if (hrec.mat_ptr->is_delta_specular() || srec.is_passthrough)
+            PropagateRayDifferentials(r2,hrec,srec.specular_ray,srec.is_transmission,srec.eta,srec.is_passthrough);
           r2 = srec.specular_ray;
           throughput *= srec.attenuation;
           continue;
@@ -235,7 +240,8 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
               r2.time()); // scatters a ray from hit point to random direction
         }
 
-        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError, hrec.normal, dir), dir,
+        r2 = Ray(OffsetRayOrigin(hrec.p, hrec.pError,
+                 hrec.mat_ptr->physical_normal_mapping() ? hrec.geometric_normal : hrec.normal, dir), dir,
                  r2.pri_stack, r2.time());
         pdf_val = p.value(dir, rng,
                           r2.time()); // generates a pdf value based the
@@ -249,7 +255,7 @@ void color_basic_path_guiding(const Ray &r, hitable *world, hitable_list *hlist,
           break;
         }
 
-        throughput *= hrec.mat_ptr->f(r1, hrec, r2.direction()) / pdf_val;
+        throughput *= (srec.distribution ? srec.distribution->Evaluate(r2.direction()) : hrec.mat_ptr->f(r1, hrec, r2.direction())) / pdf_val;
       } else {
         color = final_color;
         return;

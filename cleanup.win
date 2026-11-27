@@ -1,9 +1,6 @@
 #!/bin/sh
 
-rm -f config.*
+# Remove generated configuration, preserving the shipped configure scripts.
+rm -f config.log config.status config.cache src/Makevars src/Makevars.win
 rm -rf autom4te.cache
 rm -f src/*.o.tmp
-rm -f src/Makevars
-rm -f configure.ac
-rm -f configure.in
-rm -f configure

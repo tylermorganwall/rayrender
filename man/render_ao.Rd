@@ -109,8 +109,9 @@ otherwise specified.}
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-of equal size.}
+hierarchy. Options are `"sah"`, `"equal"`, `"hlbvh"` (parallel CPU construction)
+and `"metal"` (Metal GPU construction, CPU traversal). See [render_scene()] for
+availability and construction/traversal tradeoffs.}
 
 \item{progress}{Default `TRUE` if interactive session, `FALSE` otherwise.}
 

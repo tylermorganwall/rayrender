@@ -93,22 +93,24 @@ group_objects = function(
     stopifnot(sum(axis_rotation * axis_rotation) > 0)
     Rotation = RotateAxis(angle, axis_rotation)
   }
-  for (i in seq_len(nrow(scene))) {
-    if (nrow(scene$transforms[[i]]$group_transform[[1]]) == 1) {
-      scene$transforms[[i]]$group_transform[[1]] = Translation %*%
-        PivotTranslateEnd %*%
-        Rotation %*%
-        Scale %*%
-        PivotTranslateStart
+  # All rows receive the same left-composed group transform. Preserve the
+  # multiplication order, but calculate it once and update the column in one
+  # assignment: nested scene$transforms[[i]] writes copy the growing column.
+  group_transform = Translation %*%
+    PivotTranslateEnd %*%
+    Rotation %*%
+    Scale %*%
+    PivotTranslateStart
+  transforms = lapply(scene$transforms, function(transform) {
+    previous = transform$group_transform[[1]]
+    transform$group_transform[[1]] = if (nrow(previous) == 1L) {
+      group_transform
     } else {
-      scene$transforms[[i]]$group_transform[[1]] = Translation %*%
-        PivotTranslateEnd %*%
-        Rotation %*%
-        Scale %*%
-        PivotTranslateStart %*%
-        scene$transforms[[i]]$group_transform[[1]]
+      group_transform %*% previous
     }
-  }
+    transform
+  })
+  scene$transforms = vctrs::vec_restore(transforms, scene$transforms)
 
   return(scene)
 }

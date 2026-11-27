@@ -4,7 +4,7 @@
 \alias{csg_cone}
 \title{CSG Cone}
 \usage{
-csg_cone(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5)
+csg_cone(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5, material = NULL)
 }
 \arguments{
 \item{start}{Default `c(0, 0, 0)`. Start point of the cone, specifing `x`, `y`, `z`.}
@@ -12,6 +12,8 @@ csg_cone(start = c(0, 0, 0), end = c(0, 1, 0), radius = 0.5)
 \item{end}{Default `c(0, 1, 0)`. End point of the cone, specifing `x`, `y`, `z`.}
 
 \item{radius}{Default `1`. Radius of the bottom of the cone.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the box in the scene.

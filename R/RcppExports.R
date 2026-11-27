@@ -5,8 +5,24 @@ PrintClassSizes <- function() {
     invisible(.Call(`_rayrender_PrintClassSizes`))
 }
 
+animation_evaluate_track <- function(track, times) {
+    .Call(`_rayrender_animation_evaluate_track`, track, times)
+}
+
+animation_evaluate_transform <- function(track, times) {
+    .Call(`_rayrender_animation_evaluate_transform`, track, times)
+}
+
+animation_euler_quaternions <- function(angles) {
+    .Call(`_rayrender_animation_euler_quaternions`, angles)
+}
+
 query_prague_atmosphere <- function(description, positions, directions, distances, sample = FALSE, build_sampler = FALSE) {
     .Call(`_rayrender_query_prague_atmosphere`, description, positions, directions, distances, sample, build_sampler)
+}
+
+cpp_has_metal <- function() {
+    .Call(`_rayrender_cpp_has_metal`)
 }
 
 has_gui_capability <- function() {
@@ -37,11 +53,43 @@ cppdef_HAS_SSE41 <- function() {
     .Call(`_rayrender_cppdef_HAS_SSE41`)
 }
 
+read_gltf_native <- function(filename) {
+    .Call(`_rayrender_read_gltf_native`, filename)
+}
+
+model_pose_native <- function(asset, player, placement, times) {
+    .Call(`_rayrender_model_pose_native`, asset, player, placement, times)
+}
+
+animation_model_surface <- function(asset, player, time) {
+    .Call(`_rayrender_animation_model_surface`, asset, player, time)
+}
+
+animation_model_clips <- function(input) {
+    .Call(`_rayrender_animation_model_clips`, input)
+}
+
+pbrt_lex_cpp <- function(filename, source = "") {
+    .Call(`_rayrender_pbrt_lex_cpp`, filename, source)
+}
+
 render_animation_rcpp <- function(scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background) {
     .Call(`_rayrender_render_animation_rcpp`, scene, camera_info, scene_info, render_info, camera_movement, start_frame, end_frame, filenames, post_process_frame, tonemap, bloom, write_image, transparent_background)
 }
 
 render_scene_rcpp <- function(scene, camera_info, scene_info, render_info) {
     .Call(`_rayrender_render_scene_rcpp`, scene, camera_info, scene_info, render_info)
+}
+
+usd_inspect_native <- function(filename, selectors, properties) {
+    .Call(`_rayrender_usd_inspect_native`, filename, selectors, properties)
+}
+
+usd_author_native <- function(document, filename) {
+    invisible(.Call(`_rayrender_usd_author_native`, document, filename))
+}
+
+usd_instance_quaternions_native <- function(angles, order) {
+    .Call(`_rayrender_usd_instance_quaternions_native`, angles, order)
 }
 

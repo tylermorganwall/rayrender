@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"directional","Absolute: both poles",64,6,5.40400000000001
+"directional","One-sided: upper surfaces",64,6,5.348
+"directional","Orientation multiplied by noise",64,6,6.386

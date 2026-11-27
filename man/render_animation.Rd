@@ -50,8 +50,16 @@ render_animation(
   transparent_background = FALSE,
   preview_light_direction = c(0, -1, 0),
   preview_exponent = 6,
-  integrator_type = "rtiow",
-  camera = NULL
+  integrator_type = "auto",
+  camera = NULL,
+  times = NULL,
+  fps = 30,
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement"),
+  return_frames = NULL,
+  async_write = TRUE,
+  screen_text = NULL,
+  screen_line = NULL
 )
 }
 \arguments{
@@ -155,8 +163,9 @@ to control the intensity of the bloom (higher number = more bloom).}
 (or the number specified in `options("cores")` if that option is not `NULL`).}
 
 \item{bvh_type}{Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-of equal size.}
+hierarchy. Options are `"sah"`, `"equal"`, `"hlbvh"` (parallel CPU construction)
+and `"metal"` (Metal GPU construction, CPU traversal). See [render_scene()] for
+availability, construction/traversal tradeoffs, and core-limit behavior.}
 
 \item{environment_light}{Default `NULL`. An image to be used for the background for rays that escape
 the scene. Supports EXR, HDR, PNG, and JPEG images. Scene lights added with
@@ -193,19 +202,102 @@ those pixels will be partially transparent.}
 
 \item{preview_exponent}{Default `6`. Phong exponent.}
 
-\item{integrator_type}{Default `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend", a basic
-form of path guiding). Other options include `"nee"` (Next Event Estimation, with direct light sampling)
+\item{integrator_type}{Default `"auto"`, selecting Metal when the package was built
+with Metal support and a ray-tracing-capable device is available, otherwise CPU
+`"nee"` (Next Event Estimation, with direct light sampling). Explicit choices
+override automatic selection. Other options include `"rtiow"` (the algorithm
+specified in the book "Raytracing in One Weekend", a basic form of path guiding)
 and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+`"metal"` uses the experimental GPU wavefront integrator where supported; see
+\code{\link{render_scene}()} for its feature coverage and CPU fallback behavior.
 \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
 media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.}
 
 \item{camera}{Default `NULL`. Scene-attached camera name, `"all"`, or a `ray_camera` object created with `camera()`.}
+
+\item{times}{Default `NULL`. Finite output scene times in seconds, including
+nonmonotonic or repeated times. NULL preserves legacy timing. start_frame and
+end_frame select positions in this sequence; filenames use output indices.}
+
+\item{fps}{Default `30`. Frame rate used to timestamp camera-motion rows as
+(index - 1) / fps when no explicit time column is present.}
+
+\item{shutter_offsets}{Default `NULL`. Ordered exposure offsets in seconds.
+Nonzero intervals integrate motion using `animation_motion_blur`.
+Zero-width intervals sample time plus the given offset.
+With times, NULL freezes each requested scene time. Explicit legacy shutter
+controls conflict with times. Moving perspective, orthographic, and panoramic
+cameras sample authored keys within the exposure; projection changes are
+cuts at the next key. Moving physical cameras support exact rigid exposure with
+constant aperture and focus. Varying physical optics require zero-width
+snapshots. Equal nonzero offsets sample optics at time plus that offset.
+Geometry is compiled once for the output sequence.
+Physical lens cameras use unit exposure weighting with explicit times;
+offsets select poses and ISO controls brightness. Legacy weighting is unchanged.}
+
+\item{animation_motion_blur}{Default `c("full", "placement")`. With explicit
+time and animated models, "full" evaluates the complete scene, including
+skin and morph deformation, at one shared shutter time per image sample.
+Existing geometry and BVH topology are reused with tight bounds refits.
+The total ray budget remains `samples`; increase it for smoother blur.
+Adaptive stopping is disabled for these exposures, and denoising uses
+accumulated temporal features. "placement" freezes internal model poses at
+frame time while retaining outer placement and other scene motion blur.
+Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+channels retain frame-frozen internal poses and report this when requested.}
+
+\item{return_frames}{Default `NULL`. Whether to retain rendered image arrays
+in the returned list. `NULL` retains frames only when they are not written
+to files. `TRUE` retains every image, including saved frames; memory then
+grows with frame count. `FALSE` releases every image after output.}
+
+\item{async_write}{Default `TRUE`. Process and save file-output frames in one
+persistent background R worker while the next frame renders. At most one
+image is pending; all pending output finishes before this function returns.
+Worker errors and warnings are reported in the main R session. In-memory
+outputs and `return_frames = TRUE` use synchronous processing. Set `FALSE`
+to process all frames synchronously.}
+
+\item{screen_text}{Default `NULL`. Screen-space labels created with `screen_text()`,
+or a list of label specifications. World anchors are projected for each frame;
+text size stays fixed in pixels and the specified occlusion mode is preserved.}
+
+\item{screen_line}{Default `NULL`. Screen-space lines created with `screen_line()`,
+or a list of line specifications. Endpoints are projected for each frame;
+line width stays fixed in pixels and the specified occlusion mode is preserved.}
 }
 \value{
-Raytraced plot to current device, or an image saved to a file.
+Invisibly, a list of frame results. Retained frames are image arrays;
+  otherwise each result is its filename, or `NA_character_` if no file was
+  written. Per-frame diagnostic attributes are preserved on either result.
+  Multiple cameras return a named list of camera results.
 }
 \description{
 Takes the scene description and renders an image, either to the device or to a filename.
+}
+\details{
+With \code{integrator_type = "metal"}, frames in the same native animation batch
+reuse the uploaded scene, acceleration structures, and GPU work buffers.
+Skin and morph pose changes update the affected mesh buffers and refit
+existing acceleration structures without rebuilding their topology.
+Camera parameters update for each frame while image accumulation and sampling
+restart independently. Resources are released when the batch finishes or is
+interrupted. Changes that require new camera storage or replace a sky model
+rebuild the Metal session. Separate \code{render_scene()} calls and camera batches
+with incompatible metadata do not share a session.
+
+Returned Metal frames carry a \code{wavefront} attribute with \code{scene_reused},
+\code{upload_seconds}, \code{sample_seconds}, and the other Metal diagnostics.
+Reused frames with unchanged geometry report zero scene-upload time. Pose
+changes report their update/refit time in \code{upload_seconds}; sampling time
+remains per frame. \code{acceleration_builds} and \code{acceleration_refits}
+count device acceleration operations in that frame's preparation, and
+\code{geometry_bytes_updated} counts updated packed triangle bytes, excluding
+auxiliary bounds and shading metadata. Repeated identical poses need no refit.
+
+Motion generated with \code{generate_camera_motion(closed = TRUE)} wraps its
+last shutter interval toward the first frame when camera motion blur is enabled.
+Open paths keep a stationary shutter endpoint at their final frame.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

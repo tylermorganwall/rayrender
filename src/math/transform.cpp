@@ -643,10 +643,17 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
+  if (r.has_differentials) {
+    transformed.has_differentials = true;
+    transformed.rx_origin = (*this)(r.rx_origin);
+    transformed.ry_origin = (*this)(r.ry_origin);
+    transformed.rx_direction = (*this)(r.rx_direction);
+    transformed.ry_direction = (*this)(r.ry_direction);
+  }
   return transformed;
 }
-
 
  Ray Transform::operator()(const Ray &r, vec3f *oError,
                                vec3f *dError) const {
@@ -661,9 +668,17 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
+  if (r.has_differentials) {
+    transformed.has_differentials = true;
+    transformed.rx_origin = (*this)(r.rx_origin);
+    transformed.ry_origin = (*this)(r.ry_origin);
+    transformed.rx_direction = (*this)(r.rx_direction);
+    transformed.ry_direction = (*this)(r.ry_direction);
+  }
   return transformed;
-}
+ }
 
  Ray Transform::operator()(const Ray &r, const vec3f &oErrorIn,
                                const vec3f &dErrorIn, vec3f *oErrorOut,
@@ -679,23 +694,61 @@ Ray Transform::operator()(const Ray &r) const {
   }
   Ray transformed(o, d, r.pri_stack, r.time(), tMax);
   transformed.segment_absorption = r.segment_absorption;
+  transformed.medium_t_min = r.medium_t_min;
   transformed.medium = r.medium;
+  if (r.has_differentials) {
+    transformed.has_differentials = true;
+    transformed.rx_origin = (*this)(r.rx_origin);
+    transformed.ry_origin = (*this)(r.ry_origin);
+    transformed.rx_direction = (*this)(r.rx_direction);
+    transformed.ry_direction = (*this)(r.ry_direction);
+  }
   return transformed;
-}
-
+ }
 
 hit_record Transform::operator()(const hit_record &r) const {
   hit_record hr;
   hr.p = (*this)(r.p, r.pError, &hr.pError);
+  hr.texture_object_p = r.texture_object_p;
+  hr.texture_object_normal = r.texture_object_normal;
   hr.normal = (*this)(r.normal);
   hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
+  hr.base_shading_normal = r.base_shading_normal.squared_length() > 0
+      ? unit_vector((*this)(r.base_shading_normal)) : normal3f(0);
+  hr.physical_shading_normal = r.physical_shading_normal.squared_length() > 0
+      ? (*this)(r.physical_shading_normal) : normal3f(0);
   hr.medium_boundary = r.medium_boundary;
   hr.boundary_id = r.boundary_id;
   if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
   hr.infinite_area_hit = r.infinite_area_hit;
-  hr.bump_normal = (*this)(r.bump_normal);
+  hr.bump_normal = r.has_bump ? (*this)(r.bump_normal) : normal3f(0);
   hr.dpdu = (*this)(r.dpdu);
   hr.dpdv = (*this)(r.dpdv);
+  hr.dpdx = (*this)(r.dpdx);
+  hr.dpdy = (*this)(r.dpdy);
+  hr.dudx = r.dudx;
+  hr.dvdx = r.dvdx;
+  hr.dudy = r.dudy;
+  hr.dvdy = r.dvdy;
+  hr.has_differentials = r.has_differentials;
+  // Differentiate normalize(M^-T n). Normal derivatives are not unit normals:
+  // normalizing them loses curvature magnitude and turns planar zeros into NaNs.
+  auto raw_normal = [&](const normal3f& n) {
+    return normal3f(mInv.m[0][0]*n[0]+mInv.m[1][0]*n[1]+mInv.m[2][0]*n[2],
+                    mInv.m[0][1]*n[0]+mInv.m[1][1]*n[1]+mInv.m[2][1]*n[2],
+                    mInv.m[0][2]*n[0]+mInv.m[1][2]*n[1]+mInv.m[2][2]*n[2]);
+  };
+  const auto transformed_n =
+      raw_normal(r.physical_shading_normal.squared_length() > 0 ? r.physical_shading_normal
+              : r.geometric_normal.squared_length() > 0      ? r.geometric_normal
+                                                             : r.normal);
+  const Float normal_length = transformed_n.length();
+  if (normal_length > 0) {
+    const auto n = transformed_n / normal_length;
+    const auto du = raw_normal(r.dndu), dv = raw_normal(r.dndv);
+    hr.dndu = (du - dot(du, n) * n) / normal_length;
+    hr.dndv = (dv - dot(dv, n) * n) / normal_length;
+  }
   hr.mat_ptr = r.mat_ptr;
   hr.has_bump = r.has_bump;
 #ifdef DEBUGBVH
@@ -704,6 +757,7 @@ hit_record Transform::operator()(const hit_record &r) const {
   hr.u = r.u;
   hr.v = r.v;
   hr.t = r.t;
+  hr.precise_t = r.precise_t;
   hr.shape = r.shape;
   hr.light_placement = r.light_placement;
   hr.alpha_miss = r.alpha_miss;
@@ -715,33 +769,7 @@ hit_record Transform::operator()(const hit_record &r) const {
 }
 
 hit_record Transform::operator()(hit_record &r) const {
-  hit_record hr;
-  hr.p = (*this)(r.p, r.pError, &hr.pError);
-
-  hr.normal = (*this)(r.normal);
-  hr.geometric_normal = r.geometric_normal.squared_length() > 0 ? unit_vector((*this)(r.geometric_normal)) : normal3f(0);
-  hr.medium_boundary = r.medium_boundary;
-  hr.boundary_id = r.boundary_id;
-  if(r.medium_boundary) hr.medium_to_world = (*this) * r.MediumToWorld();
-  hr.infinite_area_hit = r.infinite_area_hit;
-  hr.bump_normal = (*this)(r.bump_normal);
-  hr.dpdu = (*this)(r.dpdu);
-  hr.dpdv = (*this)(r.dpdv);
-  hr.mat_ptr = r.mat_ptr;
-  hr.has_bump = r.has_bump;
-#ifdef DEBUGBVH
-  hr.bvh_nodes = r.bvh_nodes;
-#endif
-  hr.u = r.u;
-  hr.v = r.v;
-  hr.t = r.t;
-  hr.shape = r.shape;
-  hr.light_placement = r.light_placement;
-  hr.alpha_miss = r.alpha_miss;
-  
-  
-  //Need to transform wo if used
-  return(hr);
+  return (*this)(static_cast<const hit_record&>(r));
 }
 
 // inline rayDifferential Transform::operator()(const rayDifferential &r) const {

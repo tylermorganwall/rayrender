@@ -13,6 +13,7 @@ public:
   virtual void StartPixel(const unsigned int i, const unsigned int j);
   virtual Float Get1D() = 0;
   virtual vec2f Get2D() = 0;
+  virtual vec2f Get2DContinuous() { return Get2D(); }
   virtual int RoundCount(int n) const {
     return n;
   }
@@ -106,12 +107,13 @@ class SobolSampler : public PixelSampler {
 class SobolBlueNoiseSampler : public PixelSampler {
   public:
     SobolBlueNoiseSampler(random_gen& rng);
-    void StartPixel( unsigned int i,  unsigned int j);
-    Float Get1D();
-    vec2f Get2D();
-    bool StartNextSample();
-    bool SetSampleNumber(size_t);
-    std::unique_ptr<Sampler> Clone(int seed);
+    void StartPixel( unsigned int i,  unsigned int j) override;
+    Float Get1D() override;
+    vec2f Get2D() override;
+    vec2f Get2DContinuous() override;
+    bool StartNextSample() override;
+    bool SetSampleNumber(size_t) override;
+    std::unique_ptr<Sampler> Clone(int seed) override;
     private:
       unsigned int current1Dsample, current2Dsample;
 

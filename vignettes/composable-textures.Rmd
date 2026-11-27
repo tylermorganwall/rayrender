@@ -1,0 +1,314 @@
+---
+title: "Composing surface textures"
+author: "rayrender"
+output:
+  rmarkdown::html_vignette:
+    toc: true
+    css: composable-textures.css
+vignette: >
+  %\VignetteIndexEntry{Composing surface textures}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r register-chunks, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", out.width = "100%",
+                      fig.align = "center", message = FALSE, warning = TRUE)
+knitr::read_chunk("scripts/texture-gallery.R")
+```
+
+```{r gallery-tools, include=FALSE}
+```
+
+A texture can be a number, a color, an image, or a computation that combines
+other textures. Feed its output into a material input to vary that input over
+the surface. The same scalar field can control several inputs: a pale region
+can also be rougher, or a dark stripe can also be polished.
+
+This gallery contains **26 renders in ten comparisons**. Each recipe below is
+the code used to generate its figure. The supplied images make the vignette
+quick to build; the final section explains how to regenerate them.
+
+These are surface-parameter recipes. A stone-like color pattern does not create
+stone geometry, and varying roughness does not change the object's silhouette.
+
+# Start with a scalar field
+
+`texture_noise()` produces a scalar between zero and one. It is seeded smooth
+value noise, with smaller contributions from successive octaves. Its seed is
+independent of the render's sampling seed.
+
+`texture_mix(a, b, weight)` computes `(1 - weight) * a + weight * b`. Its weight
+is clamped to `[0, 1]`. The first mix below expands the noise range; using that
+result as the next mix's weight makes the patches more distinct.
+
+The left image shows the scalar field through a diffuse grayscale material, so
+its brightness also includes lighting and shadows. The middle and right images
+reuse that field for a two-color palette. On the right, the gold-colored patches
+also have greater roughness.
+
+```{r shared-field, fig.alt="Three spheres showing a grayscale noise mask, the same mask driving blue and gold color, and the same mask also driving roughness."}
+```
+
+`grain`, `mask`, `pigment`, and `roughness` are serializable texture descriptions.
+They do not contain R callbacks. Scene construction turns their graphs into
+native nodes, which evaluate at surface hits.
+
+# Put patterns inside patterns
+
+A checker's two children need not be colors. One child below is another checker.
+The third recipe turns a 3D checker into horizontal bands by setting its x and z
+coordinate scales to zero, then puts a noise-based palette between those bands.
+
+```{r nested-patterns, fig.alt="A fine checker, a nested checker with coral cells, and a sphere with alternating gold stripes and blue-green noisy bands."}
+```
+
+The pattern belongs to the texture; the material describes how it reflects
+light. A checker can therefore drive color, roughness, or another mix's weight.
+
+# Stretch and combine noise
+
+Unequal coordinate scales stretch the pattern. Here, a larger y scale creates
+closely spaced variation along y. A rotation tilts the pattern in the texture
+xy plane. The third material uses a second, broader noise field to blend two
+complete **color recipes**.
+
+These suggest wood and stone rather than simulating their physical structure.
+All three objects retain exactly the same smooth spherical geometry.
+
+```{r stretched-noise, fig.alt="Three smooth spheres with stretched brown noise, gray stone-like noise, and a broad mixture of the two palettes."}
+```
+
+This rotation argument rotates about the texture z axis. It is useful for UV
+rotation and for tilting 3D patterns in xy; it is not an arbitrary three-axis
+texture transform or a domain-warping system.
+
+# Use orientation as a mask
+
+`texture_direction_mix()` uses the geometric surface normal. Its argument order
+follows PBRT: alignment weights **the first input**. This differs from
+`texture_mix()`, where a weight of one selects the second input.
+
+With `absolute = TRUE`, the weight is `abs(dot(normal, direction))`. Upward and
+downward faces receive the same value. For a deposited-on-top appearance, use
+`absolute = FALSE`, which uses `max(0, dot(normal, direction))` instead.
+
+The final recipe multiplies that one-sided orientation mask by noise. It breaks
+up the pale region and also increases roughness there. It changes color and
+roughness; it does not add a physical layer of dust or snow.
+
+```{r directional, fig.alt="Absolute normal weighting colors both poles, one-sided weighting colors only upper surfaces, and multiplying the upward mask by noise creates irregular pale patches."}
+```
+
+The direction is fixed in world space by default. This is **not a facing-ratio or
+Fresnel texture**: moving the camera does not move the mask. Set `space =
+"object"` to anchor its direction to the object instead. Bump mapping does not
+change this geometric-normal mask.
+
+# Choose where the texture lives
+
+Object coordinates move with the primitive and survive instancing. World
+coordinates include the placement of each instance. The two spheres in each
+image below are instances of the same source sphere.
+
+The object-space gradient repeats from blue to orange in each sphere. The
+world-space gradient spans both placements: the left sphere samples its blue
+end and the right sphere its orange end. The gradient clamps at its endpoints;
+it does not repeat.
+
+```{r coordinate-spaces, fig.alt="Two pairs of instanced spheres: an object-space gradient repeats in both; a world-space gradient spans the pair."}
+```
+
+Each node owns its mapping. Changing an image node's UV offset does not move a
+separate roughness node. Mapping applies scale, then rotation about z, then
+offset. Negative scales mirror a mapping; zero scales suppress variation along
+an axis.
+
+## UV coordinates have their own distortion
+
+A 3D checker evaluates the position of the surface inside a grid of cubes. Its
+intersection with a sphere need not look like square tiles. A UV checker instead
+uses the sphere's parameterization. Its cells narrow and converge near the poles.
+
+```{r uv-versus-object, fig.alt="A position-based checker on a sphere compared with a UV checker whose cells converge near the poles."}
+```
+
+Composing textures does not remove UV seams or stretching. Choose 3D coordinates
+for a pattern that should cut through an object, or supply suitable mesh UVs for
+a pattern that should follow its surface. UV images use the mapped x and y
+coordinates; they are not automatically projected triplanarly.
+
+# Change the finish with a scalar output
+
+The first two spheres keep the same color texture and metallic base. The
+roughness bands in the middle image alternate between sharp and broad
+reflections. The third sphere shows that the same graph can feed the existing
+`microfacet()` material.
+
+```{r roughness-finishes, fig.alt="Gold-colored spheres with constant roughness, alternating polished and rough bands in OpenPBR, and the same roughness graph on a microfacet material."}
+```
+
+The numbers are interpreted by the receiving material. `microfacet()` retains
+its existing numeric roughness conversion; OpenPBR uses its own model. The same
+number is not a promise of identical highlight width across the two shaders.
+Within each material, a texture value follows that material's numeric-input
+semantics.
+
+## Make glass clearer in one orientation
+
+The checker floor makes refraction easier to see. Both spheres use OpenPBR solid
+transmission, constant IOR, and identical geometry. Only roughness changes.
+
+The second sphere is clearest where its geometric normal aligns with a fixed
+direction close to the camera's position, and rougher toward the silhouette.
+The camera is fixed for this example; moving it would not update the texture's
+direction automatically.
+
+```{r glass, fig.alt="Clear glass over a checker floor compared with glass whose roughness increases toward its silhouette."}
+```
+
+This is the same kind of parameter operation as PBRT's `directionmix` roughness
+texture. PBRT import transforms the declared direction and evaluates its
+roughness remapping **after** the texture blend. It does not blend the BSDFs of
+two separate glass materials.
+
+# Images can be graph inputs too
+
+The small RGB tile below is generated entirely in R, so the example needs no
+downloaded assets. Its channels deliberately contain different patterns.
+
+```{r make-image}
+```
+
+```{r source-image, echo=FALSE, out.width="24%", fig.alt="Original RGB tile with concentric rings, a vertical ramp, and diagonal bands in separate channels."}
+knitr::include_graphics(tile_file)
+```
+
+Extracting its red channel gives a scalar mask that can drive a new palette.
+The last sphere uses another image node with its own repeat, rotation, and offset
+to control roughness. Changing that mapping leaves the color mapping alone.
+
+```{r image-composition, fig.alt="An RGB image on a metallic sphere, its red channel recolored blue and gold, and that recolored sphere with independently mapped roughness."}
+```
+
+Color-to-scalar conversion is explicit. Use `texture_channel(x, "r")`, `"g"`,
+`"b"`, `"average"`, or `"luminance"`. A scalar can broadcast to a color, but a
+color cannot silently become a roughness value or mixing weight.
+
+For images, `encoding = "auto"` treats scalar maps as linear data and ordinary
+LDR color images as sRGB; EXR/HDR defaults to linear. Use an explicit encoding
+when the file's contents differ from those assumptions. Decoding happens before
+bilinear filtering and mixing. A scalar image averages its RGB channels; it does
+not automatically interpret its alpha channel as a mask. The `red_mask` above
+uses the red channel **after sRGB decoding**, while `image_roughness` reads the
+RGB average as **linear data**.
+
+# Small patterns expose the filtering limit
+
+Procedural patterns currently evaluate a point sample. They have no knowledge
+of the pixel's projected footprint. The dense checker below has cells smaller
+than a pixel in parts of the image, so the render cannot resolve every cell.
+
+```{r fine-patterns, fig.alt="A coarse checker floor with resolved cells and a much denser checker floor showing subpixel sampling artifacts."}
+```
+
+More samples can reduce sampling noise, and rendering larger and downsampling
+can help. Neither supplies analytic filtering to the procedural texture. For
+stable fine detail, reduce the pattern frequency. Image nodes use bilinear
+filtering, but do not yet have mipmapped or anisotropic footprint filtering.
+
+# Supported inputs and limitations
+
+| Material | Inputs that currently accept graphs |
+|:--|:--|
+| `diffuse()` | `color` |
+| `microfacet()` | `color`, `roughness` |
+| `openpbr()` | `base_color`, `specular_roughness` |
+
+The examples stay within those inputs. In particular:
+
+- **No graph-driven bump, normal, or displacement.** The apparent grain and
+  weathering in the renders do not change the surface normals or silhouette.
+  Existing non-graph bump arguments remain available separately.
+- **No graph-driven alpha, emission, volume coefficients, or other OpenPBR
+  controls yet.** A roughness graph on glass works; a graph for
+  `transmission_weight`, `coat_weight`, or `subsurface_color` is not supported.
+- **Parameter mixing is not material mixing.** `texture_mix()` produces values
+  for one material. There is no public graph-based `mix_material()` operation.
+  Blending two roughness values constructs one intermediate distribution, rather
+  than a weighted sum of two complete BSDFs.
+- **One source per input.** Do not combine a color graph with legacy
+  `image_texture`, checker, noise, or gradient arguments for that same color.
+  Likewise, choose a roughness graph or `roughness_texture`, not both.
+- **Roughness has a numerical floor.** Spatial `microfacet()` roughness uses a
+  minimum alpha of `1e-6`; a constant zero roughness selects its existing smooth
+  material. OpenPBR has its own reference-model roughness floor. A transmitting
+  `microfacet()` color graph requires nonzero roughness.
+- **Graph outputs are scalar or color.** Public roughness graphs are scalar;
+  there is no public pair of independent u/v roughness graphs or vector-valued
+  normal graph. Existing numeric anisotropy controls remain available separately.
+  Use the provided constructors rather than arbitrary R callbacks or arithmetic
+  operators on the graph objects.
+- **Transforms and filtering are bounded.** Mapping supports scale, translation,
+  and rotation about texture z. There is no public domain warping, triplanar node,
+  time-varying texture node, or procedural footprint antialiasing yet.
+- **Sharing does not imply complete memoization.** Shared nodes and decoded
+  images avoid duplicate storage, but cross-slot/per-hit expression memoization
+  is not implemented. An expensive field used by several inputs may be evaluated
+  more than once. Keep graphs proportionate to the visible detail.
+
+Unsupported inputs should not be replaced by guessed alternatives in examples.
+For example, this is intentionally an error:
+
+```{r unsupported-slot, error=TRUE}
+openpbr(coat_weight = texture_noise())
+```
+
+Use a constant `coat_weight` with a supported texture input until that slot gains
+graph support.
+
+# Reproduce the gallery
+
+`scripts/texture-gallery.R` contains every recipe above and the small
+`texture_panel()` rendering helper. It uses a common studio, fixed exposure and
+camera within each comparison, seed `20261002`, and **six rendering cores**.
+Images are 420 by 420 pixels, except the wider instancing comparison. Samples are
+64 per pixel, or 128 for metal, glass, and image comparisons. No denoising or
+bloom is applied.
+
+From the repository root, with this development version of rayrender installed:
+
+```{r regenerate, eval=FALSE}
+Sys.setenv(RAYRENDER_REBUILD_TEXTURES = "true")
+source("vignettes/scripts/texture-gallery.R", chdir = FALSE)
+Sys.unsetenv("RAYRENDER_REBUILD_TEXTURES")
+```
+
+The script switches into the vignette directory when run from the repository
+root. Set `RAYRENDER_TEXTURE_GROUPS` to a comma-separated set of figure names
+(for example, `"glass,image-composition"`) to regenerate selected comparisons
+once the gallery exists. Individual renders, labeled comparisons, and per-image
+timings are retained under `figures/composable-textures/`.
+
+The material recipes also work without the gallery helper. A minimal standalone
+render looks like this:
+
+```{r standalone, eval=FALSE}
+library(rayrender)
+options(cores = 6L)
+n = texture_noise(scale = 5, seed = 7)
+surface = openpbr(
+  base_color = texture_mix("steelblue", "wheat", n),
+  specular_roughness = texture_mix(.05, .6, n)
+)
+scene = sphere(material = surface) |>
+  add_object(generate_ground(depth = -1))
+set.seed(20261002)
+render_scene(scene, width = 600, height = 600, samples = 64,
+  lookfrom = c(3, 1.5, 5), lookat = c(0, 0, 0),
+  ambient_light = TRUE, denoise = FALSE, filename = "my-texture.png")
+```
+
+To build this document from the existing images, leave
+`RAYRENDER_REBUILD_TEXTURES` unset and use `rmarkdown::render()` or the package's
+normal vignette build. No gallery path tracing is performed in that mode.

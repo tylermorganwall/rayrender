@@ -170,6 +170,8 @@ inline Float loopGamma(int valence) {
 void LoopSubdivide(TriangleMesh* base_mesh,
                    const int nLevels,
                    bool verbose) {
+  if (!base_mesh->ptex_face_indices.empty())
+    Rcpp::stop("Subdivision of Ptex-addressed meshes requires preserving source-face UVs and is not supported.");
   int nIndices = base_mesh->vertexIndices.size();
   const int *vertexIndices = base_mesh->vertexIndices.data();
   const int *texIndices    = base_mesh->texIndices.data();

@@ -1,0 +1,3 @@
+Warning: PBRT conversion recorded 3 diagnostic(s); inspect $diagnostics. First: /Users/tyler/Desktop/R/rayrender/pbrt-v4-tests/aerial_explosion/aerial_explosion.pbrt:1: Only linear sRGB values are supported; other ColorSpace values are not converted.
+Warning: "sobol_blue" sample method only valid for `samples` than or equal to 256--switching to `sample_method = "sobol"`
+Error: Compressed NanoVDB is unsupported; convert to uncompressed .nvdb.

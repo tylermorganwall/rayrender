@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"image-composition","RGB image",128,6,11.716
+"image-composition","Red channel into a new palette",128,6,11.783
+"image-composition","Independent roughness image mapping",128,6,11.878

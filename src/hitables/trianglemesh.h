@@ -1,10 +1,6 @@
 #ifndef TRIANGLEMESHH
 #define TRIANGLEMESHH
 
-#ifndef STBIMAGEH
-#define STBIMAGEH
-#include "../ext/stb/stb_image.h"
-#endif
 
 #include "../materials/texture.h"
 #include "../math/transform.h"
@@ -39,7 +35,7 @@ struct TriangleMesh {
                Rcpp::NumericMatrix texcoords,
                Rcpp::NumericMatrix vertexcolors,
                unsigned char * mesh_texture_data,
-               unsigned char * bump_texture_data,
+               std::shared_ptr<const HeightImage> bump_texture_data,
                std::shared_ptr<alpha_texture> alpha,
                std::shared_ptr<bump_texture> bump,
                std::shared_ptr<material> default_material, 
@@ -57,7 +53,7 @@ struct TriangleMesh {
                std::shared_ptr<material> default_material, 
                Transform* ObjectToWorld, 
                Transform* WorldToObject, 
-               bool reverseOrientation);
+               bool reverseOrientation, bool calculate_consistent_normals = false);
   TriangleMesh(Rcpp::List raymesh, bool verbose, bool calculate_consistent_normals,
                bool override_material, bool flip_transmittance,
                std::shared_ptr<alpha_texture> alpha,
@@ -69,6 +65,7 @@ struct TriangleMesh {
                bool reverseOrientation);
   
   ~TriangleMesh();
+  void CalculateConsistentNormals();
   size_t GetSize();
   void ValidateMesh();
     
@@ -78,6 +75,7 @@ struct TriangleMesh {
   std::vector<int> vertexIndices;
   std::vector<int> normalIndices;
   std::vector<int> texIndices;
+  std::vector<int> ptex_face_indices;
 
   std::unique_ptr<point3f[]>  p;
   std::unique_ptr<normal3f[]> n;
@@ -95,7 +93,7 @@ struct TriangleMesh {
   
   //Texture Data (from MTL)
   std::vector<unsigned char * > obj_texture_data;
-  std::vector<unsigned char * > bump_texture_data;
+  std::vector<std::shared_ptr<const HeightImage>> bump_texture_data;
   std::vector<std::shared_ptr<bump_texture> > bump_textures;
   std::vector<std::shared_ptr<alpha_texture> > alpha_textures;
   size_t texture_size;

@@ -9,6 +9,8 @@
 #include "../core/color.h"
 
 class random_gen;
+struct WavefrontReport;
+class WavefrontContext;
 
 void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::size_t ns, int debug_channel,
                 Float min_variance, std::size_t min_adaptive_size, 
@@ -20,6 +22,8 @@ void pathtracer(std::size_t numbercores, std::size_t nx, std::size_t ny, std::si
                 Float fov,
                 hitable_list& world, hitable_list& hlist,
                 Float clampval, std::size_t max_depth, std::size_t roulette_active,
-                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override = nullptr);
+                PreviewDisplay& display, IntegratorType integrator_type, random_gen* rng_override = nullptr,
+                WavefrontReport* wavefront_report = nullptr,
+                WavefrontContext* retained_wavefront = nullptr);
 
 #endif

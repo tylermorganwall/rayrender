@@ -45,7 +45,7 @@ ImageInfiniteLight::ImageInfiniteLight(std::shared_ptr<texture> source, int widt
     throw std::runtime_error("Infinite light image dimensions must be positive.");
   std::vector<Float> values(size_t(width) * height);
   double max_value = 0;
-  // Normalize in double precision before building the Float CDF so bright HDR
+  // Normalize in double precision before building the Float proposal so bright HDR
   // images cannot overflow its integral.
   for (int y = 0; y < height; ++y) {
     if (y % 64 == 0) Rcpp::checkUserInterrupt();
@@ -64,13 +64,35 @@ ImageInfiniteLight::ImageInfiniteLight(std::shared_ptr<texture> source, int widt
     }
   }
 
+  // Integrate the bilinear footprint over each proposal cell. A texel's tent
+  // puts 3/4 of its area in its own cell and 1/8 in either neighbor on each
+  // axis. Center-only weights miss that spill, producing rare bright samples
+  // beside compact HDR suns. Longitude wraps; latitude clamps at the poles.
+  // Filtering the sin-weighted values is an approximation near the poles,
+  // which is harmless for a proposal: Pdf() evaluates this same distribution.
+  std::vector<Float> horizontal(values.size());
+  for (int y = 0; y < height; ++y) {
+    for (int x = 0; x < width; ++x) {
+      const size_t row = size_t(y) * width;
+      horizontal[row + x] = .75f * values[row + x] +
+        .125f * (values[row + (x + width - 1) % width] + values[row + (x + 1) % width]);
+    }
+  }
+  for (int y = 0; y < height; ++y) {
+    const size_t previous = size_t(std::max(y - 1, 0)) * width;
+    const size_t next = size_t(std::min(y + 1, height - 1)) * width;
+    for (int x = 0; x < width; ++x) {
+      const size_t i = size_t(y) * width + x;
+      values[i] = .75f * horizontal[i] + .125f * (horizontal[previous + x] + horizontal[next + x]);
+    }
+  }
 
-  // A common scale preserves sampling probabilities while keeping the CDF
+  // A common scale preserves sampling probabilities while keeping the table
   // manageable. With no positive luminance, leave sampling to the uniform path.
   if (max_value > 0) {
     for (size_t i = 0; i < values.size(); ++i)
       values[i] = double(values[i]) / max_value;
-    distribution = std::make_unique<Distribution2D>(values.data(), width, height);
+    distribution = std::make_unique<AliasDistribution2D>(values.data(), width, height);
   }
 
 
@@ -130,6 +152,7 @@ InfiniteLightMixture::InfiniteLightMixture(std::vector<std::shared_ptr<InfiniteL
   if (lights.empty()) throw std::runtime_error("An infinite light mixture must contain lights.");
   double maximum = 0;
   for (const auto &light : lights) {
+    continuous_samples |= light->NeedsContinuousSamples();
     weight += light->SamplingWeight();
     maximum = std::max(maximum, light->SamplingWeight());
   }
@@ -283,6 +306,17 @@ size_t InfiniteLightMixture::GetSize() const {
 }
 
 
+// Uniform disks share the cone geometry and sampler but have an exact integrated
+// brightness, including for wide angles where texture quadrature is inaccurate.
+DiskInfiniteLight::DiskInfiniteLight(point3f radiance, vec3f direction,
+                                   double diameter, Float rotation)
+    : DiskInfiniteLight(std::make_shared<constant_texture>(radiance), 1, 1,
+                        direction, diameter, rotation, false) {
+  weight = std::max(0.0, .212671 * radiance[0] + .715160 * radiance[1] +
+                        .072169 * radiance[2]) * solid_angle;
+}
+
+
 // Keep a celestial image in its own rectilinear projection instead of baking it
 // into a sky map. A local orthonormal frame maps between its pixels and directions.
 DiskInfiniteLight::DiskInfiniteLight(std::shared_ptr<texture> source, int width,
@@ -412,7 +446,6 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
   for (R_xlen_t i = 0; i < descriptions.size(); ++i) {
     Rcpp::checkUserInterrupt();
     Rcpp::List item = descriptions[i];
-    std::string filename = Rcpp::as<std::string>(item["filename"]);
     std::string type = Rcpp::as<std::string>(item["type"]);
 
     // One sky supplies the scene's atmospheric transport for all other sources.
@@ -427,12 +460,26 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
 
     // Both image-based types share linear HDR loading and intensity validation.
     // Reject invalid texels here rather than allowing worker queries to see them.
-    if (type != "image" && type != "disk")
+    if (type != "image" && type != "disk" && type != "uniform_disk")
       throw std::runtime_error("Unsupported infinite light type.");
     Float intensity = Rcpp::as<Float>(item["intensity"]);
     double rotation = Rcpp::as<double>(item["rotation"]);
     if (!std::isfinite(intensity) || intensity < 0 || !std::isfinite(rotation))
       throw std::runtime_error("Infinite light intensity and rotation must be finite and representable; intensity must be nonnegative.");
+    if (type == "uniform_disk") {
+      Rcpp::NumericVector color = item["color"], d = item["direction"];
+      if (color.size() != 3 || d.size() != 3)
+        throw std::runtime_error("Disk light color and direction must have three components.");
+      for (int c = 0; c < 3; ++c)
+        if (!std::isfinite(color[c]) || color[c] < 0 || color[c] > 1)
+          throw std::runtime_error("Disk light color must be finite and between zero and one.");
+      lights.push_back(std::make_shared<DiskInfiniteLight>(
+          point3f(color[0] * intensity, color[1] * intensity, color[2] * intensity),
+          vec3f(d[0], d[1], d[2]), Rcpp::as<double>(item["angular_diameter"]),
+          -Float(std::fmod(rotation, 360.0))));
+      continue;
+    }
+    std::string filename = Rcpp::as<std::string>(item["filename"]);
     int width, height, channels;
     Float *data = textures.LookupFloat(filename, width, height, channels, 3);
     for (size_t j = 0; j < size_t(width) * height * channels; ++j) {
@@ -440,8 +487,11 @@ std::shared_ptr<InfiniteLight> BuildInfiniteLights(const Rcpp::List &description
       if (!std::isfinite(data[j]))
         throw std::runtime_error("Infinite light image contains non-finite pixels: " + filename);
     }
-    auto image = std::make_shared<image_texture_float>(
-        data, width, height, channels, 1, 1, intensity);
+    std::shared_ptr<texture> image;
+    if (type == "image")
+      image = std::make_shared<latlong_image_texture>(data, width, height, channels, intensity);
+    else
+      image = std::make_shared<image_texture_float>(data, width, height, channels, 1, 1, intensity);
 
 
     // A disk also carries its geometric support and reference spectrum. The

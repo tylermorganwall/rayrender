@@ -7,9 +7,11 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -36,27 +38,28 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(-1, 0, 0) : vec3f(1, 0, 0);
-  rec.dpdv = vec3f(0, 1, 0);
+  rec.dpdu = reverseOrientation ? vec3f(x0-x1, 0, 0) : vec3f(x1-x0, 0, 0);
+  rec.dpdv = vec3f(0, y1-y0, 0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
-  
+
   rec.mat_ptr = mat_ptr.get();
   rec.p = r2(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(0,0,1) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
 }
@@ -66,9 +69,11 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -95,27 +100,28 @@ const bool xy_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.v = v;
   rec.t = t;
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(-1, 0, 0) : vec3f(1, 0, 0);
-  rec.dpdv = vec3f(0, 1, 0);
+  rec.dpdu = reverseOrientation ? vec3f(x0-x1, 0, 0) : vec3f(x1-x0, 0, 0);
+  rec.dpdv = vec3f(0, y1-y0, 0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
-  
+
   rec.mat_ptr = mat_ptr.get();
   rec.p = r2(t);
   rec.p.e[2] = k;
   rec.pError = vec3f(0,0,0);
   
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(0,0,1) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,0,1) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   return(true);
 }
@@ -126,9 +132,11 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -145,9 +153,11 @@ bool xy_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.z == 0) return false;
   Float t = (k-r2.origin().xyz.z) * (r.segment_absorption ? 1/r2.direction().xyz.z : r2.inv_dir_pad.xyz.z);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -204,9 +214,11 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
 
@@ -216,7 +228,7 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   if(x < x0 || x > x1 || z < z0 || z > z1) {
     return(false);
   }
-  Float u = (x-x0)/(x1-x0);
+  Float u = 1-(x-x0)/(x1-x0);
   Float v = (z-z0)/(z1-z0);
   if(reverseOrientation) {
     u = 1 - u;
@@ -236,26 +248,27 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(1, 0, 0) : vec3f(-1, 0, 0);
-  rec.dpdv = vec3f(0, 0, 1);
+  rec.dpdu = reverseOrientation ? vec3f(x1-x0, 0, 0) : vec3f(x0-x1, 0, 0);
+  rec.dpdv = vec3f(0, 0, z1-z0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
-  
+
   rec.mat_ptr = mat_ptr.get();
   rec.p = r2(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(0,1,0) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   
@@ -269,9 +282,11 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float x = r2.origin().xyz.x + t*r2.direction().xyz.x;
@@ -299,27 +314,28 @@ const bool xz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(1, 0, 0) : vec3f(-1, 0, 0);
-  rec.dpdv = vec3f(0, 0, 1);
+  rec.dpdu = reverseOrientation ? vec3f(x1-x0, 0, 0) : vec3f(x0-x1, 0, 0);
+  rec.dpdv = vec3f(0, 0, z1-z0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
-  
+
   rec.mat_ptr = mat_ptr.get();
   rec.p = r2(t);
   rec.p.e[1] = k;
   rec.pError = vec3f(0,0,0);
   
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(0,1,0) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   rec.geometric_normal = (*ObjectToWorld)(normal3f(0,1,0) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -331,9 +347,11 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   
@@ -353,9 +371,11 @@ bool xz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.y == 0) return false;
   Float t = (k-r2.origin().xyz.y) * (r.segment_absorption ? 1/r2.direction().xyz.y : r2.inv_dir_pad.xyz.y);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   
@@ -416,9 +436,11 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -446,8 +468,9 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(0, 0, 1) : vec3f(0, 0, -1);
-  rec.dpdv = vec3f(0, 1, 0);
+  rec.dpdu = reverseOrientation ? vec3f(0, 0, z1-z0) : vec3f(0, 0, z0-z1);
+  rec.dpdv = vec3f(0, y1-y0, 0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   
   rec.mat_ptr = mat_ptr.get();
@@ -455,18 +478,18 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(1,0,0) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
   rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -478,9 +501,11 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -508,28 +533,29 @@ const bool yz_rect::hit(const Ray& r, Float t_min, Float t_max, hit_record& rec,
   rec.t = t;
   
   //Interaction information
-  rec.dpdu = reverseOrientation ? vec3f(0, 0, 1) : vec3f(0, 0, -1);
-  rec.dpdv = vec3f(0, 1, 0);
+  rec.dpdu = reverseOrientation ? vec3f(0, 0, z1-z0) : vec3f(0, 0, z0-z1);
+  rec.dpdv = vec3f(0, y1-y0, 0);
+  rec.dndu = rec.dndv = normal3f(0);
   rec.has_bump = bump_tex ? true : false;
   if(!alpha_mask) {
     rec.normal *= reverseOrientation  ? -1 : 1;
   }
-  if(bump_tex) {
-    point3f bvbu = bump_tex->value(u,v, rec.p);
-    rec.bump_normal = convert_to_normal3(cross(rec.dpdu + bvbu.xyz.x * convert_to_vec3(rec.normal) , 
-                            rec.dpdv - bvbu.xyz.y * convert_to_vec3(rec.normal) ));
-    rec.bump_normal.make_unit_vector();
+  if (bump_tex) {
+    rec.bump_normal = rec.normal;
   }
-  
+
   rec.mat_ptr = mat_ptr.get();
   rec.p = r2(t);
   rec.p.e[0] = k;
   rec.pError = vec3f(0,0,0);
   
+  rec.texture_object_p = rec.p;
+  rec.texture_object_normal = normal3f(1,0,0) * (reverseOrientation ? -1 : 1);
   rec = (*ObjectToWorld)(rec);
   
   rec.geometric_normal = (*ObjectToWorld)(normal3f(1,0,0) * (reverseOrientation ? -1 : 1));
-    rec.shape = this;
+  SetPhysicalBump(rec, mat_ptr.get(), bump_tex.get(), r);
+  rec.shape = this;
   rec.alpha_miss = alpha_miss;
   
   return(true);
@@ -541,9 +567,11 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, random_gen& rng) cons
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;
@@ -560,9 +588,11 @@ bool yz_rect::HitP(const Ray& r, Float t_min, Float t_max, Sampler* sampler) con
   SCOPED_TIMER_COUNTER("Rect");
   Ray r2 = (*WorldToObject)(r);
   
+  // Parallel and coplanar rays have no isolated rectangle intersection.
+  if (r2.direction().xyz.x == 0) return false;
   Float t = (k-r2.origin().xyz.x) * (r.segment_absorption ? 1/r2.direction().xyz.x : r2.inv_dir_pad.xyz.x);
 
-  if(t < t_min || t > t_max) {
+  if(!std::isfinite(t) || t < t_min || t > t_max) {
     return(false);
   }
   Float z = r2.origin().xyz.z + t*r2.direction().xyz.z;

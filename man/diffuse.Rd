@@ -19,18 +19,18 @@ diffuse(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
-  fog = FALSE,
-  fogdensity = 0.01,
   sigma = NULL,
   importance_sample = FALSE
 )
 }
 \arguments{
-\item{color}{Default `white`. The color of the surface. Can be either
-a hexadecimal code, R color string, or a numeric rgb vector listing three intensities between `0` and `1`.}
+\item{color}{Default `"#ffffff"`. Surface color as an R color name, hexadecimal
+code, an `rgb(r, g, b)` string with channels from `0` to `255`, or a numeric
+RGB vector with three intensities between `0` and `1`.}
 
 \item{checkercolor}{Default `NA`. If not `NA`, determines the secondary color of the checkered surface.
 Can be either a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.}
@@ -69,21 +69,20 @@ begins with value `gradient_color`.}
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.}
+
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to
 be used to specify the transparency.}
 
 \item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+\item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
-\item{fog}{Default `FALSE`. If `TRUE`, the object will be a volumetric scatterer.}
-
-\item{fogdensity}{Default `0.01`. The density of the fog. Higher values will produce more opaque objects.}
-
-\item{sigma}{Default `NULL`. A number between 0 and Infinity specifying the roughness of the surface using the Oren-Nayar microfacet model.
-Higher numbers indicate a roughed surface, where sigma is the standard deviation of the microfacet orientation angle. When 0, this reverts
-to the default lambertian behavior.}
+\item{sigma}{Default `NULL`. Nonnegative finite roughness control in degrees
+for energy-preserving Oren-Nayar (EON). EON roughness is `min(sigma / 90, 1)`;
+values at or above 90 give maximum roughness. `NULL` or zero uses Lambertian
+reflection. This control is no longer a microfacet angle standard deviation.}
 
 \item{importance_sample}{Default `FALSE`. If `TRUE`, the object will be sampled explicitly during
 the rendering process. If the object is particularly important in contributing to the light paths
@@ -94,7 +93,27 @@ this will help with the convergence of the image.}
 Single row of a tibble describing the diffuse material.
 }
 \description{
-Diffuse Material
+A reflecting surface with optional roughness and texture. For fog or other
+participating volumes, attach an explicit medium with \code{\link{set_medium}()}
+and \code{\link{homogeneous_medium}()}, \code{\link{grid_medium}()}, or
+\code{\link{vdb_medium}()}.
+}
+\details{
+Diffuse surfaces use energy-conserving normal mapping for
+  bump textures relative to the unperturbed smooth surface normal. Interpolated
+  mesh normals define that base surface, so smooth shading does not acquire
+  triangle facets from the bump correction. Reflection remains on the same
+  side of the geometric surface; rejected samples absorb energy. Expected
+  reflected energy is bounded in the smooth surface frame. Positive `sigma` uses EON rough
+  diffuse with color-dependent multiple scattering; zero uses Lambertian
+  reflection. Image and procedural reflectance is bounded to [0, 1], with
+  nonfinite values treated as absorbing. CPU and Metal rendering include up to
+  16 local facet interactions to reduce energy loss from truncating the
+  normal-mapping model. These interactions do not consume scene-level
+  `max_depth`. Direct-light sampling is retained. Very steep bumps can still
+  lose energy through truncation or geometric clipping.
+  Imported diffuse face materials and vertex colors use the same model.
+  Fog uses volumetric scattering instead of a surface bump model.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

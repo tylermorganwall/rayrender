@@ -12,6 +12,7 @@
 #include "../hitables/trimesh.h"
 #include "boundary.h"
 #include "intersections.h"
+#include "../materials/openpbr.h"
 #include <algorithm>
 #include <array>
 #include <unordered_set>
@@ -315,6 +316,7 @@ bool finite_bounds(const aabb &box) {
 // A few deterministic probes are sufficient for a power estimate. In
 // particular, these do not replace the emitter's actual texture evaluation.
 double emission_estimate(const material *mat, const point3f &p) {
+  if (auto *pbr = dynamic_cast<const OpenPBRMaterial *>(mat)) return pbr->EmissionEstimate();
   const texture *emit = nullptr;
   double intensity = 1;
   if (auto *light = dynamic_cast<const diffuse_light *>(mat)) {
@@ -333,6 +335,9 @@ double emission_estimate(const material *mat, const point3f &p) {
 }
 } // namespace
 // The directional mixture above remains available for atmospheric source terms.
+double EstimateLightEmission(const material *mat, const point3f &p) {
+  return emission_estimate(mat, p);
+}
 // Finite emission instead lives on (emitter, direction): a selected lamp cannot
 // collect another lamp's emission when that lamp blocks the connection.
 struct VolumeLightSampler::Emitters {
@@ -464,8 +469,12 @@ struct VolumeLightSampler::Emitters {
       mat = t->mesh->mesh_materials[t->mesh->face_material_id[t->face_number]].get();
       // Vertex normals, alpha masks and consistent-normal interpolation can
       // change which side emits. Use an unrestricted cone in those cases.
-      if (!t->mesh->has_normals && !t->mesh->alpha_textures[t->mesh->face_material_id[t->face_number]])
+      if (!t->mesh->has_normals && !t->mesh->alpha_textures[t->mesh->face_material_id[t->face_number]]) {
         normal = convert_to_vec3(placement(convert_to_normal3(cross(b - a, c - a))));
+        // Match triangle::hit(): mesh vertices already include ObjectToWorld,
+        // while the additional placement uses an inverse-transpose normal.
+        if (t->reverseOrientation ^ t->transformSwapsHandedness) normal = -normal;
+      }
     } else if (dynamic_cast<xy_rect *>(entry.shape.get()) ||
                dynamic_cast<xz_rect *>(entry.shape.get()) ||
                dynamic_cast<yz_rect *>(entry.shape.get()) ||

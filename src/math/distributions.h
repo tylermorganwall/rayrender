@@ -34,5 +34,26 @@ private:
   std::unique_ptr<Distribution1D> pMarginal;
 };
 
+// Piecewise-constant UV density with Walker/Vose lookup on both axes. Keeping
+// row and conditional-column tables avoids spending most of a float variate's
+// mantissa on a single large 2D cell index. Each remapped coin jitters its axis.
+class AliasDistribution2D {
+public:
+  AliasDistribution2D(const Float *data, int width, int height);
+  vec2f SampleContinuous(const vec2f &u, Float *pdf) const;
+  Float Pdf(const vec2f &uv) const;
+  size_t GetSize() const;
+
+private:
+  struct Entry {
+    Float cutoff = 1, density = 0;
+    uint32_t alias = 0;
+  };
+  static void Build(const std::vector<double> &weights, Entry *entries);
+  static int Sample(const Entry *entries, int count, Float u, Float &residual);
+  int width, height;
+  std::vector<Entry> columns, rows;
+};
+
 
 #endif

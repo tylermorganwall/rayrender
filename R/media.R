@@ -1,8 +1,8 @@
 #' Homogeneous Participating Medium
 #'
 #' Describe a medium independently of the surface that contains it. Attach it to
-#' closed objects with [set_medium()]. Rendering automatically selects
-#' \code{integrator_type = "nee"} for scenes containing attached media.
+#' closed objects with [set_medium()]. The default integrator uses Metal when
+#' available, otherwise CPU NEE.
 #'
 #' @param sigma_a Default `0`. Absorption coefficient, a nonnegative number or RGB
 #'   vector, per world-space distance unit.
@@ -107,6 +107,9 @@ homogeneous_medium = function(
 #'   Two rows giving minimum and maximum medium-space coordinates.
 #' @param emission Default `0`. Scalar/RGB radiance or an array with dimensions
 #'   `c(nx, ny, nz, 3)`. The volume source is `sigma_a * Le`.
+#' @param emission_scale Default `1`. Nonnegative scalar multiplier, or a
+#'   nonnegative array with the same dimensions as `density`, interpolated
+#'   independently of the emission or temperature field.
 #' @param temperature Default `NULL`. Scalar kelvin temperature or an array with
 #'   the same dimensions as `density`. Mutually exclusive with nonzero emission.
 #' @return A reusable `ray_medium` description.
@@ -121,8 +124,8 @@ homogeneous_medium = function(
 #'   scene = set_medium(cube(), smoke) |>
 #'     add_object(sphere(x = 3, material = light(intensity = 10)))
 #'   render_scene(
-#'     scene, integrator_type = "nee", width = 64, height = 64,
-#'     samples = 4, parallel = FALSE, plot_scene = FALSE
+#'     scene, integrator_type = "nee", width = 256, height = 256,
+#'     samples = 32, parallel = FALSE, plot_scene = FALSE
 #'   )
 #' }
 grid_medium = function(
@@ -142,6 +145,15 @@ grid_medium = function(
   haze_density_threshold = NULL
 ) {
   validate_medium_array(density, "density", 3L)
+  emission_scale_grid = NULL
+  if (!is.null(dim(emission_scale))) {
+    validate_medium_array(emission_scale, "emission_scale", 3L)
+    if (!identical(dim(emission_scale), dim(density))) {
+      stop("Emission scale array dimensions must match density.", call. = FALSE)
+    }
+    emission_scale_grid = emission_scale
+    emission_scale = 1
+  }
   if (
     !is.matrix(bounds) ||
       !identical(dim(bounds), c(2L, 3L)) ||
@@ -185,23 +197,58 @@ grid_medium = function(
     haze_density_threshold
   )
   out$density = density
+  if (!is.null(emission_scale_grid)) {
+    out$emission_scale_grid = emission_scale_grid
+  }
   out$bounds = bounds
   out
 }
 
-#' NanoVDB Participating Medium
+#' OpenVDB and NanoVDB Participating Medium
 #'
-#' Read uncompressed float grids from a NanoVDB file. Native grid coordinates and
-#' transforms are retained; use `medium_transform` to place them inside the
-#' boundary. Convert OpenVDB or compressed NanoVDB files externally before use.
+#' Render sparse density and temperature fields from OpenVDB or NanoVDB files.
+#' Native grid coordinates and affine transforms are retained; use
+#' `medium_transform` to place them inside the boundary. This is useful for smoke,
+#' clouds and fire exported from simulation tools, without creating dense R arrays.
+#'
+#' @details The `openvdbr` runtime loads float grids from `.vdb` files and from
+#'   raw, uncompressed, ZIP-compressed or BLOSC-compressed `.nvdb` files.
+#'   OpenVDB grids are converted once to sparse NanoVDB storage during scene
+#'   construction; rendering samples that storage directly. Grids must be fog
+#'   volumes or scalar fields with finite, nonnegative values. Density must have
+#'   zero background. Convert signed distance fields with [openvdbr::vdb_fog()]
+#'   before writing them. `nanovdb_medium()` is an alias of `vdb_medium()`.
 #'
 #' @inheritParams homogeneous_medium
-#' @param filename Path to an uncompressed `.nvdb` file.
+#' @param filename Path to a `.vdb` or `.nvdb` file.
 #' @param density_grid Default `"density"`. Name of the float density grid.
 #' @param temperature_grid Default `NULL`. Optional float temperature grid name.
 #' @return A reusable `ray_medium` description. Files are loaded during scene construction.
+#' @importFrom openvdbr vdb_version
+#' @md
 #' @export
-nanovdb_medium = function(
+#' @examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
+#' # A little moon made of fog: carve a crescent in a sparse volume.
+#' outer = openvdbr::vdb_sphere(1, voxel_size = 0.05)
+#' cutout = openvdbr::vdb_sphere(0.9, c(0.45, 0.2, 0), voxel_size = 0.05)
+#' crescent = openvdbr::vdb_fog(openvdbr::vdb_csg(outer, cutout, "difference"))
+#' file = tempfile(fileext = ".vdb")
+#' openvdbr::vdb_write(crescent, file)
+#' fog = vdb_medium(file, density_grid = "surface", sigma_s = 3, g = 0.3)
+#' scene = set_medium(sphere(radius = 1.2), fog) |>
+#'   add_infinite_light(disk_light(
+#'     direction = c(-1, 1, -1), angular_diameter = 15, intensity = 8,
+#'     color = "lightgoldenrod"
+#'   )) |>
+#'   add_infinite_light(disk_light(
+#'     direction = c(1, 0.5, 1), angular_diameter = 30, intensity = 2,
+#'     color = "lightblue", name = "fill"
+#'   ))
+#' render_scene(scene, lookfrom = c(0, 0.2, 4), lookat = c(0, 0, 0),
+#'              fov = 35, samples = 16, backgroundlow = "midnightblue",
+#'              backgroundhigh = "midnightblue")
+#' unlink(file)
+vdb_medium = function(
   filename,
   sigma_a = 0,
   sigma_s = 1,
@@ -223,7 +270,10 @@ nanovdb_medium = function(
       is.na(filename) ||
       !file.exists(path.expand(filename))
   ) {
-    stop("`filename` must name an existing NanoVDB file.", call. = FALSE)
+    stop(
+      "`filename` must name an existing OpenVDB or NanoVDB file.",
+      call. = FALSE
+    )
   }
   for (name in list(density_grid, temperature_grid)) {
     if (
@@ -260,16 +310,20 @@ nanovdb_medium = function(
   out
 }
 
+#' @rdname vdb_medium
+#' @export
+nanovdb_medium = vdb_medium
+
 #' Attach a Medium to Closed Objects
 #'
 #' Media nest: the innermost medium replaces the surrounding one. Cameras inside
 #' media are detected automatically. A medium with zero absorption and scattering
 #' creates a vacuum cavity. Intersecting, non-nested volume boundaries are unsupported.
 #'
-#' @param scene A `ray_scene` containing closed spheres, cubes, ellipsoids, or
+#' @param scene A `ray_scene` containing closed spheres, cubes, ellipsoids, CSG solids, or
 #'   watertight consistently oriented triangle meshes.
 #' @param medium A description from [homogeneous_medium()], [grid_medium()], or
-#'   [nanovdb_medium()]. Use `NULL` to remove an attachment.
+#'   [vdb_medium()]. Use `NULL` to remove an attachment.
 #' @param keep_surface Default `FALSE`. Keep the object's surface material when
 #'   `TRUE`, for example to place a medium inside glass. Dielectric attenuation
 #'   adds absorption to the medium; it does not add emission.
@@ -312,15 +366,31 @@ set_medium = function(scene, medium, keep_surface = FALSE) {
     !is.null(medium) &&
       any(
         !scene$shape %in%
-          c("sphere", "box", "ellipsoid", "obj", "ply", "mesh3d", "raymesh")
+          c(
+            "sphere",
+            "box",
+            "ellipsoid",
+            "csg_object",
+            "obj",
+            "ply",
+            "mesh3d",
+            "raymesh"
+          )
       )
   ) {
     stop(
-      "Medium boundaries require spheres, cubes, ellipsoids, or closed triangle meshes. Attach media before creating instances.",
+      "Medium boundaries require spheres, cubes, ellipsoids, closed CSG solids, or closed triangle meshes. Attach media before creating instances.",
       call. = FALSE
     )
   }
   for (i in seq_len(nrow(scene))) {
+    if (!is.null(medium) && !is.null(scene$material[[i]]$subsurface)) {
+      stop(
+        "An explicit medium conflicts with the subsurface material. Replace the material first.",
+        call. = FALSE
+      )
+    }
+    scene$shape_info[[i]]$medium_owner = NULL
     scene$shape_info[[i]]$medium = medium
     scene$shape_info[[i]]$medium_keep_surface = if (is.null(medium)) {
       NULL
@@ -509,6 +579,11 @@ straight_volume_rgb = function(rgb_mat) {
 scene_medium_features = function(scene) {
   attached = FALSE
   emissive = FALSE
+  openpbr = any(vapply(
+    scene$material,
+    function(x) identical(x$type, 11L),
+    logical(1)
+  ))
   for (info in scene$shape_info) {
     medium = info[["medium"]]
     if (!is.null(medium)) {
@@ -524,7 +599,8 @@ scene_medium_features = function(scene) {
       child = scene_medium_features(original[[1]])
       attached = attached || child$attached
       emissive = emissive || child$emissive
+      openpbr = openpbr || child$openpbr
     }
   }
-  list(attached = attached, emissive = emissive)
+  list(attached = attached, emissive = emissive, openpbr = openpbr)
 }

@@ -317,9 +317,10 @@ test_that("static scene brightness is independent of shutter speed", {
 
   base = render_once(1)
 
-  expect_identical(render_once(2), base)
-  expect_identical(render_once(4), base)
-  expect_identical(render_once(Inf), base)
+  # Compare image samples, not the independently measured Metal render timings.
+  expect_identical(as.numeric(render_once(2)), as.numeric(base))
+  expect_identical(as.numeric(render_once(4)), as.numeric(base))
+  expect_identical(as.numeric(render_once(Inf)), as.numeric(base))
 })
 
 test_that("camera_batch_plan combines static and animated cameras", {
@@ -426,4 +427,17 @@ test_that("print.ray_camera summarizes animated cameras", {
   expect_true(any(grepl("frames: 5", output, fixed = TRUE)))
   expect_true(any(grepl("last lookfrom:", output, fixed = TRUE)))
   expect_true(any(grepl("output: orbit_%04d.png", output, fixed = TRUE)))
+})
+
+test_that("camera film reflection is validated and survives camera metadata", {
+  cam = camera(camera_flip_x = TRUE)
+  expect_true(camera_frame_args(cam)$camera_flip_x)
+  expect_true(camera_batch_metadata(cam)$camera_flip_x)
+  expect_false(camera_batch_metadata_compatible(list(cam, camera())))
+  old = camera()
+  old$camera_flip_x = NULL
+  expect_false(camera_frame_args(old)$camera_flip_x)
+  for (value in list(NA, NULL, 1, 'yes', c(TRUE, FALSE))) {
+    expect_error(camera(camera_flip_x = value), 'camera_flip_x')
+  }
 })

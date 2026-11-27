@@ -14,7 +14,7 @@ jobs:
   build:
     name: Build and verify source tarball
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     outputs:
       artifact-name: ${{ steps.artifact-name.outputs.name }}
     steps:
@@ -28,6 +28,16 @@ jobs:
           use-public-rspm: true
       - name: Test safe publication behavior
         run: node --test .github/scripts/publish-source.test.cjs .github/scripts/test-source-build.cjs
+      # R CMD build installs rayrender temporarily to build its vignettes.
+      - uses: r-lib/actions/setup-pandoc@v2
+      - name: Install Blosc runtime for cached openvdbr builds
+        run: bash .github/install-blosc-runtime.sh
+      - name: Select compatible dependency versions
+        id: dependency-pins
+        run: Rscript .github/dependency-pins.R
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: ${{ steps.dependency-pins.outputs.packages }}
       - name: Build the triggering commit
         shell: bash
         run: |

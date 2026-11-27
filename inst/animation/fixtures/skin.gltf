@@ -1,0 +1,332 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "rayrender original acceptance fixture"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    },
+    {
+      "nodes": [
+        2
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "name": "hinge",
+      "mesh": 0,
+      "children": [
+        1
+      ],
+      "skin": 0
+    },
+    {
+      "name": "hinge",
+      "mesh": 0,
+      "translation": [
+        0,
+        2,
+        0
+      ]
+    },
+    {
+      "name": "matrix",
+      "mesh": 0,
+      "matrix": [
+        -1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        -3,
+        0,
+        0,
+        1
+      ]
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0,
+            "NORMAL": 1,
+            "TEXCOORD_0": 2
+          },
+          "indices": 3
+        }
+      ]
+    }
+  ],
+  "animations": [
+    {
+      "name": "motion",
+      "samplers": [
+        {
+          "input": 4,
+          "output": 5,
+          "interpolation": "LINEAR"
+        },
+        {
+          "input": 6,
+          "output": 7,
+          "interpolation": "LINEAR"
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 0,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 1,
+          "target": {
+            "node": 1,
+            "path": "rotation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "motion",
+      "samplers": [
+        {
+          "input": 8,
+          "output": 9,
+          "interpolation": "STEP"
+        },
+        {
+          "input": 10,
+          "output": 11,
+          "interpolation": "CUBICSPLINE"
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 1,
+            "path": "translation"
+          }
+        },
+        {
+          "sampler": 1,
+          "target": {
+            "node": 0,
+            "path": "scale"
+          }
+        }
+      ]
+    },
+    {
+      "name": "authored cubic",
+      "samplers": [
+        {
+          "input": 10,
+          "output": 12,
+          "interpolation": "CUBICSPLINE"
+        }
+      ],
+      "channels": [
+        {
+          "sampler": 0,
+          "target": {
+            "node": 1,
+            "path": "rotation"
+          }
+        }
+      ]
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 4,
+      "byteLength": 128,
+      "byteStride": 32
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 132,
+      "byteLength": 2
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 136,
+      "byteLength": 24
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 160,
+      "byteLength": 24
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 184,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 196,
+      "byteLength": 36
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 232,
+      "byteLength": 12
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 244,
+      "byteLength": 48
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 292,
+      "byteLength": 8
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 300,
+      "byteLength": 24
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 324,
+      "byteLength": 8
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 332,
+      "byteLength": 72
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 404,
+      "byteLength": 96
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC3",
+      "sparse": {
+        "count": 2,
+        "indices": {
+          "bufferView": 1,
+          "componentType": 5121
+        },
+        "values": {
+          "bufferView": 2
+        }
+      }
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 12,
+      "componentType": 5126,
+      "count": 4,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 0,
+      "byteOffset": 24,
+      "componentType": 5123,
+      "normalized": true,
+      "count": 4,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 12,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5126,
+      "count": 3,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 5,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 6,
+      "componentType": 5126,
+      "count": 3,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 7,
+      "componentType": 5126,
+      "count": 3,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 8,
+      "componentType": 5126,
+      "count": 2,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 9,
+      "componentType": 5126,
+      "count": 2,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 10,
+      "componentType": 5126,
+      "count": 2,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 11,
+      "componentType": 5126,
+      "count": 6,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 12,
+      "componentType": 5126,
+      "count": 6,
+      "type": "VEC4"
+    }
+  ],
+  "skins": [
+    {
+      "joints": [
+        0,
+        1
+      ]
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 500,
+      "uri": "data:application/octet-stream;base64,UEFEIQAAAAAAAAAAAAAAADrNE786zRO/Os0TvwAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAAAA//8AAAAAAAAAAAAAAACAPwAAAAAAAAAAAACAPwAAAAAAAP//AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAACAP/////8AAAAAAQMAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAgABAAAAAQADAAAAAwACAAEAAgADAAAAAEAAAGBAAACgQAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAIBAAACgQAAAAAAAAAAAAAAAAAAAgD8AAAAAAAAAAAAAgD8AAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAIA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAIA/AAAAAAAAAEAAAAAAAAAAAAAAAAAAAIA/AACAPwAAgD8AAAA/AAAAPwAAAD8AAAA/AAAAPwAAAD8AAABAAAAAQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADzBDW/8wQ1vwAAAAAAAAAAAAAAAAAAAAA="
+    }
+  ]
+}

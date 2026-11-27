@@ -8,7 +8,8 @@ csg_cylinder(
   start = c(0, 0, 0),
   end = c(0, 1, 0),
   radius = 1,
-  corner_radius = 0
+  corner_radius = 0,
+  material = NULL
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ csg_cylinder(
 \item{radius}{Default `1`. Cylinder radius.}
 
 \item{corner_radius}{Default `0`. Radius if rounded cylinder.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the cylinder in the scene.

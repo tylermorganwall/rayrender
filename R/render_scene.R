@@ -15,42 +15,8 @@
 #' The total number of samples in this case will be the product of the two numbers.
 #' @param preview Default `interactive()`. Whether to display a real-time progressive preview of the render. Press ESC to cancel the render.
 #' If `deferred_render = TRUE`, the preview stays interactive until the final render is explicitly started.
-#' @param interactive Default `interactive()`. Whether the scene preview should be interactive. Camera movement orbits around the
-#' lookat point (unless the mode is switched to free flying), with the following control mapping:
-#' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
-#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
-#' E = 2x Step Distance (max 128), C = 0.5x Step Distance, Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
-#' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
-#' 3/4 = Rotate Environment Light,
-#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
-#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
-#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
-#' Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
-#' If the interactive preview window is wide enough, a status bar at the bottom shows the current camera, exposure, environment rotation,
-#' and keyframe state.
-#' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
-#' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions.
-#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
-#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
-#' M: Preview/cancel keyframe motion,
-#' F: Toggle Fast Travel Mode,
-#' B: Toggle Camera Motion Blur,
-#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
-#' Haze requires altitude queries: enabling haze also enables altitude queries,
-#' and disabling altitude queries also disables haze. Each change restarts sampling.
-#'
-#' Initial step size is 1/20th of the distance from `lookat` to `lookfrom`.
-#'
-#' With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
-#' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
-#' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
-#' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
-#' background without reaching this opacity turns perspective and panoramic cameras toward that
-#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
-#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
-#' Right clicking preserves the focal distance.
-#' Some options aren't available for all cameras. When using a realistic camera,
-#' the aperture and field of view cannot be changed from their initial settings.
+#' @param interactive Default `TRUE`. Enable camera and keyboard controls when the
+#' preview is open. See Interactive preview controls in Details.
 #' @param deferred_render Default `FALSE`. If `TRUE` and interactive preview is enabled, rayrender will keep
 #' updating the progressive preview until Return is pressed. Pressing Return toggles the full render in the
 #' same window; pressing Return again returns to deferred mode.
@@ -88,6 +54,7 @@
 #' `backgroundlow` directly down (-y).
 #' @param lookfrom Default `c(0,1,10)`. Location of the camera.
 #' @param lookat Default `c(0,0,0)`. Location where the camera is pointed.
+#' @param camera_flip_x Default `FALSE`. Reverse horizontal film coordinates before tracing.
 #' @param camera_up Default `c(0,1,0)`. Vector indicating the "up" position of the camera.
 #' @param aperture Default `0.1`. Aperture of the camera. Smaller numbers will increase depth of field, causing
 #' less blurring in areas not in focus.
@@ -104,6 +71,41 @@
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
 #' @param backgroundlow Default `#ffffff`. The "low" color in the background gradient. Can be either
 #' a hexadecimal code, or a numeric rgb vector listing three intensities between `0` and `1`.
+#' @param time Default `NULL`. Scene time in seconds; NULL retains legacy timing.
+#'   Explicit times sample object and camera tracks without playback history.
+#' @param timeline Default `NULL`. Ordered playback range in scene seconds.
+#'   With preview and interactive enabled, shows seeking and playback controls.
+#'   Authored perspective, orthographic, and panoramic camera rows follow scene
+#'   time, including each shutter sample. Projection changes are cuts that hold
+#'   the left camera until the next key. Manual camera changes
+#'   pause and override the track until the next timeline command. M plays saved
+#'   camera keyframes at fps, starting at the timeline's first second.
+#' @param fps Default `30`. Positive display/output frame rate.
+#' @param animation_motion_blur Default `c("full", "placement")`. With explicit
+#'   time and animated models, "full" evaluates the complete scene, including
+#'   skin and morph deformation, at one shared shutter time per image sample.
+#'   Existing geometry and BVH topology are reused with tight bounds refits.
+#'   The total ray budget remains `samples`; increase it for smoother blur.
+#'   Adaptive stopping is disabled for these exposures, and denoising uses
+#'   accumulated temporal features. "placement" freezes internal model poses at
+#'   frame time while retaining outer placement and other scene motion blur.
+#'   Zero-width exposures and legacy timing are unchanged. Diagnostic `debug`
+#'   channels retain frame-frozen internal poses and report this when requested.
+#' @param shutter_offsets Default `NULL`. Ordered exposure offsets in seconds.
+#'   Nonzero intervals integrate motion using `animation_motion_blur`.
+#'   Zero-width intervals sample time plus the given offset.
+#'   With explicit time, NULL resolves to c(0, 0), a frozen snapshot. Offsets are
+#'   stored as frame-relative floats; absolute scene time remains double precision.
+#'   Moving perspective, orthographic, and panoramic cameras sample all authored
+#'   keys within the exposure. Physical cameras support authored playback and exact rigid
+#'   exposure with constant aperture and focus. Varying physical optics support
+#'   zero-width snapshots in preview and offline rendering. Each optics change
+#'   prepares the complete lens and pupil bounds before display, which can make
+#'   playback slow. Nonzero-width exposure with varying physical optics is rejected.
+#'   Explicit time rejects explicitly supplied legacy shutter controls.
+#'   In explicit-time mode, physical lens cameras use unit exposure weighting;
+#'   offsets select poses and ISO controls brightness. Legacy exposure weighting
+#'   is unchanged when time is NULL.
 #' @param shutteropen Default `0`. Time at which the shutter is open. Only affects moving objects.
 #' @param shutterclose Default `1`. Time at which the shutter is open. Only affects moving objects.
 #' @param camera_motion_blur Default `FALSE`. Whether to blur camera movement over the shutter interval. Press `B` in interactive preview to toggle.
@@ -114,7 +116,8 @@
 #' motion blur. This does not affect exposure or brightness.
 #' @param focal_distance Default `NULL`, automatically set to the `lookfrom-lookat` distance unless
 #' otherwise specified.
-#' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera. Will only be used if `fov = 0`.
+#' @param ortho_dimensions Default `c(1,1)`. Width and height of the orthographic camera, used when
+#' `fov = 0` or when the interactive viewer switches to orthographic projection.
 #' @param tonemap Default `raw`, no tonemapping. Choose the tone mapping function,
 #' `reinhard` scales values by their individual color channels `color/(1+color)` and then performs the
 #' gamma adjustment. `uncharted` uses the mapping developed for Uncharted 2 by John Hable. `hbd` uses an
@@ -137,13 +140,9 @@
 #' @param transparent_background Default `FALSE`. If `TRUE`, any initial camera rays that escape the scene
 #' will be marked as transparent in the final image. If for a pixel some rays escape and others hit a surface,
 #' those pixels will be partially transparent.
-#' @param integrator_type Default `"nee"` (Next Event Estimation, with direct light sampling).
-#' Other options include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
-#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
-#' With `nee`, surfaces and participating media use RGB null-scattering transport;
-#' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
-#' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
-#' See \code{\link{set_medium}()}.
+#' @param integrator_type Default `"auto"`. Rendering integrator. Select `"metal"`,
+#' `"nee"`, `"rtiow"`, or `"basic"` explicitly, or use automatic selection.
+#' See Rendering integrators in Details for selection and fallback rules.
 #' @param debug_channel Default `none`. If `depth`, function will return a depth map of rays into the scene
 #' instead of an image. If `normals`, function will return an image of scene normals, mapped from 0 to 1.
 #' If `uv`, function will return an image of the uv coords. If `variance`, function will return an image
@@ -154,8 +153,16 @@
 #' @param parallel Default `TRUE`. If `FALSE`, it will use all available cores to render the image
 #'  (or the number specified in `options("cores")` or `options("Ncpus")` if that option is not `NULL`).
 #' @param bvh_type Default `"sah"`, "surface area heuristic". Method of building the bounding volume
-#' hierarchy structure used when rendering. Other option is "equal", which splits tree into groups
-#' of equal size.
+#' hierarchy used for scene objects and meshes. `"equal"` uses equal-count splits;
+#' `"hlbvh"` builds Morton-code treelets in parallel on the CPU, then joins them
+#' with SAH. `"metal"` builds those treelets on a Metal GPU, with CPU SAH joining
+#' and layout packing. Metal requires a supported macOS build and available GPU;
+#' otherwise it reports an error (use `"hlbvh"` for the portable CPU path).
+#' HLBVH can reduce construction time at the cost of slower traversal. This choice
+#' controls scene construction; `integrator_type` selects CPU or GPU transport.
+#' CPU construction honors `parallel` and
+#' the renderer's core limit. Set `RAYRENDER_DISABLE_METAL=true` when installing
+#' to omit the optional Metal backend. First Metal use includes shader compilation.
 #' @param progress Default `interactive()` if interactive session, `FALSE` otherwise.
 #' @param verbose Default `FALSE`. Prints information and timing information about scene
 #' construction and raytracing progress.
@@ -177,6 +184,179 @@
 #' @importFrom  grDevices col2rgb
 #' @return A pathtraced image to the current device, or an image saved to a file. Invisibly returns the
 #' array (containing either debug data or the RGB).
+#' @details
+#' \subsection{Interactive preview controls}{
+#' Camera movement orbits around the
+#' lookat point (unless the mode is switched to free flying), with the following control mapping:
+#' W = Forward, S = Backward, A = Left, D = Right, Q = Up, Z = Down,
+#' Shift-W/Shift-S = Pitch Camera Forward/Back, Shift-A/Shift-D = Roll Camera Left/Right,
+#' E = 2x Speed (max 128), C = 0.5x Speed (min 1/128), Up Key = Zoom In (decrease FOV), Down Key = Zoom Out (increase FOV),
+#' Left Key = Decrease Aperture, Right Key = Increase Aperture, 1 = Decrease Focal Distance, 2 = Increase Focal Distance,
+#' 3/4 = Rotate Environment Light,
+#' Right bracket/left bracket = Increase/Decrease Preview Exposure, Shift + right bracket/left bracket = Increase/Decrease shutter speed,
+#' Shift-Enter = Save Preview Snapshot, R = Reset Camera,
+#' Return = Toggle between deferred and final render if `deferred_render = TRUE`, TAB: Toggle Orbit Mode,
+#' Left Mouse Click: Set Look At and Focal Distance, Right Mouse Click: Set Look At.
+#' For perspective and orthographic views, decreasing FOV to zero or below switches to orthographic
+#' projection using `ortho_dimensions`. Increasing FOV above zero switches back to perspective.
+#' Camera position and orientation are preserved; R restores the starting projection.
+#' If the interactive preview window is wide enough, a status bar below the image shows the current camera, exposure, environment rotation,
+#' keyframe state, and active integrator (including CPU fallback from Metal). The bar does not cover the image or appear in saved snapshots.
+#' K: Save Keyframe (at the conclusion of the render, this will create the `ray_keyframes`
+#' data.frame in the global environment, which can be passed to `generate_camera_motion()` to tween between those saved positions).
+#' L: Reset Camera to Last Keyframe (if set), Shift-L: Toggle keyframe path open/closed,
+#' < and >: Jump to previous/next keyframe, /: Delete current keyframe,
+#' M: Preview/cancel keyframe motion,
+#' F: Toggle Fast Travel Mode,
+#' B: Toggle Camera Motion Blur,
+#' H: Toggle Atmospheric Haze, Y: Toggle Altitude Queries (with `sky_light()`).
+#' Haze requires altitude queries: enabling haze also enables altitude queries,
+#' and disabling altitude queries also disables haze. Each change restarts sampling.
+#'
+#' Initial navigation distance is estimated from visible geometry near the center
+#' of the image, with finite scene bounds as a fallback. The orbit target is placed
+#' at that distance along the viewing direction, preserving framing and lens focus.
+#' Held movement keys use elapsed time rather than keyboard repeat. Orbiting uses
+#' angular speed; free-flight panning scales with viewport size at the navigation
+#' distance, and orbit-mode forward/backward movement scales with orbit radius.
+#' Each orbit movement step sets the perspective camera's focal distance to the
+#' distance from the camera to the orbit point, keeping that point in focus.
+#' Picking a surface updates the navigation distance. Free flight retains its
+#' scale until another target is selected; E/C adjust the speed multiplier.
+#' A long preview stall contributes at most 0.25 seconds of held movement per update.
+#'
+#' With \code{integrator_type = "nee"}, clicks select the first point where accumulated volume opacity
+#' reaches 15\%, or the first ordinary surface if reached sooner. Picking integrates extinction
+#' deterministically with a fixed shutter sample and a centered lens sample. Thin or empty regions
+#' allow selection of surfaces behind them; invisible container faces are skipped. Clicking the
+#' background without reaching this opacity turns perspective and panoramic cameras toward that
+#' direction, preserving focal distance and orbit radius. Orthographic background clicks leave the
+#' view unchanged. Selected surface and volume points remain the orbit center when rotating.
+#' Right clicking preserves the focal distance until the next orbit movement.
+#' Some options aren't available for all cameras. When using a realistic camera,
+#' the aperture and field of view cannot be changed from their initial settings.
+#' }
+#'
+#' \subsection{Rendering integrators}{
+#' Automatic selection uses Metal when the package was built with Metal support
+#' and a ray-tracing-capable device is available. Otherwise it uses the CPU
+#' `"nee"` integrator (next event estimation with direct light sampling).
+#' Other CPU integrators include `"rtiow"` (the algorithm specified in the book "Raytracing in One Weekend")
+#' and `"basic"` (basic pathtracing, for high sample reference renders and debugging only).
+#' `"metal"` selects the experimental Metal wavefront integrator on supported macOS GPUs.
+#' It traces static meshes and instances with [diffuse()] (including rough diffuse),
+#' [metal()], [microfacet()] reflection/transmission, [glossy()], [dielectric()],
+#' [translucent()], [hair()], and the layered [openpbr()] material. Both [subsurface()]
+#' random walks and [subsurface_diffusion()] support rough interfaces and priority overlaps.
+#' Spheres and ellipsoids use analytic GPU intersections, including transformed instances,
+#' textures, and area emission. Flat, cylindrical, and ribbon [bezier_curve()] objects
+#' use direct GPU intersections with the CPU curve model, preserving tapered widths,
+#' texture coordinates, hair shading, and animated transforms. Cylinders and disks
+#' are triangulated automatically.
+#'
+#' [csg_object()] evaluates distance fields directly on the GPU, including blends,
+#' shells, emission, and closed dielectric/subsurface boundaries.
+#'
+#' It supports constant/checker/gradient/image textures, legacy Perlin noise, nested checkers,
+#' RGB/HSV gradients in UV or world coordinates, composable color and roughness graphs,
+#' image bump and alpha maps, and imported graph bump maps. Bump filtering uses ray differentials,
+#' and diffuse bump mapping uses the same energy-conserving model as CPU rendering. Area,
+#' point/spot, and image/disk infinite lights are supported. Camera movement, environment rotation,
+#' progressive denoising, adaptive sampling, and cancellation remain interactive. Perspective,
+#' orthographic, panoramic, and physical lens cameras are supported, including camera motion
+#' blur. Lens tracing retains aperture rejection, pupil sampling, and radiometric weights.
+#'
+#' Animated geometry and cameras use independent per-pixel shutter samples, except
+#' full-pose model exposures which share a shutter time per image sample. Every
+#' path retains its time through shading, shadows, emitter sampling, and volume transport.
+#' Metal evaluates the native translation, quaternion rotation, and scale/shear interpolation,
+#' including nested transforms, against immutable reference geometry. Each intersected
+#' animation group requires a reference-frame traversal, so many independently moving
+#' objects can increase traversal cost. Full-pose exposures also update skinned and
+#' morphed geometry between samples. `shutter_speed = Inf` freezes
+#' time at the start of the shutter interval. [texture_ptex()] uses a bounded GPU atlas
+#' approximation; see its documentation for filtering differences and memory limits.
+#' Unsupported geometry, materials, media, or stratified sampling produce a warning and use CPU
+#' `nee` for the whole scene.
+#'
+#' GPU sampling uses independent sequences, so fixed seeds are reproducible within a backend
+#' but do not give pixel-identical noise across backends. Mesh instances share GPU triangle
+#' buffers and acceleration structures, including nested placements. Image environments
+#' use luminance-weighted alias sampling in solid angle; interactive rotation reuses the table.
+#'
+#' Homogeneous, dense-grid, and sparse OpenVDB/NanoVDB media support absorption, HG scattering,
+#' RGB and thermal emission, invisible boundaries, transformed fields, and nested regions.
+#' Density and emission fields retain their native interpolation; sparse grids stay sparse.
+#' Thermal spectra use a 10 K lookup spacing; spatial temperature fields above 20,000 K
+#' fall back to CPU rendering.
+#'
+#' Prague [sky_light()] evaluates skymodelr's spectral coefficients directly on Metal for
+#' altitude-dependent lighting and finite haze, preserving atmospheric light before blockers
+#' and within scattering volumes. GPU arithmetic uses floats; CPU evaluation uses doubles.
+#' Density-threshold haze splits the trilinear density field at every cutoff crossing on the GPU.
+#' Scenes with multiple Prague skies retain batched CPU atmosphere queries, which can be slower
+#' for small images. Camera movement, environment rotation,
+#' haze/altitude controls, and cancellation remain available.
+#'
+#' The returned image's `wavefront` attribute reports use/fallback, stored triangle,
+#' unique-mesh, mesh-placement, analytic-primitive, and tessellated-primitive counts,
+#' scattering events, discarded paths, upload time, and sampling time. `atmosphere_seconds`
+#' records CPU atmosphere work within `sample_seconds`, excluding GPU synchronization.
+#' `csg_failed_queries` counts CSG queries skipped after nonfinite distances,
+#' stalled progress, or 8192 marching steps; the first failure also issues a warning.
+#' Other platforms retain the CPU renderer and do not require Metal.
+#'
+#' With `nee`, surfaces and participating media use RGB null-scattering transport;
+#' \code{nee} is selected automatically for scenes containing \code{\link{sky_light}()} or attached
+#' media (including clouds and media inside instances), overriding \code{rtiow} or \code{basic}.
+#' See \code{\link{set_medium}()}.
+#'
+#' Metal uses the same homogeneous SSS coefficients, HG phase function, dielectric
+#' Fresnel boundary, and priority convention as CPU rendering. Its RGB free-flight
+#' mixture supports `method = "guided"` using entry-normal direction and flight
+#' proposals for eligible isotropic bodies. Missing entry guides and nonzero `g`
+#' use ordinary sampling; the physical transport model is unchanged.
+#' CPU and Metal use independent random sequences, so equal seeds do not produce
+#' pixel-identical images. With eight or more finite emitters, Metal selects lights
+#' through a spatial, power-weighted light BVH with a small uniform component;
+#' infinite lights retain their individual selection probabilities.
+#' Internal scattering and SSS boundary
+#' reflections do not consume `max_depth`, and walks have no finite event cap.
+#' Camera origins inside bodies are classified on the GPU. Denoising guides use
+#' the first non-specular interaction, including scattering behind glass.
+#' Invisible [light()] emitters still illuminate objects but remain hidden from
+#' the camera and through purely specular paths. Transparent backgrounds use
+#' independent camera-ray coverage: exposed surfaces (including glass) are opaque
+#' in alpha, cutouts preserve holes, and volumes contribute partial opacity from
+#' extinction. Environment lights continue to illuminate objects when hidden from
+#' the camera. Finite atmospheric haze retains its radiance and opacity.
+#'
+#' Triangulation approximates cylinders/disks using 128 azimuth segments.
+#' Supply a mesh directly when finer control is needed. Curves retain the same
+#' width-dependent intersection refinement and `split_depth` as CPU rendering;
+#' they are open surfaces and cannot bound dielectric/subsurface interiors.
+#' Grid temperatures above 20000 kelvin and other unsupported features still select
+#' CPU rendering for the whole scene.
+#' GPU membership supports up to 16 simultaneous overlapping closed boundaries.
+#' Overflow, unresolvable positions, and nonfinite transport weights terminate affected
+#' rays and issue a summarized console warning; `wavefront$discarded_paths` counts them.
+#' These terminated paths can bias the result, so inspect that count for extreme scenes.
+#' }
+#'
+#' \subsection{Path diagnostics}{
+#' Recoverable medium/subsurface tracking failures terminate only the affected
+#' path, retaining its accumulated light. Rendering continues silently by default:
+#' no warning is emitted and no diagnostic log file is written. These terminated paths
+#' can bias the result. Diagnostics are attached to the returned array as `path_warnings`,
+#' with counts by failure category and up to eight examples per category containing ray
+#' origins, directions, and path state. Collection occurs only on failed paths, not on
+#' successful scattering events.
+#' Set the environment variable `RAYRENDER_DEBUG_PATHS=true` (or `1`) to opt into a
+#' summarized warning after image output and a diagnostic log. The `path_warning_log`
+#' attribute then gives its filename. Saved images use `<filename>.warnings.log`;
+#' renders without a filename, or with an unwritable log directory, use a temporary log.
+#' Scene validation errors and unclassified exceptions remain errors.
+#' }
 #'
 #'@examplesIf interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")
 #' # Generate a large checkered sphere as the ground
@@ -186,7 +366,7 @@
 #'   # Add a sphere to the center
 #'   scene = scene |>
 #'     add_object(sphere(x = 0, y = 0, z = 0, radius = 0.5, material = diffuse(color = c(1, 0, 1))))
-#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16)
+#'   render_scene(scene, fov = 20, parallel = TRUE, samples = 16, integrator_type = "metal")
 #'   # Add a marbled cube
 #'   scene = scene |>
 #'     add_object(cube(x = 1.1, y = 0, z = 0, material = diffuse(noise = 3)))
@@ -299,15 +479,47 @@ render_scene = function(
   verbose = FALSE,
   print_debug_info = FALSE,
   new_page = TRUE,
-  integrator_type = "nee",
+  integrator_type = "auto",
   screen_text = NULL,
   screen_line = NULL,
   camera = NULL,
   start_frame = 1,
   end_frame = NA,
-  mode = c("auto", "image", "animation", "preview")
+  mode = c("auto", "image", "animation", "preview"),
+  camera_flip_x = FALSE,
+  time = NULL,
+  timeline = NULL,
+  fps = 30,
+  shutter_offsets = NULL,
+  animation_motion_blur = c("full", "placement")
 ) {
+  saved_call = saved_scene_render_call(
+    scene,
+    names(as.list(match.call())[-1L]),
+    environment(),
+    render_scene
+  )
+  if (!is.null(saved_call)) {
+    return(do.call(render_scene, saved_call))
+  }
+  animation_motion_blur = match.arg(animation_motion_blur)
+  timing = resolve_scene_timing(
+    time,
+    timeline,
+    fps,
+    shutter_offsets,
+    !missing(shutteropen) ||
+      !missing(shutterclose) ||
+      !missing(shutter_speed) ||
+      !missing(camera_motion_blur)
+  )
   mode = match.arg(mode)
+  if (!is.null(timeline) && mode == "animation") {
+    stop(
+      "Use render_animation(times = ...) for offline output; timeline controls an interactive still preview.",
+      call. = FALSE
+    )
+  }
   if (!is.logical(camera_motion_blur) || length(camera_motion_blur) != 1) {
     stop("camera_motion_blur must be a single TRUE/FALSE value.")
   }
@@ -333,6 +545,7 @@ render_scene = function(
     shutteropen = !missing(shutteropen),
     shutterclose = !missing(shutterclose),
     camera_motion_blur = !missing(camera_motion_blur),
+    camera_flip_x = !missing(camera_flip_x),
     filename = filename_supplied
   )
   legacy_camera_geometry_supplied = any(legacy_camera_supplied[c(
@@ -352,6 +565,7 @@ render_scene = function(
     "shutteropen",
     "shutterclose",
     "camera_motion_blur",
+    "camera_flip_x",
     "shutter_speed",
     "filename"
   )]
@@ -364,6 +578,7 @@ render_scene = function(
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = camera_shutter_speed,
+    camera_flip_x = camera_flip_x,
     filename = filename
   )
   metadata_supplied[["shutter_speed"]] = shutter_speed_supplied
@@ -396,6 +611,7 @@ render_scene = function(
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = camera_shutter_speed,
+    camera_flip_x = camera_flip_x,
     message_cornell = is.null(camera_arg) &&
       length(ray_scene_cameras(scene)) == 0
   )
@@ -416,6 +632,21 @@ render_scene = function(
     )
   }
 
+  if (!is.null(time)) {
+    if (!is.null(timeline)) {
+      validate_relative_scene_times(c(
+        timeline - time + min(0, timing$offsets[1]),
+        timeline - time + max(0, timing$offsets[2])
+      ))
+    }
+    cameras = lapply(
+      cameras,
+      camera_at_scene_times,
+      times = time,
+      fps = fps,
+      shutter_offsets = timing$offsets
+    )
+  }
   if (length(cameras) > 1) {
     validate_camera_output_filenames(
       cameras,
@@ -424,6 +655,9 @@ render_scene = function(
       end_frame = end_frame
     )
     batch_blockers = character()
+    if (!is.null(timeline)) {
+      batch_blockers = c(batch_blockers, "interactive timeline is enabled")
+    }
     if (!camera_batch_metadata_compatible(cameras)) {
       batch_blockers = c(batch_blockers, "camera metadata differs")
     }
@@ -448,6 +682,7 @@ render_scene = function(
     }
     if (length(batch_blockers) == 0) {
       return(render_camera_batch(
+        animation_motion_blur = animation_motion_blur,
         scene = scene,
         cameras = cameras,
         mode = mode,
@@ -487,13 +722,16 @@ render_scene = function(
         force_no_write = identical(mode, "preview")
       ))
     }
-    warning(
-      "Rendering cameras one at a time because ",
-      paste(batch_blockers, collapse = ", "),
-      "."
-    )
+    if (length(batch_blockers)) {
+      warning(
+        "Rendering cameras one at a time because ",
+        paste(batch_blockers, collapse = ", "),
+        "."
+      )
+    }
     output = lapply(cameras, function(cam) {
       render_scene(
+        animation_motion_blur = animation_motion_blur,
         scene = scene,
         width = width,
         height = height,
@@ -532,7 +770,11 @@ render_scene = function(
         camera = cam,
         start_frame = start_frame,
         end_frame = end_frame,
-        mode = mode
+        mode = mode,
+        time = time,
+        timeline = timeline,
+        fps = fps,
+        shutter_offsets = shutter_offsets
       )
     })
     names(output) = vapply(cameras, function(cam) cam$name, character(1))
@@ -546,6 +788,7 @@ render_scene = function(
       (render_mode == "preview" && nrow(selected_camera$motion) > 1)
   ) {
     return(render_animation_camera(
+      animation_motion_blur = animation_motion_blur,
       scene = scene,
       camera = selected_camera,
       start_frame = start_frame,
@@ -618,6 +861,13 @@ render_scene = function(
   shutterclose = camera_args$shutterclose
   camera_motion_blur = camera_args$camera_motion_blur
   shutter_speed = camera_args$shutter_speed
+  camera_flip_x = camera_args$camera_flip_x
+  if (!is.null(time)) {
+    shutteropen = timing$offsets[1]
+    shutterclose = timing$offsets[2]
+    shutter_speed = 1
+    camera_motion_blur = FALSE
+  }
   filename = camera_image_filename(selected_camera, frame)
   if (render_mode == "preview") {
     filename = NA
@@ -665,18 +915,36 @@ HAS_OIDN: %s
   ) {
     controls_lines = c(
       "------------------------ Interactive Mode Controls ------------------------",
-      "Move:       W/A/S/D horizontal | Q/Z vertical | E/C step size | F fast travel",
+      "Move:       W/A/S/D horizontal | Q/Z vertical | E/C speed | F fast travel",
       "Look:       Shift-W/S pitch | Shift-A/D roll | Tab toggle orbit",
       "Lens/Env:   Up/Down FOV | Left/Right aperture | 1/2 focal | 3/4 env rotate",
-      "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel",
+      if (is.null(timeline)) {
+        "Keyframes:  K save | L last | Shift-L loop | </> prev/next | / delete | M preview/cancel"
+      } else {
+        "Keyframes:  K save | L last | </> prev/next | / delete | M scene-time preview/cancel"
+      },
       "Mouse:      Left click lookat + focal distance | Right click lookat",
       "Status:     Wide window shows camera/exposure/env/keyframes/loop",
-      "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed",
-      "Blur:       B camera motion blur",
+      if (is.null(timeline)) {
+        "Exposure:   ]/[ preview exposure | Shift-]/[ shutter speed"
+      } else {
+        "Exposure:   ]/[ preview exposure | shutter_offsets controls scene motion blur"
+      },
+      if (is.null(timeline)) {
+        "Blur:       B camera motion blur"
+      } else {
+        "Timeline:   Space play/pause | Shift-Space reverse | Ctrl-Space scene loop"
+      },
       "Atmosphere: H haze | Y altitude queries (haze requires altitude queries)",
       "Snapshot:   Shift-Enter save current preview",
       "General:    P print camera | R reset camera | ESC close"
     )
+    if (!is.null(timeline)) {
+      controls_lines = c(
+        controls_lines,
+        "Timeline:   Drag slider | Home/End endpoints | Ctrl-Left/Right step | Page Up/Down rate"
+      )
+    }
     if (deferred_render) {
       controls_lines = c(
         controls_lines,
@@ -716,6 +984,7 @@ HAS_OIDN: %s
     shutterclose = shutterclose,
     camera_motion_blur = camera_motion_blur,
     shutter_speed = shutter_speed,
+    camera_flip_x = camera_flip_x,
     focal_distance = focal_distance,
     ortho_dimensions = ortho_dimensions,
     tonemap = tonemap,
@@ -733,13 +1002,22 @@ HAS_OIDN: %s
     deferred_render = deferred_render,
     integrator_type = integrator_type,
     denoise = denoise,
-    print_debug_info = print_debug_info
+    print_debug_info = print_debug_info,
+    scene_time = time
   )
   print_time(verbose, "Pre-processed scene")
 
   camera_info = scene_list$camera_info
+  camera_info$timeline = timeline
+  camera_info$timeline_fps = fps
+  camera_info$timeline_camera = if (!is.null(time)) {
+    selected_camera$authored_motion
+  } else {
+    NULL
+  }
   scene_info = scene_list$scene_info
   render_info = scene_list$render_info
+  render_info$animation_motion_blur = animation_motion_blur
   render_info$benchmark_timing = isTRUE(getOption("rayrender.benchmark_timing"))
   render_info$transparent_background = transparent_background
   processed_scene = scene_info$scene
@@ -768,11 +1046,36 @@ HAS_OIDN: %s
   camera_info$interactive = interactive
   camera_info$auto_exposure = auto_exposure
   camera_info$camera_motion_blur = isTRUE(camera_motion_blur)
+  if (isTRUE(camera_motion_blur) && frame < nrow(selected_camera$motion)) {
+    endpoint = camera_frame_args(selected_camera, frame + 1L)
+    groups = selected_camera$motion$camera_motion_blur_group
+    same_group = is.null(groups) || identical(groups[frame], groups[frame + 1L])
+    same_projection = identical(
+      c(fov < 0, fov == 0, fov == 360),
+      c(endpoint$fov < 0, endpoint$fov == 0, endpoint$fov == 360)
+    )
+    # Match animation rendering: camera cuts and projection changes end motion.
+    if (same_group && same_projection) {
+      camera_info$motion_endpoint = list(
+        lookfrom = endpoint$lookfrom,
+        lookat = endpoint$lookat,
+        up = endpoint$camera_up,
+        focal = endpoint$focal_distance
+      )
+    }
+  }
   camera_info$shutter_speed = shutter_speed
   camera_info$snapshot_filename = snapshot_filename
   camera_info$keyframe_motion_args = normalize_keyframe_motion_args(
     selected_camera$keyframe_motion_args
   )
+  camera_info$keyframes = if (is.null(selected_camera$keyframes)) {
+    list()
+  } else {
+    lapply(seq_len(nrow(selected_camera$keyframes)), function(i) {
+      as.list(selected_camera$keyframes[i, , drop = FALSE])
+    })
+  }
   debug_channel = scene_info$debug_channel # converted to numeric
 
   #Pathtrace Scene
@@ -831,6 +1134,10 @@ HAS_OIDN: %s
   print_time(verbose, "Post-processed image")
   attr(return_array, "bvh_build_seconds") = attr(rgb_mat, "bvh_build_seconds")
   attr(return_array, "bvh_build_count") = attr(rgb_mat, "bvh_build_count")
+  attr(return_array, "trace_seconds") = attr(rgb_mat, "trace_seconds")
+  attr(return_array, "animation_timing") = attr(rgb_mat, "animation_timing")
+  attr(return_array, "wavefront") = attr(rgb_mat, "wavefront")
+  attr(return_array, "timeline") = attr(rgb_mat, "timeline")
 
   return(invisible(return_array))
 }

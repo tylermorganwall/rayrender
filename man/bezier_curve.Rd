@@ -23,7 +23,8 @@ bezier_curve(
   angle = c(0, 0, 0),
   order_rotation = c(1, 2, 3),
   flipped = FALSE,
-  scale = c(1, 1, 1)
+  scale = c(1, 1, 1),
+  split_depth = 3L
 )
 }
 \arguments{
@@ -69,9 +70,13 @@ functions \code{\link{diffuse}}, \code{\link{metal}}, or \code{\link{dielectric}
 \item{scale}{Default `c(1, 1, 1)`. Scale transformation in the x, y, and z directions. If this is a single value,
 number, the object will be scaled uniformly.
 Note: emissive objects may not currently function correctly when scaled.}
+
+\item{split_depth}{Default `3L`. Subdivide into `2^split_depth` native BVH primitives,
+matching PBRT's CPU default. Zero disables subdivision; maximum 10. More
+subdivisions use more memory but can speed up long or densely packed curves.}
 }
 \value{
-Single row of a tibble describing the cube in the scene.
+Single row of a tibble describing the curve in the scene.
 }
 \description{
 Bezier curve, defined by 4 control points.

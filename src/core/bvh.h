@@ -7,6 +7,8 @@
 #include <atomic>
 #include <memory>
 #include <span>
+#include <type_traits>
+#include "hlbvh.h"
 
 struct BVHPrimitive {
     BVHPrimitive() : primitiveIndex(0), bounds(aabb()) {};
@@ -108,6 +110,18 @@ struct alignas(64) LinearBVHNode4 {
     int nChildren;
 };
 
+// Own aligned storage separately from initialization: HLBVH workers construct
+// their disjoint output ranges, while SAH initializes the array before packing.
+// No destructor walk is needed, including after a partially completed build.
+static_assert(std::is_trivially_destructible_v<LinearBVHNode4>);
+struct BVH4NodeDeleter {
+    size_t count = 0;
+    void operator()(LinearBVHNode4* nodes) const noexcept {
+        std::allocator<LinearBVHNode4>{}.deallocate(nodes, count);
+    }
+};
+using BVH4NodeStorage = std::unique_ptr<LinearBVHNode4[], BVH4NodeDeleter>;
+
 // The parent already tested the leaf's bounds, so a leaf needs only its range
 // in the existing ordered primitive array. Keep full counts for coincident
 // primitives, whose leaves can exceed the requested maximum leaf size.
@@ -120,16 +134,17 @@ static_assert(sizeof(LinearBVHLeaf4) == 8, "BVH4 leaves should occupy eight byte
 
 class BVHAggregate : public hitable {
 public:
+    friend class WavefrontSceneCompiler;
     BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                 float t_min, float t_max, 
                 int maxPrimsInNode, bool sah, 
                 Transform* ObjectToWorld, 
                 Transform* WorldToObject, 
-                bool reverseOrientation);
+                bool reverseOrientation, BVHBuildOptions options = {});
                 
     BVHAggregate(std::vector<std::shared_ptr<hitable> > prims,
                 float t_min, float t_max, 
-                int maxPrimsInNode, bool sah);
+                int maxPrimsInNode, bool sah, BVHBuildOptions options = {});
     
     // static BVHAggregate *Create(std::vector<Primitive> prims,
     //                         const ParameterDictionary &parameters);
@@ -140,6 +155,12 @@ public:
 
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, random_gen& rng) const;
     virtual const bool hit(const Ray& r, Float t_min, Float t_max, hit_record& rec, Sampler* sampler) const;
+    // Containment probes only: primitives must be whole closed objects, not
+    // individual mesh triangles. Objects outside the origin's bounds cannot
+    // contain it; their entry/exit pairs need not be traced and replayed.
+    // Exclusions identify complete objects already classified by a probe.
+    bool HitContainingObjects(const Ray&, Float, Float, hit_record&, random_gen&,
+                              const std::vector<const hitable*>* excluded = nullptr) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, random_gen& rng) const;
     virtual bool HitP(const Ray &r, Float t_min, Float t_max, Sampler* sampler) const;
     OpaqueShadowType ShadowType() const { return shadow_type; }
@@ -147,6 +168,8 @@ public:
     // Mesh construction releases its temporary list; light sampling borrows
     // these same owned primitives instead of retaining a duplicate mesh list.
     std::span<const std::shared_ptr<hitable>> Primitives() const { return primitives; }
+    // Refit fixed topology after owning-thread deformation/placement updates.
+    void Refit(Float open, Float close);
 
     virtual bool bounding_box(Float t0, Float t1, aabb& box) const;
     
@@ -175,9 +198,12 @@ public:
     void transformToSimdFormat();
     aabb scene_bounds;
     // std::vector<BVH4Node> simdNodes;
-    int n_nodes;
+    int n_nodes = 0;
     // std::pair<size_t,size_t> CountNodeLeaf();
 private:
+    void build(float t_min, float t_max, BVHBuildOptions options);
+    void packHLBVH(const HLBVHTree& tree, unsigned threads);
+    BVHBuildMethod build_method = BVHBuildMethod::SAH;
     void classifyOpaqueShadow();
     OpaqueShadowType shadow_type = OpaqueShadowType::Opaque;
     BVHBuildNode *buildRecursive(std::span<BVHPrimitive> bvhPrimitives,
@@ -187,18 +213,6 @@ private:
     BVHBuildNode4* ConvertBVH2ToBVH4(BVHBuildNode* node, int* totalNodes4,
                                    int* totalLeaves4);
     void buildBVH4(BVHBuildNode* root);
-//    BVHBuildNode *buildHLBVH(Allocator alloc,
-//                             const std::vector<BVHPrimitive> &primitiveInfo,
-//                             std::atomic<int> *totalNodes,
-//                             std::vector<Primitive> &orderedPrims);
-//    BVHBuildNode *emitLBVH(BVHBuildNode *&buildNodes,
-//                           const std::vector<BVHPrimitive> &primitiveInfo,
-//                           MortonPrimitive *mortonPrims, int nPrimitives, int *totalNodes,
-//                           std::vector<Primitive> &orderedPrims,
-//                           std::atomic<int> *orderedPrimsOffset, int bitIndex);
-//    BVHBuildNode *buildUpperSAH(Allocator alloc,
-//                                std::vector<BVHBuildNode *> &treeletRoots, int start,
-//                                int end, std::atomic<int> *totalNodes) const;
     int flattenBVH(BVHBuildNode *node, int *offset);
     int flattenBVH4(BVHBuildNode4* node, int* offset, int* leafOffset);
     void validateBVH4() const;
@@ -210,7 +224,7 @@ private:
     std::vector<std::shared_ptr<hitable> > primitives;
     //    SplitMethod splitMethod;
        std::unique_ptr<LinearBVHNode[]> nodes;
-       std::unique_ptr<LinearBVHNode4[]> nodes4;
+       BVH4NodeStorage nodes4;
        std::unique_ptr<LinearBVHLeaf4[]> leaves4;
     //    int totalNodes;
 

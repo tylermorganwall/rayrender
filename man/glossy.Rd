@@ -22,6 +22,7 @@ glossy(
   gradient_type = "hsv",
   image_texture = "",
   image_repeat = 1,
+  image_offset = c(0, 0),
   alpha_texture = "",
   bump_texture = "",
   bump_intensity = 1,
@@ -79,12 +80,14 @@ begins with value `gradient_color`.}
 \item{image_repeat}{Default `1`. Number of times to repeat the image across the surface.
 `u` and `v` repeat amount can be set independently if user passes in a length-2 vector.}
 
+\item{image_offset}{Default `c(0, 0)`. Finite length-two UV translation for image-based textures supported by this material. Applied after any UV repeat and before wrapping; positive values sample toward increasing u and v.}
+
 \item{alpha_texture}{Default `""`. A matrix or filename (specifying a greyscale image) to be used to specify the transparency.}
 
 \item{bump_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a bump map for the surface.}
 
-\item{bump_intensity}{Default `1`. Intensity of the bump map. High values may lead to unphysical results.}
+\item{bump_intensity}{Default `1`. Height-map scale. Slopes are measured per UV unit, including texture repeats, independently of image resolution. High values may lead to unphysical results.}
 
 \item{roughness_texture}{Default `""`. A matrix, array, or filename (specifying a greyscale image) to
 be used to specify a roughness map for the surface.}
@@ -105,6 +108,13 @@ Single row of a tibble describing the glossy material.
 }
 \description{
 Glossy Material
+}
+\details{
+Bump textures use up to 16 local facet interactions on CPU and Metal
+  to reduce truncation loss while preserving the material's absorption.
+  These interactions do not consume scene-level `max_depth`. Direct-light
+  sampling and multiple importance sampling remain active. Very steep bumps
+  can still lose energy through truncation or geometric clipping.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

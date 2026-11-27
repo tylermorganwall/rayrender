@@ -4,7 +4,7 @@
 \alias{csg_capsule}
 \title{CSG Capsule}
 \usage{
-csg_capsule(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1)
+csg_capsule(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1, material = NULL)
 }
 \arguments{
 \item{start}{Default `c(0, 0, 0)`. Start point of the capsule, specifying `x`, `y`, `z`.}
@@ -12,6 +12,8 @@ csg_capsule(start = c(0, 0, 0), end = c(0, 1, 0), radius = 1)
 \item{end}{Default `c(0, 1, 0)`. End point of the capsule, specifying `x`, `y`, `z`.}
 
 \item{radius}{Default `1`. Capsule radius.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the capsule in the scene.

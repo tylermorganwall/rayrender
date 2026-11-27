@@ -7,11 +7,11 @@
 set_medium(scene, medium, keep_surface = FALSE)
 }
 \arguments{
-\item{scene}{A `ray_scene` containing closed spheres, cubes, ellipsoids, or
+\item{scene}{A `ray_scene` containing closed spheres, cubes, ellipsoids, CSG solids, or
 watertight consistently oriented triangle meshes.}
 
 \item{medium}{A description from [homogeneous_medium()], [grid_medium()], or
-[nanovdb_medium()]. Use `NULL` to remove an attachment.}
+[vdb_medium()]. Use `NULL` to remove an attachment.}
 
 \item{keep_surface}{Default `FALSE`. Keep the object's surface material when
 `TRUE`, for example to place a medium inside glass. Dielectric attenuation

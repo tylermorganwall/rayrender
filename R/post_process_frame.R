@@ -13,6 +13,33 @@ post_process_frame = function(
   write_file = TRUE,
   plot_scene = TRUE
 ) {
+  if (debug_channel %in% c(10, 11, 13)) {
+    # Numerical geometry channels must retain signed world-space values, just
+    # like stills. Color-space conversion changes the data used for parity checks.
+    channel = switch(
+      as.character(debug_channel),
+      `10` = "position",
+      `11` = "direction",
+      `13` = "shape"
+    )
+    return(post_process_scene(
+      rgb_mat,
+      iso = 1,
+      use_iso = FALSE,
+      tonemap = tonemap,
+      debug_channel = channel,
+      filename = if (write_file) filename else NA_character_,
+      plot_scene = plot_scene,
+      bloom = FALSE,
+      transparent_background = transparent_background
+    ))
+  }
+  path_record = save_path_warnings(
+    attr(rgb_mat, "path_warnings"),
+    if (write_file) filename else NA_character_
+  )
+  # Warn only after image output, including when options(warn = 2) is enabled.
+  on.exit(warn_path_failures(path_record), add = TRUE)
   if (transparent_background && isTRUE(rgb_mat$premultiplied)) {
     rgb_mat = straight_volume_rgb(rgb_mat)
   }
@@ -37,14 +64,14 @@ post_process_frame = function(
     } else if (plot_scene) {
       rayimage::plot_image(output_array, new_page = TRUE)
     }
-    return(invisible(returnmat))
+    return(invisible(attach_path_warnings(returnmat, path_record)))
   } else if (debug_channel %in% c(2, 3, 4, 5, 6, 7, 8, 9)) {
     if (write_file) {
       rayimage::ray_write_image(full_array, filename)
     } else if (plot_scene) {
       rayimage::plot_image(full_array, new_page = TRUE)
     }
-    return(invisible(full_array))
+    return(invisible(attach_path_warnings(full_array, path_record)))
   }
   coverage = if (transparent_background) full_array[,, 4] else NULL
   if (transparent_background) {
@@ -73,6 +100,21 @@ post_process_frame = function(
   if (any(is.na(full_array))) {
     full_array[is.na(full_array)] = 0
   }
+  # Composite in display space, matching still renders. Attributes travel with
+  # the pixels to the asynchronous writer, so both output paths use this step.
+  for (overlay_name in c("screen_text_overlay", "screen_line_overlay")) {
+    overlay = attr(rgb_mat, overlay_name, exact = TRUE)
+    if (!is.null(overlay)) {
+      full_array = composite_screen_text_image(
+        full_array,
+        overlay,
+        x = 1,
+        y = 1,
+        hjust = 0,
+        vjust = 0
+      )
+    }
+  }
   if (!is.null(attr(rgb_mat, "volume_statistics"))) {
     attr(full_array, "volume_statistics") = attr(rgb_mat, "volume_statistics")
   }
@@ -81,5 +123,5 @@ post_process_frame = function(
   } else if (plot_scene) {
     rayimage::plot_image(full_array, new_page = TRUE)
   }
-  return(invisible(full_array))
+  return(invisible(attach_path_warnings(full_array, path_record)))
 }

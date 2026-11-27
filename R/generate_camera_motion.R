@@ -23,7 +23,10 @@
 #' a corner because the keyed path is preserved. `manual` just returns the values passed in,
 #' properly formatted to be passed to `render_animation()`.
 #' @param frames Default `30`. Total number of frames.
-#' @param closed Default `FALSE`. Whether to close the camera curve so the first position matches the last. Set this to `TRUE` for perfect loops.
+#' @param closed Default `FALSE`. Whether the camera path loops back to its start.
+#' Generated paths contain `frames` samples without a duplicated closing frame.
+#' `render_animation()` wraps the last frame's camera motion blur toward the first.
+#' With `type = "manual"`, the supplied rows are retained and marked as a loop.
 #' @param constant_step Default `TRUE`. Whether to make the camera travel at a constant speed
 #' when `type = "bezier"`.
 #' @param aperture_linear Default `TRUE`. This linearly interpolates focal distances, rather than using a smooth Bezier curve  or easing function.
@@ -51,7 +54,9 @@
 #' `spline`, `linear`, `quad`, `cubic`, and `exp` motion. This preserves the keyed camera positions
 #' and orientations while making angular velocity continuous through orientation keyframes. Closed
 #' paths use periodic orientation tangents. Set this to `FALSE` to interpolate lookat and up vectors
-#' directly with the selected `type`.
+#' directly with the selected `type`. Identical lookat targets at adjacent keyframes
+#' stay fixed throughout that interval before damping. Damping is applied last to
+#' the complete motion, so transitions into and out of a fixed target remain smoothed.
 #'
 #' @export
 #' @return Data frame of camera positions, orientations, apertures, focal distances, and field of views
@@ -141,6 +146,11 @@ generate_camera_motion = function(
   progress = TRUE,
   smooth_orientation = TRUE
 ) {
+  # Interpolation includes both endpoints. Sample one extra closing pose for
+  # loops, then omit it from the output so every row occupies a unique loop time.
+  if (isTRUE(closed) && type != "manual") {
+    frames = frames + 1L
+  }
   damp_magnitude = 1 - damp_magnitude
   stopifnot(damp_magnitude >= 0 && damp_magnitude < 1)
   if (damp_magnitude == 0) {
@@ -401,7 +411,7 @@ generate_camera_motion = function(
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
 
-    return(as_ray_camera_motion(final_motion))
+    return(finish_camera_motion(final_motion, closed, type != "manual"))
   } else if (type %in% c("exp", "quad", "cubic", "linear", "spline")) {
     if (inherits(positions, "list")) {
       positions = do.call(rbind, positions)
@@ -539,10 +549,35 @@ generate_camera_motion = function(
       final_motion[, c("dx", "dy", "dz")] = orientation_motion$lookats
       final_motion[, c("upx", "upy", "upz")] = orientation_motion$camera_ups
     }
+    if (smooth_orientation) {
+      # Finish the undamped orbit basis before filtering any camera components.
+      # Reproject the up vector onto the fixed target's view plane, preserving
+      # its roll. Target holds must never overwrite the final damped motion.
+      for (row in which(orientation_motion$fixed_lookat_rows)) {
+        target = orientation_motion$lookats[row, ]
+        final_motion[row, c("dx", "dy", "dz")] = target
+        forward = target - as.numeric(final_motion[row, c("x", "y", "z")])
+        distance = sqrt(sum(forward^2))
+        if (distance <= sqrt(.Machine$double.eps)) {
+          next
+        }
+        forward = forward / distance
+        up = as.numeric(final_motion[row, c("upx", "upy", "upz")])
+        up = up - sum(up * forward) * forward
+        if (sum(up^2) < .Machine$double.eps) {
+          # At a singular up hint, use the world axis least aligned with view.
+          up = diag(3)[, which.min(abs(forward))]
+          up = up - sum(up * forward) * forward
+        }
+        final_motion[row, c("upx", "upy", "upz")] = up / sqrt(sum(up^2))
+      }
+    }
+    # Damping is the final motion operation, including at target-hold boundaries.
+    # A moving target settles into a hold instead of snapping to it at the key.
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
-    return(as_ray_camera_motion(final_motion))
+    return(finish_camera_motion(final_motion, closed, type != "manual"))
   } else if (type == "manual") {
     if (inherits(positions, "list")) {
       positions = do.call(rbind, positions)
@@ -625,10 +660,27 @@ generate_camera_motion = function(
     if (damp_motion) {
       final_motion = damp_camera_motion(final_motion, damp_magnitude, closed)
     }
-    return(as_ray_camera_motion(final_motion))
+    return(finish_camera_motion(final_motion, closed, type != "manual"))
   } else {
     stop("type '", type, "' not recognized")
   }
+}
+
+#' @param motion Interpolated camera motion.
+#' @param closed Whether the path loops back to its first frame.
+#' @param drop_endpoint Whether interpolation generated an extra closing row.
+#' @return Camera motion with explicit loop metadata.
+#' @keywords internal
+finish_camera_motion = function(motion, closed, drop_endpoint) {
+  if (isTRUE(closed) && drop_endpoint) {
+    motion = motion[-nrow(motion), , drop = FALSE]
+    rownames(motion) = NULL
+  }
+  motion = as_ray_camera_motion(motion)
+  if (isTRUE(closed)) {
+    attr(motion, "closed") = TRUE
+  }
+  motion
 }
 
 #' Damp Camera Motion

@@ -3,7 +3,9 @@
 #include "../hitables/hitablelist.h"
 #include "lights.h"
 #include "medium.h"
+#include "path_diagnostics.h"
 #include "../lights/atmosphere.h"
+#include "../lights/point.h"
 #include <atomic>
 #include <cstdlib>
 #include <functional>
@@ -49,11 +51,25 @@ struct MediumEntry {
   const MediumBoundary *boundary;
   uint64_t boundary_id;
   Transform medium_to_world;
+  vec3f guide_axis{0};
+  bool guide_valid = false;
+  const dielectric *surface = nullptr;
+};
+struct PriorityInterface {
+  const dielectric *before = nullptr, *after = nullptr;
+  bool entering = false;
+  bool Hidden() const { return before == after; }
+  double Eta() const;
 };
 struct VolumePathState {
   std::vector<MediumEntry> media;
   std::vector<dielectric *> glass;
-  const MediumEntry *Active() const { return media.empty() ? nullptr : &media.back(); }
+  const dielectric *ActiveDielectric() const;
+  const MediumEntry *Active() const;
+  MediumEntry *Active() { return const_cast<MediumEntry *>(static_cast<const VolumePathState *>(this)->Active()); }
+  bool ContainsSubsurface() const;
+  PriorityInterface Interface(const hit_record &, const vec3f &direction) const;
+  void CrossDielectric(const hit_record &, const vec3f &direction);
   void Cross(const hit_record &, const vec3f &direction);
   void SetRay(Ray &ray) {
     ray.segment_absorption = true;
@@ -64,12 +80,26 @@ struct VolumePathState {
 struct VolumeStatistics {
   std::atomic<uint64_t> paths{0}, segments{0}, null_events{0}, scattering_events{0},
       shadow_candidates{0};
+  std::atomic<uint64_t> subsurface_events{0}, subsurface_boundaries{0},
+      guide_eligible{0}, guide_fallback{0}, subsurface_intersections{0}, max_subsurface_events{0};
+  std::atomic<uint64_t> subsurface_event_paths{0}, total_subsurface_events{0},
+      rounded_subsurface_flights{0};
+  std::atomic<uint64_t> diffusion_samples{0};
+  std::atomic<uint64_t> subsurface_bounded_queries{0}, subsurface_bounded_misses{0};
+  // Power-of-two upper bounds for internal event counts, on paths with events.
+  std::array<std::atomic<uint64_t>, 64> subsurface_event_histogram{};
   void Reset() {
     paths = 0;
+    diffusion_samples = 0;
+    subsurface_bounded_queries = subsurface_bounded_misses = 0;
     segments = 0;
     null_events = 0;
     scattering_events = 0;
     shadow_candidates = 0;
+    subsurface_events = subsurface_boundaries = guide_eligible = guide_fallback = 0;
+    subsurface_intersections = max_subsurface_events = 0;
+    subsurface_event_paths = total_subsurface_events = rounded_subsurface_flights = 0;
+    for (auto &bin : subsurface_event_histogram) bin = 0;
   }
 };
 class VolumeScene {
@@ -83,6 +113,7 @@ public:
   uint64_t BoundaryCount() const { return boundary_count; }
   hitable_list boundaries;
   std::shared_ptr<VolumeLightSampler> light_sampler;
+  PointLightSet point_lights;
   // Owned by the scene's infinite light collection; immutable during a render.
   const Atmosphere *atmosphere = nullptr;
   using MediumCache = std::unordered_map<SEXP, std::shared_ptr<const Medium>>;
@@ -96,9 +127,11 @@ public:
   std::shared_ptr<hitable> boundary_bvh;
   std::vector<std::shared_ptr<VolumeScene>> children;
   bool has_media = false, has_emission = false, transparent_background = false;
+  bool has_diffusion = false;
   bool collect_statistics = std::getenv("RAYRENDER_VOLUME_STATS") &&
                             std::string(std::getenv("RAYRENDER_VOLUME_STATS")) == "true";
   mutable VolumeStatistics statistics;
+  mutable PathDiagnostics path_diagnostics;
   Rcpp::List Statistics() const;
   void Finish(Float t0, Float t1);
   VolumePathState InitialState(const Ray &, const std::atomic<bool> *cancel,
@@ -106,6 +139,7 @@ public:
 
 private:
   uint64_t boundary_count = 0;
+  bool individual_boundaries = false;
 };
 // Returns false for ordinary geometry that cannot form a supported closed boundary.
 bool ValidateMediumBoundary(hitable *geometry, bool required);

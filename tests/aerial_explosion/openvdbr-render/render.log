@@ -1,0 +1,11 @@
+Warning message:
+PBRT conversion recorded 3 diagnostic(s); inspect $diagnostics. First: /Users/tyler/Desktop/R/rayrender/tests/aerial_explosion/aerial_explosion.pbrt:1: Only linear sRGB values are supported; other ColorSpace values are not converted. 
+Pre-processing scene       : 0.0 secs (Total: 0.0 secs)
+Pre-processed scene        : 0.0 secs (Total: 0.0 secs)
+Generated Camera           : 0.0 secs (Total: 0.0 secs)
+Built Scene BVH            : 0.5 secs (Total: 0.5 secs)
+Loaded background          : 0.3 secs (Total: 0.8 secs)
+Allocating sampler         : 0.0 secs (Total: 0.8 secs)
+Finished rendering         : 2.0 secs (Total: 2.8 secs)
+Post-processed image       : 0.1 secs (Total: 3.0 secs)
+Import 7.826 s; render 2.967 s; output /Users/tyler/Desktop/R/rayrender/tests/aerial_explosion/openvdbr-render/aerial-explosion.png

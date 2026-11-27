@@ -16,6 +16,7 @@ enum class InfiniteLightSpectrum { RGB, Sun, Moon };
 // Incident radiance and a directional proposal are separate operations. The
 // position/time context permits future spatial atmosphere implementations.
 class InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   virtual ~InfiniteLight() = default;
   virtual point3f Radiance(const point3f &p, const vec3f &wi, Float time) const = 0;
@@ -23,6 +24,8 @@ public:
   virtual Float Pdf(const point3f &p, const vec3f &wi, Float time) const = 0;
   virtual double SamplingWeight() const = 0;
   virtual size_t GetSize() const = 0;
+  // Alias decisions need the low bits omitted by the blue-noise ranking tile.
+  virtual bool NeedsContinuousSamples() const { return false; }
   virtual const Atmosphere *GetAtmosphere() const { return nullptr; }
   // Lighting can use Prague at each altitude without integrating finite haze.
   virtual const Atmosphere *GetTransportAtmosphere() const { return GetAtmosphere(); }
@@ -45,6 +48,7 @@ protected:
 };
 
 class ImageInfiniteLight final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   ImageInfiniteLight(std::shared_ptr<texture> image, int width, int height,
                      Float rotation);
@@ -53,15 +57,17 @@ public:
   Float Pdf(const point3f &, const vec3f &, Float) const override;
   double SamplingWeight() const override { return weight; }
   size_t GetSize() const override;
+  bool NeedsContinuousSamples() const override { return bool(distribution); }
 
 private:
   std::shared_ptr<texture> image;
-  std::unique_ptr<Distribution2D> distribution;
+  std::unique_ptr<AliasDistribution2D> distribution;
   Transform light_to_world, world_to_light;
   double weight = 0;
 };
 
 class InfiniteLightMixture final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
   explicit InfiniteLightMixture(std::vector<std::shared_ptr<InfiniteLight>> lights);
   point3f Radiance(const point3f &, const vec3f &, Float) const override;
@@ -69,6 +75,7 @@ public:
   Float Pdf(const point3f &, const vec3f &, Float) const override;
   double SamplingWeight() const override { return weight; }
   size_t GetSize() const override;
+  bool NeedsContinuousSamples() const override { return continuous_samples; }
   const Atmosphere *GetAtmosphere() const override;
   const Atmosphere *GetTransportAtmosphere() const override;
   void SetEnvironmentTransform(const Transform *, const Transform *) override;
@@ -77,6 +84,7 @@ private:
   std::vector<std::shared_ptr<InfiniteLight>> lights;
   std::unique_ptr<Distribution1D> selection;
   double weight = 0;
+  bool continuous_samples = false;
   double ChoiceWeight(size_t index, const point3f &, const Atmosphere *) const;
   double ChoiceTotal(const point3f &, const Atmosphere *) const;
 };
@@ -85,7 +93,10 @@ private:
 // into the environment dome. Uniform solid-angle sampling remains efficient for
 // small celestial disks and gives support to every phase/texture detail.
 class DiskInfiniteLight final : public InfiniteLight {
+  friend class WavefrontSceneCompiler;
 public:
+  DiskInfiniteLight(point3f radiance, vec3f direction, double angular_diameter,
+                    Float rotation);
   DiskInfiniteLight(std::shared_ptr<texture> image, int width, int height,
                     vec3f direction, double angular_diameter, Float rotation,
                     bool clip_horizon = true,

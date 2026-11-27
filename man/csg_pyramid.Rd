@@ -4,7 +4,7 @@
 \alias{csg_pyramid}
 \title{CSG Pyramid}
 \usage{
-csg_pyramid(x = 0, y = 0, z = 0, height = 1, base = 1)
+csg_pyramid(x = 0, y = 0, z = 0, height = 1, base = 1, material = NULL)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate on the pyramid.}
@@ -16,6 +16,8 @@ csg_pyramid(x = 0, y = 0, z = 0, height = 1, base = 1)
 \item{height}{Default `1`. Pyramid height.}
 
 \item{base}{Default `1`. Pyramid base width.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the box in the scene.

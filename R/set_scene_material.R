@@ -26,10 +26,31 @@ set_scene_material = function(scene, material) {
     )
   }
 
+  for (i in seq_len(nrow(scene))) {
+    if (identical(scene$shape_info[[i]]$medium_owner, "subsurface")) {
+      scene$shape_info[[i]]$medium = NULL
+      scene$shape_info[[i]]$medium_keep_surface = NULL
+      scene$shape_info[[i]]$medium_owner = NULL
+    }
+    original = scene$shape_info[[i]]$shape_properties$original_scene
+    if (!is.null(original)) {
+      scene$shape_info[[i]]$shape_properties$original_scene[[1]] =
+        set_scene_material(original[[1]], material)
+    }
+  }
   scene$material = do.call(
     c,
     replicate(nrow(scene), material, simplify = FALSE)
   )
+
+  # An instance row is a placement, not a closed material boundary.
+  for (i in seq_len(nrow(scene))) {
+    if (!is.null(scene$shape_info[[i]]$shape_properties$original_scene)) {
+      scene$material[[i]]$subsurface = NULL
+      scene$shape_info[[i]]$shape_properties$any_light =
+        material[[1]]$type %in% c(5L, 8L)
+    }
+  }
 
   return(scene)
 }

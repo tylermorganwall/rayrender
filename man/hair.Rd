@@ -24,11 +24,11 @@ hair(
 
 \item{sigma_a}{Default `NA`. Attenuation. Overrides `color` and `pigment`/`redness` arguments.}
 
-\item{eta}{Default `1.55`. Index of refraction of the hair medium.}
+\item{eta}{Default `1.55`. Index of refraction of the hair medium, greater than 1.}
 
-\item{beta_m}{Default `0.3`. Longitudinal roughness of the hair. Should be between 0 and 1. This roughness controls the size and shape of the hair highlight.}
+\item{beta_m}{Default `0.3`. Longitudinal roughness of the hair. Must be in `(0, 1]`. This roughness controls the size and shape of the hair highlight.}
 
-\item{beta_n}{Default `0.3`. Azimuthal roughness of the hair. Should be between 0 and 1.}
+\item{beta_n}{Default `0.3`. Azimuthal roughness of the hair. Must be in `(0, 1]`.}
 
 \item{alpha}{Default `2`. Angle of scales on the hair surface, in degrees.}
 }

@@ -83,6 +83,20 @@ medium_test_render = function(scene, samples = 64, ...) {
   )
 }
 
+test_that("volume creation requires an explicit medium", {
+  expect_error(diffuse(fog = TRUE), "unused argument")
+  expect_error(diffuse(fogdensity = .1), "unused argument")
+  expect_false(any(c("fog", "fogdensity") %in% names(diffuse()[[1]])))
+  # An old serialized fog material must fail rather than silently become opaque.
+  old_material = diffuse()
+  old_material[[1]]$fog = TRUE
+  old_material[[1]]$fogdensity = .1
+  expect_error(
+    medium_test_render(sphere(material = old_material), samples = 1),
+    "Material fog.*set_medium"
+  )
+})
+
 test_that("primary alpha measures world distance, nesting, and surface coverage", {
   a = c(0, 1, 2)
   medium = homogeneous_medium(sigma_a = a, sigma_s = 0)
@@ -272,7 +286,12 @@ test_that("observed non-nested boundaries are diagnosed", {
   vacuum = homogeneous_medium(sigma_s = 0)
   overlap = set_medium(cube(x = -0.2, z = 0.3), vacuum) |>
     add_object(set_medium(cube(x = 0.2, z = -0.3), vacuum))
-  expect_error(medium_test_render(overlap, samples = 1), "Non-nested")
+  # Classified path failures are recorded without aborting a completed render.
+  image = medium_test_render(overlap, samples = 1)
+  diagnostics = attr(image, "path_warnings")
+  expect_true(all(is.finite(image)))
+  expect_gt(diagnostics$counts[["invalid_exit"]], 0)
+  expect_match(diagnostics$examples$invalid_exit[[1]], "Non-nested")
 })
 
 test_that("glowing media inside glass include radiance transport across the interface", {
@@ -286,4 +305,96 @@ test_that("glowing media inside glass include radiance transport across the inte
   image = medium_test_render(scene, samples = 128)
   fresnel = ((1.5 - 1) / (1.5 + 1))^2
   expect_lt(abs(mean(image[,, 1]) - (1 - fresnel) / 1.5^2), 0.01)
+})
+
+test_that("grid emission multipliers retain scalar fields without RGB expansion", {
+  density = array(1, c(2, 3, 4))
+  scale = array(seq_len(24) / 24, dim(density))
+  medium = grid_medium(density, emission = c(1, 2, 3), emission_scale = scale)
+  expect_identical(medium$emission_scale_grid, scale)
+  expect_equal(medium$emission_scale, 1)
+  expect_equal(medium$emission, c(1, 2, 3))
+  expect_error(
+    grid_medium(density, emission_scale = array(1, c(3, 2, 4))),
+    'dimensions'
+  )
+  expect_error(
+    grid_medium(density, emission_scale = array(-1, dim(density))),
+    'emission_scale'
+  )
+  expect_error(homogeneous_medium(emission_scale = scale), 'emission_scale')
+})
+
+test_that('OpenVDB and compressed NanoVDB preserve transforms and emitted light', {
+  images = lapply(
+    c('transformed.vdb', 'transformed-zip.nvdb', 'transformed-blosc.nvdb'),
+    function(file) {
+      medium = vdb_medium(
+        test_path('fixtures', 'volumes', file),
+        sigma_a = 0.3,
+        sigma_s = 0.4,
+        temperature_grid = 'temperature',
+        emission_scale = 0.1
+      )
+      set.seed(412)
+      medium_test_render(set_medium(cube(width = 2), medium), samples = 16)
+    }
+  )
+  expect_identical(nanovdb_medium, vdb_medium)
+  expect_true(all(is.finite(images[[1]])))
+  expect_gt(max(images[[1]][,, 1:3]), 0)
+  expect_equal(
+    as.numeric(images[[1]]),
+    as.numeric(images[[2]]),
+    tolerance = 1e-7
+  )
+  expect_equal(
+    as.numeric(images[[1]]),
+    as.numeric(images[[3]]),
+    tolerance = 1e-7
+  )
+})
+
+test_that('OpenVDB rendering validates field type, class and density', {
+  file = tempfile(fileext = '.vdb')
+  on.exit(unlink(file))
+  openvdbr::vdb_write(openvdbr::vdb_sphere(name = 'density'), file)
+  expect_error(
+    medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+    'level set'
+  )
+  for (grid in list(
+    openvdbr::vdb_grid(type = 'double'),
+    openvdbr::vdb_grid(background = 1)
+  )) {
+    openvdbr::vdb_write(grid, file, overwrite = TRUE)
+    expect_error(
+      medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+      'float grid|background'
+    )
+  }
+  grid = openvdbr::vdb_grid()
+  openvdbr::vdb_set(grid, c(0, 0, 0), -1)
+  openvdbr::vdb_write(grid, file, overwrite = TRUE)
+  expect_error(
+    medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+    'nonnegative'
+  )
+})
+
+test_that('truncated compressed payloads fail safely', {
+  for (codec in c('zip', 'blosc')) {
+    original = readBin(
+      test_path('fixtures', 'volumes', paste0('transformed-', codec, '.nvdb')),
+      'raw',
+      n = 1e7
+    )
+    file = tempfile(fileext = '.nvdb')
+    writeBin(original[seq_len(length(original) - 8L)], file)
+    expect_error(
+      medium_test_render(set_medium(cube(), vdb_medium(file)), samples = 1),
+      'Truncated|sizes'
+    )
+    unlink(file)
+  }
 })

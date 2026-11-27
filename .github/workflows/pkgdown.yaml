@@ -103,9 +103,15 @@ jobs:
           7z x oidn-2.3.1.x64.windows.zip
           echo "OIDN_PATH=$(pwd)/oidn-2.3.1.x64.windows" >> $GITHUB_ENV
 
+      - name: Install Blosc runtime for cached openvdbr builds
+        if: runner.os == 'Linux'
+        run: bash .github/install-blosc-runtime.sh
+      - name: Select compatible dependency versions
+        id: dependency-pins
+        run: Rscript .github/dependency-pins.R
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgdown, local::.
+          extra-packages: any::pkgdown, local::. ${{ steps.dependency-pins.outputs.packages }}
           needs: website
 
       - name: Fix git pkgdown build

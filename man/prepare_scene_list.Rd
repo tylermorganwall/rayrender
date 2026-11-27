@@ -48,10 +48,15 @@ prepare_scene_list(
   sample_dist = Inf,
   keep_colors = FALSE,
   deferred_render = FALSE,
-  integrator_type = "nee",
+  integrator_type = "auto",
   denoise = TRUE,
-  print_debug_info = FALSE
+  print_debug_info = FALSE,
+  camera_flip_x = FALSE,
+  scene_time = NULL
 )
+}
+\arguments{
+\item{scene_time}{Default `NULL`. Double scene-time epoch for relative ray times.}
 }
 \description{
 Prepare the scene list

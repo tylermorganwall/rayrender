@@ -4,7 +4,7 @@
 \alias{csg_sphere}
 \title{CSG Sphere}
 \usage{
-csg_sphere(x = 0, y = 0, z = 0, radius = 1)
+csg_sphere(x = 0, y = 0, z = 0, radius = 1, material = NULL)
 }
 \arguments{
 \item{x}{Default `0`. x-coordinate of the center of the sphere.}
@@ -14,6 +14,8 @@ csg_sphere(x = 0, y = 0, z = 0, radius = 1)
 \item{z}{Default `0`. z-coordinate of the center of the sphere.}
 
 \item{radius}{Default `1`. Radius of the sphere.}
+
+\item{material}{Default `NULL`. Surface material for this component; `NULL` inherits the enclosing [csg_object()] material. Dielectric and subsurface materials cannot be mixed.}
 }
 \value{
 List describing the sphere in the scene.
