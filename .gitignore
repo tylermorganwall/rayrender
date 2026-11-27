@@ -36,6 +36,7 @@ src/core/wavefront_openpbr_generated.inc
 *.pdf
 *.txt
 !/.github/rchk/Rcpp-*.txt
+!inst/licenses/cgltf-MIT.txt
 tools/codex/
 inst/examples/
 inst/doc/
@@ -58,3 +59,8 @@ dev/
 tools/openpbr/
 tools/pbrt
 .agents/skills/
+
+# Keep the rendered model-animation vignette reproducible from the checkout.
+!vignettes/figures/model-animation/*.png
+/vignettes/model-animation.html
+/vignettes/model-animation.R
