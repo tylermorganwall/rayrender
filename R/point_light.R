@@ -13,8 +13,8 @@
 #' @param direction Default `c(0, -1, 0)`. World-space spotlight axis, pointing
 #'   from the light toward the illuminated region.
 #' @param cone_angle Default `30`. Outer cone half-angle in degrees, in `(0, 180]`.
-#' @param falloff_angle Default `5`. Angular width of the falloff region inside
-#'   `cone_angle`. Zero gives a hard cone edge.
+#' @param falloff_angle Default `5`. Width in degrees of the falloff region inside
+#'   the spotlight cone, from zero to `cone_angle`. Zero gives a hard cone edge.
 #' @return A `ray_light` description for [add_light()]. Lights have no visible
 #'   surface and automatically select the NEE integrator. Surface and volume
 #'   scattering receive their illumination; specular caustics require a transport

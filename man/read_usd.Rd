@@ -24,9 +24,13 @@ prims do not replace those descriptors. Unsupported schema versions fail.
 Geometry and settings use typed USD values, not serialized R objects.
 }
 \examples{
-\dontshow{if (interactive() && requireNamespace("libopenusd", quietly = TRUE)) withAutoprint(\{ # examplesIf}
-# Restore an exported scene after restarting R.
-# scene = read_usd("sphere.usdc")
-# render_scene(scene, samples = 256)
+\dontshow{if (requireNamespace("libopenusd", quietly = TRUE) && requireNamespace("digest", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+# Save a camera with the scene so its framing is available after import.
+path = tempfile(fileext = ".usdc")
+scene = sphere() |> add_camera(camera(name = "portrait", lookfrom = c(3, 2, 5)))
+write_usd(scene, path)
+restored = read_usd(path)
+list_cameras(restored)[, c("name", "active")]
+unlink(path)
 \dontshow{\}) # examplesIf}
 }

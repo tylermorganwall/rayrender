@@ -13,8 +13,8 @@ animation_model_pose(instance, time)
 }
 \value{
 A list per requested time with clip_time, named local/global/world
-  matrices, morph weights, and separate placement_changed and pose_changed flags relative to
-  the preceding requested result. Matrices never depend on that result.
+matrices, morph weights, and separate placement_changed and pose_changed flags relative to
+the preceding requested result. Matrices never depend on that result.
 }
 \description{
 Evaluate a model instance at arbitrary scene times without opening a renderer.
@@ -27,9 +27,13 @@ Legacy animate_objects() matrix attachments remain renderable, but this
 inspector requires an animation_transform_track() placement and rejects legacy attachments.
 }
 \examples{
-# Repeated and backward queries produce the same matrices.
+# Move two units along x in one second. Query the midpoint twice, out of order.
 asset = animation_model_asset(list(animation_model_node("body", sphere())))
-animation_model_pose(animation_model_instance(asset), c(2, 0, 2))
+path = animation_transform_track(c(0, 1), position = rbind(c(0, 0, 0), c(2, 0, 0)))
+poses = animation_model_pose(animation_model_instance(asset, transform = path),
+                             time = c(0.5, 0, 0.5))
+# World-space x positions are 1, 0, 1; seeking back reproduces the same pose.
+vapply(poses, function(pose) pose$world$body[1, 4], numeric(1))
 }
 \seealso{
 \code{vignette("model-animation", package = "rayrender")}

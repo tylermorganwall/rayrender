@@ -14,7 +14,7 @@ animate_keyframes(scene, track, player = NULL)
 
 \item{track}{A transform track created by animation_transform_track().}
 
-\item{player}{Default `NULL`. An animation_clip_player() mapping scene seconds to the
+\item{player}{Default \code{NULL}. An animation_clip_player() mapping scene seconds to the
 track's local key interval. NULL evaluates keys directly in scene time.}
 }
 \value{

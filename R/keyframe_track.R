@@ -3,16 +3,20 @@
 #' Describe an independently timed property using keys in scene seconds.
 #'
 #' @param time Strictly increasing finite key times, in seconds.
-#' @param value Numeric matrix with one row per key. A vector is accepted for
-#'   a single key or a scalar track.
+#' @param value Numeric matrix with one row per key and one column per component:
+#'   three for position or scale, four for rotation, and one for a scalar.
+#'   A vector is accepted for a single key or a scalar track.
 #' @param property Default `"position"`. One of position, rotation, scale, scalar.
 #'   Rotation values are quaternions in x, y, z, w order.
-#' @param interpolation Default `"linear"`. One of step, linear, cubic, smooth.
-#'   Linear rotation uses shortest-arc SLERP; smooth is native cubic rotation.
+#' @param interpolation Default `"linear"`. Use `"step"` to hold each key or
+#'   `"linear"` to interpolate between keys (shortest-arc SLERP for rotations).
+#'   Use `"cubic"` for a Hermite curve. Cubic rotations require both tangent
+#'   matrices; `"smooth"` computes them automatically for rotations only.
 #' @param incoming Default `NULL`. Matrix of incoming cubic derivatives per second.
 #' @param outgoing Default `NULL`. Matrix of outgoing cubic derivatives per second.
 #' @return A serializable `ray_keyframe_track` authoring object.
 #' @export
+#' @md
 #' @details
 #' Values are held outside the key range. STEP selects the new value at an exact
 #' key. One-key constant tracks are valid. Cubic vector tracks without tangents
@@ -90,11 +94,16 @@ animation_keyframe_track = function(
 #'   rotation keyframe track. Mutually exclusive with angle.
 #' @param scale Default `NULL`. Scale matrix or a scale keyframe track.
 #' @param pivot Default `c(0, 0, 0)`. Fixed local pivot for rotation and scale.
-#' @param position_interpolation Default `"linear"`. Position interpolation.
-#' @param rotation_interpolation Default `"linear"`. Rotation interpolation.
-#' @param scale_interpolation Default `"linear"`. Scale interpolation.
+#' @param position_interpolation Default `"linear"`. Use `"step"`, `"linear"`,
+#'   or `"cubic"` between position keys supplied as a matrix.
+#' @param rotation_interpolation Default `"linear"`. Use `"step"`, `"linear"`
+#'   (shortest-arc SLERP), or `"smooth"` between orientations supplied as angles
+#'   or quaternions. For authored cubic tangents, pass an [animation_keyframe_track()].
+#' @param scale_interpolation Default `"linear"`. Use `"step"`, `"linear"`,
+#'   or `"cubic"` between scale keys supplied as a matrix.
 #' @return A serializable `ray_transform_track` authoring object.
 #' @export
+#' @md
 #' @details
 #' The column-vector composition is T(position) T(pivot) R S T(-pivot), outside
 #' existing static object and group transforms. Absent channels retain identity.
@@ -180,6 +189,7 @@ animation_transform_track = function(
 #'   track's local key interval. NULL evaluates keys directly in scene time.
 #' @return The scene with an animation attachment in each selected row.
 #' @export
+#' @md
 #' @details
 #' All rows share the authored transform about its fixed pivot. Bind, copy, and
 #' subset operations retain attachments in the existing animation_info column.

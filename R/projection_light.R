@@ -13,12 +13,13 @@
 #' dimension, greater than zero and less than 180. Aspect ratio follows the image.
 #' @param intensity Default `1`. Nonnegative radiant-intensity multiplier.
 #' Doubling the distance reduces illumination by a factor of four.
-#' @param color Default `"white"`. RGB tint, as an R color or three values in [0,1].
+#' @param color Default `"white"`. RGB tint, as an R color or three values between zero and one.
 #' @param encoding Default `"auto"`. `"linear"` or `"srgb"`, or `"auto"` to
 #' treat arrays and HDR/EXR files as linear and other image files as sRGB.
 #' @param name Default `"projection"`. Unique light name within the scene.
 #' @return A `ray_light` description containing the decoded image.
 #' @export
+#' @md
 #' @details The image is read when the light is created, so subsequent rendering
 #' does not depend on a temporary file. Values are linear RGB after decoding;
 #' floating-point images may exceed one. Images use bilinear filtering, a hard

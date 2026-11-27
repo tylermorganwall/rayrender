@@ -119,10 +119,14 @@ write_usd = function(scene, filename, copy_assets = TRUE, overwrite = FALSE) {
 #' shaders from arbitrary third-party stages. Edits to standard interchange
 #' prims do not replace those descriptors. Unsupported schema versions fail.
 #' Geometry and settings use typed USD values, not serialized R objects.
-#' @examplesIf interactive() && requireNamespace("libopenusd", quietly = TRUE)
-#' # Restore an exported scene after restarting R.
-#' # scene = read_usd("sphere.usdc")
-#' # render_scene(scene, samples = 256)
+#' @examplesIf requireNamespace("libopenusd", quietly = TRUE) && requireNamespace("digest", quietly = TRUE)
+#' # Save a camera with the scene so its framing is available after import.
+#' path = tempfile(fileext = ".usdc")
+#' scene = sphere() |> add_camera(camera(name = "portrait", lookfrom = c(3, 2, 5)))
+#' write_usd(scene, path)
+#' restored = read_usd(path)
+#' list_cameras(restored)[, c("name", "active")]
+#' unlink(path)
 read_usd = function(filename) {
   if (
     !is.character(filename) ||

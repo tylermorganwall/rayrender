@@ -9,6 +9,7 @@
 #'   A NULL clip selects the rest pose, without guessing the first clip.
 #' @return One scene row owning a complete model instance and stable instance ID.
 #' @export
+#' @md
 #' @details
 #' World transforms are outer placement * parent globals * local pose. Each
 #' instance shares the asset's geometry and tracks, but owns its playback settings.
@@ -28,11 +29,19 @@
 #' set_scene_material() edits retain private geometry without changing the asset.
 #' @seealso \code{vignette("model-animation", package = "rayrender")}
 #' @examples
-#' # Two paths can share an asset while using different phases and speeds.
-#' asset = animation_model_asset(list(animation_model_node("body", cube())))
-#' first = animation_model_instance(asset, animation_transform_track(0, position = c(-1, 0, 0)))
-#' second = animation_model_instance(asset, animation_transform_track(0, position = c(1, 0, 0)))
+#' # Place two copies of the same model side by side and play one twice as fast.
+#' file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
+#' asset = animation_read_gltf(file)
+#' first = animation_model_instance(asset,
+#'   transform = animation_transform_track(0, position = c(-1, 0, 0)),
+#'   animation = animation_clip_player("clip-0"))
+#' second = animation_model_instance(asset,
+#'   transform = animation_transform_track(0, position = c(1, 0, 0)),
+#'   animation = animation_clip_player("clip-0", speed = 2))
 #' scene = add_object(first, second)
+#' # One second into the scene, the two copies have reached different clip times.
+#' c(animation_model_pose(first, 1)[[1]]$clip_time,
+#'   animation_model_pose(second, 1)[[1]]$clip_time)
 animation_model_instance = function(
   asset,
   transform = NULL,
@@ -137,6 +146,7 @@ build_model_hierarchy = function(asset, binding) {
 #'   matrices, morph weights, and separate placement_changed and pose_changed flags relative to
 #'   the preceding requested result. Matrices never depend on that result.
 #' @export
+#' @md
 #' @details
 #' Global matrices exclude placement. World matrices include the instance's
 #' static grouping and animated placement. The flags describe changed matrices;
@@ -145,9 +155,13 @@ build_model_hierarchy = function(asset, binding) {
 #' inspector requires an animation_transform_track() placement and rejects legacy attachments.
 #' @seealso \code{vignette("model-animation", package = "rayrender")}
 #' @examples
-#' # Repeated and backward queries produce the same matrices.
+#' # Move two units along x in one second. Query the midpoint twice, out of order.
 #' asset = animation_model_asset(list(animation_model_node("body", sphere())))
-#' animation_model_pose(animation_model_instance(asset), c(2, 0, 2))
+#' path = animation_transform_track(c(0, 1), position = rbind(c(0, 0, 0), c(2, 0, 0)))
+#' poses = animation_model_pose(animation_model_instance(asset, transform = path),
+#'                              time = c(0.5, 0, 0.5))
+#' # World-space x positions are 1, 0, 1; seeking back reproduces the same pose.
+#' vapply(poses, function(pose) pose$world$body[1, 4], numeric(1))
 animation_model_pose = function(instance, time) {
   if (
     !inherits(instance, "data.frame") ||

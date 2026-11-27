@@ -22,13 +22,13 @@ read_gltf(
 \arguments{
 \item{filename}{Path to a local .gltf or .glb file.}
 
-\item{material}{Default `diffuse()`. Rayrender material applied to every
+\item{material}{Default \code{diffuse()}. Rayrender material applied to every
 primitive. glTF materials and textures are not imported.}
 
-\item{scene}{Default `NULL`. One-based glTF scene index. NULL selects the
+\item{scene}{Default \code{NULL}. One-based glTF scene index. NULL selects the
 document's default scene, then its first scene, or all roots if none exist.}
 
-\item{recalculate_normals}{Default `FALSE`. Recompute smooth shading normals
+\item{recalculate_normals}{Default \code{FALSE}. Recompute smooth shading normals
 from the posed triangles at each requested time instead of deforming authored
 normals. Useful for skins with large differences in neighboring weights.}
 }
@@ -62,23 +62,22 @@ face normals, preserving splits in the imported vertex indexing. Authored
 normals and morph normal deltas are replaced; tangents are reorthogonalized.
 Vertices without a nondegenerate incident surface fail clearly. Static meshes
 use mesh3d_model()'s existing normal recalculation.
-Nonzero shutter intervals freeze the complete internal pose at frame time
-while retaining motion blur on the outer instance placement. Zero-width
-intervals evaluate the exact time plus shutter offset. Deformation blur is
-not implemented. Unsupported compression and non-triangle primitives fail
-clearly. read_gltf() remains a compatibility alias.
+With explicit frame times, the default \code{animation_motion_blur = "full"} in
+\code{\link[=render_scene]{render_scene()}} and \code{\link[=render_animation]{render_animation()}} samples node, skin, morph, and
+placement motion together during the exposure. Use \code{"placement"} to freeze
+the internal pose at frame time while blurring the outer placement.
+Unsupported compression and non-triangle primitives fail on import.
+\code{read_gltf()} is an alias for \code{animation_read_gltf()}.
 Source arrays are copied into ordinary R data before parser storage is freed;
 no native pointer or source-buffer file is required after a successful load.
 }
 \examples{
-# The shipped original fixture has two asynchronous rigid clips.
+# Two of the bundled model's clips share a name. Use the ID to play one.
 file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
-if (nzchar(file)) {
-  asset = animation_read_gltf(file)
-  animation_list_clips(asset)
-  bird = animation_model_instance(
-    asset, animation = animation_clip_player("clip-0", loop = "repeat")
-  )
-  animation_model_pose(bird, c(1, 0, 1))
-}
+asset = animation_read_gltf(file)
+animation_list_clips(asset)[, c("id", "name", "duration")]
+model = animation_model_instance(
+  asset, animation = animation_clip_player("clip-0", loop = "repeat")
+)
+animation_model_pose(model, time = 1)[[1]]$clip_time
 }

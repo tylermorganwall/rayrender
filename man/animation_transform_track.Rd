@@ -30,28 +30,32 @@ transform_track(
 )
 }
 \arguments{
-\item{time}{Default `NULL`. Shared key times for matrix-valued channels, in seconds.}
+\item{time}{Default \code{NULL}. Shared key times for matrix-valued channels, in seconds.}
 
-\item{position}{Default `NULL`. Position matrix or a position keyframe track.}
+\item{position}{Default \code{NULL}. Position matrix or a position keyframe track.}
 
-\item{angle}{Default `NULL`. Euler angle matrix in degrees, applied in x, y, z
+\item{angle}{Default \code{NULL}. Euler angle matrix in degrees, applied in x, y, z
 order using rayrender's existing rotation convention.}
 
-\item{rotation}{Default `NULL`. Quaternion matrix in x, y, z, w order, or a
+\item{rotation}{Default \code{NULL}. Quaternion matrix in x, y, z, w order, or a
 rotation keyframe track. Mutually exclusive with angle.}
 
-\item{scale}{Default `NULL`. Scale matrix or a scale keyframe track.}
+\item{scale}{Default \code{NULL}. Scale matrix or a scale keyframe track.}
 
-\item{pivot}{Default `c(0, 0, 0)`. Fixed local pivot for rotation and scale.}
+\item{pivot}{Default \code{c(0, 0, 0)}. Fixed local pivot for rotation and scale.}
 
-\item{position_interpolation}{Default `"linear"`. Position interpolation.}
+\item{position_interpolation}{Default \code{"linear"}. Use \code{"step"}, \code{"linear"},
+or \code{"cubic"} between position keys supplied as a matrix.}
 
-\item{rotation_interpolation}{Default `"linear"`. Rotation interpolation.}
+\item{rotation_interpolation}{Default \code{"linear"}. Use \code{"step"}, \code{"linear"}
+(shortest-arc SLERP), or \code{"smooth"} between orientations supplied as angles
+or quaternions. For authored cubic tangents, pass an \code{\link[=animation_keyframe_track]{animation_keyframe_track()}}.}
 
-\item{scale_interpolation}{Default `"linear"`. Scale interpolation.}
+\item{scale_interpolation}{Default \code{"linear"}. Use \code{"step"}, \code{"linear"},
+or \code{"cubic"} between scale keys supplied as a matrix.}
 }
 \value{
-A serializable `ray_transform_track` authoring object.
+A serializable \code{ray_transform_track} authoring object.
 }
 \description{
 Combine position, orientation, and scale with independently timed channels.

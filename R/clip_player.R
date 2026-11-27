@@ -21,10 +21,11 @@
 #'   about asset +Y, relative to the clip's first pose, while retaining swing.
 #' @return A serializable ray_clip_player configuration.
 #' @export
+#' @md
 #' @details
-#' For an interval [a,b], local displacement is
-#' speed * (scene_time - start_time) + offset. Hold clamps to [a,b], repeat wraps
-#' to [a,b), and pingpong reflects at both ends. Exact repeat boundaries select
+#' For a clip spanning `[a, b]`, local displacement from its start is
+#' `speed * (scene_time - start_time) + offset`. Hold clamps to `[a, b]`, repeat wraps
+#' to `[a, b)`, and pingpong reflects at both ends. Exact repeat boundaries select
 #' a; pingpong and hold can select b. A zero-duration clip stays at a. Start time
 #' is an anchor, not a visibility gate, so negative scene times are defined.
 #' For animation_keyframes(), the interval spans all channel keys. The player maps
@@ -131,6 +132,7 @@ animation_clip_player = function(
 #' @return A list with the local interval, maximum matrix-entry gap, and a
 #'   pose_continuous flag. This does not certify velocity continuity.
 #' @export
+#' @md
 #' @examples
 #' # This path returns to its initial position.
 #' path = animation_transform_track(c(0, 1, 2),

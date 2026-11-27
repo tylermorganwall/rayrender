@@ -20,32 +20,32 @@ projection_light(
 \item{image}{Image filename or numeric RGB array with dimensions height,
 width, channels. The first row is the top of the projected image. Alpha is ignored.}
 
-\item{position}{Default `c(0, 1, 0)`. Projector position in world coordinates.}
+\item{position}{Default \code{c(0, 1, 0)}. Projector position in world coordinates.}
 
-\item{direction}{Default `c(0, 0, -1)`. Nonzero direction pointing into the scene.}
+\item{direction}{Default \code{c(0, 0, -1)}. Nonzero direction pointing into the scene.}
 
-\item{up}{Default `c(0, 1, 0)`. Image-up direction; cannot be parallel to `direction`.}
+\item{up}{Default \code{c(0, 1, 0)}. Image-up direction; cannot be parallel to \code{direction}.}
 
-\item{fov}{Default `45`. Full field of view in degrees along the shorter image
+\item{fov}{Default \code{45}. Full field of view in degrees along the shorter image
 dimension, greater than zero and less than 180. Aspect ratio follows the image.}
 
-\item{intensity}{Default `1`. Nonnegative radiant-intensity multiplier.
+\item{intensity}{Default \code{1}. Nonnegative radiant-intensity multiplier.
 Doubling the distance reduces illumination by a factor of four.}
 
-\item{color}{Default `"white"`. RGB tint, as an R color or three values in [0,1].}
+\item{color}{Default \code{"white"}. RGB tint, as an R color or three values between zero and one.}
 
-\item{encoding}{Default `"auto"`. `"linear"` or `"srgb"`, or `"auto"` to
+\item{encoding}{Default \code{"auto"}. \code{"linear"} or \code{"srgb"}, or \code{"auto"} to
 treat arrays and HDR/EXR files as linear and other image files as sRGB.}
 
-\item{name}{Default `"projection"`. Unique light name within the scene.}
+\item{name}{Default \code{"projection"}. Unique light name within the scene.}
 }
 \value{
-A `ray_light` description containing the decoded image.
+A \code{ray_light} description containing the decoded image.
 }
 \description{
 Create a slide-projector light that paints an image onto objects and through
 scattering media. Use it for stained-glass lighting, stage patterns, or a
-miniature cinema. Attach it to a scene with [add_light()].
+miniature cinema. Attach it to a scene with \code{\link[=add_light]{add_light()}}.
 }
 \details{
 The image is read when the light is created, so subsequent rendering
@@ -54,7 +54,7 @@ floating-point images may exceed one. Images use bilinear filtering, a hard
 rectangular boundary, and no repetition. This is an ideal point projector:
 shadows are hard and there is no lens defocus. CPU and Metal use the same
 projection. Looking from the projector toward the scene, image right is
-`direction` crossed with `up`. Geometry transforms do not move the light.
+\code{direction} crossed with \code{up}. Geometry transforms do not move the light.
 }
 \examples{
 \dontshow{if (interactive() || identical(Sys.getenv("IN_PKGDOWN"), "true")) withAutoprint(\{ # examplesIf}

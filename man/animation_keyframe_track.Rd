@@ -26,21 +26,24 @@ keyframe_track(
 \arguments{
 \item{time}{Strictly increasing finite key times, in seconds.}
 
-\item{value}{Numeric matrix with one row per key. A vector is accepted for
-a single key or a scalar track.}
+\item{value}{Numeric matrix with one row per key and one column per component:
+three for position or scale, four for rotation, and one for a scalar.
+A vector is accepted for a single key or a scalar track.}
 
-\item{property}{Default `"position"`. One of position, rotation, scale, scalar.
+\item{property}{Default \code{"position"}. One of position, rotation, scale, scalar.
 Rotation values are quaternions in x, y, z, w order.}
 
-\item{interpolation}{Default `"linear"`. One of step, linear, cubic, smooth.
-Linear rotation uses shortest-arc SLERP; smooth is native cubic rotation.}
+\item{interpolation}{Default \code{"linear"}. Use \code{"step"} to hold each key or
+\code{"linear"} to interpolate between keys (shortest-arc SLERP for rotations).
+Use \code{"cubic"} for a Hermite curve. Cubic rotations require both tangent
+matrices; \code{"smooth"} computes them automatically for rotations only.}
 
-\item{incoming}{Default `NULL`. Matrix of incoming cubic derivatives per second.}
+\item{incoming}{Default \code{NULL}. Matrix of incoming cubic derivatives per second.}
 
-\item{outgoing}{Default `NULL`. Matrix of outgoing cubic derivatives per second.}
+\item{outgoing}{Default \code{NULL}. Matrix of outgoing cubic derivatives per second.}
 }
 \value{
-A serializable `ray_keyframe_track` authoring object.
+A serializable \code{ray_keyframe_track} authoring object.
 }
 \description{
 Describe an independently timed property using keys in scene seconds.

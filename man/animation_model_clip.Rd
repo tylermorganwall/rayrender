@@ -12,9 +12,9 @@ animation_model_clip(id, channels, name = id, weights = list())
 \item{channels}{Named list of animation_transform_track() objects, named by target node
 IDs. Each property replaces that node's corresponding rest property.}
 
-\item{name}{Default `id`. Display name; select by ID when names are ambiguous.}
+\item{name}{Default \code{id}. Display name; select by ID when names are ambiguous.}
 
-\item{weights}{Default `list()`. Named list of morph channels by node ID.
+\item{weights}{Default \code{list()}. Named list of morph channels by node ID.
 Each entry is a list of scalar animation_keyframe_track() objects, one per target.}
 }
 \value{

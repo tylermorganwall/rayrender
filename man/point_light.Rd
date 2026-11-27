@@ -38,8 +38,8 @@ from the light toward the illuminated region.}
 
 \item{cone_angle}{Default \code{30}. Outer cone half-angle in degrees, in \verb{(0, 180]}.}
 
-\item{falloff_angle}{Default \code{5}. Angular width of the falloff region inside
-\code{cone_angle}. Zero gives a hard cone edge.}
+\item{falloff_angle}{Default \code{5}. Width in degrees of the falloff region inside
+the spotlight cone, from zero to \code{cone_angle}. Zero gives a hard cone edge.}
 }
 \value{
 A \code{ray_light} description for \code{\link[=add_light]{add_light()}}. Lights have no visible

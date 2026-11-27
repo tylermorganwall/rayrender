@@ -30,29 +30,29 @@ clip_player(
 )
 }
 \arguments{
-\item{clip}{Default `NULL`. Clip name or identifier for an animated asset.
+\item{clip}{Default \code{NULL}. Clip name or identifier for an animated asset.
 Use NULL when attaching a player to a bare transform track.}
 
-\item{start_time}{Default `0`. Scene seconds anchoring the local clock.}
+\item{start_time}{Default \code{0}. Scene seconds anchoring the local clock.}
 
-\item{offset}{Default `0`. Local seconds from the beginning of the clip at
+\item{offset}{Default \code{0}. Local seconds from the beginning of the clip at
 start_time. Negative speeds do not automatically change this offset.}
 
-\item{speed}{Default `1`. Local seconds per scene second; negative and zero
+\item{speed}{Default \code{1}. Local seconds per scene second; negative and zero
 values select reverse and frozen playback.}
 
-\item{loop}{Default `"hold"`. One of hold, repeat, or pingpong.}
+\item{loop}{Default \code{"hold"}. One of hold, repeat, or pingpong.}
 
-\item{root_motion}{Default `"preserve"`. Preserve motion or select in_place
+\item{root_motion}{Default \code{"preserve"}. Preserve motion or select in_place
 to remove explicitly designated locomotion. Extract is not implemented.}
 
-\item{locomotion_root}{Default `NULL`. Explicit top-level model node ID for
+\item{locomotion_root}{Default \code{NULL}. Explicit top-level model node ID for
 in_place. Names are not searched and a bare transform has no locomotion root.}
 
-\item{translation_axes}{Default `c("x", "z")`. Asset-space translation axes
+\item{translation_axes}{Default \code{c("x", "z")}. Asset-space translation axes
 held at the clip's first pose by in_place. Y bob is retained by default.}
 
-\item{remove_yaw}{Default `FALSE`. Whether in_place also removes changing twist
+\item{remove_yaw}{Default \code{FALSE}. Whether in_place also removes changing twist
 about asset +Y, relative to the clip's first pose, while retaining swing.}
 }
 \value{
@@ -63,9 +63,9 @@ Map absolute scene seconds to a clip using an offset, playback speed, and
 loop policy. The same scene time always selects the same local pose.
 }
 \details{
-For an interval [a,b], local displacement is
-speed * (scene_time - start_time) + offset. Hold clamps to [a,b], repeat wraps
-to [a,b), and pingpong reflects at both ends. Exact repeat boundaries select
+For a clip spanning \verb{[a, b]}, local displacement from its start is
+\code{speed * (scene_time - start_time) + offset}. Hold clamps to \verb{[a, b]}, repeat wraps
+to \verb{[a, b)}, and pingpong reflects at both ends. Exact repeat boundaries select
 a; pingpong and hold can select b. A zero-duration clip stays at a. Start time
 is an anchor, not a visibility gate, so negative scene times are defined.
 For animation_keyframes(), the interval spans all channel keys. The player maps

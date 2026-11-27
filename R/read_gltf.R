@@ -12,6 +12,7 @@
 #'   normals. Useful for skins with large differences in neighboring weights.
 #' @return A serializable model asset for animation_model_instance() and animation_list_clips().
 #' @export
+#' @md
 #' @details
 #' Local relative buffers, embedded base64 buffers, and GLB binary buffers are
 #' supported. Network URIs and required extensions are rejected. Geometry uses
@@ -36,24 +37,23 @@
 #' normals and morph normal deltas are replaced; tangents are reorthogonalized.
 #' Vertices without a nondegenerate incident surface fail clearly. Static meshes
 #' use mesh3d_model()'s existing normal recalculation.
-#' Nonzero shutter intervals freeze the complete internal pose at frame time
-#' while retaining motion blur on the outer instance placement. Zero-width
-#' intervals evaluate the exact time plus shutter offset. Deformation blur is
-#' not implemented. Unsupported compression and non-triangle primitives fail
-#' clearly. read_gltf() remains a compatibility alias.
+#' With explicit frame times, the default `animation_motion_blur = "full"` in
+#' [render_scene()] and [render_animation()] samples node, skin, morph, and
+#' placement motion together during the exposure. Use `"placement"` to freeze
+#' the internal pose at frame time while blurring the outer placement.
+#' Unsupported compression and non-triangle primitives fail on import.
+#' `read_gltf()` is an alias for `animation_read_gltf()`.
 #' Source arrays are copied into ordinary R data before parser storage is freed;
 #' no native pointer or source-buffer file is required after a successful load.
 #' @examples
-#' # The shipped original fixture has two asynchronous rigid clips.
+#' # Two of the bundled model's clips share a name. Use the ID to play one.
 #' file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
-#' if (nzchar(file)) {
-#'   asset = animation_read_gltf(file)
-#'   animation_list_clips(asset)
-#'   bird = animation_model_instance(
-#'     asset, animation = animation_clip_player("clip-0", loop = "repeat")
-#'   )
-#'   animation_model_pose(bird, c(1, 0, 1))
-#' }
+#' asset = animation_read_gltf(file)
+#' animation_list_clips(asset)[, c("id", "name", "duration")]
+#' model = animation_model_instance(
+#'   asset, animation = animation_clip_player("clip-0", loop = "repeat")
+#' )
+#' animation_model_pose(model, time = 1)[[1]]$clip_time
 animation_read_gltf = function(
   filename,
   material = diffuse(),

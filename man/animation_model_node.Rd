@@ -15,14 +15,14 @@ animation_model_node(
 \arguments{
 \item{id}{Unique node ID within the model asset.}
 
-\item{scene}{Default `NULL`. Static rayrender geometry in this node's coordinates.}
+\item{scene}{Default \code{NULL}. Static rayrender geometry in this node's coordinates.}
 
-\item{parent}{Default `NULL`. Parent node ID; NULL denotes a top-level node.}
+\item{parent}{Default \code{NULL}. Parent node ID; NULL denotes a top-level node.}
 
-\item{transform}{Default `animation_transform_track()`. Constant rest transform, with
+\item{transform}{Default \code{animation_transform_track()}. Constant rest transform, with
 at most one key per property. Its pivot also applies to animated channels.}
 
-\item{name}{Default `id`. Display label, which need not be unique.}
+\item{name}{Default \code{id}. Display label, which need not be unique.}
 }
 \value{
 A serializable ray_model_node authoring object.

@@ -131,13 +131,17 @@ openpbr(
 
 \item{geometry_thin_walled}{Default \code{FALSE}. If true the surface is double-sided and represents an infinitesimally thin shell. Suitable for extremely geometrically thin objects such as leaves or paper.}
 
-\item{geometry_normal}{Default \code{NULL}. Input geometric normal}
+\item{geometry_normal}{Default \code{NULL}. Base-layer normal as a finite, nonzero
+world-space vector of length three. The default uses the surface normal.}
 
-\item{geometry_coat_normal}{Default \code{NULL}. Input normal for coat layer}
+\item{geometry_coat_normal}{Default \code{NULL}. World-space normal for the coat,
+supplied like \code{geometry_normal}. The default follows the base layer.}
 
-\item{geometry_tangent}{Default \code{NULL}. Input geometric tangent}
+\item{geometry_tangent}{Default \code{NULL}. Finite, nonzero world-space vector of
+length three orienting the base layer's anisotropy. The default uses the UV tangent.}
 
-\item{geometry_coat_tangent}{Default \code{NULL}. Input geometric tangent for coat layer}
+\item{geometry_coat_tangent}{Default \code{NULL}. World-space tangent orienting the
+coat's anisotropy, supplied like \code{geometry_tangent}. The default follows the base layer.}
 
 \item{priority}{Default \code{0}. Nonnegative dielectric priority; lower values win.}
 

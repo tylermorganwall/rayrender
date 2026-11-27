@@ -9,12 +9,12 @@ animation_loop_seam(track, tolerance = 1e-06)
 \arguments{
 \item{track}{An animation_transform_track() to inspect.}
 
-\item{tolerance}{Default `1e-6`. Maximum absolute difference between matrix
+\item{tolerance}{Default \code{1e-6}. Maximum absolute difference between matrix
 entries considered continuous; translation entries use scene distance units.}
 }
 \value{
 A list with the local interval, maximum matrix-entry gap, and a
-  pose_continuous flag. This does not certify velocity continuity.
+pose_continuous flag. This does not certify velocity continuity.
 }
 \description{
 Compare a transform's first and last local poses before configuring repetition.

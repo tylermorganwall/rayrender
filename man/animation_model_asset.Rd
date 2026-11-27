@@ -9,13 +9,13 @@ animation_model_asset(nodes, clips = list(), name = NULL)
 \arguments{
 \item{nodes}{List of animation_model_node() objects with unique IDs.}
 
-\item{clips}{Default `list()`. List of animation_model_clip() objects with unique IDs.}
+\item{clips}{Default \code{list()}. List of animation_model_clip() objects with unique IDs.}
 
-\item{name}{Default `NULL`. Optional descriptive asset label.}
+\item{name}{Default \code{NULL}. Optional descriptive asset label.}
 }
 \value{
 A locked, serializable ray_model_asset environment containing source
-  geometry, rest transforms, and clips.
+geometry, rest transforms, and clips.
 }
 \description{
 Share geometry and animation clips across independently placed model instances.

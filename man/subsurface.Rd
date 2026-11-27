@@ -98,9 +98,12 @@ The current pole guide is restricted to \code{g = 0}; nonzero anisotropy uses th
 same tracked unguided fallback without changing the physical phase function.
 }
 \examples{
+# In artist mode, red light travels farther through this wax than blue light.
 wax = subsurface(color = "ivory", radius = c(0.4, 0.2, 0.1))
+# For measured media, supply absorption and scattering per unit distance.
 physical = subsurface(sigma_a = c(0.1, 0.3, 0.8), sigma_s = 4)
 thin = cube(zwidth = 0.1, material = physical)
+# Compare the two sampling methods on the same material and geometry.
 reference = sphere(material = subsurface(sigma_a = 0.1, sigma_s = 4,
                                          method = "random_walk"))
 guided = sphere(material = subsurface(sigma_a = 0.1, sigma_s = 4,

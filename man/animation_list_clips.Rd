@@ -19,6 +19,8 @@ A data frame with id, name, start, end, duration, and targets columns.
 List stable clip IDs, display names, and local time intervals in seconds.
 }
 \examples{
-# A model with no clips is still a reusable static hierarchy.
-animation_list_clips(animation_model_asset(list(animation_model_node("body", sphere()))))
+# Find the clip IDs, their durations in seconds, and the nodes each clip moves.
+file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
+clips = animation_list_clips(animation_read_gltf(file))
+clips[, c("id", "name", "duration", "targets")]
 }

@@ -13,10 +13,10 @@ animation_model_instance(
 \arguments{
 \item{asset}{An animation_model_asset() containing immutable geometry and clips.}
 
-\item{transform}{Default `NULL`. Outer animation_transform_track() in scene seconds.
+\item{transform}{Default \code{NULL}. Outer animation_transform_track() in scene seconds.
 NULL retains identity placement and allows a later animation_keyframes() call.}
 
-\item{animation}{Default `animation_clip_player()`. Internal clip selection and clock.
+\item{animation}{Default \code{animation_clip_player()}. Internal clip selection and clock.
 A NULL clip selects the rest pose, without guessing the first clip.}
 }
 \value{
@@ -28,11 +28,11 @@ Give a shared model its own outer path and independently timed internal clip.
 \details{
 World transforms are outer placement * parent globals * local pose. Each
 instance shares the asset's geometry and tracks, but owns its playback settings.
-In explicit-time rendering, the default `animation_motion_blur = "full"`
+In explicit-time rendering, the default \code{animation_motion_blur = "full"}
 evaluates internal nodes, skins, morphs, and outer placement at a shared
 shutter time per image sample. Geometry and bounds are updated between samples
-while BVH topology is retained. Select `animation_motion_blur = "placement"`
-in [render_scene()] or [render_animation()] to freeze internal poses at frame
+while BVH topology is retained. Select \code{animation_motion_blur = "placement"}
+in \code{\link[=render_scene]{render_scene()}} or \code{\link[=render_animation]{render_animation()}} to freeze internal poses at frame
 time and blur only placement. A zero-width interval samples the complete model
 at time plus its shutter offset. Seeking never depends on the preceding pose.
 Static group_objects() changes stay inside the outer animated placement.
@@ -44,11 +44,19 @@ scenes resolve unchanged geometry through the shared asset; explicit
 set_scene_material() edits retain private geometry without changing the asset.
 }
 \examples{
-# Two paths can share an asset while using different phases and speeds.
-asset = animation_model_asset(list(animation_model_node("body", cube())))
-first = animation_model_instance(asset, animation_transform_track(0, position = c(-1, 0, 0)))
-second = animation_model_instance(asset, animation_transform_track(0, position = c(1, 0, 0)))
+# Place two copies of the same model side by side and play one twice as fast.
+file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
+asset = animation_read_gltf(file)
+first = animation_model_instance(asset,
+  transform = animation_transform_track(0, position = c(-1, 0, 0)),
+  animation = animation_clip_player("clip-0"))
+second = animation_model_instance(asset,
+  transform = animation_transform_track(0, position = c(1, 0, 0)),
+  animation = animation_clip_player("clip-0", speed = 2))
 scene = add_object(first, second)
+# One second into the scene, the two copies have reached different clip times.
+c(animation_model_pose(first, 1)[[1]]$clip_time,
+  animation_model_pose(second, 1)[[1]]$clip_time)
 }
 \seealso{
 \code{vignette("model-animation", package = "rayrender")}

@@ -8,6 +8,7 @@
 #' @return A locked, serializable ray_model_asset environment containing source
 #'   geometry, rest transforms, and clips.
 #' @export
+#' @md
 #' @details
 #' Nodes use column-vector transforms: global = parent_global * local. Clip
 #' properties replace the corresponding rest property; missing properties retain
@@ -160,6 +161,7 @@ model_scene_has_animation = function(scene) {
 #' @param name Default `id`. Display label, which need not be unique.
 #' @return A serializable ray_model_node authoring object.
 #' @export
+#' @md
 #' @seealso \code{vignette("model-animation", package = "rayrender")}
 #' @examples
 #' # Offset a wing's hinge while retaining its geometry relative to that hinge.
@@ -216,6 +218,7 @@ animation_model_node = function(
 #'   Each entry is a list of scalar animation_keyframe_track() objects, one per target.
 #' @return A serializable ray_model_clip object. Its interval spans all channel keys.
 #' @export
+#' @md
 #' @details
 #' Each node occurs at most once in channels; combine its independent properties
 #' in one animation_transform_track(). Set pivots on animation_model_node(), not on clip channels.
@@ -286,9 +289,12 @@ animation_model_clip = function(id, channels, name = id, weights = list()) {
 #' @param asset An asset created by animation_model_asset().
 #' @return A data frame with id, name, start, end, duration, and targets columns.
 #' @export
+#' @md
 #' @examples
-#' # A model with no clips is still a reusable static hierarchy.
-#' animation_list_clips(animation_model_asset(list(animation_model_node("body", sphere()))))
+#' # Find the clip IDs, their durations in seconds, and the nodes each clip moves.
+#' file = system.file("animation", "fixtures", "rigid.gltf", package = "rayrender")
+#' clips = animation_list_clips(animation_read_gltf(file))
+#' clips[, c("id", "name", "duration", "targets")]
 animation_list_clips = function(asset) {
   if (!inherits(asset, "ray_model_asset")) {
     stop("asset must be a model asset.", call. = FALSE)

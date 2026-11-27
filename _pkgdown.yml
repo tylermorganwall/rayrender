@@ -1,8 +1,7 @@
-url: http://www.rayrender.net/
+url: https://www.rayrender.net/
 pandoc: 2.3.1
 pkgdown: 1.3.0.9000
 pkgdown_sha: 2f40b4769ea9ad2312aa4cc93f27ab116461543b
-articles: []
 template:
   opengraph:
     image:
@@ -65,6 +64,10 @@ reference:
   - starts_with("hair")
   - starts_with("lambertian")
   - starts_with("set_scene_material")
+  - openpbr
+  - translucent
+  - subsurface
+  - subsurface_diffusion
 - title: Participating Media
   desc: Functions to define and attach scattering, absorbing, and emitting media.
   contents:
@@ -72,6 +75,13 @@ reference:
   - grid_medium
   - nanovdb_medium
   - set_medium
+- title: Point, Spot, and Projection Lights
+  desc: Create, attach, and manage lights at positions in the scene.
+  contents:
+  - point_light
+  - projection_light
+  - add_light
+  - get_light
 - title: Infinite and Sky Lights
   desc: Functions to create and manage image, atmospheric, Sun, and Moon lighting.
   contents:
@@ -81,6 +91,7 @@ reference:
   - sun_light
   - disk_light
   - add_infinite_light
+  - get_infinite_light
   - list_infinite_lights
   - remove_infinite_light
 - title: Cameras
@@ -88,6 +99,7 @@ reference:
   contents:
   - camera
   - add_camera
+  - get_camera
   - list_cameras
   - set_active_camera
   - preview_camera
@@ -98,18 +110,27 @@ reference:
   - add_object
   - starts_with("group")
   - starts_with("create")
+- title: Scene Import and Export
+  desc: Import PBRT scenes and save or restore rayrender scenes with OpenUSD.
+  contents:
+  - read_pbrt
+  - write_usd
+  - read_usd
 - title: Screen-space Annotations
   desc: Functions for adding 2D annotations anchored to 3D scene positions.
   contents: starts_with("screen")
 - title: Animating Scenes
   desc: Function for animating objects or the camera through a scene.
   contents:
-  - starts_with("get")
+  - get_saved_keyframes
   - starts_with("generate_camera_motion")
-  - starts_with("animate")
+  - animate_objects
+  - starts_with("animation_")
 - title: Render Raytraced Scene
   desc: Function to render the current scene.
-  contents: starts_with("render")
+  contents:
+  - starts_with("render")
+  - set_render_settings
 - title: Capabilities
   desc: Functions to query compiled capabilities.
   contents:

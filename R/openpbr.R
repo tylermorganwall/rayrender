@@ -41,10 +41,14 @@
 #' @param emission_color Default `c(1, 1, 1)`. The color of the emitted light.
 #' @param geometry_opacity Default `1`. The opacity of the entire material.
 #' @param geometry_thin_walled Default `FALSE`. If true the surface is double-sided and represents an infinitesimally thin shell. Suitable for extremely geometrically thin objects such as leaves or paper.
-#' @param geometry_normal Default `NULL`. Input geometric normal
-#' @param geometry_coat_normal Default `NULL`. Input normal for coat layer
-#' @param geometry_tangent Default `NULL`. Input geometric tangent
-#' @param geometry_coat_tangent Default `NULL`. Input geometric tangent for coat layer
+#' @param geometry_normal Default `NULL`. Base-layer normal as a finite, nonzero
+#'   world-space vector of length three. The default uses the surface normal.
+#' @param geometry_coat_normal Default `NULL`. World-space normal for the coat,
+#'   supplied like `geometry_normal`. The default follows the base layer.
+#' @param geometry_tangent Default `NULL`. Finite, nonzero world-space vector of
+#'   length three orienting the base layer's anisotropy. The default uses the UV tangent.
+#' @param geometry_coat_tangent Default `NULL`. World-space tangent orienting the
+#'   coat's anisotropy, supplied like `geometry_tangent`. The default follows the base layer.
 #' @param priority Default `0`. Nonnegative dielectric priority; lower values win.
 #' @param image_texture Default `""`. Base-color texture filename or RGB array; replaces base_color.
 #' @param image_repeat Default `1`. One or two positive UV repeat factors.
