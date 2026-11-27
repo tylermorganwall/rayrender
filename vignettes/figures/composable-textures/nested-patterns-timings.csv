@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"nested-patterns","Fine checker",64,6,5.688
+"nested-patterns","Checker inside checker",64,6,5.558
+"nested-patterns","Noise with horizontal bands",64,6,6.178

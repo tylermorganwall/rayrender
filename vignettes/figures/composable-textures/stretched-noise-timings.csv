@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"stretched-noise","Stretched, rotated noise",64,6,6.394
+"stretched-noise","Stone-like color variation",64,6,6.03
+"stretched-noise","Noise blends two recipes",64,6,6.67400000000001

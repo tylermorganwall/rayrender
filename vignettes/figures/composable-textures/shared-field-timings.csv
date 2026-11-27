@@ -1,0 +1,4 @@
+"group","example","samples","cores","elapsed"
+"shared-field","Scalar mask",64,6,10.764
+"shared-field","Mask into color",64,6,10.374
+"shared-field","Same mask into roughness",64,6,6.89
