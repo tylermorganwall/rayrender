@@ -127,7 +127,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/rayrender-benchmark-workdirs"
           Rscript tools/benchmarks/run_render_benchmarks.R \
             --repo . \
-            --ref current \
+            --ref "$GITHUB_SHA" \
             --config tools/benchmarks/configs/default.json \
             --only-config "${{ matrix.build_config_name }}" \
             --benchmarks "$BENCHMARKS" \
